@@ -8,6 +8,7 @@ import { DemoFolder, DriveFolder } from '../folder';
 import { FolderError } from '../model/parse';
 import type { RequestScope } from '../model/types';
 import { getClientId, getFolder, setClientId, setFolder } from '../settings';
+import { readSetupLink, setupLinkFor, withoutClient } from '../setup-link';
 import { button, type Ctx } from './components';
 import { clear, h, icon, s } from './dom';
 import { href, parseRoute, type Route } from './router';
@@ -78,6 +79,35 @@ export class App {
 
     const answer = completeSignIn(location.hash, sessionStorage, Date.now());
     if (answer.kind !== 'none') history.replaceState(null, '', `${location.pathname}${location.search}${answer.route}`);
+    // A setup link (?client=) leaves the address before anything else runs,
+    // so it is never carried into Google's sign-in or a bookmark.
+    const link = readSetupLink(location.search, getClientId());
+    if (link.kind !== 'none') history.replaceState(null, '', withoutClient(location));
+    if (answer.kind === 'none') {
+      switch (link.kind) {
+        case 'new':
+          setClientId(link.clientId);
+          return this.signIn(false, true);
+        case 'same':
+          return getFolder() ? this.signIn(true) : this.signIn(false, true);
+        case 'different':
+          return this.show({
+            name: 'message',
+            title: 'Use the client in this link?',
+            text: `This browser signs in through the Google client ${link.current}. The link you opened names ${link.clientId}. Use the link’s client if this device belongs to that household.`,
+            actions: [
+              button('Use the link’s client', () => (setClientId(link.clientId), this.signIn(false, true)), { primary: true }),
+              button('Keep the current one', () => this.resume()),
+            ],
+          });
+        case 'invalid':
+          if (!getClientId()) {
+            return this.show({ name: 'welcome', error: 'The link you opened has no valid Google client id. Ask for the setup link again, or paste the client id here.' });
+          }
+          this.toast('The link you opened has no valid Google client id, so the app kept its own.', 'error');
+          break;
+      }
+    }
     const clientId = getClientId();
     if (!clientId) return this.show({ name: 'welcome' });
     if (answer.kind === 'signed_in') return this.signedIn(answer.token, clientId);
@@ -85,6 +115,11 @@ export class App {
       // A silent attempt that needs the person is not an error to show.
       return this.show({ name: 'signin', error: answer.silent ? undefined : signInErrorText(answer.error) });
     }
+    this.resume();
+  }
+
+  /** Signed out, with a client: sign in again quietly when a folder was chosen before. */
+  private resume(): void {
     if (getFolder()) return this.signIn(true);
     this.show({ name: 'signin' });
   }
@@ -350,6 +385,7 @@ export class App {
       case 'settings':
         return settingsView(ctx, {
           clientId: getClientId(),
+          setupLink: getClientId() ? setupLinkFor(getClientId()!, this.redirectUri()) : null,
           scopes: this.scopes,
           onChangeFolder: () => {
             setFolder(null);

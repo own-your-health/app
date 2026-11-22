@@ -47,6 +47,7 @@ export function welcomeView(onSave: (clientId: string) => void, error?: string):
       { title: 'Your Google client' },
       h('p', null, 'Each household signs in through its own Google OAuth client, so no one else’s app holds access to your Drive. Creating one takes about ten minutes in Google Cloud, free.'),
       h('p', null, h('a', { href: REGISTRATION_URL, target: '_blank', rel: 'noopener noreferrer' }, 'How to create your Google client')),
+      h('p', { class: 'muted small' }, 'Someone in your household already uses the app? Ask them for the setup link in its Settings: opening it on this device skips this step.'),
       h('label', { class: 'label' }, 'Client id', input),
       msg,
       h('div', { class: 'actions' }, button('Save', save, { primary: true })),

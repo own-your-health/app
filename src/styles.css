@@ -660,6 +660,15 @@ a.row-main:hover .row-title {
   overflow-wrap: anywhere;
 }
 
+.setup-link {
+  display: block;
+  padding: 10px 12px;
+  border-radius: var(--radius-small);
+  background: var(--sunken);
+  border: 1px solid var(--line);
+  user-select: all;
+}
+
 .refresh-held {
   display: flex;
   flex-wrap: wrap;
