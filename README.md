@@ -127,7 +127,7 @@ Node 22 or newer.
 npm ci
 npm run dev        # http://localhost:5173/app/ (sample: /app/?demo)
 npm run verify     # lint, typecheck, unit tests, build
-npm run e2e        # browser tests on the sample, phone and desktop sizes
+npm run e2e        # browser tests at phone and desktop sizes: the sample, and signed in through a stand-in for Google and Drive
 ```
 
 - Plain TypeScript, built by Vite, with no runtime dependencies.
