@@ -4,6 +4,10 @@ A web page that shows a household's medical records from the household's own
 Google Drive. It reads the records folder that
 [medrec](https://github.com/own-your-health/medrec-cli) keeps, and shows:
 
+- each person's overview: what the latest loads added, the newest result of
+  each test with those out of range first, active conditions, current
+  medicines, allergies, immunizations and recent visits, each naming the
+  source it came from;
 - each person's records: a timeline, results over time, medicines,
   conditions, allergies, immunizations, claims and bills, documents and
   imaging studies, with search over titles and the text of documents;
@@ -56,7 +60,13 @@ top until it is made. **Sources** (`#/sources`, the stack icon in the bar,
 which carries a dot while a source needs attention) has every source: its
 sign-in, its last load and attempt, and when the Mac loads it next.
 
-Every person and record has its own address, such as `#/p/<person id>` and
+A result is out of range when the source's interpretation says so (High,
+Low, Abnormal, Critical), or, when it gave none the app can read, when the
+value falls outside the reference range in the same unit; the app labels
+those **Above range** or **Below range**, so it is clear the app worked it out.
+
+Every person and record has its own address, such as `#/p/<person id>` (the
+person's overview; `#/p/<person id>/timeline` is the timeline) and
 `#/p/<person id>/r/<record id>`, so a bookmark or another app can link
 straight to it. `#/hh/<id>` opens the person whose
 `links.huishouden_health_person` is that id.

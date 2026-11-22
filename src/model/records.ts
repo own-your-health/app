@@ -1,7 +1,7 @@
 // Views over one person's index: the timeline, results over time,
 // medicines, lists, claims and bills.
 
-import type { ImagingStudy, ImportRun, Json, JsonObject, MedDocument, MedRecord, PersonIndex, Provenance } from './types';
+import type { Household, ImagingStudy, ImportRun, Json, JsonObject, MedDocument, MedRecord, PersonIndex, Provenance } from './types';
 import { isObject } from './parse';
 
 export const KIND_LABELS: Record<string, string> = {
@@ -323,4 +323,22 @@ export function importFor(p: Provenance, imports: ImportRun[]): ImportRun | unde
 /** Keys of an object other than the ones a view already shows. */
 export function extraFields(o: JsonObject, shown: string[]): [string, Json][] {
   return Object.entries(o).filter(([k, v]) => !shown.includes(k) && v !== null && v !== undefined);
+}
+
+// ---- Where a record came from ----
+
+const ORIGIN_KIND: Record<string, string> = { scan: 'Scanned', media: 'Imaging disc', inbox: 'Filed by hand' };
+
+/** A source's name as the household knows it: its organization, by slug. */
+export function organizationName(household: Household, person: string, slug: string): string {
+  const own = household.sources.find((s) => s.person === person && s.organization === slug && s.organization_name);
+  if (own?.organization_name) return own.organization_name;
+  const org = household.organizations.find((o) => o.id === slug || o.aliases?.includes(slug));
+  return org?.name ?? slug;
+}
+
+/** The distinct names of the sources a record or document came from. */
+export function originNames(provenance: Provenance[], household: Household, person: string): string[] {
+  const names = provenance.map((p) => (p.source.organization_id ? organizationName(household, person, p.source.organization_id) : ORIGIN_KIND[p.source.kind] ?? p.source.kind));
+  return [...new Set(names)];
 }

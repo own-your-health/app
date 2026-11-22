@@ -33,14 +33,14 @@ async function openSection(page: Page, name: string) {
     await page.locator('.section-tabs').getByText(name, { exact: true }).click();
   }
   const slug = SLUGS[name] ?? name.toLowerCase();
-  await expect(page).toHaveURL(slug === 'timeline' ? /#\/p\/[^/]+$/ : new RegExp(`#/p/[^/]+/${slug}(\\?.*)?$`));
+  await expect(page).toHaveURL(slug === 'overview' ? /#\/p\/[^/]+$/ : new RegExp(`#/p/[^/]+/${slug}(\\?.*)?$`));
   // The tabs are in the page at every size (hidden on phones); the current
   // one changes only once the section has rendered.
   await expect(page.locator('.section-tabs .tab-current')).toHaveText(name);
 }
 
 /** The sections the phone's bottom bar shows; the rest are under More. */
-const BOTTOM = ['Timeline', 'Results', 'Medicines', 'Documents'];
+const BOTTOM = ['Overview', 'Results', 'Medicines', 'Timeline'];
 const SLUGS: Record<string, string> = { 'Claims and bills': 'claims' };
 
 test('home shows what needs a person, and leaves the sources to their screen', async ({ page }) => {
@@ -87,6 +87,54 @@ test('the Sources screen lists every source and sign-in, and opens one', async (
   await expect(page).toHaveURL(/#\/sources$/);
 });
 
+test('a person opens on what is current: new loads, results out of range first, and the rest', async ({ page }) => {
+  await page.goto('./?demo');
+  await page.getByRole('link', { name: /^Robin Example/ }).first().click();
+  await expect(page).toHaveURL(/#\/p\/p_[a-z2-7]{20}$/);
+  await expect(page.locator('.section-tabs .tab-current')).toHaveText('Overview');
+
+  const fresh = page.locator('.card', { hasText: 'New in the latest loads' });
+  await expect(fresh.locator('.load-head')).toHaveText(/^Example Health, 3 hours ago: 2 records and 1 document$/);
+  await expect(fresh.locator('.row')).toHaveCount(3);
+
+  const results = page.locator('.card', { hasText: 'Latest results' });
+  await expect(results).toContainText('The newest result of 1 test is out of its range.');
+  await expect(results.locator('.row').first()).toContainText('Potassium');
+  await expect(results.locator('.row').first().locator('.chip')).toHaveText('High');
+  await expect(results.locator('.row').first()).toContainText('5.4 mmol/L');
+  await expect(results.locator('.row').first()).toContainText('range 3.5-5.1 mmol/L');
+  await expect(results.locator('.row .chip')).toHaveCount(1);
+
+  const conditions = page.locator('.card', { hasText: 'Active conditions' });
+  await expect(conditions.locator('.row')).toHaveCount(1);
+  await expect(conditions.locator('.row')).toContainText('High blood pressure');
+  await expect(conditions.locator('.row')).toContainText('Example Health');
+  await expect(conditions.getByRole('link', { name: /All conditions, 1 past or inactive/ })).toBeVisible();
+
+  await expect(page.locator('.card', { hasText: 'Current medicines' }).locator('.row')).toHaveText([/Lisinopril 10 mg tablet/]);
+  await expect(page.locator('.card', { hasText: 'Allergies' }).locator('.row')).toHaveText([/Sulfa drugs.*Rash/]);
+  await expect(page.locator('.card', { hasText: 'Immunizations' }).locator('.row').first()).toContainText('Influenza');
+  const visits = page.locator('.card', { hasText: 'Recent visits' });
+  await expect(visits.locator('.row').first()).toContainText('Annual physical');
+  await expect(visits.locator('.row').first()).toContainText('1 document');
+
+  // A card's link opens its whole section.
+  // Robin has 6 tests, all shown here, so the link offers them over time.
+  await results.getByRole('link', { name: 'Results over time' }).click();
+  await expect(page).toHaveURL(/#\/p\/p_[a-z2-7]{20}\/results$/);
+});
+
+test('a child’s overview shows the visit, condition and medicine loaded yesterday', async ({ page }) => {
+  await page.goto('./?demo');
+  await page.getByRole('link', { name: /^Alex Example/ }).first().click();
+  const fresh = page.locator('.card', { hasText: 'New in the latest loads' });
+  await expect(fresh.locator('.load-head')).toHaveText(/^Example Pediatrics, (1 day|\d+ hours) ago: 3 records and 1 document$/);
+  await expect(page.locator('.card', { hasText: 'Active conditions' }).locator('.row')).toContainText('Ear infection');
+  await expect(page.locator('.card', { hasText: 'Current medicines' }).locator('.row')).toContainText('Amoxicillin');
+  await expect(page.locator('.card', { hasText: 'Allergies' })).toContainText('No allergies recorded in these records.');
+  await expect(page.locator('.card', { hasText: 'Recent visits' }).locator('.row').first()).toContainText('Sick visit');
+});
+
 test('a result over time, down to its raw FHIR', async ({ page }) => {
   await page.goto('./?demo');
   await page.getByRole('link', { name: /^Robin Example/ }).first().click();
@@ -119,7 +167,7 @@ test('every section of every person opens', async ({ page }) => {
   for (const name of ['Robin Example', 'Sam Example', 'Alex Example']) {
     await page.goto('./?demo#/');
     await page.getByRole('link', { name: new RegExp(`^${name}`) }).first().click();
-    for (const section of ['Timeline', 'Results', 'Medicines', 'Conditions', 'Allergies', 'Immunizations', 'Claims and bills', 'Documents', 'Imaging']) {
+    for (const section of ['Timeline', 'Results', 'Medicines', 'Conditions', 'Allergies', 'Immunizations', 'Claims and bills', 'Documents', 'Imaging', 'Overview']) {
       await openSection(page, section);
     }
   }

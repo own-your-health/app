@@ -40,6 +40,11 @@ function at(offsetMinutes) {
 }
 
 const files = new Map();
+// When each source's newest import ran: the records and documents it added
+// are filed at that moment, as medrec files them, and the app shows them as
+// new in the latest load.
+const ROBIN_CHART_LOAD = at(-60 * 3);
+const ALEX_PEDS_LOAD = at(-60 * 26);
 // When each source's first import ran (minutes from the anchor); its
 // records were filed then.
 const FIRST_IMPORT = new Map();
@@ -391,7 +396,22 @@ for (const [date, v] of [['2025-06-01', 13.9], ['2025-12-02', 14.2], ['2026-06-0
     resource: { ...obs('718-7', 'Hemoglobin', v, 'g/dL', 'g/dL'), effectiveDateTime: date },
   });
 }
-const rChart = R.importRun(src.robinChart, { importedAt: at(-60 * 3), added: 2, updated: 0, unchanged: 41, docs: 1 });
+for (const [code, name, display, v, unit, range, interp] of [
+  ['2823-3', 'Potassium [Moles/volume] in Serum or Plasma', 'Potassium', 5.4, 'mmol/L', '3.5-5.1 mmol/L', 'High'],
+  ['2160-0', 'Creatinine [Mass/volume] in Serum or Plasma', 'Creatinine', 0.9, 'mg/dL', '0.6-1.2 mg/dL', 'Normal'],
+]) {
+  R.record(src.robinChart, 'Observation', 'result', {
+    date: '2026-11-18',
+    code: { system: LOINC, code, display: name },
+    display,
+    status: 'final',
+    fields: { value: { value: v, unit }, reference_range: range, interpretation: interp, category: 'Laboratory', issued: '2026-11-19T16:00:00Z' },
+    resource: { ...obs(code, display, v, unit, unit, range, interp), effectiveDateTime: '2026-11-18' },
+    filed: ROBIN_CHART_LOAD,
+  });
+}
+R.document(src.robinChart, { date: '2026-11-18', doc_type: 'lab_report', title: 'Basic metabolic panel', organization: 'Example Health', text: 'Basic metabolic panel. Potassium 5.4 mmol/L (high). Creatinine 0.9 mg/dL.', original: 'basic_metabolic_panel.pdf', filed: ROBIN_CHART_LOAD });
+const rChart = R.importRun(src.robinChart, { importedAt: ROBIN_CHART_LOAD, added: 2, updated: 0, unchanged: 41, docs: 1 });
 R.importRun(src.robinChart, { importedAt: at(-60 * 24 * 8), added: 5, updated: 1, unchanged: 36 });
 R.importRun(src.robinPlan, { importedAt: at(-60 * 24 * 3), added: 1, updated: 0, unchanged: 3, cliVersion: '0.3.2' });
 R.importRun(src.robinBlood, { importedAt: at(-60 * 24 * 12), added: 0, updated: 0, unchanged: 3, cliVersion: '0.1.1' });
@@ -496,8 +516,34 @@ for (const [date, what] of [['2024-01-08', 'Well child visit, 6 years'], ['2025-
     resource: { status: 'finished', type: [{ text: what }], period: { start: `${date}T13:00:00Z` } },
   });
 }
+A.record(src.alexPeds, 'Encounter', 'encounter', {
+  date: '2026-11-20',
+  display: 'Sick visit',
+  status: 'finished',
+  fields: { class: 'ambulatory', practitioner: 'Dr. Morgan Placeholder', location: 'Example Pediatrics', reason: 'Ear pain' },
+  resource: { status: 'finished', type: [{ text: 'Sick visit' }], period: { start: '2026-11-20T16:00:00Z' }, reasonCode: [{ text: 'Ear pain' }] },
+  filed: ALEX_PEDS_LOAD,
+});
+A.record(src.alexPeds, 'Condition', 'condition', {
+  date: '2026-11-20',
+  code: { system: ICD10, code: 'H66.90', display: 'Otitis media, unspecified, unspecified ear' },
+  display: 'Ear infection',
+  status: 'active',
+  fields: { verification_status: 'confirmed', category: 'Encounter diagnosis' },
+  resource: { clinicalStatus: { coding: [{ code: 'active' }] }, code: { coding: [{ system: ICD10, code: 'H66.90' }], text: 'Ear infection' }, onsetDateTime: '2026-11-20' },
+  filed: ALEX_PEDS_LOAD,
+});
+A.record(src.alexPeds, 'MedicationRequest', 'medication', {
+  date: '2026-11-20',
+  code: { system: RXNORM, code: '308189', display: 'amoxicillin 400 MG in 5 mL Oral Suspension' },
+  display: 'Amoxicillin 400 mg/5 mL suspension',
+  status: 'active',
+  fields: { dosage: 'Take 7 mL by mouth twice a day for 10 days', prescriber: 'Dr. Morgan Placeholder', intent: 'order', source: 'request' },
+  resource: { status: 'active', intent: 'order', medicationCodeableConcept: { text: 'Amoxicillin 400 mg/5 mL suspension' }, authoredOn: '2026-11-20', dosageInstruction: [{ text: 'Take 7 mL by mouth twice a day for 10 days' }] },
+  filed: ALEX_PEDS_LOAD,
+});
 A.document(src.alexPeds, { date: '2025-10-20', doc_type: 'immunization_record', title: 'Immunization history', organization: 'Example Pediatrics', text: 'Immunization history. DTaP, IPV, MMR 01/10/2022. Influenza 10/20/2025.', original: 'immunizations.pdf' });
-const aPeds = A.importRun(src.alexPeds, { importedAt: at(-60 * 26), added: 3, updated: 0, unchanged: 11, docs: 1, cliVersion: '0.6.1' });
+const aPeds = A.importRun(src.alexPeds, { importedAt: ALEX_PEDS_LOAD, added: 3, updated: 0, unchanged: 11, docs: 1, cliVersion: '0.6.1' });
 A.write();
 
 // ---- What the Mac's `medrec refresh` wrote ----

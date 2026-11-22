@@ -58,7 +58,7 @@ export function homeView(ctx: Ctx): HTMLElement {
             : idx
               ? [count(idx.records.length, 'record'), count(idx.documents.length, 'document'), idx.studies.length ? count(idx.studies.length, 'imaging study', 'imaging studies') : null].filter(Boolean).join(' · ')
               : 'Loading…';
-          return row({ route: { name: 'person', person: p.id, section: 'timeline' }, title: p.name, meta });
+          return row({ route: { name: 'person', person: p.id, section: 'overview' }, title: p.name, meta });
         }),
   );
 

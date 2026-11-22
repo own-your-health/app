@@ -1230,3 +1230,44 @@ body:has(.bottom-nav) {
   outline-color: var(--on-primary);
 }
 
+/* ---- A person's overview: short cards, each with a link to its section ---- */
+
+.overview {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (min-width: 960px) {
+  .overview {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .overview-wide {
+    grid-column: 1 / -1;
+  }
+}
+
+.card-more {
+  margin: 8px 0 0;
+  font-size: 15px;
+}
+
+.card-more a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+}
+
+.load-group + .load-group {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.load-head {
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+

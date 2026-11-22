@@ -8,6 +8,8 @@ import {
   formatMoney,
   KIND_LABELS,
   medicines,
+  organizationName,
+  originNames,
   recordDetail,
   recordsOf,
   resultSeries,
@@ -16,17 +18,18 @@ import {
   timeline,
   type TimelineEntry,
 } from '../../model/records';
+import { activeConditions, currentAllergies, currentMedicines, immunizationsGiven, isOutOfRange, latestResults, newInLatestLoads, recentVisits } from '../../model/overview';
 import { search } from '../../model/search';
-import type { Json, MedRecord, Person, PersonIndex } from '../../model/types';
+import type { Json, MedRecord, Person, PersonIndex, Provenance } from '../../model/types';
 import { resultChart } from '../chart';
 import { button, card, chip, command, driveLink, empty, link, refreshControl, row, sheet, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, relative, yearOf } from '../format';
 import { SECTION_LABELS, href, type Route, type Section } from '../router';
 
-const PRIMARY: Section[] = ['timeline', 'results', 'medicines', 'documents'];
-const MORE: Section[] = ['conditions', 'allergies', 'immunizations', 'claims', 'imaging', 'search'];
-const SECTION_ICONS: Partial<Record<Section, string>> = { timeline: 'clock', results: 'chart', medicines: 'pill', documents: 'file' };
+const PRIMARY: Section[] = ['overview', 'results', 'medicines', 'timeline'];
+const MORE: Section[] = ['documents', 'conditions', 'allergies', 'immunizations', 'claims', 'imaging', 'search'];
+const SECTION_ICONS: Partial<Record<Section, string>> = { overview: 'home', timeline: 'clock', results: 'chart', medicines: 'pill', documents: 'file' };
 
 const PAGE = 200;
 
@@ -132,6 +135,111 @@ function yearList<T extends { date?: string }>(items: T[], render: (x: T) => HTM
   };
   draw();
   return box;
+}
+
+/** The person's local calendar day, for "has this visit happened". */
+function localDay(now: Date): string {
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+}
+
+function reactions(r: MedRecord): string | undefined {
+  return Array.isArray(r.fields.reaction) ? r.fields.reaction.filter((x): x is string => typeof x === 'string').join(', ') || undefined : undefined;
+}
+
+/** How many results the overview lists when none is out of range. */
+const RESULTS_SHOWN = 6;
+
+/**
+ * The person's first screen: what is current now, each card a short list
+ * with a link to its whole section. Every row names where it came from.
+ */
+function overviewSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
+  const now = ctx.now();
+  const household = ctx.store.household;
+  const from = (prov: Provenance[]) => originNames(prov, household, person.id).join(', ');
+  const all = (section: Section, text: string) => h('p', { class: 'card-more' }, link({ name: 'person', person: person.id, section }, text, ' ', icon('next', 14)));
+  const recordRow = (r: MedRecord, meta: (string | undefined | null)[], aside?: Child) =>
+    row({ route: itemRoute(person.id, r.id), title: r.display || KIND_LABELS[r.kind] || r.kind, meta: meta.filter(Boolean).join(' · '), aside });
+
+  const loads = newInLatestLoads(idx, now);
+  const newCard = loads.length
+    ? card(
+        { title: 'New in the latest loads', class: 'overview-wide' },
+        loads.map((l) => {
+          const items = l.records.length + l.documents.length;
+          const shown = [
+            ...l.records.slice(0, 4).map((r) => recordRow(r, [dateText(r.date), KIND_LABELS[r.kind] ?? r.kind, recordDetail(r)])),
+            ...l.documents.slice(0, Math.max(0, 4 - l.records.length)).map((d) => row({ route: itemRoute(person.id, d.id), title: documentTitle(d), meta: [dateText(d.date), docTypeLabel(d.doc_type)].filter(Boolean).join(' · ') })),
+          ];
+          const what = [l.records.length ? count(l.records.length, 'record') : null, l.documents.length ? count(l.documents.length, 'document') : null].filter(Boolean).join(' and ');
+          return h(
+            'div',
+            { class: 'load-group' },
+            h('p', { class: 'load-head small' }, `${organizationName(household, person.id, l.organization)}, ${relative(l.at, now)}: ${what}`),
+            shown,
+            items > shown.length ? h('p', { class: 'small muted' }, `and ${items - shown.length} more in the `, link({ name: 'person', person: person.id, section: 'timeline' }, 'timeline')) : null,
+          );
+        }),
+      )
+    : null;
+
+  const results = latestResults(idx);
+  const flagged = results.filter((r) => isOutOfRange(r.flag));
+  const shownResults = [...flagged, ...results.filter((r) => !isOutOfRange(r.flag)).slice(0, Math.max(0, RESULTS_SHOWN - flagged.length))];
+  const resultsCard = card(
+    { title: 'Latest results' },
+    flagged.length ? h('p', { class: 'small attention' }, flagged.length === 1 ? 'The newest result of 1 test is out of its range.' : `The newest results of ${flagged.length} tests are out of their range.`) : null,
+    results.length
+      ? shownResults.map(({ series, latest, flag }) =>
+          row({
+            route: { name: 'person', person: person.id, section: 'results', sub: series.key },
+            title: series.name,
+            meta: [latest.text, dateText(latest.date), latest.range ? `range ${latest.range}` : null].filter(Boolean).join(' · '),
+            aside: isOutOfRange(flag) ? chip(flag.label, flag.critical ? 'error' : 'attention') : null,
+          }),
+        )
+      : empty('No results recorded.'),
+    results.length ? all('results', results.length > shownResults.length ? `All ${count(results.length, 'test')}` : 'Results over time') : null,
+  );
+
+  const conditions = activeConditions(idx);
+  const conditionsCard = card(
+    { title: 'Active conditions' },
+    conditions.active.length ? conditions.active.map((r) => recordRow(r, [r.date ? `since ${dateText(r.date)}` : null, from(r.provenance)])) : empty('No active conditions recorded.'),
+    conditions.active.length || conditions.other ? all('conditions', conditions.other ? `All conditions, ${conditions.other} past or inactive` : 'All conditions') : null,
+  );
+
+  const meds = currentMedicines(idx);
+  const medsCard = card(
+    { title: 'Current medicines' },
+    meds.length ? meds.map((g) => recordRow(g.latest, [str(g.latest.fields.dosage), from(g.records.flatMap((r) => r.provenance))])) : empty('No current medicines recorded.'),
+    all('medicines', 'All medicines'),
+  );
+
+  const allergies = currentAllergies(idx);
+  const allergiesCard = card(
+    { title: 'Allergies' },
+    allergies.length ? allergies.map((r) => recordRow(r, [reactions(r), str(r.fields.criticality) ? `criticality ${str(r.fields.criticality)}` : null, from(r.provenance)])) : empty('No allergies recorded in these records.'),
+    all('allergies', 'All allergies'),
+  );
+
+  const doses = immunizationsGiven(idx);
+  const immunizationsCard = card(
+    { title: 'Immunizations' },
+    doses.length ? doses.slice(0, 5).map((r) => recordRow(r, [dateText(r.date), from(r.provenance)])) : empty('No immunizations recorded.'),
+    doses.length ? all('immunizations', doses.length > 5 ? `All ${count(doses.length, 'dose')}` : 'All immunizations') : null,
+  );
+
+  const visits = recentVisits(idx, localDay(now));
+  const visitsCard = card(
+    { title: 'Recent visits' },
+    visits.length
+      ? visits.slice(0, 3).map((r) => recordRow(r, [dateText(r.date), str(r.fields.reason), str(r.fields.practitioner), str(r.fields.location) ?? str(r.fields.service_provider), r.documents.length ? count(r.documents.length, 'document') : null]))
+      : empty('No visits recorded.'),
+    all('timeline', 'Timeline'),
+  );
+
+  return h('div', { class: 'overview' }, newCard, resultsCard, conditionsCard, medsCard, allergiesCard, immunizationsCard, visitsCard);
 }
 
 function timelineSection(person: Person, idx: PersonIndex): HTMLElement {
@@ -374,6 +482,9 @@ export function personView(ctx: Ctx, personId: string, section: Section, sub?: s
   if (err || !idx) return card({ title: person.name }, empty(err ?? 'Loading…'));
   let body: Child;
   switch (section) {
+    case 'overview':
+      body = overviewSection(ctx, person, idx);
+      break;
     case 'timeline':
       body = timelineSection(person, idx);
       break;

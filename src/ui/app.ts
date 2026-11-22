@@ -495,8 +495,8 @@ export class App {
       case 'huishouden': {
         const person = this.store!.personForHuishouden(r.hh);
         if (person) {
-          history.replaceState(null, '', href({ name: 'person', person: person.id, section: 'timeline' }));
-          return personView(ctx, person.id, 'timeline');
+          history.replaceState(null, '', href({ name: 'person', person: person.id, section: 'overview' }));
+          return personView(ctx, person.id, 'overview');
         }
         return messageView('Not linked yet', 'No one in this records folder is linked to that Huishouden Health person. Link them on the Mac with medrec.');
       }
