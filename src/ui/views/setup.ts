@@ -1,7 +1,7 @@
 // Before the records: the household's own Google client id, sign-in, and
 // choosing the records folder.
 
-import { clientFromPaste } from '../../setup-link';
+import { readPaste, type Paste } from '../../setup-link';
 import { Drive, folderIdFrom, FOLDER_MIME, HOUSEHOLD_QUERY } from '../../drive';
 import { button, card, empty } from '../components';
 import { h } from '../dom';
@@ -27,16 +27,19 @@ function intro(): HTMLElement {
   );
 }
 
+const PASTE_PROBLEM: Record<Exclude<Paste['kind'], 'client'>, string> = {
+  bad_link: 'That link has no valid Google client id; it may have been cut short. Copy the setup link again from Settings on a device that is set up.',
+  other_site: 'That link is not this app’s setup link. Copy it from Settings, under Setup link for another device.',
+  bad: 'That is not a Google OAuth client id or a setup link. A client id ends in .apps.googleusercontent.com.',
+};
+
 export function welcomeView(onSave: (clientId: string) => void, error?: string): HTMLElement {
   const input = h('input', { class: 'input', type: 'text', inputmode: 'url', autocomplete: 'off', spellcheck: 'false', placeholder: '123456789012-abc….apps.googleusercontent.com', 'aria-label': 'Google OAuth client id' });
   const msg = h('p', { class: 'error-text small', 'aria-live': 'polite' }, error ?? '');
   const save = () => {
-    const id = clientFromPaste(input.value);
-    if (!id) {
-      msg.textContent = 'That is not a Google OAuth client id or a setup link. A client id ends in .apps.googleusercontent.com.';
-      return;
-    }
-    onSave(id);
+    const paste = readPaste(input.value, location.origin);
+    if (paste.kind === 'client') return onSave(paste.clientId);
+    msg.textContent = PASTE_PROBLEM[paste.kind];
   };
   input.addEventListener('keydown', (e) => e.key === 'Enter' && save());
   return h(

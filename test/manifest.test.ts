@@ -88,6 +88,8 @@ describe('the Home Screen on iPhone', () => {
     expect(pngSize(join(PUBLIC, touch!))).toEqual([180, 180]);
     expect(html).toContain('<meta name="apple-mobile-web-app-title" content="Own Health" />');
     expect(html).toContain('<meta name="mobile-web-app-capable" content="yes" />');
+    // Older iOS reads only the prefixed tag.
+    expect(html).toContain('<meta name="apple-mobile-web-app-capable" content="yes" />');
   });
 
   it('names only files that exist', () => {

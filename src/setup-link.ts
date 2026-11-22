@@ -26,22 +26,32 @@ export function readSetupLink(search: string, current: string | null): SetupLink
   return id === current ? { kind: 'same', clientId: id } : { kind: 'different', clientId: id, current };
 }
 
+export type Paste =
+  | { kind: 'client'; clientId: string }
+  /** This app's link, without a valid client id: cut short when copied. */
+  | { kind: 'bad_link' }
+  /** A link to another site. */
+  | { kind: 'other_site' }
+  | { kind: 'bad' };
+
 /**
- * The client id in what a person pasted: the id itself, or a whole setup
- * link. An app installed on an iPhone keeps its own storage and has no
- * address bar, so the link is pasted there instead of opened.
+ * What a person pasted into the client field: the client id itself, or this
+ * app's whole setup link (`origin` is the app's own). An app added to an
+ * iPhone's Home Screen keeps its own storage and has no address bar, so the
+ * link is pasted there instead of opened.
  */
-export function clientFromPaste(text: string): string | null {
+export function readPaste(text: string, origin: string): Paste {
   const v = text.trim();
-  if (isClientId(v)) return v;
+  if (isClientId(v)) return { kind: 'client', clientId: v };
   let url: URL;
   try {
     url = new URL(v);
   } catch {
-    return null;
+    return { kind: 'bad' };
   }
+  if (url.origin !== origin) return { kind: 'other_site' };
   const link = readSetupLink(url.search, null);
-  return link.kind === 'new' ? link.clientId : null;
+  return link.kind === 'new' ? { kind: 'client', clientId: link.clientId } : { kind: 'bad_link' };
 }
 
 /** The address without `?client=`, keeping any other parameter and the route. */
