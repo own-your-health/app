@@ -1150,8 +1150,15 @@ body:has(.bottom-nav) {
   font-weight: 600;
 }
 
+/* The ring is drawn inside the option, in its own text colour, so it shows
+   on the selected (filled) option too: ink on the card, on-primary on the
+   fill, both pairs checked at WCAG AA by test/theme.test.ts. */
 .choice input:focus-visible + span {
-  outline: 2px solid var(--focus);
-  outline-offset: -2px;
+  outline: 2px solid var(--ink);
+  outline-offset: -4px;
+}
+
+.choice input:checked:focus-visible + span {
+  outline-color: var(--on-primary);
 }
 

@@ -45,6 +45,17 @@ test('Light on a dark phone applies at once and on the next open, before the app
   problems = problems.filter((p) => !p.includes('net::ERR_FAILED'));
 });
 
+test('the focused theme option shows a ring that differs from its fill', async ({ page }) => {
+  await page.goto('./?demo#/settings');
+  await page.getByRole('radio', { name: 'System' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('radio', { name: 'Light' })).toBeChecked();
+  const span = page.locator('.choice', { hasText: 'Light' }).locator('span');
+  const [ring, fill] = await span.evaluate((e) => [getComputedStyle(e).outlineColor, getComputedStyle(e).backgroundColor]);
+  expect(await span.evaluate((e) => getComputedStyle(e).outlineStyle)).toBe('solid');
+  expect(ring).not.toBe(fill);
+});
+
 test('Dark on a light phone, and System gives the device its own back', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('./?demo#/settings');
