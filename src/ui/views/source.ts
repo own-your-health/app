@@ -2,10 +2,10 @@
 // recorded for it.
 
 import type { AttemptLine } from '../../model/types';
-import { h } from '../dom';
-import { button, card, chip, empty, kv, refreshControl, type Ctx } from '../components';
+import { h, icon } from '../dom';
+import { button, card, chip, empty, kv, link, refreshControl, type Ctx } from '../components';
 import { count, dateTime, duration, relative } from '../format';
-import { canRefresh, HEALTH_TEXT, sourceDetail } from './home';
+import { canRefresh, HEALTH_TEXT, sourceDetail } from './sources';
 
 const OUTCOME_TONE: Record<string, 'ok' | 'error' | 'attention' | 'muted' | 'running'> = {
   ok: 'ok',
@@ -51,7 +51,8 @@ function attemptRow(a: AttemptLine): HTMLElement {
 
 export function sourceView(ctx: Ctx, sourceId: string): HTMLElement {
   const v = ctx.store.sources().find((x) => x.source.id === sourceId);
-  if (!v) return card({}, empty('This source is not in the records folder.'));
+  const back = h('p', null, link({ name: 'sources' }, icon('back', 16), ' All sources'));
+  if (!v) return h('div', { class: 'stack' }, back, card({}, empty('This source is not in the records folder.')));
   const [label, tone] = HEALTH_TEXT[v.health];
   const st = v.status;
   const history = h('div', null, h('p', { class: 'muted small' }, 'Loading the Mac’s history…'));
@@ -83,6 +84,7 @@ export function sourceView(ctx: Ctx, sourceId: string): HTMLElement {
   return h(
     'div',
     { class: 'stack' },
+    back,
     h(
       'section',
       { class: 'card' },

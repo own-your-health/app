@@ -86,6 +86,7 @@ const ICONS: Record<string, string[]> = {
   close: ['M18 6L6 18', 'M6 6l12 12'],
   person: ['M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M4 21a8 8 0 0 1 16 0'],
   settings: ['M4 6h16', 'M4 12h16', 'M4 18h16'],
+  sources: ['M12 8c4.4 0 8-1.3 8-3s-3.6-3-8-3-8 1.3-8 3 3.6 3 8 3z', 'M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5', 'M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3'],
 };
 
 export function icon(name: keyof typeof ICONS | string, size = 20): SVGSVGElement {
