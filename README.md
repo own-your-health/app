@@ -111,10 +111,10 @@ run in a terminal on the Mac, such as `medrec refresh sign-in s_…`.
 - **Browser storage holds three settings, nothing else:** your client id
   (`own-your-health-app.client_id`), the chosen folder's id and name
   (`own-your-health-app.folder`), and the email of the Google account that
-  last signed in (`own-your-health-app.account`). None is a secret, and none
-  leaves the device except the email, which goes to Google as the sign-in's
-  `login_hint`. During a sign-in, a random nonce sits in session storage until
-  Google answers.
+  last signed in (`own-your-health-app.account`). None is a secret. The client
+  id and the email go to Google as the sign-in's `client_id` and `login_hint`,
+  and the folder id goes to Drive when the app reads the folder. During a
+  sign-in, a random nonce sits in session storage until Google answers.
 - **Read-only, except requests.** The app writes only refresh requests into
   `_requests/`, and deletes only requests it made (a cancel). medrec is the
   only writer of records.

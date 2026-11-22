@@ -52,6 +52,12 @@ describe('state', () => {
     expect(decodeState(encodeState({ n: 'abc', r: '#/', s: 2 }))).toEqual({ n: 'abc', r: '#/', s: 2 });
   });
 
+  it('carries what a renewal interrupted as one word, and drops anything else', () => {
+    expect(decodeState(encodeState({ n: 'abc', r: '#/', s: 2, w: 'refresh' }))).toEqual({ n: 'abc', r: '#/', s: 2, w: 'refresh' });
+    const forged = btoa(JSON.stringify({ n: 'abc', r: '#/', w: 's_aaaaaaaaaaaaaaaaaaaa' })).replace(/=+$/, '');
+    expect(decodeState(forged)).toEqual({ n: 'abc', r: '#/' });
+  });
+
   it('sends a route that is not the app’s own home', () => {
     expect(decodeState(encodeState({ n: 'abc', r: 'https://elsewhere.example/' }))).toEqual({ n: 'abc', r: '#/' });
   });
@@ -125,6 +131,17 @@ describe('the account hint', () => {
   it('marks a renewal, so its failure can say the sign-in ended', () => {
     const u = signInUrl({ silent: true, renewal: true, loginHint: HINT });
     expect(decodeState(u.searchParams.get('state'))).toMatchObject({ s: 2 });
+  });
+
+  it('brings back what the renewal interrupted, signed in or not', () => {
+    const storage = memoryStorage();
+    let went = '';
+    startSignIn({ clientId: CLIENT, redirectUri: 'x', route: '#/', silent: true, renewal: true, unsent: 'cancel', loginHint: HINT, storage, go: (u) => (went = u) });
+    const state = new URL(went).searchParams.get('state')!;
+    const n = storage.getItem(NONCE_KEY)!;
+    expect(completeSignIn(answer({ access_token: 'tok', expires_in: '3599', state }), storage, 0)).toMatchObject({ kind: 'signed_in', unsent: 'cancel' });
+    storage.setItem(NONCE_KEY, n);
+    expect(completeSignIn(answer({ error: 'login_required', state }), storage, 0)).toMatchObject({ kind: 'failed', renewal: true, unsent: 'cancel' });
   });
 });
 

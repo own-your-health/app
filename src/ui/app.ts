@@ -1,6 +1,6 @@
 // The app: sign-in, the folder, and the views, in one page.
 
-import { completeSignIn, revokeToken, SCOPE_READ, SCOPE_WRITE, signInErrorText, startSignIn, verifyToken, type Token } from '../auth';
+import { completeSignIn, revokeToken, SCOPE_READ, SCOPE_WRITE, signInErrorText, startSignIn, verifyToken, type Token, type Unsent } from '../auth';
 import { startDemoMac } from '../data/demo-mac';
 import { Store } from '../data/store';
 import { Drive, DriveError } from '../drive';
@@ -18,6 +18,12 @@ import { personView } from './views/person';
 import { folderView, messageView, signInView, welcomeView } from './views/setup';
 import { settingsView } from './views/settings';
 import { sourceView } from './views/source';
+
+/** What the app says when a renewal interrupted a write the person asked for. */
+const UNSENT_TEXT: Record<Unsent, string> = {
+  refresh: 'The refresh request was not sent: tap Refresh again.',
+  cancel: 'The request was not cancelled: tap Cancel again.',
+};
 
 const VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '0.0.0';
 
@@ -45,6 +51,8 @@ export class App {
   /** When Google issued the token, so one Drive refuses at once is not renewed in a loop. */
   private tokenAt = 0;
   private renewing = false;
+  /** A write the person started, which a renewal would interrupt. */
+  private writing: Unsent | null = null;
   private scopes: string[] = [];
   private user: { email?: string; name?: string } = {};
   private store: Store | null = null;
@@ -115,11 +123,15 @@ export class App {
     }
     const clientId = getClientId();
     if (!clientId) return this.show({ name: 'welcome' });
-    if (answer.kind === 'signed_in') return this.signedIn(answer.token, clientId);
+    if (answer.kind === 'signed_in') return this.signedIn(answer.token, clientId, answer.unsent);
     if (answer.kind === 'failed') {
       // A silent attempt on opening that needs the person is not an error to
       // show; one renewing an ended sign-in says why the app stopped.
-      const error = !answer.silent ? signInErrorText(answer.error) : answer.renewal ? 'Your Google sign-in ended, as it does after an hour, and Google needs you to sign in again.' : undefined;
+      const error = !answer.silent
+        ? signInErrorText(answer.error)
+        : answer.renewal
+          ? `Your Google sign-in ended, as it does after an hour, and Google needs you to sign in again.${answer.unsent ? ` ${UNSENT_TEXT[answer.unsent]}` : ''}`
+          : undefined;
       return this.show({ name: 'signin', error });
     }
     this.resume();
@@ -146,7 +158,7 @@ export class App {
   }
 
   /** Leaves for Google's sign-in, as the account that last signed in when there is one. */
-  private signIn(silent = false, chooseAccount = false, renewal = false): void {
+  private signIn(silent = false, chooseAccount = false, renewal = false, unsent?: Unsent): void {
     const clientId = getClientId();
     if (!clientId) return this.show({ name: 'welcome' });
     startSignIn({
@@ -155,6 +167,7 @@ export class App {
       route: location.hash || '#/',
       silent,
       renewal,
+      ...(unsent ? { unsent } : {}),
       chooseAccount,
       loginHint: getAccount(),
       storage: sessionStorage,
@@ -168,7 +181,7 @@ export class App {
     this.signIn(false, true);
   }
 
-  private async signedIn(token: Token, clientId: string): Promise<void> {
+  private async signedIn(token: Token, clientId: string, unsent?: Unsent): Promise<void> {
     this.show({ name: 'loading' });
     const check = await verifyToken((...a) => fetch(...a), token.accessToken, clientId).catch(() => ({ ok: false, scopes: [] as string[] }));
     if (!check.ok) return this.show({ name: 'signin', error: 'Google did not confirm this sign-in for your client. Sign in again.' });
@@ -188,6 +201,7 @@ export class App {
     const folder = getFolder();
     if (!folder) return this.show({ name: 'folder' });
     await this.openFolder(folder);
+    if (unsent) this.toast(`Your Google sign-in had ended, so the app signed in again. ${UNSENT_TEXT[unsent]}`, 'error');
   }
 
   private accessToken(): string {
@@ -221,7 +235,7 @@ export class App {
   private renew(): void {
     if (this.renewing) return;
     this.renewing = true;
-    this.signIn(true, false, true);
+    this.signIn(true, false, true, this.writing ?? undefined);
   }
 
   private async openFolder(f: { id: string; name: string }): Promise<void> {
@@ -305,11 +319,16 @@ export class App {
       toast: (t, kind) => this.toast(t, kind),
       refresh: (scope, what) => this.refresh(scope, what),
       cancel: async (p) => {
+        this.writing = 'cancel';
         try {
           await this.store!.cancel(p);
           this.toast('Request cancelled');
         } catch (e) {
+          // A renewal is leaving the page; it says so when it comes back.
+          if (this.renewing) return;
           this.toast(e instanceof Error ? e.message : 'The request could not be cancelled.', 'error');
+        } finally {
+          this.writing = null;
         }
         this.renderKeepingScroll();
       },
@@ -320,12 +339,15 @@ export class App {
   private async refresh(scope: RequestScope, what: string): Promise<void> {
     const store = this.store;
     if (!store) return;
+    this.writing = 'refresh';
     try {
       const p = await store.requestRefresh(scope, this.user, VERSION);
       this.demoMac?.(p.file);
       this.signature = this.stateSignature();
       this.toast(`Asked the Mac to refresh ${what}`);
     } catch (e) {
+      // A renewal is leaving the page; it says so when it comes back.
+      if (this.renewing) return;
       const text =
         e instanceof DriveError && e.status === 403
           ? 'Google did not let the app write the request into this folder. Check that this account may edit the records folder.'
@@ -333,6 +355,8 @@ export class App {
             ? e.message
             : 'The request could not be written.';
       this.toast(text, 'error');
+    } finally {
+      this.writing = null;
     }
     this.renderKeepingScroll();
   }

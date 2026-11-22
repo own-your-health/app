@@ -137,6 +137,20 @@ test('a Drive read after the hour renews the sign-in on its own', async ({ page 
   expect(google.changes).toHaveLength(1);
 });
 
+test('a Refresh tapped after the hour renews the sign-in and says the request was not sent', async ({ page }) => {
+  await page.clock.install();
+  await signIn(page);
+  // The page stayed in view, so nothing renewed it before the tap.
+  await page.clock.fastForward('01:00:00');
+  await page.getByRole('button', { name: 'Refresh everything' }).click();
+  await expect(page.getByText('Your Google sign-in had ended, so the app signed in again. The refresh request was not sent: tap Refresh again.')).toBeVisible();
+  expect(google.signIns[1]).toMatchObject({ prompt: 'none', hint: USER.emailAddress });
+  expect(google.changes).toEqual([]);
+  await page.getByRole('button', { name: 'Refresh everything' }).click();
+  await expect(page.getByText(/waiting for the Mac/).first()).toBeVisible();
+  expect(google.changes).toHaveLength(1);
+});
+
 test('when Google needs the person, the renewal says so, and another account can be chosen', async ({ page }) => {
   await page.clock.install();
   await signIn(page);
