@@ -23,10 +23,21 @@ export const SCHEDULE_SOURCE = {
 /** A dose's place: an age range in months, or a time after the dose before it. */
 type When = { age: [number, number] } | { after: [number, number] };
 
+/** A product whose series differs from the antigen's usual one. */
+interface Variant {
+  /** The product's CVX codes, and its name when a dose has no CVX code. */
+  cvx: string[];
+  text: RegExp;
+  /** Which of the antigen's doses its series has, by index. */
+  doses: number[];
+}
+
 interface Antigen {
   id: string;
   name: string;
   doses: When[];
+  /** Used when every dose given is this product; before a first dose, the count reads as each possibility. */
+  variants?: Variant[];
   /** The age in months after which the schedule no longer gives it. */
   until?: number;
   /** CVX codes of vaccines that carry it, combinations included. */
@@ -39,11 +50,11 @@ const Y = 12;
 
 export const ANTIGENS: Antigen[] = [
   { id: 'hepb', name: 'Hepatitis B', doses: [{ age: [0, 0] }, { age: [1, 2] }, { age: [6, 18] }], cvx: ['08', '42', '43', '44', '45', '51', '102', '104', '110', '146', '189'], text: /hep(atitis)?\s*-?\s*b\b|hepb|engerix|recombivax/i },
-  // Rotarix (CVX 119) is 2 doses; RotaTeq, or any unknown dose, makes it 3.
-  { id: 'rota', name: 'Rotavirus', doses: [{ age: [2, 2] }, { age: [4, 4] }, { age: [6, 6] }], until: 8, cvx: ['116', '119', '122'], text: /rota/i },
+  // Rotarix is 2 doses; RotaTeq, or any unknown dose, makes it 3.
+  { id: 'rota', name: 'Rotavirus', doses: [{ age: [2, 2] }, { age: [4, 4] }, { age: [6, 6] }], until: 8, cvx: ['116', '119', '122'], text: /rota/i, variants: [{ cvx: ['119'], text: /rotarix/i, doses: [0, 1] }] },
   { id: 'dtap', name: 'DTaP (diphtheria, tetanus, whooping cough)', doses: [{ age: [2, 2] }, { age: [4, 4] }, { age: [6, 6] }, { age: [15, 18] }, { age: [4 * Y, 6 * Y] }], until: 7 * Y, cvx: ['01', '20', '22', '50', '102', '106', '107', '110', '120', '130', '146'], text: /dtap|dtp\b|daptacel|infanrix|pediarix|pentacel|kinrix|quadracel|vaxelis/i },
-  // PedvaxHIB (PRP-OMP, CVX 49) is 3 doses; the others 4.
-  { id: 'hib', name: 'Hib (Haemophilus influenzae type b)', doses: [{ age: [2, 2] }, { age: [4, 4] }, { age: [6, 6] }, { age: [12, 15] }], until: 5 * Y, cvx: ['17', '46', '47', '48', '49', '50', '51', '102', '120', '146', '148'], text: /\bhib\b|haemophilus|acthib|hiberix|pedvaxhib|pentacel|vaxelis/i },
+  // PedvaxHIB (PRP-OMP) is 3 doses, with no 6-month dose; the others 4.
+  { id: 'hib', name: 'Hib (Haemophilus influenzae type b)', doses: [{ age: [2, 2] }, { age: [4, 4] }, { age: [6, 6] }, { age: [12, 15] }], until: 5 * Y, cvx: ['17', '46', '47', '48', '49', '50', '51', '102', '120', '146', '148'], text: /\bhib\b|haemophilus|acthib|hiberix|pedvaxhib|pentacel|vaxelis/i, variants: [{ cvx: ['49'], text: /pedvax/i, doses: [0, 1, 3] }] },
   { id: 'pcv', name: 'Pneumococcal conjugate', doses: [{ age: [2, 2] }, { age: [4, 4] }, { age: [6, 6] }, { age: [12, 15] }], until: 5 * Y, cvx: ['100', '133', '152', '215', '216'], text: /pneumococcal conjugate|\bpcv\d*\b|prevnar|vaxneuvance/i },
   { id: 'ipv', name: 'Polio (IPV)', doses: [{ age: [2, 2] }, { age: [4, 4] }, { age: [6, 18] }, { age: [4 * Y, 6 * Y] }], until: 18 * Y, cvx: ['10', '89', '110', '120', '130', '146'], text: /\bipv\b|polio|ipol|pediarix|pentacel|kinrix|quadracel|vaxelis/i },
   { id: 'mmr', name: 'MMR (measles, mumps, rubella)', doses: [{ age: [12, 15] }, { age: [4 * Y, 6 * Y] }], until: 18 * Y, cvx: ['03', '94'], text: /\bmmr|measles|proquad/i },
@@ -140,12 +151,11 @@ export function scheduleFor(birth: string, records: MedRecord[], today: string):
   const rows: ScheduleRow[] = [];
   for (const a of ANTIGENS) {
     const given = doseDays(records, a);
-    let doses = a.doses;
-    if (a.id === 'rota' && given.length && given.every((g) => cvxOf(g.record) === '119')) doses = doses.slice(0, 2);
-    if (a.id === 'hib' && given.length && given.every((g) => cvxOf(g.record) === '49')) doses = [doses[0]!, doses[1]!, doses[3]!];
-    // Before a first dose, the brand (and so the count) is not known.
-    const totalText = !given.length && a.id === 'rota' ? '2 or 3' : !given.length && a.id === 'hib' ? '3 or 4' : String(doses.length);
-    const row: ScheduleRow = { id: a.id, name: a.name, total: doses.length, totalText, given };
+    const variant = given.length ? a.variants?.find((v) => given.every((g) => carries(g.record, v))) : undefined;
+    const doses = variant ? variant.doses.map((i) => a.doses[i]!) : a.doses;
+    // Before a first dose, the product (and so the count) is not known.
+    const counts = given.length ? [doses.length] : [...new Set([a.doses.length, ...(a.variants ?? []).map((v) => v.doses.length)])].sort((x, y) => x - y);
+    const row: ScheduleRow = { id: a.id, name: a.name, total: doses.length, totalText: counts.join(' or '), given };
     const k = given.length;
     if (k < doses.length) {
       const w = doses[k]!;
@@ -175,6 +185,8 @@ export interface FluSeason {
   /** Doses this season the schedule gives: 2 in a first season under 9, else 1. */
   due: number;
   given: { day: string; record: MedRecord }[];
+  /** Fewer doses this season in these records than the schedule gives. */
+  missing: boolean;
 }
 
 /** This flu season (from July 1) for a child 6 months or older. */
@@ -188,5 +200,19 @@ export function fluSeason(birth: string, records: MedRecord[], today: string): F
   const before = all.filter((g) => g.day < start).length;
   const given = all.filter((g) => g.day >= start);
   const due = age < 9 * Y && before < 2 ? 2 : 1;
-  return { season: `${startYear}–${String(startYear + 1).slice(2)}`, due, given };
+  return { season: `${startYear}–${String(startYear + 1).slice(2)}`, due, given, missing: given.length < due };
+}
+
+export type DigestEntry = { row: ScheduleRow & { next: NonNullable<ScheduleRow['next']> } } | { flu: FluSeason };
+
+/**
+ * What the overview lists: the doses the schedule places by now that these
+ * records do not show (in the table's order), this season's flu dose if
+ * missing, then the doses coming up within COMING_UP_DAYS, soonest first.
+ */
+export function scheduleDigest(rows: ScheduleRow[], flu: FluSeason | undefined): DigestEntry[] {
+  const withNext = rows.filter((r): r is ScheduleRow & { next: NonNullable<ScheduleRow['next']> } => !!r.next);
+  const notRecorded = withNext.filter((r) => r.next.state === 'not_recorded');
+  const comingUp = withNext.filter((r) => r.next.state === 'coming_up').sort((a, b) => a.next.from.localeCompare(b.next.from));
+  return [...notRecorded.map((row) => ({ row })), ...(flu?.missing ? [{ flu }] : []), ...comingUp.map((row) => ({ row }))];
 }

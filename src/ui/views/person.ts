@@ -19,7 +19,7 @@ import {
   type TimelineEntry,
 } from '../../model/records';
 import { activeConditions, currentAllergies, currentMedicines, immunizationsGiven, isOutOfRange, latestResults, newInLatestLoads, recentVisits } from '../../model/overview';
-import { fluSeason, SCHEDULE_SOURCE, scheduleFor, type ScheduleRow } from '../../model/schedule';
+import { COMING_UP_DAYS, FLU, fluSeason, SCHEDULE_SOURCE, scheduleDigest, scheduleFor, type DoseState, type FluSeason, type ScheduleRow } from '../../model/schedule';
 import { search } from '../../model/search';
 import type { Json, MedRecord, Person, PersonIndex, Provenance } from '../../model/types';
 import { resultChart } from '../chart';
@@ -147,11 +147,20 @@ function reactions(r: MedRecord): string | undefined {
   return Array.isArray(r.fields.reaction) ? r.fields.reaction.filter((x): x is string => typeof x === 'string').join(', ') || undefined : undefined;
 }
 
-const SCHEDULE_CHIP: Record<string, [string, 'attention' | 'muted' | 'ok']> = {
+type Chip = [string, 'attention' | 'muted' | 'ok'];
+
+/** Each state of a child's next dose and its chip; a dose months away has none. */
+const SCHEDULE_CHIP: Record<Exclude<DoseState, 'given'>, Chip | null> = {
   not_recorded: ['Not in these records', 'attention'],
   coming_up: ['Coming up', 'muted'],
   past_age: ['Past the schedule’s age', 'muted'],
+  later: null,
 };
+
+function stateChip(state: Exclude<DoseState, 'given'>): HTMLElement | null {
+  const c = SCHEDULE_CHIP[state];
+  return c ? chip(...c) : null;
+}
 
 function scheduleNote(): HTMLElement {
   return h(
@@ -164,46 +173,37 @@ function scheduleNote(): HTMLElement {
 }
 
 /** When the next dose falls: "at 2 months, from Jan 8, 2027". */
-function whenText(r: ScheduleRow): string {
-  const n = r.next!;
-  return n.state === 'coming_up' || n.state === 'later' ? `${n.when}, from ${dateText(n.from)}` : n.when;
+function whenText(next: NonNullable<ScheduleRow['next']>): string {
+  return next.state === 'coming_up' || next.state === 'later' ? `${next.when}, from ${dateText(next.from)}` : next.when;
 }
 
-function nextText(r: ScheduleRow): string {
-  return `Dose ${r.next!.dose} of ${r.totalText}, ${whenText(r)}`;
+function fluRow(flu: FluSeason, brief: boolean): HTMLElement {
+  return row({
+    title: FLU.name,
+    meta: flu.missing ? `${flu.season} season: dose ${flu.given.length + 1} of ${flu.due}` : `${flu.season} season: ${count(flu.given.length, 'dose')} in these records`,
+    aside: flu.missing ? stateChip('not_recorded') : brief ? null : chip('This season’s in these records', 'ok'),
+  });
 }
 
 /**
- * A child's doses against the schedule. `brief` (the overview) lists only
- * what the schedule places by now and is not recorded, then what comes in
- * the next 90 days; the Immunizations section lists every vaccine.
+ * A child's doses against the schedule. `brief` (the overview) lists the
+ * model's digest: what the schedule places by now and is not recorded, then
+ * what comes up soon. The Immunizations section lists every vaccine.
  */
 function scheduleBlock(person: Person, idx: PersonIndex, today: string, brief: boolean): HTMLElement | null {
   if (!person.birth_date) return null;
   const rows = scheduleFor(person.birth_date, idx.records, today);
   if (!rows) return null;
   const flu = fluSeason(person.birth_date, idx.records, today);
-  const fluRow = (): HTMLElement | null => {
-    if (!flu) return null;
-    const missing = flu.given.length < flu.due;
-    return row({
-      title: 'Flu (influenza)',
-      meta: missing ? `${flu.season} season: dose ${flu.given.length + 1} of ${flu.due}` : `${flu.season} season: ${count(flu.given.length, 'dose')} in these records`,
-      aside: missing ? chip(...SCHEDULE_CHIP.not_recorded!) : brief ? null : chip('This season’s in these records', 'ok'),
-    });
-  };
   if (brief) {
-    const due = rows.filter((r) => r.next?.state === 'not_recorded');
-    const soon = rows.filter((r) => r.next?.state === 'coming_up').sort((a, b) => a.next!.from.localeCompare(b.next!.from));
-    const fluMissing = flu && flu.given.length < flu.due;
-    const lines = [...due.map((r) => row({ title: r.name, meta: nextText(r), aside: chip(...SCHEDULE_CHIP.not_recorded!) })), fluMissing ? fluRow() : null, ...soon.map((r) => row({ title: r.name, meta: nextText(r), aside: chip(...SCHEDULE_CHIP.coming_up!) }))].filter(
-      (x): x is HTMLElement => !!x,
+    const lines = scheduleDigest(rows, flu).map((e) =>
+      'flu' in e ? fluRow(e.flu, true) : row({ title: e.row.name, meta: `Dose ${e.row.next.dose} of ${e.row.totalText}, ${whenText(e.row.next)}`, aside: stateChip(e.row.next.state) }),
     );
     return h(
       'div',
       { class: 'schedule' },
       h('h3', { class: 'card-sub' }, 'By the schedule'),
-      lines.length ? lines : h('p', { class: 'small' }, 'Every dose the schedule places by this age is in these records, and none falls in the next 90 days.'),
+      lines.length ? lines : h('p', { class: 'small' }, `Every dose the schedule places by this age is in these records, and none falls in the next ${COMING_UP_DAYS} days.`),
       scheduleNote(),
     );
   }
@@ -214,11 +214,11 @@ function scheduleBlock(person: Person, idx: PersonIndex, today: string, brief: b
       const done = `${r.given.length} of ${r.totalText} ${r.totalText === '1' ? 'dose' : 'doses'} in these records`;
       return row({
         title: r.name,
-        meta: !n ? done : n.state === 'past_age' ? `${done} · the schedule no longer gives it at this age` : `${done} · next ${whenText(r)}`,
-        aside: !n ? chip('All in these records', 'ok') : SCHEDULE_CHIP[n.state] ? chip(...SCHEDULE_CHIP[n.state]!) : null,
+        meta: !n ? done : n.state === 'past_age' ? `${done} · the schedule no longer gives it at this age` : `${done} · next ${whenText(n)}`,
+        aside: n ? stateChip(n.state) : chip('All in these records', 'ok'),
       });
     }),
-    fluRow(),
+    flu ? fluRow(flu, false) : null,
     scheduleNote(),
   );
 }

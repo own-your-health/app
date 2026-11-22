@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addMonths, fluSeason, monthsBetween, scheduleFor, type ScheduleRow } from '../src/model/schedule';
+import { addMonths, fluSeason, monthsBetween, scheduleDigest, scheduleFor, type DigestEntry, type ScheduleRow } from '../src/model/schedule';
 import type { MedRecord } from '../src/model/types';
 import { demo, personNamed } from './demo-data';
 
@@ -8,6 +8,7 @@ const TODAY = '2026-11-22';
 const { household, indexes } = demo();
 const records = (name: string) => indexes.get(personNamed(household, name).id)!.records;
 const byId = (rows: ScheduleRow[]) => Object.fromEntries(rows.map((r) => [r.id, r]));
+const digestIds = (d: DigestEntry[]) => d.map((e) => ('flu' in e ? 'flu' : `${e.row.id}:${e.row.next.state}`));
 
 let n = 0;
 function dose(date: string, code: string | undefined, display: string, status = 'completed'): MedRecord {
@@ -108,6 +109,11 @@ describe('the schedule’s own rules', () => {
     expect(six.dtap!.next?.state).toBe('not_recorded');
   });
 
+  it('reads Rotarix and PedvaxHIB by name when a dose has no CVX code', () => {
+    const rows = byId(scheduleFor('2026-07-01', [dose('2026-09-01', undefined, 'Rotarix oral'), dose('2026-09-01', undefined, 'PedvaxHIB')], TODAY)!);
+    expect([rows.rota!.total, rows.hib!.total]).toEqual([2, 3]);
+  });
+
   it('makes rotavirus 3 doses when any dose was RotaTeq or unknown, and Hib 3 with PedvaxHIB only', () => {
     const mixed = [dose('2026-09-01', '119', 'Rotarix'), dose('2026-11-01', '116', 'RotaTeq')];
     expect(byId(scheduleFor('2026-07-01', mixed, TODAY)!).rota).toMatchObject({ total: 3, next: { dose: 3 } });
@@ -130,10 +136,42 @@ describe('the schedule’s own rules', () => {
   });
 
   it('gives 2 flu doses in a first season under 9, and 1 after two before', () => {
-    expect(fluSeason('2025-01-01', [dose('2026-10-01', '141', 'Influenza')], TODAY)).toMatchObject({ season: '2026–27', due: 2 });
+    expect(fluSeason('2025-01-01', [dose('2026-10-01', '141', 'Influenza')], TODAY)).toMatchObject({ season: '2026–27', due: 2, missing: true });
+    expect(fluSeason('2025-01-01', [dose('2026-09-01', '141', 'Influenza'), dose('2026-10-01', '141', 'Influenza')], TODAY)).toMatchObject({ due: 2, missing: false });
     const twice = [dose('2024-10-01', '141', 'Influenza'), dose('2024-11-01', '141', 'Influenza')];
     expect(fluSeason('2023-01-01', twice, TODAY)).toMatchObject({ due: 1, given: [] });
     expect(fluSeason('2010-01-01', [], TODAY)).toMatchObject({ due: 1 });
     expect(fluSeason('2023-01-01', twice, '2026-06-30')).toMatchObject({ season: '2025–26' });
   });
 });
+
+describe('the overview’s digest', () => {
+  it('lists a newborn’s coming doses, soonest first, then in the table’s order', () => {
+    const rows = scheduleFor('2026-11-08', records('Jamie Example'), TODAY)!;
+    expect(digestIds(scheduleDigest(rows, undefined))).toEqual(['hepb:coming_up', 'rota:coming_up', 'dtap:coming_up', 'hib:coming_up', 'pcv:coming_up', 'ipv:coming_up']);
+  });
+
+  it('lists only the flu dose for a child with the full series', () => {
+    const rows = scheduleFor('2018-01-01', records('Alex Example'), TODAY)!;
+    expect(digestIds(scheduleDigest(rows, fluSeason('2018-01-01', records('Alex Example'), TODAY)))).toEqual(['flu']);
+  });
+
+  it('puts doses not in the records first, then the flu, then what is coming up', () => {
+    const records = [dose('2026-04-01', '08', 'Hep B')];
+    const rows = scheduleFor('2026-04-01', records, TODAY)!;
+    expect(digestIds(scheduleDigest(rows, fluSeason('2026-04-01', records, TODAY)))).toEqual([
+      'hepb:not_recorded',
+      'rota:not_recorded',
+      'dtap:not_recorded',
+      'hib:not_recorded',
+      'pcv:not_recorded',
+      'ipv:not_recorded',
+      'flu',
+    ]);
+  });
+
+  it('is empty when nothing is missing and nothing is near', () => {
+    expect(scheduleDigest(scheduleFor('2018-01-01', records('Alex Example'), '2026-05-01')!, undefined)).toEqual([]);
+  });
+});
+
