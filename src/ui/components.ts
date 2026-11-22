@@ -2,6 +2,7 @@
 
 import type { PendingRequest } from '../data/store';
 import type { Store } from '../data/store';
+import { requestWait } from '../model/sources';
 import type { RequestScope } from '../model/types';
 import { h, icon, type Child } from './dom';
 import { relative } from './format';
@@ -115,13 +116,22 @@ export function refreshControl(ctx: Ctx, scope: RequestScope, what: string, opts
   const store = ctx.store;
   const held = store.pendingFor(scope);
   if (held) {
-    const mac = store.mac(ctx.now());
-    const late = mac.kind === 'online' && ctx.now().getTime() - Date.parse(held.request.requested_at) > (mac.passEverySecs + 60) * 1000;
+    const now = ctx.now();
+    const wait = requestWait(held.request, store.sources(), store.mac(now), now);
+    const asked = `Asked ${relative(held.request.requested_at, now)}`;
+    const text =
+      wait.kind === 'loading'
+        ? `${asked}; the Mac is loading ${wait.source} for it now`
+        : wait.kind === 'busy'
+          ? `${asked}; the Mac is loading ${wait.source} and takes this on its next pass`
+          : wait.kind === 'late'
+            ? `${asked}; the Mac has not taken it yet`
+            : `${asked}; waiting for the Mac`;
     return h(
       'div',
       { class: 'refresh-held' },
-      h('span', { class: late ? 'attention small' : 'muted small' }, late ? `Asked ${relative(held.request.requested_at, ctx.now())}; the Mac has not taken it yet` : `Asked ${relative(held.request.requested_at, ctx.now())}; waiting for the Mac`),
-      held.cancellable && held.request.id === held.request.id && sameScopeText(held, scope)
+      h('span', { class: wait.kind === 'late' ? 'attention small' : 'muted small' }, text),
+      held.cancellable && sameScopeText(held, scope)
         ? button(
             'Cancel',
             () => {

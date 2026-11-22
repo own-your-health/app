@@ -54,6 +54,7 @@ async function handle(folder: DemoFolder, file: string, onChange: () => void): P
     s.last_attempt = { attempt: attemptId(), started_at: iso(pickedUp), finished_at: null, trigger: 'request', requests: [req.id], outcome: 'running', exit_code: null, error: null, import: null };
   }
   status.refresher.last_pass_at = iso(pickedUp);
+  status.updated_at = iso(pickedUp);
   folder.writeAsMac('_status/status.json', JSON.stringify(status, null, 2));
   onChange();
   await new Promise((r) => setTimeout(r, toRun.length ? RUN_MS : 0));
