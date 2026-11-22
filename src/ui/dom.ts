@@ -40,13 +40,12 @@ function setAttrs(el: Element, attrs: Attrs | null | undefined): void {
   }
 }
 
-function append(el: Node, children: Child[]): void {
+// ParentNode.append inserts each string as a Text node, never as markup.
+function append(el: ParentNode, children: Child[]): void {
   for (const c of children) {
     if (c === null || c === undefined || c === false) continue;
     if (Array.isArray(c)) append(el, c);
-    // A single typeof test, which CodeQL recognises as keeping strings out.
-    else if (typeof c === 'object') el.appendChild(c);
-    else el.appendChild(document.createTextNode(String(c)));
+    else el.append(typeof c === 'number' ? String(c) : c);
   }
 }
 
