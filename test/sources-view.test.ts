@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ANSWER_SHOWN_MS, ATTENTION, HEALTH_ORDER, latestAnswered, needsAttention, needsPerson, sourceViews, type AnsweredRequest } from '../src/model/sources';
+import { ANSWER_SHOWN_MS, ATTENTION, HEALTH_ORDER, isRecentAnswer, latestAnswered, needsAttention, needsPerson, sourceViews, type AnsweredRequest } from '../src/model/sources';
 import type { RefreshRequest } from '../src/model/types';
 import { requestAnswer } from '../src/ui/views/sources';
 import { demo, sourceOf } from './demo-data';
@@ -63,8 +63,12 @@ describe('which answer home shows', () => {
 
   it('skips a request not yet finished, and a clock that runs ahead', () => {
     const open: RefreshRequest = { ...answered({ all: true }, ['ok']), handled: { outcome: 'running', picked_up_at: at(1000) } };
+    const ahead = answered({ all: true }, ['ok'], undefined, at(-60_000));
     expect(latestAnswered([open], NOW)).toBeUndefined();
-    expect(latestAnswered([answered({ all: true }, ['ok'], undefined, at(-60_000))], NOW)).toBeUndefined();
+    expect(latestAnswered([ahead], NOW)).toBeUndefined();
+    // The source rows ask the same question.
+    expect([open, ahead].map((r) => isRecentAnswer(r, NOW))).toEqual([false, false]);
+    expect(isRecentAnswer(answered({ all: true }, ['ok'], undefined, at(1000)), NOW)).toBe(true);
   });
 });
 

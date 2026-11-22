@@ -1,7 +1,7 @@
 // Sources: each provider medrec loads from, its sign-in, its last load and
 // attempt, and what the Mac does next. Home shows only what needs a person.
 
-import { ANSWER_SHOWN_MS, headline, needsAttention, type AnsweredRequest, type MacState, type SourceView } from '../../model/sources';
+import { headline, isRecentAnswer, needsAttention, type AnsweredRequest, type MacState, type SourceView } from '../../model/sources';
 import { h, type Child } from '../dom';
 import { card, chip, command, empty, refreshControl, row, type Ctx, type Tone } from '../components';
 import { dateTime, duration, relative } from '../format';
@@ -113,7 +113,7 @@ export function sourceDetail(ctx: Ctx, v: SourceView, brief = false): Child[] {
     );
   }
   const handled = v.lastHandled?.handled;
-  const recent = handled?.finished_at ? now.getTime() - Date.parse(handled.finished_at) < ANSWER_SHOWN_MS : false;
+  const recent = v.lastHandled ? isRecentAnswer(v.lastHandled, now) : false;
   if (handled && !v.pending.length && v.lastHandled && (!brief || recent)) {
     const mine = handled.sources?.find((s) => s.source === v.source.id);
     const when = relative(handled.finished_at ?? v.lastHandled.requested_at, now);
