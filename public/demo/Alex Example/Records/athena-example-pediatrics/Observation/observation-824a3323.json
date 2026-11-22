@@ -1,6 +1,6 @@
 {
   "resourceType": "Observation",
-  "id": "observation-df548a9d",
+  "id": "observation-824a3323",
   "meta": {
     "lastUpdated": "2026-11-21T08:00:00Z"
   },
@@ -15,8 +15,8 @@
     ]
   },
   "valueQuantity": {
-    "value": 25.1,
+    "value": 22.6,
     "unit": "kg"
   },
-  "effectiveDateTime": "2026-01-12"
+  "effectiveDateTime": "2025-01-13"
 }

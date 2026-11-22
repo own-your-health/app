@@ -1,8 +1,8 @@
 {
   "resourceType": "Observation",
-  "id": "observation-6717678e",
+  "id": "observation-d978a95a",
   "meta": {
-    "lastUpdated": "2026-11-13T08:00:00Z"
+    "lastUpdated": "2026-11-22T08:00:00Z"
   },
   "status": "final",
   "category": [
@@ -20,27 +20,27 @@
     "coding": [
       {
         "system": "http://loinc.org",
-        "code": "3016-3",
-        "display": "TSH"
+        "code": "2823-3",
+        "display": "Potassium"
       }
     ],
-    "text": "TSH"
+    "text": "Potassium"
   },
   "valueQuantity": {
-    "value": 2.1,
-    "unit": "mIU/L",
+    "value": 5.4,
+    "unit": "mmol/L",
     "system": "http://unitsofmeasure.org",
-    "code": "mIU/L"
+    "code": "mmol/L"
   },
   "referenceRange": [
     {
-      "text": "0.4-4.0 mIU/L"
+      "text": "3.5-5.1 mmol/L"
     }
   ],
   "interpretation": [
     {
-      "text": "Normal"
+      "text": "High"
     }
   ],
-  "effectiveDateTime": "2026-07-09"
+  "effectiveDateTime": "2026-11-18"
 }

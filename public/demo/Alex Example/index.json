@@ -4,11 +4,11 @@
   "rev": 9,
   "documents": [
     {
-      "id": "d_2lnzyykwmjsv6tr5dflk",
+      "id": "d_jiqril7vuigu2gfo5w2p",
       "path": "Alex Example/Documents/2025/2025-10-20_immunization_record_example_pediatrics_immunizations.pdf",
-      "sha256": "65e4937643f3df44eb2d62ff0551ac42668bd1066ba324a23ac2887aa97eafe6",
-      "md5": "ca6e49d72e575c42de4cf5e5adbb9e1c",
-      "size": 212760,
+      "sha256": "8ea0099ed2e43f6196936a4290cec44f14bdfd8399d310aada4c898ad633fe9d",
+      "md5": "08cc05b80e21bcc2be8fb0af57de1a67",
+      "size": 162850,
       "media_type": "application/pdf",
       "pages": 1,
       "original_name": "immunizations.pdf",
@@ -39,19 +39,19 @@
         "method": "fhir-api",
         "source_resource": {
           "type": "Binary",
-          "id": "binary-2f5b78bd",
+          "id": "binary-28314817",
           "last_updated": "2026-11-21T08:00:00Z"
         },
         "fetched_at": "2026-11-21T18:00:00Z",
         "filed_at": "2026-11-21T18:00:00Z",
-        "raw_path": "Alex Example/Records/athena-example-pediatrics/Binary/binary-2f5b78bd.json",
+        "raw_path": "Alex Example/Records/athena-example-pediatrics/Binary/binary-28314817.json",
         "filed_by": "medrec 0.2.11"
       }
     }
   ],
   "records": [
     {
-      "id": "r_j756aol3vbixzgzfjybd",
+      "id": "r_67kbrv463vkur72hchmx",
       "kind": "result",
       "key": "result|http://loinc.org|29463-7|2024-01-08",
       "date": "2024-01-08",
@@ -83,18 +83,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-6e67dda4",
+            "id": "observation-f9c1b48a",
             "last_updated": "2026-11-21T08:00:00Z"
           },
           "fetched_at": "2026-11-21T17:59:00Z",
           "filed_at": "2026-11-21T17:59:00Z",
-          "raw_path": "Alex Example/Records/athena-example-pediatrics/Observation/observation-6e67dda4.json",
+          "raw_path": "Alex Example/Records/athena-example-pediatrics/Observation/observation-f9c1b48a.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_feu7pbfwcmcei7w45twd",
+      "id": "r_35vywrysx5zuezwtnkih",
       "kind": "result",
       "key": "result|http://loinc.org|29463-7|2025-01-13",
       "date": "2025-01-13",
@@ -126,18 +126,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-6b323417",
+            "id": "observation-824a3323",
             "last_updated": "2026-11-21T08:00:00Z"
           },
           "fetched_at": "2026-11-21T17:59:00Z",
           "filed_at": "2026-11-21T17:59:00Z",
-          "raw_path": "Alex Example/Records/athena-example-pediatrics/Observation/observation-6b323417.json",
+          "raw_path": "Alex Example/Records/athena-example-pediatrics/Observation/observation-824a3323.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_yki56j3vx52u2qnkpd4b",
+      "id": "r_6thaueazygaycxabtakr",
       "kind": "result",
       "key": "result|http://loinc.org|29463-7|2026-01-12",
       "date": "2026-01-12",
@@ -169,18 +169,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-df548a9d",
+            "id": "observation-8bf77091",
             "last_updated": "2026-11-21T08:00:00Z"
           },
           "fetched_at": "2026-11-21T17:59:00Z",
           "filed_at": "2026-11-21T17:59:00Z",
-          "raw_path": "Alex Example/Records/athena-example-pediatrics/Observation/observation-df548a9d.json",
+          "raw_path": "Alex Example/Records/athena-example-pediatrics/Observation/observation-8bf77091.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_bw3kvi6dmg664qsv4aax",
+      "id": "r_qtw5nd72lnzyykwmjsv6",
       "kind": "immunization",
       "key": "immunization|http://hl7.org/fhir/sid/cvx|20|2022-01-10",
       "date": "2022-01-10",
@@ -209,18 +209,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Immunization",
-            "id": "immunization-4e6ea5da",
+            "id": "immunization-7c37c006",
             "last_updated": "2026-11-21T08:00:00Z"
           },
           "fetched_at": "2026-11-21T17:59:00Z",
           "filed_at": "2026-11-21T17:59:00Z",
-          "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-4e6ea5da.json",
+          "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-7c37c006.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_ft3whe6hgi2t2v5ngbz5",
+      "id": "r_pflxyl5wfoujthwud7t5",
       "kind": "immunization",
       "key": "immunization|http://hl7.org/fhir/sid/cvx|10|2022-01-10",
       "date": "2022-01-10",
@@ -249,18 +249,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Immunization",
-            "id": "immunization-64d51e4f",
+            "id": "immunization-31d35ba2",
             "last_updated": "2026-11-21T08:00:00Z"
           },
           "fetched_at": "2026-11-21T17:59:00Z",
           "filed_at": "2026-11-21T17:59:00Z",
-          "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-64d51e4f.json",
+          "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-31d35ba2.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_ohwztbkjgpw7vzksnucc",
+      "id": "r_sppavvrkmecwwi35ragw",
       "kind": "immunization",
       "key": "immunization|http://hl7.org/fhir/sid/cvx|03|2022-01-10",
       "date": "2022-01-10",
@@ -289,18 +289,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Immunization",
-            "id": "immunization-b1652837",
+            "id": "immunization-f44eb2d6",
             "last_updated": "2026-11-21T08:00:00Z"
           },
           "fetched_at": "2026-11-21T17:59:00Z",
           "filed_at": "2026-11-21T17:59:00Z",
-          "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-b1652837.json",
+          "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-f44eb2d6.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_jqbmqpjmb3ey267kbrv4",
+      "id": "r_2msiix2kzx62p6w42woe",
       "kind": "immunization",
       "key": "immunization|http://hl7.org/fhir/sid/cvx|141|2025-10-20",
       "date": "2025-10-20",
@@ -329,18 +329,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Immunization",
-            "id": "immunization-099ae32e",
+            "id": "immunization-ba324a23",
             "last_updated": "2026-11-21T08:00:00Z"
           },
           "fetched_at": "2026-11-21T17:59:00Z",
           "filed_at": "2026-11-21T17:59:00Z",
-          "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-099ae32e.json",
+          "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-ba324a23.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_hchmxysuktdst35vywry",
+      "id": "r_4esnoempvov253lz6rmy",
       "kind": "encounter",
       "key": "encounter|well child visit, 6 years|2024-01-08",
       "date": "2024-01-08",
@@ -365,18 +365,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Encounter",
-            "id": "encounter-eb5a41fa",
+            "id": "encounter-9d72e575",
             "last_updated": "2026-11-21T08:00:00Z"
           },
           "fetched_at": "2026-11-21T17:59:00Z",
           "filed_at": "2026-11-21T17:59:00Z",
-          "raw_path": "Alex Example/Records/athena-example-pediatrics/Encounter/encounter-eb5a41fa.json",
+          "raw_path": "Alex Example/Records/athena-example-pediatrics/Encounter/encounter-9d72e575.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_tnkihy37hhqjb6thauea",
+      "id": "r_yr2qetkdjgp4c5yvisq3",
       "kind": "encounter",
       "key": "encounter|well child visit, 7 years|2025-01-13",
       "date": "2025-01-13",
@@ -401,18 +401,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Encounter",
-            "id": "encounter-27d94496",
+            "id": "encounter-13af14de",
             "last_updated": "2026-11-21T08:00:00Z"
           },
           "fetched_at": "2026-11-21T17:59:00Z",
           "filed_at": "2026-11-21T17:59:00Z",
-          "raw_path": "Alex Example/Records/athena-example-pediatrics/Encounter/encounter-27d94496.json",
+          "raw_path": "Alex Example/Records/athena-example-pediatrics/Encounter/encounter-13af14de.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_btakrhmtxmqqwqtw5nd7",
+      "id": "r_bnskgio225qk2qwpgmhy",
       "kind": "encounter",
       "key": "encounter|well child visit, 8 years|2026-01-12",
       "date": "2026-01-12",
@@ -437,12 +437,131 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Encounter",
-            "id": "encounter-98608270",
+            "id": "encounter-4f8bd1dd",
             "last_updated": "2026-11-21T08:00:00Z"
           },
           "fetched_at": "2026-11-21T17:59:00Z",
           "filed_at": "2026-11-21T17:59:00Z",
-          "raw_path": "Alex Example/Records/athena-example-pediatrics/Encounter/encounter-98608270.json",
+          "raw_path": "Alex Example/Records/athena-example-pediatrics/Encounter/encounter-4f8bd1dd.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_yshulxlnomh2dajjqxej",
+      "kind": "encounter",
+      "key": "encounter|sick visit|2026-11-20",
+      "date": "2026-11-20",
+      "display": "Sick visit",
+      "status": "finished",
+      "fields": {
+        "when": "2026-11-20",
+        "class": "ambulatory",
+        "practitioner": "Dr. Morgan Placeholder",
+        "location": "Example Pediatrics",
+        "reason": "Ear pain"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "athena",
+            "cli_version": "0.7.1",
+            "organization_id": "example-pediatrics",
+            "fhir_base": "https://api.example.net/fhir/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Encounter",
+            "id": "encounter-63158c75",
+            "last_updated": "2026-11-21T08:00:00Z"
+          },
+          "fetched_at": "2026-11-21T18:00:00Z",
+          "filed_at": "2026-11-21T18:00:00Z",
+          "raw_path": "Alex Example/Records/athena-example-pediatrics/Encounter/encounter-63158c75.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_4gbdxmmpbj3lgiwq36ur",
+      "kind": "condition",
+      "key": "condition|http://hl7.org/fhir/sid/icd-10-cm|H66.90|2026-11-20",
+      "date": "2026-11-20",
+      "code": {
+        "system": "http://hl7.org/fhir/sid/icd-10-cm",
+        "code": "H66.90",
+        "display": "Otitis media, unspecified, unspecified ear"
+      },
+      "display": "Ear infection",
+      "status": "active",
+      "fields": {
+        "when": "2026-11-20",
+        "verification_status": "confirmed",
+        "category": "Encounter diagnosis"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "athena",
+            "cli_version": "0.7.1",
+            "organization_id": "example-pediatrics",
+            "fhir_base": "https://api.example.net/fhir/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Condition",
+            "id": "condition-607f4aea",
+            "last_updated": "2026-11-21T08:00:00Z"
+          },
+          "fetched_at": "2026-11-21T18:00:00Z",
+          "filed_at": "2026-11-21T18:00:00Z",
+          "raw_path": "Alex Example/Records/athena-example-pediatrics/Condition/condition-607f4aea.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_d52eanz4hh6jhhd7dfk7",
+      "kind": "medication",
+      "key": "medication|http://www.nlm.nih.gov/research/umls/rxnorm|308189|2026-11-20",
+      "date": "2026-11-20",
+      "code": {
+        "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+        "code": "308189",
+        "display": "amoxicillin 400 MG in 5 mL Oral Suspension"
+      },
+      "display": "Amoxicillin 400 mg/5 mL suspension",
+      "status": "active",
+      "fields": {
+        "when": "2026-11-20",
+        "dosage": "Take 7 mL by mouth twice a day for 10 days",
+        "prescriber": "Dr. Morgan Placeholder",
+        "intent": "order",
+        "source": "request"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "athena",
+            "cli_version": "0.7.1",
+            "organization_id": "example-pediatrics",
+            "fhir_base": "https://api.example.net/fhir/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "MedicationRequest",
+            "id": "medicationrequest-8f0b101e",
+            "last_updated": "2026-11-21T08:00:00Z"
+          },
+          "fetched_at": "2026-11-21T18:00:00Z",
+          "filed_at": "2026-11-21T18:00:00Z",
+          "raw_path": "Alex Example/Records/athena-example-pediatrics/MedicationRequest/medicationrequest-8f0b101e.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
@@ -451,10 +570,10 @@
   "studies": [],
   "imports": [
     {
-      "id": "i_bd2pbun6yr2qetkdjgp4",
+      "id": "i_wjzl5nta6exqt2f7e6xz",
       "source_dir": "Alex Example/Records/athena-example-pediatrics",
-      "stream_sha256": "2d85820b4f8bd1dd1d2a68eaad0aa06f6c7863158c758274b7bdec7a30990749",
-      "stream_bytes": 737894,
+      "stream_sha256": "b1f3165e5aa0f5bf57e97e9fa33ef4e0c9f1bd0ebeb498701a254edd707500c1",
+      "stream_bytes": 860624,
       "cli": "athena",
       "cli_version": "0.6.1",
       "organization": "example-pediatrics",

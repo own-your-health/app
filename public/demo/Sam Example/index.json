@@ -4,11 +4,11 @@
   "rev": 9,
   "documents": [
     {
-      "id": "d_dst7bunrcqbudcvyz4cm",
+      "id": "d_aqui6ocgxpqrse4ifcts",
       "path": "Sam Example/Claims/2026/2026-07-09_bill_example_billing_statement.pdf",
-      "sha256": "edcf5df3928de3cabf19235972c7bed213dedfd86d0d82840a350baa5da4d80d",
-      "md5": "2973d5fc29e0449144eacfa72b2d65fe",
-      "size": 145439,
+      "sha256": "d0fe67ad701aabbc8c38adb091b4f936167ca399ed694cd95254588e09ee1fa9",
+      "md5": "409b9a5799ec5a835cc8e5a7f2a11e47",
+      "size": 84351,
       "media_type": "application/pdf",
       "pages": 1,
       "original_name": "statement.pdf",
@@ -50,7 +50,7 @@
   ],
   "records": [
     {
-      "id": "r_akv465h26i2maw4tbaad",
+      "id": "r_fhqohrkv57jncdst7bun",
       "kind": "result",
       "key": "result|http://loinc.org|62292-8|2026-04-02",
       "date": "2026-04-02",
@@ -84,18 +84,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-7311e93d",
+            "id": "observation-04fb0743",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T14:59:00Z",
           "filed_at": "2026-11-22T14:59:00Z",
-          "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-7311e93d.json",
+          "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-04fb0743.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_bo622b2qan6brldjgjwe",
+      "id": "r_yz4cmwcgdctiko5mpv57",
       "kind": "result",
       "key": "result|http://loinc.org|62292-8|2026-07-09",
       "date": "2026-07-09",
@@ -129,18 +129,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-4d9c03fe",
+            "id": "observation-12014325",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T14:59:00Z",
           "filed_at": "2026-11-22T14:59:00Z",
-          "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-4d9c03fe.json",
+          "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-12014325.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_fs6r7bvyabuvrmfyezz7",
+      "id": "r_237rjcdfzhsmh365crtn",
       "kind": "result",
       "key": "result|http://loinc.org|62292-8|2026-10-12",
       "date": "2026-10-12",
@@ -174,18 +174,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-02b1b6a4",
+            "id": "observation-3928de3c",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T14:59:00Z",
           "filed_at": "2026-11-22T14:59:00Z",
-          "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-02b1b6a4.json",
+          "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-3928de3c.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_hq4uq52blkxbbhgqyln4",
+      "id": "r_5ysyeqktvq322v52u5ia",
       "kind": "result",
       "key": "result|http://loinc.org|3016-3|2026-07-09",
       "date": "2026-07-09",
@@ -218,18 +218,18 @@
           "method": "portal",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-6717678e",
+            "id": "observation-edfd86d0",
             "last_updated": "2026-11-13T08:00:00Z"
           },
           "fetched_at": "2026-11-13T19:59:00Z",
           "filed_at": "2026-11-13T19:59:00Z",
-          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-6717678e.json",
+          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-edfd86d0.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_pgotfnme2euhvqa67jnz",
+      "id": "r_4sj6aeezbuu6k4p2xs3s",
       "kind": "medication",
       "key": "medication|vitamin d3 2,000 unit capsule|2026-04-03",
       "date": "2026-04-03",
@@ -254,18 +254,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "MedicationRequest",
-            "id": "medicationrequest-1ad71fa3",
+            "id": "medicationrequest-d2973d5f",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T14:59:00Z",
           "filed_at": "2026-11-22T14:59:00Z",
-          "raw_path": "Sam Example/Records/mychart-example-health/MedicationRequest/medicationrequest-1ad71fa3.json",
+          "raw_path": "Sam Example/Records/mychart-example-health/MedicationRequest/medicationrequest-d2973d5f.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_euhgzicnhcmc2rxpwwhb",
+      "id": "r_c3rdrrtts7ve62h6aeik",
       "kind": "encounter",
       "key": "encounter|sports medicine visit|2026-05-20",
       "date": "2026-05-20",
@@ -291,12 +291,12 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Encounter",
-            "id": "encounter-e4a54c75",
+            "id": "encounter-d65fef45",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T14:59:00Z",
           "filed_at": "2026-11-22T14:59:00Z",
-          "raw_path": "Sam Example/Records/mychart-example-health/Encounter/encounter-e4a54c75.json",
+          "raw_path": "Sam Example/Records/mychart-example-health/Encounter/encounter-d65fef45.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
@@ -304,8 +304,8 @@
   ],
   "studies": [
     {
-      "id": "m_q4ymlputw6nw2aup3qhu",
-      "study_uid": "2.25.2993353683913594821",
+      "id": "m_tbkmxbxfmhzeiaz4ooaf",
+      "study_uid": "2.25.7861997554042331297",
       "path": "Sam Example/Imaging/2026-05-20_xr_ankle_example_imaging/",
       "date": "2026-05-20",
       "modalities": [
@@ -314,33 +314,33 @@
       "body_part": "ANKLE",
       "description": "XR ankle, 3 views",
       "facility": "Example Imaging",
-      "accession": "ACC70E71A",
+      "accession": "ACCBA05EB",
       "series": [
         {
-          "uid": "2.25.2338413493",
+          "uid": "2.25.3972452620",
           "number": 1,
           "modality": "DX",
           "description": "AP",
           "instances": {
-            "2.25.1494879261": "S001/00001.dcm"
+            "2.25.1080732572": "S001/00001.dcm"
           }
         },
         {
-          "uid": "2.25.1067858239",
+          "uid": "2.25.3571159796",
           "number": 2,
           "modality": "DX",
           "description": "Lateral",
           "instances": {
-            "2.25.269091913": "S002/00001.dcm"
+            "2.25.1210482331": "S002/00001.dcm"
           }
         },
         {
-          "uid": "2.25.3144919565",
+          "uid": "2.25.1510108067",
           "number": 3,
           "modality": "DX",
           "description": "Oblique",
           "instances": {
-            "2.25.4055218306": "S003/00001.dcm"
+            "2.25.3900020976": "S003/00001.dcm"
           }
         }
       ],
@@ -361,10 +361,10 @@
   ],
   "imports": [
     {
-      "id": "i_efc3rdrrtts7ve62h6ae",
+      "id": "i_c2pdd5c5cw6wx5nkej75",
       "source_dir": "Sam Example/Records/mychart-example-health",
-      "stream_sha256": "8a31ac7175c794809cee05b1ba05ebcc4b300048ee267f0124c852328e38b1e0",
-      "stream_bytes": 706621,
+      "stream_sha256": "e0ebb5187969598136b323417544ff1562c248f6cd363df548a9d8a8de9b57da",
+      "stream_bytes": 728628,
       "cli": "mychart",
       "cli_version": "0.7.1",
       "organization": "example-health",
@@ -384,10 +384,10 @@
       "documents_added": 0
     },
     {
-      "id": "i_apowx2nxar2kllmymdy2",
+      "id": "i_2qnkpd4bu6g62vnkbw3k",
       "source_dir": "Sam Example/Records/labcorp-example-lab",
-      "stream_sha256": "db091b4f936167ca399ed694cd95254588e09ee1fa9409b9a5799ec5a835cc8e",
-      "stream_bytes": 285413,
+      "stream_sha256": "58e3c6eec025c00764d51e4f53b674e768a3a5dd619db1652837e76931a96f6f",
+      "stream_bytes": 637141,
       "cli": "labcorp",
       "cli_version": "0.2.1",
       "organization": "example-lab",

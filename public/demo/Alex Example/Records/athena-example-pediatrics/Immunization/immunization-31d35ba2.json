@@ -1,6 +1,6 @@
 {
   "resourceType": "Immunization",
-  "id": "immunization-4e6ea5da",
+  "id": "immunization-31d35ba2",
   "meta": {
     "lastUpdated": "2026-11-21T08:00:00Z"
   },
@@ -9,10 +9,10 @@
     "coding": [
       {
         "system": "http://hl7.org/fhir/sid/cvx",
-        "code": "20"
+        "code": "10"
       }
     ],
-    "text": "DTaP"
+    "text": "IPV"
   },
   "occurrenceDateTime": "2022-01-10"
 }

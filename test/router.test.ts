@@ -11,8 +11,8 @@ describe('routes', () => {
     { name: 'source', source: 's_aaaaaaaaaaaaaaaaaaaa' },
     { name: 'huishouden', hh: 'hh-demo-robin' },
     { name: 'item', person: P, id: 'r_aaaaaaaaaaaaaaaaaaaa' },
-    { name: 'person', person: P, section: 'timeline' },
-    ...SECTIONS.filter((s) => s !== 'timeline').map((section): Route => ({ name: 'person', person: P, section })),
+    { name: 'person', person: P, section: 'overview' },
+    ...SECTIONS.filter((s) => s !== 'overview').map((section): Route => ({ name: 'person', person: P, section })),
     { name: 'person', person: P, section: 'results', sub: 'http://loinc.org|13457-7' },
     { name: 'person', person: P, section: 'search', query: 'ldl & a1c' },
   ];
@@ -22,7 +22,9 @@ describe('routes', () => {
   });
 
   it('are stable for links from outside', () => {
-    expect(href({ name: 'person', person: P, section: 'timeline' })).toBe(`#/p/${P}`);
+    expect(href({ name: 'person', person: P, section: 'overview' })).toBe(`#/p/${P}`);
+    expect(href({ name: 'person', person: P, section: 'timeline' })).toBe(`#/p/${P}/timeline`);
+    expect(parseRoute(`#/p/${P}/overview`)).toEqual({ name: 'person', person: P, section: 'overview' });
     expect(href({ name: 'item', person: P, id: 'd_aaaaaaaaaaaaaaaaaaaa' })).toBe(`#/p/${P}/r/d_aaaaaaaaaaaaaaaaaaaa`);
     expect(href({ name: 'huishouden', hh: 'abc' })).toBe('#/hh/abc');
     expect(href({ name: 'sources' })).toBe('#/sources');

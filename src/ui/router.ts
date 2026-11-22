@@ -4,6 +4,7 @@
 // nothing about the person or the record.
 
 export const SECTIONS = [
+  'overview',
   'timeline',
   'results',
   'medicines',
@@ -18,6 +19,7 @@ export const SECTIONS = [
 export type Section = (typeof SECTIONS)[number];
 
 export const SECTION_LABELS: Record<Section, string> = {
+  overview: 'Overview',
   timeline: 'Timeline',
   results: 'Results',
   medicines: 'Medicines',
@@ -60,7 +62,7 @@ export function parseRoute(hash: string): Route {
   if (head === 's' && a && ID.test(a) && parts.length === 2) return { name: 'source', source: a };
   if (head === 'hh' && a && ID.test(a) && parts.length === 2) return { name: 'huishouden', hh: a };
   if (head === 'p' && a && ID.test(a)) {
-    if (!b) return { name: 'person', person: a, section: 'timeline' };
+    if (!b) return { name: 'person', person: a, section: 'overview' };
     if (b === 'r' && c && ID.test(c) && parts.length === 4) return { name: 'item', person: a, id: c };
     if ((SECTIONS as readonly string[]).includes(b)) {
       const section = b as Section;
@@ -88,7 +90,7 @@ export function href(route: Route): string {
       return `#/p/${encodeURIComponent(route.person)}/r/${encodeURIComponent(route.id)}`;
     case 'person': {
       let h = `#/p/${encodeURIComponent(route.person)}`;
-      if (route.section !== 'timeline' || route.sub || route.query) h += `/${route.section}`;
+      if (route.section !== 'overview' || route.sub || route.query) h += `/${route.section}`;
       if (route.sub) h += `/${encodeURIComponent(route.sub)}`;
       if (route.query) h += `?${new URLSearchParams({ q: route.query }).toString()}`;
       return h;

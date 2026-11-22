@@ -171,6 +171,51 @@
         "classified_by": "medrec intake",
         "filed_by": "medrec 0.2.11"
       }
+    },
+    {
+      "id": "d_2isfdta43ydnr77zowo3",
+      "path": "Robin Example/Documents/2026/2026-11-18_lab_report_example_health_basic_metabolic_panel.pdf",
+      "sha256": "3b17a5d3dc0887f504b26cb60d6bd5d7f4ef36425af65f930d7185e57e7977a1",
+      "md5": "b8df6b573c7549999e94433fe1ac5009",
+      "size": 43205,
+      "media_type": "application/pdf",
+      "pages": 1,
+      "original_name": "basic_metabolic_panel.pdf",
+      "title": "Basic metabolic panel",
+      "doc_type": "lab_report",
+      "date": "2026-11-18",
+      "organization": "Example Health",
+      "filed_at": "2026-11-22T17:00:00Z",
+      "origin": {
+        "kind": "fhir",
+        "name": "basic_metabolic_panel.pdf",
+        "action": "copied"
+      },
+      "text": {
+        "chars": 73,
+        "engines": [
+          "pdftotext 26.10.0"
+        ]
+      },
+      "provenance": {
+        "source": {
+          "kind": "fhir",
+          "cli": "mychart",
+          "cli_version": "0.7.1",
+          "organization_id": "example-health",
+          "fhir_base": "https://fhir.example.org/r4"
+        },
+        "method": "fhir-api",
+        "source_resource": {
+          "type": "Binary",
+          "id": "binary-a292cc44",
+          "last_updated": "2026-11-22T08:00:00Z"
+        },
+        "fetched_at": "2026-11-22T17:00:00Z",
+        "filed_at": "2026-11-22T17:00:00Z",
+        "raw_path": "Robin Example/Records/mychart-example-health/Binary/binary-a292cc44.json",
+        "filed_by": "medrec 0.2.11"
+      }
     }
   ],
   "records": [
@@ -1418,15 +1463,107 @@
           "filed_by": "medrec 0.2.11"
         }
       ]
+    },
+    {
+      "id": "r_xdfry6rostqbnjjqyrmq",
+      "kind": "result",
+      "key": "result|http://loinc.org|2823-3|2026-11-18",
+      "date": "2026-11-18",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "2823-3",
+        "display": "Potassium [Moles/volume] in Serum or Plasma"
+      },
+      "display": "Potassium",
+      "status": "final",
+      "fields": {
+        "when": "2026-11-18",
+        "value": {
+          "value": 5.4,
+          "unit": "mmol/L"
+        },
+        "reference_range": "3.5-5.1 mmol/L",
+        "interpretation": "High",
+        "category": "Laboratory",
+        "issued": "2026-11-19T16:00:00Z"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-d978a95a",
+            "last_updated": "2026-11-22T08:00:00Z"
+          },
+          "fetched_at": "2026-11-22T17:00:00Z",
+          "filed_at": "2026-11-22T17:00:00Z",
+          "raw_path": "Robin Example/Records/mychart-example-health/Observation/observation-d978a95a.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_crlmknfoafwvpeiooedz",
+      "kind": "result",
+      "key": "result|http://loinc.org|2160-0|2026-11-18",
+      "date": "2026-11-18",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "2160-0",
+        "display": "Creatinine [Mass/volume] in Serum or Plasma"
+      },
+      "display": "Creatinine",
+      "status": "final",
+      "fields": {
+        "when": "2026-11-18",
+        "value": {
+          "value": 0.9,
+          "unit": "mg/dL"
+        },
+        "reference_range": "0.6-1.2 mg/dL",
+        "interpretation": "Normal",
+        "category": "Laboratory",
+        "issued": "2026-11-19T16:00:00Z"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-413bca0d",
+            "last_updated": "2026-11-22T08:00:00Z"
+          },
+          "fetched_at": "2026-11-22T17:00:00Z",
+          "filed_at": "2026-11-22T17:00:00Z",
+          "raw_path": "Robin Example/Records/mychart-example-health/Observation/observation-413bca0d.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
     }
   ],
   "studies": [],
   "imports": [
     {
-      "id": "i_nzxykjfkxdfry6rostqb",
+      "id": "i_c6fw3xpbcyxneikjpr2k",
       "source_dir": "Robin Example/Records/mychart-example-health",
-      "stream_sha256": "d99081c0413bca0d21bcad5e0565f48ee439a825330cb83d1ff9e6eba292cc44",
-      "stream_bytes": 754547,
+      "stream_sha256": "4e5cfb9344f3d86a6e6603c9c8db6a584a0e5f80d13bc259b685ca25cd497b5b",
+      "stream_bytes": 555659,
       "cli": "mychart",
       "cli_version": "0.7.1",
       "organization": "example-health",
@@ -1446,10 +1583,10 @@
       "documents_added": 1
     },
     {
-      "id": "i_3rx2v5tnmayyxpfaelcg",
+      "id": "i_nzd7uz5a3ib6bubh6h3r",
       "source_dir": "Robin Example/Records/mychart-example-health",
-      "stream_sha256": "cb60d6bd5d7f4ef36425af65f930d7185e57e7977a1b8df6b573c7549999e944",
-      "stream_bytes": 123107,
+      "stream_sha256": "b3aef2fb9c6e70326a7881d542ee5b5551394af76b202b49aca0d7ee7fe49238",
+      "stream_bytes": 137825,
       "cli": "mychart",
       "cli_version": "0.7.1",
       "organization": "example-health",
@@ -1469,10 +1606,10 @@
       "documents_added": 0
     },
     {
-      "id": "i_tporkmvaajfc6fw3xpbc",
+      "id": "i_nfxzik6dlxdrbojtnakv",
       "source_dir": "Robin Example/Records/uhc-example-health-plan",
-      "stream_sha256": "87d48a9f1aa4e5cfb9344f3d86a6e6603c9c8db6a584a0e5f80d13bc259b685c",
-      "stream_bytes": 838826,
+      "stream_sha256": "ced7ae8ac06c310034d9c03fe1eeaa1a00de11b39696402b1b6a452e1f158014",
+      "stream_bytes": 679189,
       "cli": "uhc",
       "cli_version": "0.3.2",
       "organization": "example-health-plan",
@@ -1492,10 +1629,10 @@
       "documents_added": 0
     },
     {
-      "id": "i_sfmnuzxlf3lnzd7uz5a3",
+      "id": "i_rmfyezz7whrhwhyohq4u",
       "source_dir": "Robin Example/Records/oneblood-example-blood-center",
-      "stream_sha256": "81e1417e7b1b3aef2fb9c6e70326a7881d542ee5b5551394af76b202b49aca0d",
-      "stream_bytes": 421223,
+      "stream_sha256": "0da1ba7117608bdc1ad71fa3f6e35dc4a447500ef9d9e4a54c754476982d72c2",
+      "stream_bytes": 716410,
       "cli": "oneblood",
       "cli_version": "0.1.1",
       "organization": "example-blood-center",

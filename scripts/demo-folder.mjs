@@ -40,6 +40,11 @@ function at(offsetMinutes) {
 }
 
 const files = new Map();
+// When each source's newest import ran: the records and documents it added
+// are filed at that moment, as medrec files them, and the app shows them as
+// new in the latest load.
+const ROBIN_CHART_LOAD = at(-60 * 3);
+const ALEX_PEDS_LOAD = at(-60 * 26);
 // When each source's first import ran (minutes from the anchor); its
 // records were filed then.
 const FIRST_IMPORT = new Map();
@@ -391,7 +396,22 @@ for (const [date, v] of [['2025-06-01', 13.9], ['2025-12-02', 14.2], ['2026-06-0
     resource: { ...obs('718-7', 'Hemoglobin', v, 'g/dL', 'g/dL'), effectiveDateTime: date },
   });
 }
-const rChart = R.importRun(src.robinChart, { importedAt: at(-60 * 3), added: 2, updated: 0, unchanged: 41, docs: 1 });
+for (const [code, name, display, v, unit, range, interp] of [
+  ['2823-3', 'Potassium [Moles/volume] in Serum or Plasma', 'Potassium', 5.4, 'mmol/L', '3.5-5.1 mmol/L', 'High'],
+  ['2160-0', 'Creatinine [Mass/volume] in Serum or Plasma', 'Creatinine', 0.9, 'mg/dL', '0.6-1.2 mg/dL', 'Normal'],
+]) {
+  R.record(src.robinChart, 'Observation', 'result', {
+    date: '2026-11-18',
+    code: { system: LOINC, code, display: name },
+    display,
+    status: 'final',
+    fields: { value: { value: v, unit }, reference_range: range, interpretation: interp, category: 'Laboratory', issued: '2026-11-19T16:00:00Z' },
+    resource: { ...obs(code, display, v, unit, unit, range, interp), effectiveDateTime: '2026-11-18' },
+    filed: ROBIN_CHART_LOAD,
+  });
+}
+R.document(src.robinChart, { date: '2026-11-18', doc_type: 'lab_report', title: 'Basic metabolic panel', organization: 'Example Health', text: 'Basic metabolic panel. Potassium 5.4 mmol/L (high). Creatinine 0.9 mg/dL.', original: 'basic_metabolic_panel.pdf', filed: ROBIN_CHART_LOAD });
+const rChart = R.importRun(src.robinChart, { importedAt: ROBIN_CHART_LOAD, added: 2, updated: 0, unchanged: 41, docs: 1 });
 R.importRun(src.robinChart, { importedAt: at(-60 * 24 * 8), added: 5, updated: 1, unchanged: 36 });
 R.importRun(src.robinPlan, { importedAt: at(-60 * 24 * 3), added: 1, updated: 0, unchanged: 3, cliVersion: '0.3.2' });
 R.importRun(src.robinBlood, { importedAt: at(-60 * 24 * 12), added: 0, updated: 0, unchanged: 3, cliVersion: '0.1.1' });
@@ -496,14 +516,53 @@ for (const [date, what] of [['2024-01-08', 'Well child visit, 6 years'], ['2025-
     resource: { status: 'finished', type: [{ text: what }], period: { start: `${date}T13:00:00Z` } },
   });
 }
+A.record(src.alexPeds, 'Encounter', 'encounter', {
+  date: '2026-11-20',
+  display: 'Sick visit',
+  status: 'finished',
+  fields: { class: 'ambulatory', practitioner: 'Dr. Morgan Placeholder', location: 'Example Pediatrics', reason: 'Ear pain' },
+  resource: { status: 'finished', type: [{ text: 'Sick visit' }], period: { start: '2026-11-20T16:00:00Z' }, reasonCode: [{ text: 'Ear pain' }] },
+  filed: ALEX_PEDS_LOAD,
+});
+A.record(src.alexPeds, 'Condition', 'condition', {
+  date: '2026-11-20',
+  code: { system: ICD10, code: 'H66.90', display: 'Otitis media, unspecified, unspecified ear' },
+  display: 'Ear infection',
+  status: 'active',
+  fields: { verification_status: 'confirmed', category: 'Encounter diagnosis' },
+  resource: { clinicalStatus: { coding: [{ code: 'active' }] }, code: { coding: [{ system: ICD10, code: 'H66.90' }], text: 'Ear infection' }, onsetDateTime: '2026-11-20' },
+  filed: ALEX_PEDS_LOAD,
+});
+A.record(src.alexPeds, 'MedicationRequest', 'medication', {
+  date: '2026-11-20',
+  code: { system: RXNORM, code: '308189', display: 'amoxicillin 400 MG in 5 mL Oral Suspension' },
+  display: 'Amoxicillin 400 mg/5 mL suspension',
+  status: 'active',
+  fields: { dosage: 'Take 7 mL by mouth twice a day for 10 days', prescriber: 'Dr. Morgan Placeholder', intent: 'order', source: 'request' },
+  resource: { status: 'active', intent: 'order', medicationCodeableConcept: { text: 'Amoxicillin 400 mg/5 mL suspension' }, authoredOn: '2026-11-20', dosageInstruction: [{ text: 'Take 7 mL by mouth twice a day for 10 days' }] },
+  filed: ALEX_PEDS_LOAD,
+});
 A.document(src.alexPeds, { date: '2025-10-20', doc_type: 'immunization_record', title: 'Immunization history', organization: 'Example Pediatrics', text: 'Immunization history. DTaP, IPV, MMR 01/10/2022. Influenza 10/20/2025.', original: 'immunizations.pdf' });
-const aPeds = A.importRun(src.alexPeds, { importedAt: at(-60 * 26), added: 3, updated: 0, unchanged: 11, docs: 1, cliVersion: '0.6.1' });
+const aPeds = A.importRun(src.alexPeds, { importedAt: ALEX_PEDS_LOAD, added: 3, updated: 0, unchanged: 11, docs: 1, cliVersion: '0.6.1' });
 A.write();
 
 // ---- What the Mac's `medrec refresh` wrote ----
 
-function counts(added, updated, unchanged) {
-  return { records_added: added, records_updated: updated, records_unchanged: unchanged, records_older: 0, resources_written: added + updated, resources_unchanged: unchanged, documents_added: 0, documents_duplicate: 0, documents_unchanged: 0, documents_same_statement: 0 };
+// An attempt's counts are its import's, so the status, the attempts log and
+// the index always agree.
+function counts(run) {
+  return {
+    records_added: run.records_added,
+    records_updated: run.records_updated,
+    records_unchanged: run.records_unchanged,
+    records_older: run.records_older,
+    resources_written: run.resources_written,
+    resources_unchanged: run.resources_unchanged,
+    documents_added: run.documents_added,
+    documents_duplicate: 0,
+    documents_unchanged: 0,
+    documents_same_statement: 0,
+  };
 }
 const machine = id('h');
 const attempts = [];
@@ -514,10 +573,10 @@ function attempt(s, person, { started, minutes = 1, trigger = 'schedule', reques
 }
 
 const doneReq = { schema: 'medrec-request/v1', id: id('x'), requested_at: at(-60 * 3 - 4), requested_by: { email: 'robin@example.com', name: 'Robin Example' }, scope: { source: src.robinChart.id }, app: { name: 'own-your-health-app', version: '0.1.0' } };
-const robinChartOk = attempt(src.robinChart, robin, { started: at(-60 * 3 - 1), trigger: 'request', requests: [doneReq.id], importId: rChart.id, c: counts(2, 0, 41) });
-const alexOk = attempt(src.alexPeds, alex, { started: at(-60 * 26 - 1), importId: aPeds.id, c: counts(3, 0, 11) });
-const samChartOk = attempt(src.samChart, sam, { started: at(-60 * 5 - 1), importId: S.imports[0].id, c: counts(0, 1, 5) });
-attempt(src.samLab, sam, { started: at(-60 * 24 * 9 - 1), importId: S.imports[1].id, c: counts(1, 0, 0) });
+const robinChartOk = attempt(src.robinChart, robin, { started: at(-60 * 3 - 1), trigger: 'request', requests: [doneReq.id], importId: rChart.id, c: counts(rChart) });
+const alexOk = attempt(src.alexPeds, alex, { started: at(-60 * 26 - 1), importId: aPeds.id, c: counts(aPeds) });
+const samChartOk = attempt(src.samChart, sam, { started: at(-60 * 5 - 1), importId: S.imports[0].id, c: counts(S.imports[0]) });
+attempt(src.samLab, sam, { started: at(-60 * 24 * 9 - 1), importId: S.imports[1].id, c: counts(S.imports[1]) });
 const samLabFail = attempt(src.samLab, sam, {
   started: at(-60 * 2),
   outcome: 'failed',
@@ -536,7 +595,7 @@ write('_status/status.json', {
       source: src.robinChart.id, person: robin.id, cli: 'mychart', organization: 'example-health', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: at(60 * 21),
       sign_in: { state: 'ok', expires_at: at(60 * 24 * 200), checked_at: at(-60 * 3 - 1), needs_person: null },
       last_attempt: robinChartOk,
-      last_success: { attempt: robinChartOk.attempt, finished_at: robinChartOk.finished_at, import: rChart.id, counts: counts(2, 0, 41), withheld_types: ['ExplanationOfBenefit'] },
+      last_success: { attempt: robinChartOk.attempt, finished_at: robinChartOk.finished_at, import: rChart.id, counts: counts(rChart), withheld_types: ['ExplanationOfBenefit'] },
     },
     {
       source: src.robinPlan.id, person: robin.id, cli: 'uhc', organization: 'example-health-plan', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: null,
@@ -548,7 +607,7 @@ write('_status/status.json', {
       source: src.samChart.id, person: sam.id, cli: 'mychart', organization: 'example-health', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: at(60 * 19),
       sign_in: { state: 'expiring', expires_at: at(60 * 40), checked_at: at(-60 * 5 - 1), needs_person: null },
       last_attempt: samChartOk,
-      last_success: { attempt: samChartOk.attempt, finished_at: samChartOk.finished_at, import: S.imports[0].id, counts: counts(0, 1, 5), withheld_types: [] },
+      last_success: { attempt: samChartOk.attempt, finished_at: samChartOk.finished_at, import: S.imports[0].id, counts: counts(S.imports[0]), withheld_types: [] },
     },
     {
       source: src.samLab.id, person: sam.id, cli: 'labcorp', organization: 'example-lab', auto: true, paused: null, failures: 2, min_interval_secs: 86400, next_run_at: at(60),
@@ -566,7 +625,7 @@ write('_status/status.json', {
       source: src.alexPeds.id, person: alex.id, cli: 'athena', organization: 'example-pediatrics', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: at(60 * 22 - 26),
       sign_in: { state: 'ok', expires_at: at(60 * 24 * 87), checked_at: at(-60 * 26 - 1), needs_person: null },
       last_attempt: alexOk,
-      last_success: { attempt: alexOk.attempt, finished_at: alexOk.finished_at, import: aPeds.id, counts: counts(3, 0, 11), withheld_types: [] },
+      last_success: { attempt: alexOk.attempt, finished_at: alexOk.finished_at, import: aPeds.id, counts: counts(aPeds), withheld_types: [] },
     },
   ],
 });
