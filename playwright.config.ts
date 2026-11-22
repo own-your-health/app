@@ -1,9 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
 // Browser tests run against the production build in vite preview, so they
-// see the same Content-Security-Policy as GitHub Pages. They use demo mode
-// only: no Google account and no Drive. The port is the app's own, strict,
-// so a local run never reuses another project's preview on Vite's default.
+// see the same Content-Security-Policy as GitHub Pages. They use demo mode,
+// or a stand-in for Google and Drive (e2e/fake-google.ts): no Google account.
+// The port is the app's own, strict, so a local run never reuses another
+// project's preview on Vite's default.
 const PORT = 4317;
 
 export default defineConfig({
