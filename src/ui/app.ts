@@ -6,6 +6,7 @@ import { Store } from '../data/store';
 import { Drive, DriveError } from '../drive';
 import { DemoFolder, DriveFolder } from '../folder';
 import { FolderError } from '../model/parse';
+import { needsAttention } from '../model/sources';
 import type { RequestScope } from '../model/types';
 import { getAccount, getClientId, getFolder, setAccount, setClientId, setFolder } from '../settings';
 import { readSetupLink, setupLinkFor, withoutClient } from '../setup-link';
@@ -18,7 +19,7 @@ import { personView } from './views/person';
 import { folderView, messageView, signInView, welcomeView } from './views/setup';
 import { settingsView } from './views/settings';
 import { sourceView } from './views/source';
-import { needsAttention, sourcesView } from './views/sources';
+import { sourcesView } from './views/sources';
 
 /** What the app says when a renewal interrupted a write the person asked for. */
 const UNSENT_TEXT: Record<Unsent, string> = {

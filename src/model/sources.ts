@@ -39,6 +39,43 @@ export const HEALTH_ORDER: Health[] = [
   'never',
 ];
 
+/** What a person at the Mac should look at: the head of HEALTH_ORDER, through `signed_out`. */
+export const ATTENTION: Health[] = HEALTH_ORDER.slice(0, HEALTH_ORDER.indexOf('signed_out') + 1);
+
+/** The sign-ins only a person can make: home's alert. A failed load retries on its own. */
+export const NEEDS_PERSON: Health[] = ['needs_person', 'expired', 'signed_out'];
+
+/** The sources that need attention, most pressing first. */
+export function needsAttention(views: SourceView[]): SourceView[] {
+  return views.filter((v) => ATTENTION.includes(v.health)).sort((a, b) => HEALTH_ORDER.indexOf(a.health) - HEALTH_ORDER.indexOf(b.health));
+}
+
+/** The sources whose sign-in only a person can make, most pressing first. */
+export function needsPerson(views: SourceView[]): SourceView[] {
+  return needsAttention(views).filter((v) => NEEDS_PERSON.includes(v.health));
+}
+
+/** How long the Mac's answer to a refresh request stays on show. */
+export const ANSWER_SHOWN_MS = 86_400_000;
+
+/** A request the Mac has answered. */
+export type AnsweredRequest = RefreshRequest & { handled: NonNullable<RefreshRequest['handled']> & { finished_at: string } };
+
+export function isAnswered(r: RefreshRequest): r is AnsweredRequest {
+  return typeof r.handled?.finished_at === 'string';
+}
+
+/** The newest answered request finished within ANSWER_SHOWN_MS of `now`. */
+export function latestAnswered(done: RefreshRequest[], now: Date): AnsweredRequest | undefined {
+  return done
+    .filter(isAnswered)
+    .filter((r) => {
+      const age = now.getTime() - Date.parse(r.handled.finished_at);
+      return age >= 0 && age < ANSWER_SHOWN_MS;
+    })
+    .sort((a, b) => b.handled.finished_at.localeCompare(a.handled.finished_at))[0];
+}
+
 /** Counts medrec did not give are unknown, never zero. */
 export interface LastLoad {
   at: string;

@@ -1,11 +1,11 @@
 // Sources: each provider medrec loads from, its sign-in, its last load and
 // attempt, and what the Mac does next. Home shows only what needs a person.
 
-import { headline, type Health, type MacState, type SourceView } from '../../model/sources';
+import { ANSWER_SHOWN_MS, headline, needsAttention, type AnsweredRequest, type MacState, type SourceView } from '../../model/sources';
 import { h, type Child } from '../dom';
 import { card, chip, command, empty, refreshControl, row, type Ctx, type Tone } from '../components';
 import { dateTime, duration, relative } from '../format';
-import type { Person, RefreshRequest } from '../../model/types';
+import type { Person } from '../../model/types';
 
 export const HEALTH_TEXT: Record<SourceView['health'], [string, Tone]> = {
   needs_person: ['Needs a person', 'attention'],
@@ -113,7 +113,7 @@ export function sourceDetail(ctx: Ctx, v: SourceView, brief = false): Child[] {
     );
   }
   const handled = v.lastHandled?.handled;
-  const recent = handled?.finished_at ? now.getTime() - Date.parse(handled.finished_at) < 86_400_000 : false;
+  const recent = handled?.finished_at ? now.getTime() - Date.parse(handled.finished_at) < ANSWER_SHOWN_MS : false;
   if (handled && !v.pending.length && v.lastHandled && (!brief || recent)) {
     const mine = handled.sources?.find((s) => s.source === v.source.id);
     const when = relative(handled.finished_at ?? v.lastHandled.requested_at, now);
@@ -124,21 +124,18 @@ export function sourceDetail(ctx: Ctx, v: SourceView, brief = false): Child[] {
   return lines;
 }
 
-const COUNT_TEXT: Record<string, string> = {
-  ok: 'loaded',
-  failed: 'failed',
-  needs_person: 'needed a person',
+/** The shorter words for an outcome counted among others ("2 not due yet"). */
+const COUNTED_TEXT: Record<string, string> = {
   skipped_interval: 'not due yet',
   skipped_paused: 'paused',
-  running: 'running',
 };
 
 /**
  * The Mac's answer to a refresh request, in one line: "loaded" when every
  * source had the same outcome, otherwise a count of each.
  */
-export function requestAnswer(r: RefreshRequest, names: { sources: SourceView[]; people: Person[] }, now: Date): string {
-  const handled = r.handled!;
+export function requestAnswer(r: AnsweredRequest, names: { sources: SourceView[]; people: Person[] }, now: Date): string {
+  const handled = r.handled;
   const scope = r.scope;
   const what =
     'source' in scope
@@ -152,9 +149,9 @@ export function requestAnswer(r: RefreshRequest, names: { sources: SourceView[];
     counts.size === 1
       ? OUTCOME_TEXT[[...counts.keys()][0]!] ?? [...counts.keys()][0]
       : counts.size > 1
-        ? [...counts].map(([o, n]) => `${n} ${COUNT_TEXT[o] ?? o.replace(/_/g, ' ')}`).join(', ')
+        ? [...counts].map(([o, n]) => `${n} ${COUNTED_TEXT[o] ?? OUTCOME_TEXT[o] ?? o.replace(/_/g, ' ')}`).join(', ')
         : handled.message ?? handled.outcome;
-  return `Last refresh request${what} ${relative(handled.finished_at ?? r.requested_at, now)}: ${answer}`;
+  return `Last refresh request${what} ${relative(handled.finished_at, now)}: ${answer}`;
 }
 
 /** A request would answer at once for a paused source or one that needs a person. */
@@ -176,16 +173,6 @@ export function sourceRow(ctx: Ctx, v: SourceView, opts: { showPerson: boolean }
       canRefresh(v) ? h('div', { class: 'row-actions' }, refreshControl(ctx, { source: v.source.id }, v.name)) : null,
     ),
   });
-}
-
-/** What a person on the Mac should look at, most pressing first. */
-export const ATTENTION: Health[] = ['needs_person', 'failed', 'expired', 'signed_out'];
-
-/** The sign-ins only a person can make: home's alert. A failed load retries on its own. */
-export const NEEDS_PERSON: Health[] = ['needs_person', 'expired', 'signed_out'];
-
-export function needsAttention(views: SourceView[]): SourceView[] {
-  return views.filter((v) => ATTENTION.includes(v.health)).sort((a, b) => ATTENTION.indexOf(a.health) - ATTENTION.indexOf(b.health));
 }
 
 /** The Sources screen: every source and sign-in, the Mac, and Refresh. */
