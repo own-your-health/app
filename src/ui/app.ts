@@ -6,6 +6,7 @@ import { Store } from '../data/store';
 import { Drive, DriveError } from '../drive';
 import { DemoFolder, DriveFolder } from '../folder';
 import { FolderError } from '../model/parse';
+import { needsAttention } from '../model/sources';
 import type { RequestScope } from '../model/types';
 import { getAccount, getClientId, getFolder, setAccount, setClientId, setFolder } from '../settings';
 import { readSetupLink, setupLinkFor, withoutClient } from '../setup-link';
@@ -18,6 +19,7 @@ import { personView } from './views/person';
 import { folderView, messageView, signInView, welcomeView } from './views/setup';
 import { settingsView } from './views/settings';
 import { sourceView } from './views/source';
+import { sourcesView } from './views/sources';
 
 /** What the app says when a renewal interrupted a write the person asked for. */
 const UNSENT_TEXT: Record<Unsent, string> = {
@@ -404,12 +406,22 @@ export class App {
         'div',
         { class: 'bar-inner' },
         h('a', { class: 'brand', href: ready ? '#/' : './' }, logo(), h('span', { class: 'brand-text' }, h('span', { class: 'brand-name' }, 'Own Your Health'), h('span', { class: 'brand-sub' }, 'Records'))),
-        ready ? h('a', { class: 'icon-button', href: '#/settings', 'aria-label': 'Settings' }, icon('settings')) : null,
+        ready ? h('nav', { class: 'bar-actions', 'aria-label': 'App' }, this.sourcesButton(), h('a', { class: 'icon-button', href: '#/settings', 'aria-label': 'Settings' }, icon('settings'))) : null,
       ),
     );
     if (this.demo && ready) {
       this.banner.replaceChildren(h('div', { class: 'banner banner-sample' }, h('span', { class: 'chip chip-attention' }, 'Sample data'), h('span', null, 'Invented records. Nothing is saved.')));
     }
+  }
+
+  /** Sources, with a dot while a source needs attention at the Mac. */
+  private sourcesButton(): HTMLElement {
+    const alert = this.store ? needsAttention(this.store.sources()).length > 0 : false;
+    return h(
+      'a',
+      { class: ['icon-button', alert ? 'icon-button-alert' : null], href: '#/sources', 'aria-label': alert ? 'Sources: a source needs attention' : 'Sources' },
+      icon('sources'),
+    );
   }
 
   render(): void {
@@ -472,6 +484,8 @@ export class App {
             void this.signOut().then(() => this.show({ name: 'welcome' }));
           },
         });
+      case 'sources':
+        return sourcesView(ctx);
       case 'source':
         return sourceView(ctx, r.source);
       case 'person':

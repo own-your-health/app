@@ -33,6 +33,7 @@ export const SECTION_LABELS: Record<Section, string> = {
 export type Route =
   | { name: 'home' }
   | { name: 'settings' }
+  | { name: 'sources' }
   | { name: 'source'; source: string }
   | { name: 'person'; person: string; section: Section; sub?: string; query?: string }
   | { name: 'item'; person: string; id: string }
@@ -55,6 +56,7 @@ export function parseRoute(hash: string): Route {
   if (parts.length === 0) return { name: 'home' };
   const [head, a, b, c] = parts;
   if (head === 'settings' && parts.length === 1) return { name: 'settings' };
+  if (head === 'sources' && parts.length === 1) return { name: 'sources' };
   if (head === 's' && a && ID.test(a) && parts.length === 2) return { name: 'source', source: a };
   if (head === 'hh' && a && ID.test(a) && parts.length === 2) return { name: 'huishouden', hh: a };
   if (head === 'p' && a && ID.test(a)) {
@@ -76,6 +78,8 @@ export function href(route: Route): string {
       return '#/';
     case 'settings':
       return '#/settings';
+    case 'sources':
+      return '#/sources';
     case 'source':
       return `#/s/${encodeURIComponent(route.source)}`;
     case 'huishouden':

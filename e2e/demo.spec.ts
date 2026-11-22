@@ -43,14 +43,48 @@ async function openSection(page: Page, name: string) {
 const BOTTOM = ['Timeline', 'Results', 'Medicines', 'Documents'];
 const SLUGS: Record<string, string> = { 'Claims and bills': 'claims' };
 
-test('home answers what needs a person', async ({ page }) => {
+test('home shows what needs a person, and leaves the sources to their screen', async ({ page }) => {
   await page.goto('./?demo');
   await expect(page.locator('.banner')).toContainText('Invented records');
-  await expect(page.locator('.glance-answer')).toHaveText('1 sign-in needs a person');
-  const waiting = page.locator('.card-attention', { hasText: 'Waiting for you on the Mac' });
-  await expect(waiting).toContainText('Example Health Plan');
-  await expect(waiting.locator('.command code')).toHaveText(/^medrec refresh sign-in s_[a-z2-7]{20}$/);
+  const alert = page.locator('.card-attention');
+  await expect(alert.locator('.glance-answer')).toHaveText('1 sign-in needs a person');
+  await expect(alert.locator('.row')).toHaveCount(1);
+  await expect(alert).toContainText('Example Health Plan');
+  await expect(alert.locator('.command code')).toHaveText(/^medrec refresh sign-in s_[a-z2-7]{20}$/);
+  const strip = page.locator('.status-strip');
+  await expect(strip).toContainText(/^Latest load \d+ hours? ago\./);
+  await expect(strip).toContainText(/Last refresh request for .+ 3 hours ago: loaded/);
+  // The failed load retries on its own, so home only counts it.
+  await expect(strip).toContainText('1 source failed to load; the Mac tries again on its own.');
+  await expect(page.getByRole('button', { name: 'Refresh everything' })).toBeVisible();
   await expect(page.locator('.card', { hasText: 'People' }).locator('.row')).toHaveCount(3);
+  // The alert's row and the people: every other source is on Sources.
+  await expect(page.locator('main .row')).toHaveCount(4);
+  await expect(page.getByRole('link', { name: 'Sources: a source needs attention' })).toBeVisible();
+});
+
+test('the Sources screen lists every source and sign-in, and opens one', async ({ page }) => {
+  await page.goto('./?demo');
+  await page.getByRole('link', { name: 'Sources and sign-ins' }).click();
+  await expect(page).toHaveURL(/#\/sources$/);
+  await expect(page.locator('h1.glance-answer')).toHaveText('1 sign-in needs a person');
+  await expect(page.locator('.glance')).toContainText('The Mac checked in');
+  const attention = page.locator('.card-attention', { hasText: 'Needs attention' });
+  await expect(attention.locator('.row')).toHaveCount(2);
+  await expect(attention.locator('.row').first().locator('.command code')).toHaveText(/^medrec refresh sign-in s_[a-z2-7]{20}$/);
+  await expect(attention.locator('.row').nth(1)).toContainText('The lab site answered 503 three times.');
+  const others = page.locator('.card', { hasText: 'Other sources' });
+  const total = await others.locator('.row').count();
+  expect(total).toBeGreaterThanOrEqual(3);
+  await others.locator('.row-main').first().click();
+  await expect(page).toHaveURL(/#\/s\/s_[a-z2-7]{20}$/);
+  await expect(page.locator('.card', { hasText: 'Attempts' })).toBeVisible();
+  await page.getByRole('link', { name: 'All sources' }).click();
+  await expect(page).toHaveURL(/#\/sources$/);
+  // The app bar reaches it from anywhere.
+  await page.goto('./?demo#/settings');
+  await page.getByRole('link', { name: /^Sources/ }).first().click();
+  await expect(page).toHaveURL(/#\/sources$/);
 });
 
 test('a result over time, down to its raw FHIR', async ({ page }) => {

@@ -90,7 +90,7 @@ function header(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
       { class: 'muted small' },
       [person.birth_date ? `Born ${dateText(person.birth_date)}` : null, count(idx.records.length, 'record'), count(idx.documents.length, 'document'), latest ? `latest load ${relative(latest, ctx.now())}` : null].filter(Boolean).join(' · '),
     ),
-    needs ? h('p', { class: 'small attention' }, link({ name: 'home' }, needs === 1 ? 'A sign-in for this person needs a person on the Mac' : `${needs} sign-ins for this person need a person on the Mac`)) : null,
+    needs ? h('p', { class: 'small attention' }, link({ name: 'sources' }, needs === 1 ? 'A sign-in for this person needs a person on the Mac' : `${needs} sign-ins for this person need a person on the Mac`)) : null,
     views.some((v) => v.status) ? h('div', { class: 'person-actions' }, refreshControl(ctx, { person: person.id }, person.name)) : null,
   );
 }

@@ -50,6 +50,12 @@ Refresh.
 3. Choose the records folder. The app lists the folders with a
    `household.json` that the account can see; you can also paste a folder link.
 
+Home lists the household's people, with one line on when the records last
+loaded and **Refresh everything**. A sign-in that needs a person shows at the
+top until it is made. **Sources** (`#/sources`, the stack icon in the bar,
+which carries a dot while a source needs attention) has every source: its
+sign-in, its last load and attempt, and when the Mac loads it next.
+
 Every person and record has its own address, such as `#/p/<person id>` and
 `#/p/<person id>/r/<record id>`, so a bookmark or another app can link
 straight to it. `#/hh/<id>` opens the person whose
