@@ -68,6 +68,9 @@ app names the account to Google, so a browser signed in to several Google
 accounts shows no account chooser; **Use a different account** on the sign-in
 screen forgets it, and so do signing out and changing the client.
 
+Settings has a **Theme**: System (the device's light or dark setting, the
+default), Light or Dark.
+
 ### On the Home Screen
 
 The app can be installed like an app, with no app store, once it is set up in
@@ -111,10 +114,11 @@ The privacy policy is at https://own-your-health.github.io/app/privacy.html
   token. It loads no Google script and uses no client secret.
 - **The token stays in memory.** It is gone when the tab closes. Signing out
   revokes it with Google.
-- **Browser storage holds three settings, nothing else:** your client id
+- **Browser storage holds four settings, nothing else:** your client id
   (`own-your-health-app.client_id`), the chosen folder's id and name
-  (`own-your-health-app.folder`), and the email of the Google account that
-  last signed in (`own-your-health-app.account`). None is a secret. The client
+  (`own-your-health-app.folder`), the email of the Google account that last
+  signed in (`own-your-health-app.account`), and the theme, when you choose
+  one (`own-your-health-app.theme`). None is a secret. The client
   id and the email go to Google as the sign-in's `client_id` and `login_hint`,
   and the folder id goes to Drive when the app reads the folder. During a
   sign-in, a random nonce sits in session storage until Google answers.
