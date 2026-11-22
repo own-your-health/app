@@ -61,8 +61,12 @@ A link from Huishouden Health, or any other app, can carry the setup link's
 that has never opened the app then needs no setup: it signs in and lands on
 the person. The app takes `?client=` out of the address before signing in.
 
-The sign-in lasts an hour. When it ends, the app asks Google again without a
-prompt, and asks you only if Google needs you.
+The sign-in lasts an hour. When it ends, the app signs in again on its own, as
+the same account, when you come back to it or it next reads the folder. It
+asks you only if Google needs you. Opening the app later does the same. The
+app names the account to Google, so a browser signed in to several Google
+accounts shows no account chooser; **Use a different account** on the sign-in
+screen forgets it, and so do signing out and changing the client.
 
 ### On the Home Screen
 
@@ -104,10 +108,13 @@ run in a terminal on the Mac, such as `medrec refresh sign-in s_…`.
   token. It loads no Google script and uses no client secret.
 - **The token stays in memory.** It is gone when the tab closes. Signing out
   revokes it with Google.
-- **Browser storage holds two settings, nothing else:** your client id
-  (`own-your-health-app.client_id`) and the chosen folder's id and name
-  (`own-your-health-app.folder`). During a sign-in, a random nonce sits in
-  session storage until Google answers.
+- **Browser storage holds three settings, nothing else:** your client id
+  (`own-your-health-app.client_id`), the chosen folder's id and name
+  (`own-your-health-app.folder`), and the email of the Google account that
+  last signed in (`own-your-health-app.account`). None is a secret. The client
+  id and the email go to Google as the sign-in's `client_id` and `login_hint`,
+  and the folder id goes to Drive when the app reads the folder. During a
+  sign-in, a random nonce sits in session storage until Google answers.
 - **Read-only, except requests.** The app writes only refresh requests into
   `_requests/`, and deletes only requests it made (a cancel). medrec is the
   only writer of records.

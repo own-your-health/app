@@ -13,6 +13,8 @@ export const TOKEN = 'stand-in-access-token-for-browser-tests';
 export const READ = 'https://www.googleapis.com/auth/drive.readonly';
 export const WRITE = 'https://www.googleapis.com/auth/drive.file';
 export const USER = { displayName: 'Robin Example', emailAddress: 'robin@example.com' };
+/** A second Google account in the same browser, as on a phone with a work and a personal account. */
+export const OTHER_USER = { displayName: 'Sam Example', emailAddress: 'sam@example.com' };
 export const FOLDER_NAME = 'Medical Records';
 
 const FOLDER_MIME = 'application/vnd.google-apps.folder';
@@ -41,6 +43,7 @@ export interface SignInAsk {
   clientId: string | null;
   prompt: string | null;
   scope: string | null;
+  hint: string | null;
 }
 
 export class FakeGoogle {
@@ -57,6 +60,12 @@ export class FakeGoogle {
   granted = [READ, WRITE];
   /** The client tokeninfo names: another one means a token issued to another app. */
   audience = CLIENT;
+  /** The Google accounts signed in to this browser; none when Google's session ended. */
+  accounts = [USER, OTHER_USER];
+  /** The account the person picks when Google shows its chooser. */
+  chooses = USER;
+  /** The account the current token belongs to. */
+  private account = USER;
   private nodes = new Map<string, Node>();
   private seq = 0;
   private readonly shiftMs: number;
@@ -159,9 +168,24 @@ export class FakeGoogle {
   private authorize(route: Route): Promise<void> {
     const u = new URL(route.request().url());
     const p = u.searchParams;
-    this.signIns.push({ clientId: p.get('client_id'), prompt: p.get('prompt'), scope: p.get('scope') });
-    const back = new URLSearchParams({ access_token: TOKEN, token_type: 'Bearer', expires_in: '3599', scope: this.granted.join(' '), state: p.get('state') ?? '' });
-    return route.fulfill({ status: 302, headers: { location: `${p.get('redirect_uri')}#${back.toString()}` } });
+    const hint = p.get('login_hint');
+    this.signIns.push({ clientId: p.get('client_id'), prompt: p.get('prompt'), scope: p.get('scope'), hint });
+    const state = p.get('state') ?? '';
+    const answer = (fields: Record<string, string>) =>
+      route.fulfill({ status: 302, headers: { location: `${p.get('redirect_uri')}#${new URLSearchParams({ ...fields, state }).toString()}` } });
+    // As Google does: without a prompt it can answer only for one account it
+    // can tell apart, the one named by login_hint or the only one signed in.
+    const named = this.accounts.find((a) => a.emailAddress === hint);
+    let account = named;
+    if (p.get('prompt') === 'none') {
+      if (!this.accounts.length) return answer({ error: 'login_required' });
+      account ??= this.accounts.length === 1 ? this.accounts[0] : undefined;
+      if (!account) return answer({ error: 'interaction_required' });
+    } else {
+      account ??= this.chooses;
+    }
+    this.account = account;
+    return answer({ access_token: TOKEN, token_type: 'Bearer', expires_in: '3599', scope: this.granted.join(' ') });
   }
 
   private oauth(route: Route): Promise<void> {
@@ -183,7 +207,7 @@ export class FakeGoogle {
     if (req.headers()['authorization'] !== `Bearer ${TOKEN}`) return driveError(route, 401, 'authError', 'Invalid Credentials');
     const url = new URL(req.url());
     const path = url.pathname.replace(/^\/(upload\/)?drive\/v3\//, '');
-    if (path === 'about') return json(route, 200, { user: USER });
+    if (path === 'about') return json(route, 200, { user: this.account });
     if (path === 'files' && req.method() === 'GET') return this.listFiles(route, url.searchParams.get('q') ?? '');
     if (path === 'files' && req.method() === 'POST' && url.pathname.startsWith('/upload/')) return this.create(route, req);
     const m = /^files\/([^/]+)$/.exec(path);

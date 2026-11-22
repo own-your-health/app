@@ -70,7 +70,13 @@ and this one never uses it.
 4. Allow both permissions.
 5. Choose the records folder.
 
-Each browser and phone you use needs the client id once.
+Each browser and phone you use needs the client id once. The browser keeps
+three settings: the client id, the folder, and the email of the account that
+signed in. None is a secret. The app gives the email to Google as a
+`login_hint` on the next sign-in, so a browser signed in to several Google
+accounts goes straight in, with no account chooser, and the hourly renewal
+happens without you. **Use a different account** on the sign-in screen forgets
+it; signing out and changing the client do too.
 
 ## 6. Set up your other devices with a link
 

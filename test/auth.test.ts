@@ -49,6 +49,13 @@ describe('state', () => {
     const raw = encodeState({ n: 'abc', r: '#/p/p_aaaaaaaaaaaaaaaaaaaa/results', s: 1 });
     expect(raw).not.toMatch(/[+/=]/);
     expect(decodeState(raw)).toEqual({ n: 'abc', r: '#/p/p_aaaaaaaaaaaaaaaaaaaa/results', s: 1 });
+    expect(decodeState(encodeState({ n: 'abc', r: '#/', s: 2 }))).toEqual({ n: 'abc', r: '#/', s: 2 });
+  });
+
+  it('carries what a renewal interrupted as one word, and drops anything else', () => {
+    expect(decodeState(encodeState({ n: 'abc', r: '#/', s: 2, w: 'refresh' }))).toEqual({ n: 'abc', r: '#/', s: 2, w: 'refresh' });
+    const forged = btoa(JSON.stringify({ n: 'abc', r: '#/', w: 's_aaaaaaaaaaaaaaaaaaaa' })).replace(/=+$/, '');
+    expect(decodeState(forged)).toEqual({ n: 'abc', r: '#/' });
   });
 
   it('sends a route that is not the app’s own home', () => {
@@ -94,6 +101,50 @@ describe('the sign-in URL', () => {
   });
 });
 
+describe('the account hint', () => {
+  const HINT = 'robin@example.com';
+  function signInUrl(opts: { silent?: boolean; renewal?: boolean; chooseAccount?: boolean; loginHint?: string | null }): URL {
+    let went = '';
+    startSignIn({ clientId: CLIENT, redirectUri: 'https://own-your-health.github.io/app/', route: '#/', storage: memoryStorage(), go: (u) => (went = u), ...opts });
+    return new URL(went);
+  }
+
+  it('goes on the silent sign-in when one is stored, with no account chooser', () => {
+    const u = signInUrl({ silent: true, loginHint: HINT });
+    expect(u.searchParams.get('login_hint')).toBe(HINT);
+    expect(u.searchParams.get('prompt')).toBe('none');
+  });
+
+  it('replaces the account chooser on an interactive sign-in', () => {
+    const u = signInUrl({ chooseAccount: true, loginHint: HINT });
+    expect(u.searchParams.get('login_hint')).toBe(HINT);
+    expect(u.searchParams.has('prompt')).toBe(false);
+  });
+
+  it('is absent when no account is stored, so Google shows its chooser', () => {
+    const u = signInUrl({ chooseAccount: true, loginHint: null });
+    expect(u.searchParams.has('login_hint')).toBe(false);
+    expect(u.searchParams.get('prompt')).toBe('select_account');
+    expect(signInUrl({ silent: true }).searchParams.has('login_hint')).toBe(false);
+  });
+
+  it('marks a renewal, so its failure can say the sign-in ended', () => {
+    const u = signInUrl({ silent: true, renewal: true, loginHint: HINT });
+    expect(decodeState(u.searchParams.get('state'))).toMatchObject({ s: 2 });
+  });
+
+  it('brings back what the renewal interrupted, signed in or not', () => {
+    const storage = memoryStorage();
+    let went = '';
+    startSignIn({ clientId: CLIENT, redirectUri: 'x', route: '#/', silent: true, renewal: true, unsent: 'cancel', loginHint: HINT, storage, go: (u) => (went = u) });
+    const state = new URL(went).searchParams.get('state')!;
+    const n = storage.getItem(NONCE_KEY)!;
+    expect(completeSignIn(answer({ access_token: 'tok', expires_in: '3599', state }), storage, 0)).toMatchObject({ kind: 'signed_in', unsent: 'cancel' });
+    storage.setItem(NONCE_KEY, n);
+    expect(completeSignIn(answer({ error: 'login_required', state }), storage, 0)).toMatchObject({ kind: 'failed', renewal: true, unsent: 'cancel' });
+  });
+});
+
 describe('Google’s answer', () => {
   it('reads a token and leaves app routes alone', () => {
     expect(parseRedirect('#/p/p_aaaaaaaaaaaaaaaaaaaa')).toBeNull();
@@ -135,7 +186,10 @@ describe('Google’s answer', () => {
     const storage = memoryStorage();
     storage.setItem(NONCE_KEY, 'n');
     const state = encodeState({ n: 'n', r: '#/', s: 1 });
-    expect(completeSignIn(answer({ error: 'interaction_required', state }), storage, 0)).toEqual({ kind: 'failed', error: 'interaction_required', route: '#/', silent: true });
+    expect(completeSignIn(answer({ error: 'interaction_required', state }), storage, 0)).toEqual({ kind: 'failed', error: 'interaction_required', route: '#/', silent: true, renewal: false });
+    storage.setItem(NONCE_KEY, 'n');
+    const renewal = encodeState({ n: 'n', r: '#/', s: 2 });
+    expect(completeSignIn(answer({ error: 'login_required', state: renewal }), storage, 0)).toEqual({ kind: 'failed', error: 'login_required', route: '#/', silent: true, renewal: true });
   });
 });
 
