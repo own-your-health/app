@@ -34,7 +34,7 @@ const PASTE_PROBLEM: Record<Exclude<Paste['kind'], 'client'>, string> = {
 };
 
 export function welcomeView(onSave: (clientId: string) => void, error?: string): HTMLElement {
-  const input = h('input', { class: 'input', type: 'text', inputmode: 'url', autocomplete: 'off', spellcheck: 'false', placeholder: '123456789012-abc….apps.googleusercontent.com', 'aria-label': 'Google OAuth client id' });
+  const input = h('input', { class: 'input', type: 'text', inputmode: 'url', autocomplete: 'off', spellcheck: 'false', placeholder: '123456789012-abc….apps.googleusercontent.com', 'aria-label': 'Google OAuth client id or setup link' });
   const msg = h('p', { class: 'error-text small', 'aria-live': 'polite' }, error ?? '');
   const save = () => {
     const paste = readPaste(input.value, location.origin);

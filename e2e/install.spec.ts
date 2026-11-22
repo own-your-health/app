@@ -10,7 +10,7 @@ test('the app can be installed', async ({ page }) => {
     if (m.type() === 'error' || m.type() === 'warning') problems.push(m.text());
   });
   await page.goto('./');
-  await expect(page.locator('input[aria-label="Google OAuth client id"]')).toBeVisible();
+  await expect(page.locator('input[aria-label="Google OAuth client id or setup link"]')).toBeVisible();
   const cdp = await page.context().newCDPSession(page);
 
   const manifest = (await cdp.send('Page.getAppManifest')) as { url: string; errors: { message: string }[]; data?: string };
