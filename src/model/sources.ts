@@ -203,6 +203,28 @@ export function isOverdue(req: RefreshRequest, mac: MacState, now: Date): boolea
   return now.getTime() - Date.parse(req.requested_at) > (mac.passEverySecs + 60) * 1000;
 }
 
+export type RequestWait =
+  | { kind: 'loading'; source: string }
+  | { kind: 'busy'; source: string }
+  | { kind: 'late' }
+  | { kind: 'waiting' };
+
+/**
+ * Where a pending request stands. A pass reads `_requests/` when it starts,
+ * so a request written during a long pass waits for the next one: that is
+ * the Mac being busy, not late. `last_attempt.requests` names the requests
+ * an import is running for.
+ */
+export function requestWait(req: RefreshRequest, views: SourceView[], mac: MacState, now: Date): RequestWait {
+  if (mac.kind === 'online') {
+    const running = views.filter((v) => v.lastAttempt?.outcome === 'running');
+    const mine = running.find((v) => v.lastAttempt?.requests?.includes(req.id));
+    if (mine) return { kind: 'loading', source: mine.name };
+    if (running[0]) return { kind: 'busy', source: running[0].name };
+  }
+  return isOverdue(req, mac, now) ? { kind: 'late' } : { kind: 'waiting' };
+}
+
 export interface Headline {
   text: string;
   attention: boolean;

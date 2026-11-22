@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { headline, importsFor, isOverdue, macState, sourceViews } from '../src/model/sources';
+import { headline, importsFor, isOverdue, macState, requestWait, sourceViews } from '../src/model/sources';
 import { buildRequest } from '../src/model/requests';
 import type { RefreshStatus } from '../src/model/types';
 import { demo, sourceOf } from './demo-data';
@@ -84,5 +84,35 @@ describe('the Mac', () => {
     expect(isOverdue(req, mac, NOW)).toBe(false);
     expect(isOverdue(req, mac, new Date('2026-11-22T20:00:01Z'))).toBe(true);
     expect(isOverdue(req, { kind: 'not_set_up' }, new Date('2027-01-01T00:00:00Z'))).toBe(false);
+  });
+
+  describe('a pending request', () => {
+    const { household, indexes, status } = demo();
+    const mac = macState({ kind: 'ok', status: at('2026-11-22T19:59:00Z') }, NOW);
+    const req = buildRequest({ scope: { all: true }, now: new Date('2026-11-22T19:50:00Z'), by: {}, appVersion: '0' });
+    const running = (requests: string[]) => {
+      const s: RefreshStatus = structuredClone(status);
+      const st = s.sources.find((x) => x.source === sourceOf(household, 'Robin Example', 'mychart').id)!;
+      st.last_attempt = { started_at: '2026-11-22T19:55:00Z', finished_at: null, trigger: requests.length ? 'request' : 'schedule', outcome: 'running', requests } as unknown as typeof st.last_attempt;
+      return sourceViews({ household, indexes, status: s, pending: [req], done: [] });
+    };
+
+    it('is being loaded when a running import names it', () => {
+      expect(requestWait(req, running([req.id]), mac, NOW).kind).toBe('loading');
+    });
+
+    it('waits on a busy Mac, not a late one, while another import runs', () => {
+      expect(requestWait(req, running([]), mac, NOW)).toMatchObject({ kind: 'busy' });
+    });
+
+    it('is late after a pass and a minute when nothing runs', () => {
+      const idle = sourceViews({ household, indexes, status, pending: [req], done: [] }).map((v) => (v.lastAttempt?.outcome === 'running' ? { ...v, lastAttempt: undefined } : v));
+      expect(requestWait(req, idle, mac, NOW).kind).toBe('late');
+      expect(requestWait(req, idle, mac, new Date('2026-11-22T19:55:00Z')).kind).toBe('waiting');
+    });
+
+    it('trusts no running import from a Mac that is offline', () => {
+      expect(requestWait(req, running([req.id]), { kind: 'offline', passEverySecs: 300 }, NOW).kind).toBe('waiting');
+    });
   });
 });

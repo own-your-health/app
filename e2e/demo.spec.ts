@@ -101,6 +101,8 @@ test('Refresh asks the Mac and shows its answer', async ({ page }) => {
   await page.goto('./?demo');
   await page.getByRole('button', { name: 'Refresh everything' }).click();
   await expect(page.getByText(/waiting for the Mac/).first()).toBeVisible();
+  // The sample Mac names the request in its running attempt for 3 seconds.
+  await expect(page.getByText(/the Mac is loading .+ for it now/).first()).toBeVisible({ timeout: 10_000 });
   await expect(page.getByText(/Last refresh request just now: needed a person/)).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole('button', { name: 'Refresh everything' })).toBeVisible();
 });
