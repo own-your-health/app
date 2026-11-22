@@ -1271,3 +1271,23 @@ body:has(.bottom-nav) {
   margin: 0 0 4px;
 }
 
+/* A heading inside a card, under its label: the schedule, then the doses given. */
+.card-sub {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 12px 0 4px;
+}
+
+.card > .card-sub:first-of-type,
+.schedule > .card-sub:first-child {
+  margin-top: 0;
+}
+
+.schedule {
+  margin-bottom: 8px;
+}
+
+.schedule-note {
+  margin-top: 8px;
+}
+

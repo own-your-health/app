@@ -59,7 +59,9 @@ const folderId = id('f');
 const robin = { id: id('p'), name: 'Robin Example', folder: 'Robin Example', birth_date: '1980-01-01', adult: true, aliases: ['Robin Q Example'], links: { huishouden_health_person: 'hh-demo-robin' }, created_at: at(-60 * 24 * 40) };
 const sam = { id: id('p'), name: 'Sam Example', folder: 'Sam Example', birth_date: '1980-07-01', adult: true, links: { huishouden_health_person: 'hh-demo-sam' }, created_at: at(-60 * 24 * 40) };
 const alex = { id: id('p'), name: 'Alex Example', folder: 'Alex Example', birth_date: '2018-01-01', guardians: [robin.id, sam.id], links: { huishouden_health_person: 'hh-demo-alex' }, created_at: at(-60 * 24 * 40) };
-const people = [robin, sam, alex];
+// A newborn. Its id is drawn after the other sources', so theirs stay put.
+const jamie = { id: null, name: 'Jamie Example', folder: 'Jamie Example', birth_date: '2026-11-08', guardians: [robin.id, sam.id], links: { huishouden_health_person: 'hh-demo-jamie' }, created_at: at(-60 * 24 * 12) };
+const people = [robin, sam, alex, jamie];
 
 const orgs = {
   health: { id: id('g'), name: 'Example Health', fhir_base: 'https://fhir.example.org/r4' },
@@ -99,6 +101,10 @@ FIRST_IMPORT.set(src.robinBlood.id, -60 * 24 * 12);
 FIRST_IMPORT.set(src.samChart.id, -60 * 5);
 FIRST_IMPORT.set(src.samLab.id, -60 * 24 * 9);
 FIRST_IMPORT.set(src.alexPeds.id, -60 * 26);
+jamie.id = id('p');
+src.jamiePeds = source(jamie, 'athena', 'example-pediatrics', orgs.peds);
+const JAMIE_PEDS_LOAD = at(-60 * 20);
+FIRST_IMPORT.set(src.jamiePeds.id, -60 * 20);
 
 write('household.json', {
   schema: 'medrec-household/v1',
@@ -497,7 +503,32 @@ for (const [date, kg] of [['2024-01-08', 20.4], ['2025-01-13', 22.6], ['2026-01-
     resource: { status: 'final', code: { coding: [{ system: LOINC, code: '29463-7', display: 'Body weight' }] }, valueQuantity: { value: kg, unit: 'kg' }, effectiveDateTime: date },
   });
 }
-for (const [date, code, name] of [['2022-01-10', '20', 'DTaP'], ['2022-01-10', '10', 'IPV'], ['2022-01-10', '03', 'MMR'], ['2025-10-20', '141', 'Influenza, seasonal, injectable']]) {
+for (const [date, code, name] of [
+  ['2018-01-01', '08', 'Hep B, adolescent or pediatric'],
+  ['2018-02-05', '08', 'Hep B, adolescent or pediatric'],
+  ['2018-03-05', '120', 'DTaP-Hib-IPV'],
+  ['2018-03-05', '133', 'Pneumococcal conjugate PCV 13'],
+  ['2018-03-05', '119', 'Rotavirus, monovalent'],
+  ['2018-05-07', '120', 'DTaP-Hib-IPV'],
+  ['2018-05-07', '133', 'Pneumococcal conjugate PCV 13'],
+  ['2018-05-07', '119', 'Rotavirus, monovalent'],
+  ['2018-07-09', '110', 'DTaP-hepatitis B and poliovirus vaccine'],
+  ['2018-07-09', '48', 'Hib (PRP-T)'],
+  ['2018-07-09', '133', 'Pneumococcal conjugate PCV 13'],
+  ['2019-01-07', '03', 'MMR'],
+  ['2019-01-07', '21', 'Varicella'],
+  ['2019-01-07', '83', 'Hep A, ped/adol, 2 dose'],
+  ['2019-01-07', '133', 'Pneumococcal conjugate PCV 13'],
+  ['2019-04-08', '20', 'DTaP'],
+  ['2019-04-08', '48', 'Hib (PRP-T)'],
+  ['2019-07-08', '83', 'Hep A, ped/adol, 2 dose'],
+  ['2022-01-10', '20', 'DTaP'],
+  ['2022-01-10', '10', 'IPV'],
+  ['2022-01-10', '03', 'MMR'],
+  ['2022-01-10', '21', 'Varicella'],
+  ['2024-10-14', '141', 'Influenza, seasonal, injectable'],
+  ['2025-10-20', '141', 'Influenza, seasonal, injectable'],
+]) {
   A.record(src.alexPeds, 'Immunization', 'immunization', {
     date,
     code: { system: CVX, code, display: name },
@@ -545,6 +576,60 @@ A.record(src.alexPeds, 'MedicationRequest', 'medication', {
 A.document(src.alexPeds, { date: '2025-10-20', doc_type: 'immunization_record', title: 'Immunization history', organization: 'Example Pediatrics', text: 'Immunization history. DTaP, IPV, MMR 01/10/2022. Influenza 10/20/2025.', original: 'immunizations.pdf' });
 const aPeds = A.importRun(src.alexPeds, { importedAt: ALEX_PEDS_LOAD, added: 3, updated: 0, unchanged: 11, docs: 1, cliVersion: '0.6.1' });
 A.write();
+
+// Jamie: a newborn, two weeks old at the anchor, loaded yesterday.
+const J = new PersonData(jamie);
+J.record(src.jamiePeds, 'Encounter', 'encounter', {
+  date: '2026-11-08',
+  display: 'Birth hospital stay',
+  status: 'finished',
+  fields: { class: 'inpatient', practitioner: 'Dr. Riley Placeholder', location: 'Example Health Birth Center', reason: 'Newborn delivery', period: { start: '2026-11-08T06:10:00Z', end: '2026-11-10T15:00:00Z' } },
+  resource: { status: 'finished', class: { code: 'IMP', display: 'inpatient encounter' }, type: [{ text: 'Birth hospital stay' }], period: { start: '2026-11-08T06:10:00Z', end: '2026-11-10T15:00:00Z' } },
+  filed: JAMIE_PEDS_LOAD,
+});
+J.record(src.jamiePeds, 'Immunization', 'immunization', {
+  date: '2026-11-08',
+  code: { system: CVX, code: '08', display: 'Hep B, adolescent or pediatric' },
+  display: 'Hep B, adolescent or pediatric',
+  status: 'completed',
+  fields: { performer: 'Example Health Birth Center', lot_number: `LOT${hex(4).toUpperCase()}`, site: 'Right thigh', route: 'Intramuscular' },
+  resource: { status: 'completed', vaccineCode: { coding: [{ system: CVX, code: '08' }], text: 'Hep B, adolescent or pediatric' }, occurrenceDateTime: '2026-11-08' },
+  filed: JAMIE_PEDS_LOAD,
+});
+for (const [date, kg] of [['2026-11-08', 3.42], ['2026-11-12', 3.31], ['2026-11-19', 3.55]]) {
+  J.record(src.jamiePeds, 'Observation', 'result', {
+    date,
+    code: { system: LOINC, code: '29463-7', display: 'Body weight' },
+    display: 'Weight',
+    status: 'final',
+    fields: { value: { value: kg, unit: 'kg' }, category: 'Vital signs' },
+    resource: { status: 'final', code: { coding: [{ system: LOINC, code: '29463-7', display: 'Body weight' }] }, valueQuantity: { value: kg, unit: 'kg' }, effectiveDateTime: date },
+    filed: JAMIE_PEDS_LOAD,
+  });
+}
+J.record(src.jamiePeds, 'Observation', 'result', {
+  date: '2026-11-09',
+  code: { system: LOINC, code: '42719-5', display: 'Bilirubin.total [Mass/volume] in Blood' },
+  display: 'Bilirubin, total',
+  status: 'final',
+  fields: { value: { value: 7.2, unit: 'mg/dL' }, reference_range: '1.0-12.0 mg/dL', category: 'Laboratory' },
+  resource: { ...obs('42719-5', 'Bilirubin, total', 7.2, 'mg/dL', 'mg/dL', '1.0-12.0 mg/dL'), effectiveDateTime: '2026-11-09' },
+  filed: JAMIE_PEDS_LOAD,
+});
+for (const [date, what] of [['2026-11-12', 'Newborn visit'], ['2026-11-19', 'Weight check']]) {
+  J.record(src.jamiePeds, 'Encounter', 'encounter', {
+    date,
+    display: what,
+    status: 'finished',
+    fields: { class: 'ambulatory', practitioner: 'Dr. Morgan Placeholder', location: 'Example Pediatrics' },
+    resource: { status: 'finished', type: [{ text: what }], period: { start: `${date}T15:00:00Z` } },
+    filed: JAMIE_PEDS_LOAD,
+  });
+}
+const discharge = J.document(src.jamiePeds, { date: '2026-11-10', doc_type: 'discharge_summary', title: 'Newborn discharge summary', organization: 'Example Health', pages: 2, text: 'Newborn discharge summary. Born 11/08/2026 at 39 weeks. Birth weight 3.42 kg. Hepatitis B vaccine given 11/08/2026. Total bilirubin 7.2 mg/dL on day 1. Follow up with pediatrician in 2 to 3 days.', original: 'newborn_discharge.pdf', filed: JAMIE_PEDS_LOAD });
+J.records.find((r) => r.kind === 'encounter' && r.date === '2026-11-08').documents.push(discharge.id);
+J.importRun(src.jamiePeds, { importedAt: JAMIE_PEDS_LOAD, added: 7, updated: 0, unchanged: 0, docs: 1, cliVersion: '0.6.1' });
+J.write();
 
 // ---- What the Mac's `medrec refresh` wrote ----
 

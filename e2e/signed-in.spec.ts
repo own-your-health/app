@@ -68,7 +68,7 @@ test('a setup link signs in, finds the records folder and reads it', async ({ pa
   expect(page.url()).toBe(`${baseURL}#/`);
   await page.locator('.row', { hasText: FOLDER_NAME }).getByRole('button', { name: 'Open' }).click();
   await expect(page.locator('.glance-answer')).toHaveText(HEADLINE);
-  await expect(page.locator('.card', { hasText: 'People' }).locator('.row')).toHaveCount(3);
+  await expect(page.locator('.card', { hasText: 'People' }).locator('.row')).toHaveCount(4);
 
   const kept = await page.evaluate(() => ({ local: { ...localStorage }, session: { ...sessionStorage } }));
   expect(Object.keys(kept.local).sort()).toEqual(['own-your-health-app.account', 'own-your-health-app.client_id', 'own-your-health-app.folder']);

@@ -49,8 +49,9 @@ describe('source views over the sample', () => {
   it('show an everything request only on sources the Mac refreshes', () => {
     const req = buildRequest({ scope: { all: true }, now: NOW, by: {}, appVersion: '0' });
     const vs = sourceViews({ household, indexes, status, pending: [req], done: [] });
-    const blood = sourceOf(household, 'Robin Example', 'oneblood');
-    for (const v of vs) expect(v.pending.length).toBe(v.source.id === blood.id ? 0 : 1);
+    // The blood centre and the newborn's practice are not set up for refresh.
+    const notRefreshed = [sourceOf(household, 'Robin Example', 'oneblood').id, sourceOf(household, 'Jamie Example', 'athena').id];
+    for (const v of vs) expect(v.pending.length).toBe(notRefreshed.includes(v.source.id) ? 0 : 1);
   });
 });
 
@@ -59,8 +60,8 @@ describe('headline', () => {
   it('reads plainly when nothing is wrong', () => {
     // Without status.json, health comes from the ImportRuns alone.
     const vs = sourceViews({ household, indexes, pending: [], done: [] });
-    expect(headline(vs)).toEqual({ text: '6 sources loaded, 1 not yet', attention: false });
-    expect(headline(vs.filter((v) => v.health === 'ok'))).toEqual({ text: 'All 6 sources loaded', attention: false });
+    expect(headline(vs)).toEqual({ text: '7 sources loaded, 1 not yet', attention: false });
+    expect(headline(vs.filter((v) => v.health === 'ok'))).toEqual({ text: 'All 7 sources loaded', attention: false });
     expect(headline([])).toEqual({ text: 'No sources yet', attention: false });
   });
 });

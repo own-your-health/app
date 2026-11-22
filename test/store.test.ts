@@ -18,8 +18,8 @@ describe('the store over the sample folder', () => {
   it('loads the household, every index and the refresh state', async () => {
     const store = new Store(demoFolder(ANCHOR));
     await store.load();
-    expect(store.household.people).toHaveLength(3);
-    expect(store.indexes.size).toBe(3);
+    expect(store.household.people).toHaveLength(4);
+    expect(store.indexes.size).toBe(4);
     expect(store.indexErrors.size).toBe(0);
     expect(store.status.kind).toBe('ok');
     expect(store.requestsReady).toBe(true);
