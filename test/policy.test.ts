@@ -42,7 +42,7 @@ describe('the page', () => {
 
   it('sends no referrer and loads only its own script', () => {
     expect(html).toContain('<meta name="referrer" content="no-referrer" />');
-    const scripts = [...html.matchAll(/<script\b[^>]*>/g)].map((x) => x[0]);
+    const scripts = [...html.matchAll(/<script\b[^>]*>/gi)].map((x) => x[0]);
     expect(scripts).toEqual(['<script type="module" src="/src/main.ts">']);
     expect(html).not.toMatch(/https?:\/\/(?!www\.googleapis\.com|oauth2\.googleapis\.com)[^"' ]+\.(js|css)/);
   });
