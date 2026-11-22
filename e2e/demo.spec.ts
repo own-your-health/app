@@ -135,7 +135,7 @@ test('an unknown address says so', async ({ page }) => {
 
 test('without a client id, the app asks for one and offers the sample', async ({ page }) => {
   await page.goto('./');
-  await expect(page.locator('input[aria-label="Google OAuth client id"]')).toBeVisible();
+  await expect(page.locator('input[aria-label="Google OAuth client id or setup link"]')).toBeVisible();
   await expect(page.getByRole('link', { name: /sample/i }).first()).toBeVisible();
   const stored = await page.evaluate(() => Object.keys(localStorage));
   expect(stored).toEqual([]);

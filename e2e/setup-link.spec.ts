@@ -64,7 +64,21 @@ test('a setup link for another client asks before replacing it', async ({ page }
 test('a setup link without a valid client id falls back to the paste field', async ({ page }) => {
   await page.goto('./?client=not-a-client-id');
   await expect(page.getByText(/no valid Google client id/)).toBeVisible();
-  await expect(page.locator('input[aria-label="Google OAuth client id"]')).toBeVisible();
+  await expect(page.locator('input[aria-label="Google OAuth client id or setup link"]')).toBeVisible();
   expect(page.url()).not.toContain('client=');
   expect(await page.evaluate(() => Object.keys(localStorage))).toEqual([]);
+});
+
+test('a setup link pasted into the client field works as the client id does', async ({ page, baseURL }) => {
+  // An app added to an iPhone's Home Screen has its own storage and no
+  // address bar, so the link is pasted there.
+  await page.goto('./');
+  const field = page.locator('input[aria-label="Google OAuth client id or setup link"]');
+  await field.fill(`${baseURL}?client=${ID.slice(0, 40)}`);
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText(/That link has no valid Google client id/)).toBeVisible();
+  await field.fill(`${baseURL}?client=${ID}`);
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
+  expect(await page.evaluate((k) => localStorage.getItem(k), KEY)).toBe(ID);
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readSetupLink, setupLinkFor, withoutClient } from '../src/setup-link';
+import { readPaste, readSetupLink, setupLinkFor, withoutClient } from '../src/setup-link';
 
 const ID = '123456789012-abcdefghijklmnopqrstuvwxyz012345.apps.googleusercontent.com';
 const OTHER = '999999999999-zyxwvutsrqponmlkjihgfedcba543210.apps.googleusercontent.com';
@@ -31,6 +31,18 @@ describe('a setup link', () => {
   it('leaves the address without the client, keeping the route', () => {
     expect(withoutClient({ pathname: '/app/', search: `?client=${ID}`, hash: '#/hh/hh-demo-robin' })).toBe('/app/#/hh/hh-demo-robin');
     expect(withoutClient({ pathname: '/app/', search: `?x=1&client=${ID}`, hash: '' })).toBe('/app/?x=1');
+  });
+
+  it('can be pasted instead of opened, as the client id itself can', () => {
+    const APP = 'https://own-your-health.github.io';
+    expect(readPaste(` ${ID} `, APP)).toEqual({ kind: 'client', clientId: ID });
+    expect(readPaste(`${APP}/app/?client=${ID}`, APP)).toEqual({ kind: 'client', clientId: ID });
+    expect(readPaste(`${APP}/app/?client=${encodeURIComponent(ID)}#/hh/hh-demo-robin`, APP)).toEqual({ kind: 'client', clientId: ID });
+    for (const cut of [`${APP}/app/`, `${APP}/app/?client=abc`, `${APP}/app/?client=${ID.slice(0, 40)}`]) {
+      expect(readPaste(cut, APP)).toEqual({ kind: 'bad_link' });
+    }
+    expect(readPaste(`https://elsewhere.example/app/?client=${ID}`, APP)).toEqual({ kind: 'other_site' });
+    for (const bad of ['', 'abc', `${ID}x`]) expect(readPaste(bad, APP)).toEqual({ kind: 'bad' });
   });
 
   it('builds the link another device opens', () => {

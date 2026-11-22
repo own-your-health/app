@@ -26,6 +26,34 @@ export function readSetupLink(search: string, current: string | null): SetupLink
   return id === current ? { kind: 'same', clientId: id } : { kind: 'different', clientId: id, current };
 }
 
+export type Paste =
+  | { kind: 'client'; clientId: string }
+  /** This app's link, without a valid client id: cut short when copied. */
+  | { kind: 'bad_link' }
+  /** A link to another site. */
+  | { kind: 'other_site' }
+  | { kind: 'bad' };
+
+/**
+ * What a person pasted into the client field: the client id itself, or this
+ * app's whole setup link (`origin` is the app's own). An app added to an
+ * iPhone's Home Screen keeps its own storage and has no address bar, so the
+ * link is pasted there instead of opened.
+ */
+export function readPaste(text: string, origin: string): Paste {
+  const v = text.trim();
+  if (isClientId(v)) return { kind: 'client', clientId: v };
+  let url: URL;
+  try {
+    url = new URL(v);
+  } catch {
+    return { kind: 'bad' };
+  }
+  if (url.origin !== origin) return { kind: 'other_site' };
+  const link = readSetupLink(url.search, null);
+  return link.kind === 'new' ? { kind: 'client', clientId: link.clientId } : { kind: 'bad_link' };
+}
+
 /** The address without `?client=`, keeping any other parameter and the route. */
 export function withoutClient(loc: { pathname: string; search: string; hash: string }): string {
   const params = new URLSearchParams(loc.search);
