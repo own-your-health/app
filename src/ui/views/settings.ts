@@ -5,7 +5,7 @@ import { SCOPE_READ, SCOPE_WRITE } from '../../auth';
 import { button, card, kv, type Ctx } from '../components';
 import { h } from '../dom';
 import { dateTime } from '../format';
-import { REGISTRATION_URL, REPO_URL } from './setup';
+import { PRIVACY_URL, REGISTRATION_URL, REPO_URL } from './setup';
 
 export function settingsView(
   ctx: Ctx,
@@ -49,7 +49,15 @@ export function settingsView(
         h('li', null, 'The page talks only to Google: the sign-in and the Drive API. It loads no other scripts, fonts or trackers.'),
         h('li', null, 'The only files it writes are refresh requests in the folder’s _requests/ folder.'),
       ),
-      h('p', null, h('a', { href: REPO_URL, target: '_blank', rel: 'noopener noreferrer' }, 'Source code'), ' · ', h('a', { href: REGISTRATION_URL, target: '_blank', rel: 'noopener noreferrer' }, 'Setting up a Google client')),
+      h(
+        'p',
+        null,
+        h('a', { href: PRIVACY_URL, target: '_blank', rel: 'noopener' }, 'Privacy policy'),
+        ' · ',
+        h('a', { href: REPO_URL, target: '_blank', rel: 'noopener noreferrer' }, 'Source code'),
+        ' · ',
+        h('a', { href: REGISTRATION_URL, target: '_blank', rel: 'noopener noreferrer' }, 'Setting up a Google client'),
+      ),
       h('p', { class: 'muted small' }, `Version ${ctx.version}`),
     ),
   );

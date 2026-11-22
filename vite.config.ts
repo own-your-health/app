@@ -36,6 +36,8 @@ export default defineConfig({
     // the app's own files.
     assetsInlineLimit: 0,
     modulePreload: { polyfill: false },
+    // The privacy policy is a page of its own, without the app's script.
+    rollupOptions: { input: { index: 'index.html', privacy: 'privacy.html' } },
   },
   test: {
     include: ['test/**/*.test.ts'],

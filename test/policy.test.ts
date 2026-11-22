@@ -40,6 +40,14 @@ describe('the page', () => {
     expect(m?.[1]).toBe(CSP);
   });
 
+  it('has a privacy policy under the same policy, with no script at all', () => {
+    const privacy = readFileSync(join(ROOT, 'privacy.html'), 'utf8');
+    expect(privacy.match(/http-equiv="Content-Security-Policy"\s+content="([^"]+)"/)?.[1]).toBe(CSP);
+    expect(privacy).toContain('<meta name="referrer" content="no-referrer" />');
+    expect(privacy).not.toMatch(/<script\b/i);
+    expect(html).toContain('<a href="./privacy.html">Privacy policy</a>');
+  });
+
   it('sends no referrer and loads only its own script', () => {
     expect(html).toContain('<meta name="referrer" content="no-referrer" />');
     const scripts = [...html.matchAll(/<script\b[^>]*>/gi)].map((x) => x[0]);

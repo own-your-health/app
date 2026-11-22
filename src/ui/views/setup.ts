@@ -9,6 +9,8 @@ import { dateTime } from '../format';
 
 export const REPO_URL = 'https://github.com/own-your-health/app';
 export const REGISTRATION_URL = `${REPO_URL}/blob/main/docs/registration.md`;
+/** The privacy policy, a static page next to the app. */
+export const PRIVACY_URL = './privacy.html';
 
 function demoLink(): HTMLElement {
   return h('a', { class: 'button button-outline', href: './?demo' }, 'Try it with sample records');
