@@ -51,7 +51,7 @@
           "records_older": 0,
           "resources_written": 2,
           "resources_unchanged": 41,
-          "documents_added": 0,
+          "documents_added": 1,
           "documents_duplicate": 0,
           "documents_unchanged": 0,
           "documents_same_statement": 0
@@ -238,7 +238,7 @@
           "records_older": 0,
           "resources_written": 3,
           "resources_unchanged": 11,
-          "documents_added": 0,
+          "documents_added": 1,
           "documents_duplicate": 0,
           "documents_unchanged": 0,
           "documents_same_statement": 0

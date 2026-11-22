@@ -548,8 +548,21 @@ A.write();
 
 // ---- What the Mac's `medrec refresh` wrote ----
 
-function counts(added, updated, unchanged) {
-  return { records_added: added, records_updated: updated, records_unchanged: unchanged, records_older: 0, resources_written: added + updated, resources_unchanged: unchanged, documents_added: 0, documents_duplicate: 0, documents_unchanged: 0, documents_same_statement: 0 };
+// An attempt's counts are its import's, so the status, the attempts log and
+// the index always agree.
+function counts(run) {
+  return {
+    records_added: run.records_added,
+    records_updated: run.records_updated,
+    records_unchanged: run.records_unchanged,
+    records_older: run.records_older,
+    resources_written: run.resources_written,
+    resources_unchanged: run.resources_unchanged,
+    documents_added: run.documents_added,
+    documents_duplicate: 0,
+    documents_unchanged: 0,
+    documents_same_statement: 0,
+  };
 }
 const machine = id('h');
 const attempts = [];
@@ -560,10 +573,10 @@ function attempt(s, person, { started, minutes = 1, trigger = 'schedule', reques
 }
 
 const doneReq = { schema: 'medrec-request/v1', id: id('x'), requested_at: at(-60 * 3 - 4), requested_by: { email: 'robin@example.com', name: 'Robin Example' }, scope: { source: src.robinChart.id }, app: { name: 'own-your-health-app', version: '0.1.0' } };
-const robinChartOk = attempt(src.robinChart, robin, { started: at(-60 * 3 - 1), trigger: 'request', requests: [doneReq.id], importId: rChart.id, c: counts(2, 0, 41) });
-const alexOk = attempt(src.alexPeds, alex, { started: at(-60 * 26 - 1), importId: aPeds.id, c: counts(3, 0, 11) });
-const samChartOk = attempt(src.samChart, sam, { started: at(-60 * 5 - 1), importId: S.imports[0].id, c: counts(0, 1, 5) });
-attempt(src.samLab, sam, { started: at(-60 * 24 * 9 - 1), importId: S.imports[1].id, c: counts(1, 0, 0) });
+const robinChartOk = attempt(src.robinChart, robin, { started: at(-60 * 3 - 1), trigger: 'request', requests: [doneReq.id], importId: rChart.id, c: counts(rChart) });
+const alexOk = attempt(src.alexPeds, alex, { started: at(-60 * 26 - 1), importId: aPeds.id, c: counts(aPeds) });
+const samChartOk = attempt(src.samChart, sam, { started: at(-60 * 5 - 1), importId: S.imports[0].id, c: counts(S.imports[0]) });
+attempt(src.samLab, sam, { started: at(-60 * 24 * 9 - 1), importId: S.imports[1].id, c: counts(S.imports[1]) });
 const samLabFail = attempt(src.samLab, sam, {
   started: at(-60 * 2),
   outcome: 'failed',
@@ -582,7 +595,7 @@ write('_status/status.json', {
       source: src.robinChart.id, person: robin.id, cli: 'mychart', organization: 'example-health', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: at(60 * 21),
       sign_in: { state: 'ok', expires_at: at(60 * 24 * 200), checked_at: at(-60 * 3 - 1), needs_person: null },
       last_attempt: robinChartOk,
-      last_success: { attempt: robinChartOk.attempt, finished_at: robinChartOk.finished_at, import: rChart.id, counts: counts(2, 0, 41), withheld_types: ['ExplanationOfBenefit'] },
+      last_success: { attempt: robinChartOk.attempt, finished_at: robinChartOk.finished_at, import: rChart.id, counts: counts(rChart), withheld_types: ['ExplanationOfBenefit'] },
     },
     {
       source: src.robinPlan.id, person: robin.id, cli: 'uhc', organization: 'example-health-plan', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: null,
@@ -594,7 +607,7 @@ write('_status/status.json', {
       source: src.samChart.id, person: sam.id, cli: 'mychart', organization: 'example-health', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: at(60 * 19),
       sign_in: { state: 'expiring', expires_at: at(60 * 40), checked_at: at(-60 * 5 - 1), needs_person: null },
       last_attempt: samChartOk,
-      last_success: { attempt: samChartOk.attempt, finished_at: samChartOk.finished_at, import: S.imports[0].id, counts: counts(0, 1, 5), withheld_types: [] },
+      last_success: { attempt: samChartOk.attempt, finished_at: samChartOk.finished_at, import: S.imports[0].id, counts: counts(S.imports[0]), withheld_types: [] },
     },
     {
       source: src.samLab.id, person: sam.id, cli: 'labcorp', organization: 'example-lab', auto: true, paused: null, failures: 2, min_interval_secs: 86400, next_run_at: at(60),
@@ -612,7 +625,7 @@ write('_status/status.json', {
       source: src.alexPeds.id, person: alex.id, cli: 'athena', organization: 'example-pediatrics', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: at(60 * 22 - 26),
       sign_in: { state: 'ok', expires_at: at(60 * 24 * 87), checked_at: at(-60 * 26 - 1), needs_person: null },
       last_attempt: alexOk,
-      last_success: { attempt: alexOk.attempt, finished_at: alexOk.finished_at, import: aPeds.id, counts: counts(3, 0, 11), withheld_types: [] },
+      last_success: { attempt: alexOk.attempt, finished_at: alexOk.finished_at, import: aPeds.id, counts: counts(aPeds), withheld_types: [] },
     },
   ],
 });
