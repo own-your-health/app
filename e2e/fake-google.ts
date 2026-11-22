@@ -33,6 +33,8 @@ export interface Change {
   method: string;
   /** The file's path in the records folder. */
   path: string;
+  /** Drive refused it: the token lacks drive.file, or the file is not the app's. */
+  refused?: true;
 }
 
 export interface SignInAsk {
@@ -51,7 +53,7 @@ export class FakeGoogle {
   readonly strays: string[] = [];
   /** How many calls reached Drive. */
   driveCalls = 0;
-  /** What the next sign-in grants; a person can untick a scope on Google's screen. */
+  /** What the sign-in grants, and so what the token may do; a person can untick a scope on Google's screen. */
   granted = [READ, WRITE];
   /** The client tokeninfo names: another one means a token issued to another app. */
   audience = CLIENT;
@@ -187,15 +189,22 @@ export class FakeGoogle {
     const m = /^files\/([^/]+)$/.exec(path);
     const node = m ? this.nodes.get(decodeURIComponent(m[1]!)) : undefined;
     if (!m) return driveError(route, 400, 'badRequest', `Not a call this stand-in knows: ${req.method()} ${url.pathname}`);
-    if (!node) return driveError(route, 404, 'notFound', `File not found: ${m[1]}.`);
+    if (!node || !this.sees(node)) return driveError(route, 404, 'notFound', `File not found: ${m[1]}.`);
     if (req.method() === 'DELETE') {
-      if (!node.byApp) return driveError(route, 403, 'insufficientFilePermissions', 'The user does not have sufficient permissions for this file.');
+      if (!this.granted.includes(WRITE)) {
+        this.changes.push({ method: 'DELETE', path: this.pathOf(node), refused: true });
+        return insufficientScopes(route);
+      }
+      if (!node.byApp) {
+        this.changes.push({ method: 'DELETE', path: this.pathOf(node), refused: true });
+        return driveError(route, 403, 'insufficientFilePermissions', 'The user does not have sufficient permissions for this file.');
+      }
       this.nodes.delete(node.id);
       this.changes.push({ method: 'DELETE', path: this.pathOf(node) });
       return route.fulfill({ status: 204, headers: cors() });
     }
     if (req.method() !== 'GET') {
-      this.changes.push({ method: req.method(), path: this.pathOf(node) });
+      this.changes.push({ method: req.method(), path: this.pathOf(node), refused: true });
       return driveError(route, 403, 'insufficientFilePermissions', 'The user does not have sufficient permissions for this file.');
     }
     if (url.searchParams.get('alt') === 'media') return route.fulfill({ status: 200, headers: { ...cors(), 'content-type': 'application/json' }, body: node.content ?? '' });
@@ -210,7 +219,12 @@ export class FakeGoogle {
     if ((m = new RegExp(`^${str} in parents and trashed = false$`).exec(q))) found = this.childrenOf(unq(m[1]!));
     else if ((m = new RegExp(`^name = ${str} and trashed = false$`).exec(q))) found = [...this.nodes.values()].filter((n) => n.name === unq(m![1]!));
     else return driveError(route, 400, 'invalid', `A query this stand-in does not know: ${q}`);
-    return json(route, 200, { files: found.map((n) => this.resource(n)) });
+    return json(route, 200, { files: found.filter((n) => this.sees(n)).map((n) => this.resource(n)) });
+  }
+
+  /** drive.readonly sees every file; drive.file alone sees only the app's own. */
+  private sees(n: Node): boolean {
+    return this.granted.includes(READ) || n.byApp;
   }
 
   private create(route: Route, req: Request): Promise<void> {
@@ -219,6 +233,10 @@ export class FakeGoogle {
     const meta = JSON.parse(parts[0] ?? '{}') as { name?: string; parents?: string[]; mimeType?: string };
     const parent = this.nodes.get(meta.parents?.[0] ?? '');
     if (!meta.name || !parent || parent.mimeType !== FOLDER_MIME) return driveError(route, 400, 'badRequest', 'A file needs a name and a folder.');
+    if (!this.granted.includes(WRITE)) {
+      this.changes.push({ method: 'CREATE', path: `${this.pathOf(parent)}/${meta.name}`, refused: true });
+      return insufficientScopes(route);
+    }
     const node = this.add({ name: meta.name, mimeType: meta.mimeType ?? 'application/octet-stream', parent: parent.id, byApp: true, content: parts[1] ?? '' });
     this.changes.push({ method: 'CREATE', path: this.pathOf(node) });
     return json(route, 200, this.resource(node));
@@ -251,6 +269,11 @@ function cors(): Record<string, string> {
 
 function json(route: Route, status: number, body: unknown): Promise<void> {
   return route.fulfill({ status, headers: { ...cors(), 'content-type': 'application/json' }, body: JSON.stringify(body) });
+}
+
+/** Drive's answer to a call the token's scopes do not cover. */
+function insufficientScopes(route: Route): Promise<void> {
+  return driveError(route, 403, 'insufficientPermissions', 'Request had insufficient authentication scopes.');
 }
 
 function driveError(route: Route, status: number, reason: string, message: string): Promise<void> {
