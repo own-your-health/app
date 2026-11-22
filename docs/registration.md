@@ -91,6 +91,11 @@ It is fine to send the link to the people in your household. A client id is not
 a secret: Google shows it to everyone who signs in. Only the test users listed
 on your consent screen (step 3) can sign in through it.
 
+Open a setup link only when someone in your household sent it. A link can name
+any Google client, and on a device that has none yet the app goes straight to
+Google's sign-in for it. Google's screen shows the client's developer email (the
+support email from step 3): if it is not your household's, stop there.
+
 ## Scopes
 
 The app asks for two Drive scopes, and no others:
