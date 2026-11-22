@@ -6,6 +6,8 @@ import { button, card, kv, type Ctx } from '../components';
 import { h } from '../dom';
 import { dateTime } from '../format';
 import { PRIVACY_URL, REGISTRATION_URL, REPO_URL } from './setup';
+import { getTheme, setTheme, type Theme } from '../../settings';
+import { applyTheme } from '../../theme';
 
 export function settingsView(
   ctx: Ctx,
@@ -40,11 +42,12 @@ export function settingsView(
           h('div', { class: 'actions' }, button('Sign out', () => ctx.signOut()), button('Use another Google client', opts.onChangeClient, { ghost: true })),
         ),
     ctx.demo || !opts.setupLink ? null : setupLinkCard(ctx, opts.setupLink),
+    themeCard(),
     card(
       { title: 'What this app keeps and sends' },
       h('ul', { class: 'plain' },
         h('li', null, 'Your records stay in your Drive and in this page’s memory. Closing the page forgets them.'),
-        h('li', null, 'Browser storage holds only your Google client id, which folder to open, and the email of the Google account that signed in, so the next sign-in needs no account chooser.'),
+        h('li', null, 'Browser storage holds only your Google client id, which folder to open, the email of the Google account that signed in (so the next sign-in needs no account chooser), and the theme you chose.'),
         h('li', null, 'The Google sign-in lives in memory and ends within an hour.'),
         h('li', null, 'The page talks only to Google: the sign-in and the Drive API. It loads no other scripts, fonts or trackers.'),
         h('li', null, 'The only files it writes are refresh requests in the folder’s _requests/ folder.'),
@@ -60,6 +63,31 @@ export function settingsView(
       ),
       h('p', { class: 'muted small' }, `Version ${ctx.version}`),
     ),
+  );
+}
+
+const THEMES: [Theme, string][] = [
+  ['system', 'System'],
+  ['light', 'Light'],
+  ['dark', 'Dark'],
+];
+
+/** Light, dark, or the device's setting; it applies at once and on every open. */
+function themeCard(): HTMLElement {
+  const current = getTheme();
+  const pick = (ev: Event) => {
+    const theme = (ev.currentTarget as HTMLInputElement).value as Theme;
+    setTheme(theme);
+    applyTheme(theme);
+  };
+  return card(
+    { title: 'Theme' },
+    h(
+      'div',
+      { class: 'choices', role: 'radiogroup', 'aria-label': 'Theme' },
+      THEMES.map(([value, label]) => h('label', { class: 'choice' }, h('input', { type: 'radio', name: 'theme', value, checked: value === current, on: { change: pick } }), h('span', null, label))),
+    ),
+    h('p', { class: 'muted small' }, 'System follows this device’s light or dark setting.'),
   );
 }
 

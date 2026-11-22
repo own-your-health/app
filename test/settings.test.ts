@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getAccount, getClientId, getFolder, setAccount, setClientId, setFolder, STORAGE_KEYS } from '../src/settings';
+import { getAccount, getClientId, getFolder, getTheme, setAccount, setClientId, setFolder, setTheme, STORAGE_KEYS } from '../src/settings';
 
 function kv() {
   const m = new Map<string, string>();
@@ -7,18 +7,31 @@ function kv() {
 }
 
 describe('settings', () => {
-  it('keep only the client id, the folder and the account', () => {
+  it('keep only the client id, the folder, the account and the theme', () => {
     const s = kv();
     setClientId(' 123456789012-abcdefghijklmnop.apps.googleusercontent.com ', s);
     setFolder({ id: 'folder-1', name: 'Medical Records' }, s);
     setAccount('robin@example.com', s);
+    setTheme('dark', s);
     expect([...s.m.keys()].sort()).toEqual([...STORAGE_KEYS].sort());
     expect(getClientId(s)).toBe('123456789012-abcdefghijklmnop.apps.googleusercontent.com');
     expect(getFolder(s)).toEqual({ id: 'folder-1', name: 'Medical Records' });
     expect(getAccount(s)).toBe('robin@example.com');
     setClientId(null, s);
     setFolder(null, s);
+    setTheme('system', s);
     expect(s.m.size).toBe(0);
+  });
+
+  it('keep a theme only when one is chosen', () => {
+    const s = kv();
+    expect(getTheme(s)).toBe('system');
+    setTheme('light', s);
+    expect(getTheme(s)).toBe('light');
+    setTheme('system', s);
+    expect(s.m.size).toBe(0);
+    s.setItem(STORAGE_KEYS[3]!, 'sepia');
+    expect(getTheme(s)).toBe('system');
   });
 
   it('forget the account when the client changes or is cleared, and keep it otherwise', () => {

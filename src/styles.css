@@ -75,31 +75,69 @@
   -webkit-text-size-adjust: 100%;
 }
 
+/*
+ * Dark: chosen in Settings (data-theme="dark", set before the first paint by
+ * public/theme.js), or the device's when nothing is chosen. The two blocks
+ * hold the same values; test/theme.test.ts checks that, and checks every
+ * text colour against its background at WCAG AA in both palettes.
+ */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --page: #161c30;
+  --surface: #20273f;
+  --sunken: #1a2036;
+  --ink: #eceff6;
+  --ink-soft: #d0d5e2;
+  --muted: #a9b1c5;
+  --line: #3a446c;
+  --bar: #1d2452;
+  --on-bar-soft: var(--ultra-200);
+  --primary: var(--ultra-400);
+  --primary-hover: var(--ultra-200);
+  --on-primary: #0b0f1e;
+  --link: #b4bdf8;
+  --tint: #2a3462;
+  --tint-strong: #334077;
+  --positive: var(--teal-300);
+  --positive-rule: var(--teal-300);
+  --positive-tint: #183c39;
+  --attention: var(--amber-300);
+  --attention-text: var(--amber-300);
+  --attention-tint: #42331a;
+  --error: var(--red-300);
+  --error-tint: #4b221f;
+  --focus: var(--ultra-400);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
-    --page: #0b0f1e;
-    --surface: #141a2e;
-    --sunken: #0f1427;
-    --ink: #e7eaf3;
-    --ink-soft: #c9cfdd;
-    --muted: #9aa3b8;
-    --line: #283055;
-    --bar: #0f1430;
-    --on-bar-soft: var(--slate-400);
+  :root:not([data-theme]) {
+    --page: #161c30;
+    --surface: #20273f;
+    --sunken: #1a2036;
+    --ink: #eceff6;
+    --ink-soft: #d0d5e2;
+    --muted: #a9b1c5;
+    --line: #3a446c;
+    --bar: #1d2452;
+    --on-bar-soft: var(--ultra-200);
     --primary: var(--ultra-400);
     --primary-hover: var(--ultra-200);
     --on-primary: #0b0f1e;
-    --link: #a7b1f5;
-    --tint: #1b2347;
-    --tint-strong: #232d5c;
+    --link: #b4bdf8;
+    --tint: #2a3462;
+    --tint-strong: #334077;
     --positive: var(--teal-300);
     --positive-rule: var(--teal-300);
-    --positive-tint: #0f2b2a;
+    --positive-tint: #183c39;
     --attention: var(--amber-300);
     --attention-text: var(--amber-300);
-    --attention-tint: #33260b;
+    --attention-tint: #42331a;
     --error: var(--red-300);
-    --error-tint: #3a1614;
+    --error-tint: #4b221f;
     --focus: var(--ultra-400);
   }
 }
@@ -1007,8 +1045,13 @@ body:has(.bottom-nav) {
   background: var(--red-700);
 }
 
+:root[data-theme='dark'] .toast {
+  background: var(--ultra-800);
+  border: 1px solid var(--ultra-400);
+}
+
 @media (prefers-color-scheme: dark) {
-  .toast {
+  :root:not([data-theme]) .toast {
     background: var(--ultra-800);
     border: 1px solid var(--ultra-400);
   }
@@ -1063,3 +1106,52 @@ body:has(.bottom-nav) {
 .privacy li + li {
   margin-top: 0.4em;
 }
+
+/* ---- Choices: one of a few, as in Settings' theme ---- */
+
+.choices {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 4px 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  overflow: hidden;
+}
+
+.choice {
+  position: relative;
+  display: inline-flex;
+}
+
+.choice + .choice {
+  border-left: 1px solid var(--line);
+}
+
+.choice input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.choice span {
+  padding: 8px 16px;
+  min-width: 72px;
+  text-align: center;
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.choice input:checked + span {
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 600;
+}
+
+.choice input:focus-visible + span {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+

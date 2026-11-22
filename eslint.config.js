@@ -34,6 +34,12 @@ export default tseslint.config(
     rules: noHtmlSinks,
   },
   {
+    // Served as they are: public/theme.js runs in the page's head.
+    files: ['public/**/*.js'],
+    languageOptions: { globals: globals.browser, sourceType: 'script' },
+    rules: noHtmlSinks,
+  },
+  {
     files: ['test/**/*.ts', 'e2e/**/*.ts', 'scripts/**/*.{ts,mjs}', '*.config.{ts,js}'],
     languageOptions: { globals: globals.node },
   },

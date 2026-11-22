@@ -7,6 +7,7 @@ const PREFIX = 'own-your-health-app.';
 const CLIENT_ID = `${PREFIX}client_id`;
 const FOLDER = `${PREFIX}folder`;
 const ACCOUNT = `${PREFIX}account`;
+const THEME = `${PREFIX}theme`;
 
 export interface FolderSetting {
   id: string;
@@ -69,5 +70,18 @@ export function setFolder(f: FolderSetting | null, kv: KV | null = store()): voi
   else kv?.removeItem(FOLDER);
 }
 
+export type Theme = 'system' | 'light' | 'dark';
+
+/** The colour theme chosen in Settings; `system` follows the device. */
+export function getTheme(kv: KV | null = store()): Theme {
+  const v = kv?.getItem(THEME);
+  return v === 'light' || v === 'dark' ? v : 'system';
+}
+
+export function setTheme(theme: Theme, kv: KV | null = store()): void {
+  if (theme === 'system') kv?.removeItem(THEME);
+  else kv?.setItem(THEME, theme);
+}
+
 /** Every key this app may write, for the tests and the privacy page. */
-export const STORAGE_KEYS = [CLIENT_ID, FOLDER, ACCOUNT];
+export const STORAGE_KEYS = [CLIENT_ID, FOLDER, ACCOUNT, THEME];
