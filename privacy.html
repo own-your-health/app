@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- The same policy as the app (index.html); this page runs no script at all. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'none'; connect-src 'self' https://www.googleapis.com https://oauth2.googleapis.com; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; require-trusted-types-for 'script'; trusted-types 'none'; upgrade-insecure-requests"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#121848" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f1430" media="(prefers-color-scheme: dark)" />
+    <meta name="description" content="Privacy policy of Own Your Health, the records app that reads your household's own Google Drive folder in your browser" />
+    <title>Privacy policy · Own Your Health</title>
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <header class="app-bar">
+      <div class="bar-inner">
+        <a class="brand" href="./">
+          <svg viewBox="0 0 32 32" width="32" height="32" class="logo" aria-hidden="true">
+            <rect width="32" height="32" rx="7" class="logo-tile" />
+            <path d="M6.5 11a2 2 0 0 1 2-2h5l2 2.2h8a2 2 0 0 1 2 2V22a2 2 0 0 1-2 2h-15a2 2 0 0 1-2-2z" class="logo-folder" />
+            <path d="M8.5 17.5h3.5l1.8-3.6 3 6.4 1.9-4h4.8" class="logo-pulse" />
+          </svg>
+          <span class="brand-text"><span class="brand-name">Own Your Health</span><span class="brand-sub">Records</span></span>
+        </a>
+      </div>
+    </header>
+    <main class="main" id="main">
+      <div class="stack narrow privacy">
+        <h1>Privacy policy</h1>
+        <p>
+          Own Your Health is a web app that shows a household's medical records from a folder in the household's own
+          Google Drive. A tool on the household's Mac, medrec, keeps that folder. This page says what the app reads, what
+          it keeps, and what it sends.
+        </p>
+
+        <section class="card">
+          <h2>No server</h2>
+          <p>
+            The app is a set of static files served by GitHub Pages. It has no server, no database and no account of its
+            own. It runs in your browser, signs in to Google there, and reads your records folder from Google Drive there.
+            Nobody who publishes the app can see your records, your folder or your sign-in.
+          </p>
+        </section>
+
+        <section class="card">
+          <h2>What is sent, and where</h2>
+          <p>
+            Nothing from your records is sent anywhere but back to Google Drive. The page talks only to Google: the
+            sign-in at accounts.google.com and oauth2.googleapis.com, and the Drive API at www.googleapis.com. Its
+            Content-Security-Policy blocks every other host. It loads no analytics, advertising, fonts or other
+            third-party scripts, and it sends no error reports.
+          </p>
+        </section>
+
+        <section class="card">
+          <h2>What your browser keeps</h2>
+          <ul>
+            <li>The Google OAuth client id your household registered.</li>
+            <li>The id and name of the records folder you chose.</li>
+            <li>
+              The email of the Google account that last signed in, so the next sign-in needs no account chooser. It goes
+              to Google as a sign-in hint and nowhere else.
+            </li>
+          </ul>
+          <p>
+            None of these is a secret. The Google sign-in itself lives in the page's memory only, and ends when the page
+            closes or after an hour. Records read from the folder stay in memory and are gone when the page closes.
+            Signing out forgets the account email; the browser's site settings remove the rest.
+          </p>
+        </section>
+
+        <section class="card">
+          <h2>Google permissions, and why</h2>
+          <ul>
+            <li>
+              <strong>See and download your Google Drive files</strong> (drive.readonly): to read the records folder
+              medrec writes, which the app did not create.
+            </li>
+            <li>
+              <strong>See, edit, create and delete only the Drive files this app uses</strong> (drive.file): to write a
+              small refresh request into the folder's <code>_requests/</code> folder when you ask the Mac to refresh, and to
+              remove a request of its own when you cancel it.
+            </li>
+          </ul>
+          <p>
+            The app changes nothing else in your Drive. It never asks for or holds a password to a provider's portal.
+          </p>
+        </section>
+
+        <section class="card">
+          <h2>Google user data</h2>
+          <p>
+            The app's use and transfer of information received from Google APIs adheres to the
+            <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener noreferrer">Google API Services User Data Policy</a>,
+            including the Limited Use requirements. Data from your Drive is used only to show your records to you in your
+            browser and to write the refresh requests you ask for. It is not transferred to anyone, not used for
+            advertising and not sold, and no one who publishes the app can read it.
+          </p>
+        </section>
+
+        <section class="card">
+          <h2>Removing access</h2>
+          <p>
+            Sign out in the app's Settings to revoke the current sign-in. To remove the app's access to your Google
+            account altogether, open your Google Account, then <strong>Security</strong>, then
+            <strong>Third-party connections</strong> (Your connections to third-party apps and services), choose the app,
+            and remove its access. Your records folder stays in your Drive either way.
+          </p>
+        </section>
+
+        <section class="card">
+          <h2>Contact</h2>
+          <p>
+            Questions about this policy or the app go to the project's
+            <a href="https://github.com/own-your-health/app/issues" rel="noopener noreferrer">GitHub issues</a>. Please do
+            not post records or personal details there. The source code is at
+            <a href="https://github.com/own-your-health/app" rel="noopener noreferrer">github.com/own-your-health/app</a>.
+          </p>
+        </section>
+
+        <p><a href="./">Open the app</a></p>
+      </div>
+    </main>
+  </body>
+</html>

@@ -99,6 +99,9 @@ run in a terminal on the Mac, such as `medrec refresh sign-in s_…`.
 
 ## Privacy and security
 
+The privacy policy is at https://own-your-health.github.io/app/privacy.html
+(`privacy.html`), linked under every screen and from Settings.
+
 - **No server, no third parties.** The page loads only its own files. Its
   Content-Security-Policy lets it connect only to itself and Google's OAuth
   and Drive endpoints (`www.googleapis.com`, `oauth2.googleapis.com`). There

@@ -35,6 +35,11 @@ and click **Get started** if it asks.
    - Under **Test users**, add the Google account of everyone who will sign in:
      the account that holds the records folder, and anyone it is shared with.
      Only these accounts can sign in.
+   - In Testing, Google ends each person's grant after 7 days, and the app asks
+     for consent again. To stop that, publish the app. Google then asks, on
+     **Branding**, for a home page and a privacy policy on an authorized
+     domain: the app's are `https://own-your-health.github.io/app/` and
+     `https://own-your-health.github.io/app/privacy.html`.
 5. Open **Data access**, click **Add or remove scopes**, and add these two:
    - `https://www.googleapis.com/auth/drive.readonly`
    - `https://www.googleapis.com/auth/drive.file`

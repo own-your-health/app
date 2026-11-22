@@ -17,10 +17,13 @@ if (manifestHref && existsSync(join(dir, manifestHref))) {
   if (!manifest.icons?.length) problems.push(`${manifestHref} names no icons`);
   for (const icon of manifest.icons ?? []) files.push(icon.src.replace(/^\.\//, ''));
 }
+// The privacy policy, which the page links under every screen.
+if (!/<a href="\.\/privacy\.html">/.test(html)) problems.push('index.html does not link the privacy policy');
+files.push('privacy.html');
 for (const f of files) if (!existsSync(join(dir, f))) problems.push(`${f} is not in ${dir}/`);
 
 if (problems.length) {
   for (const p of problems) console.error(p);
   process.exit(1);
 }
-console.log(`${dir}/: manifest and ${files.length - 1} icon files present`);
+console.log(`${dir}/: manifest, privacy policy and ${files.length - 2} icon files present`);

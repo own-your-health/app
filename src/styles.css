@@ -1043,3 +1043,23 @@ body:has(.bottom-nav) {
     animation: none;
   }
 }
+
+/* ---- The privacy policy page, and the link to it under every screen ---- */
+
+.site-footer {
+  max-width: 1200px;
+  margin: -16px auto 0;
+  padding: 0 16px calc(16px + var(--bottom-nav) + env(safe-area-inset-bottom));
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.privacy ul {
+  padding-left: 1.2em;
+  margin: 0.5em 0;
+}
+
+.privacy li + li {
+  margin-top: 0.4em;
+}
