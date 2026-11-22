@@ -1,0 +1,410 @@
+{
+  "schema": "medrec-index/v1",
+  "person": "p_wwezzed7kml67hnp6s7n",
+  "rev": 9,
+  "documents": [
+    {
+      "id": "d_dst7bunrcqbudcvyz4cm",
+      "path": "Sam Example/Claims/2026/2026-07-09_bill_example_billing_statement.pdf",
+      "sha256": "edcf5df3928de3cabf19235972c7bed213dedfd86d0d82840a350baa5da4d80d",
+      "md5": "2973d5fc29e0449144eacfa72b2d65fe",
+      "size": 145439,
+      "media_type": "application/pdf",
+      "pages": 1,
+      "original_name": "statement.pdf",
+      "title": "Statement from Example Billing",
+      "doc_type": "bill",
+      "date": "2026-07-09",
+      "organization": "Example Billing",
+      "filed_at": "2026-11-02T20:00:00Z",
+      "origin": {
+        "kind": "inbox",
+        "name": "statement.pdf",
+        "action": "moved"
+      },
+      "text": {
+        "chars": 99,
+        "engines": [
+          "pdftotext 26.10.0"
+        ]
+      },
+      "statement": {
+        "statement_date": "2026-08-01",
+        "amount_due": {
+          "amount": "120.00",
+          "currency": "USD"
+        },
+        "due_date": "2026-08-31",
+        "account": "EX-000000"
+      },
+      "provenance": {
+        "source": {
+          "kind": "scan"
+        },
+        "method": "scan",
+        "filed_at": "2026-11-02T20:00:00Z",
+        "classified_by": "medrec intake",
+        "filed_by": "medrec 0.2.11"
+      }
+    }
+  ],
+  "records": [
+    {
+      "id": "r_akv465h26i2maw4tbaad",
+      "kind": "result",
+      "key": "result|http://loinc.org|62292-8|2026-04-02",
+      "date": "2026-04-02",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "62292-8",
+        "display": "25-Hydroxyvitamin D2+D3 [Mass/volume] in Serum or Plasma"
+      },
+      "display": "Vitamin D, 25-hydroxy",
+      "status": "final",
+      "fields": {
+        "when": "2026-04-02",
+        "value": {
+          "value": 18,
+          "unit": "ng/mL"
+        },
+        "reference_range": "30-100 ng/mL",
+        "interpretation": "Low",
+        "category": "Laboratory"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-7311e93d",
+            "last_updated": "2026-11-22T08:00:00Z"
+          },
+          "fetched_at": "2026-11-22T14:59:00Z",
+          "filed_at": "2026-11-22T14:59:00Z",
+          "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-7311e93d.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_bo622b2qan6brldjgjwe",
+      "kind": "result",
+      "key": "result|http://loinc.org|62292-8|2026-07-09",
+      "date": "2026-07-09",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "62292-8",
+        "display": "25-Hydroxyvitamin D2+D3 [Mass/volume] in Serum or Plasma"
+      },
+      "display": "Vitamin D, 25-hydroxy",
+      "status": "final",
+      "fields": {
+        "when": "2026-07-09",
+        "value": {
+          "value": 24,
+          "unit": "ng/mL"
+        },
+        "reference_range": "30-100 ng/mL",
+        "interpretation": "Low",
+        "category": "Laboratory"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-4d9c03fe",
+            "last_updated": "2026-11-22T08:00:00Z"
+          },
+          "fetched_at": "2026-11-22T14:59:00Z",
+          "filed_at": "2026-11-22T14:59:00Z",
+          "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-4d9c03fe.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_fs6r7bvyabuvrmfyezz7",
+      "kind": "result",
+      "key": "result|http://loinc.org|62292-8|2026-10-12",
+      "date": "2026-10-12",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "62292-8",
+        "display": "25-Hydroxyvitamin D2+D3 [Mass/volume] in Serum or Plasma"
+      },
+      "display": "Vitamin D, 25-hydroxy",
+      "status": "final",
+      "fields": {
+        "when": "2026-10-12",
+        "value": {
+          "value": 33,
+          "unit": "ng/mL"
+        },
+        "reference_range": "30-100 ng/mL",
+        "interpretation": "Normal",
+        "category": "Laboratory"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-02b1b6a4",
+            "last_updated": "2026-11-22T08:00:00Z"
+          },
+          "fetched_at": "2026-11-22T14:59:00Z",
+          "filed_at": "2026-11-22T14:59:00Z",
+          "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-02b1b6a4.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_hq4uq52blkxbbhgqyln4",
+      "kind": "result",
+      "key": "result|http://loinc.org|3016-3|2026-07-09",
+      "date": "2026-07-09",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "3016-3",
+        "display": "Thyrotropin [Units/volume] in Serum or Plasma"
+      },
+      "display": "TSH",
+      "status": "final",
+      "fields": {
+        "when": "2026-07-09",
+        "value": {
+          "value": 2.1,
+          "unit": "mIU/L"
+        },
+        "reference_range": "0.4-4.0 mIU/L",
+        "interpretation": "Normal",
+        "category": "Laboratory"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.7.1",
+            "organization_id": "example-lab"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-6717678e",
+            "last_updated": "2026-11-13T08:00:00Z"
+          },
+          "fetched_at": "2026-11-13T19:59:00Z",
+          "filed_at": "2026-11-13T19:59:00Z",
+          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-6717678e.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_pgotfnme2euhvqa67jnz",
+      "kind": "medication",
+      "key": "medication|vitamin d3 2,000 unit capsule|2026-04-03",
+      "date": "2026-04-03",
+      "display": "Vitamin D3 2,000 unit capsule",
+      "status": "active",
+      "fields": {
+        "when": "2026-04-03",
+        "dosage": "Take 1 capsule by mouth once a day",
+        "prescriber": "Dr. Casey Placeholder",
+        "source": "request"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "MedicationRequest",
+            "id": "medicationrequest-1ad71fa3",
+            "last_updated": "2026-11-22T08:00:00Z"
+          },
+          "fetched_at": "2026-11-22T14:59:00Z",
+          "filed_at": "2026-11-22T14:59:00Z",
+          "raw_path": "Sam Example/Records/mychart-example-health/MedicationRequest/medicationrequest-1ad71fa3.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_euhgzicnhcmc2rxpwwhb",
+      "kind": "encounter",
+      "key": "encounter|sports medicine visit|2026-05-20",
+      "date": "2026-05-20",
+      "display": "Sports medicine visit",
+      "status": "finished",
+      "fields": {
+        "when": "2026-05-20",
+        "class": "ambulatory",
+        "practitioner": "Dr. Casey Placeholder",
+        "location": "Example Health Orthopedics",
+        "reason": "Ankle sprain"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Encounter",
+            "id": "encounter-e4a54c75",
+            "last_updated": "2026-11-22T08:00:00Z"
+          },
+          "fetched_at": "2026-11-22T14:59:00Z",
+          "filed_at": "2026-11-22T14:59:00Z",
+          "raw_path": "Sam Example/Records/mychart-example-health/Encounter/encounter-e4a54c75.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    }
+  ],
+  "studies": [
+    {
+      "id": "m_q4ymlputw6nw2aup3qhu",
+      "study_uid": "2.25.2993353683913594821",
+      "path": "Sam Example/Imaging/2026-05-20_xr_ankle_example_imaging/",
+      "date": "2026-05-20",
+      "modalities": [
+        "DX"
+      ],
+      "body_part": "ANKLE",
+      "description": "XR ankle, 3 views",
+      "facility": "Example Imaging",
+      "accession": "ACC70E71A",
+      "series": [
+        {
+          "uid": "2.25.2338413493",
+          "number": 1,
+          "modality": "DX",
+          "description": "AP",
+          "instances": {
+            "2.25.1494879261": "S001/00001.dcm"
+          }
+        },
+        {
+          "uid": "2.25.1067858239",
+          "number": 2,
+          "modality": "DX",
+          "description": "Lateral",
+          "instances": {
+            "2.25.269091913": "S002/00001.dcm"
+          }
+        },
+        {
+          "uid": "2.25.3144919565",
+          "number": 3,
+          "modality": "DX",
+          "description": "Oblique",
+          "instances": {
+            "2.25.4055218306": "S003/00001.dcm"
+          }
+        }
+      ],
+      "instances": 3,
+      "size": 21402118,
+      "filed_at": "2026-09-23T20:00:00Z",
+      "provenance": [
+        {
+          "source": {
+            "kind": "media"
+          },
+          "method": "media",
+          "filed_at": "2026-09-23T20:00:00Z",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    }
+  ],
+  "imports": [
+    {
+      "id": "i_efc3rdrrtts7ve62h6ae",
+      "source_dir": "Sam Example/Records/mychart-example-health",
+      "stream_sha256": "8a31ac7175c794809cee05b1ba05ebcc4b300048ee267f0124c852328e38b1e0",
+      "stream_bytes": 706621,
+      "cli": "mychart",
+      "cli_version": "0.7.1",
+      "organization": "example-health",
+      "patient_id": "pat-44a34d",
+      "pulled_at": "2026-11-22T15:00:00Z",
+      "imported_at": "2026-11-22T15:00:00Z",
+      "counts": {
+        "Patient": 1,
+        "Observation": 5
+      },
+      "records_added": 0,
+      "records_updated": 1,
+      "records_unchanged": 5,
+      "records_older": 0,
+      "resources_written": 1,
+      "resources_unchanged": 5,
+      "documents_added": 0
+    },
+    {
+      "id": "i_apowx2nxar2kllmymdy2",
+      "source_dir": "Sam Example/Records/labcorp-example-lab",
+      "stream_sha256": "db091b4f936167ca399ed694cd95254588e09ee1fa9409b9a5799ec5a835cc8e",
+      "stream_bytes": 285413,
+      "cli": "labcorp",
+      "cli_version": "0.2.1",
+      "organization": "example-lab",
+      "patient_id": "pat-971097",
+      "pulled_at": "2026-11-13T20:00:00Z",
+      "imported_at": "2026-11-13T20:00:00Z",
+      "counts": {
+        "Patient": 1,
+        "Observation": 1
+      },
+      "records_added": 1,
+      "records_updated": 0,
+      "records_unchanged": 0,
+      "records_older": 0,
+      "resources_written": 1,
+      "resources_unchanged": 0,
+      "documents_added": 0
+    }
+  ]
+}

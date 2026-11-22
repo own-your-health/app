@@ -1,0 +1,7 @@
+{
+  "nextPageToken": "page-2",
+  "files": [
+    { "id": "file-household", "name": "household.json", "mimeType": "application/json", "modifiedTime": "2026-11-20T10:00:00.000Z", "capabilities": { "canEdit": false, "canDelete": false } },
+    { "id": "folder-robin", "name": "Robin Example", "mimeType": "application/vnd.google-apps.folder", "modifiedTime": "2026-11-20T10:00:00.000Z", "capabilities": { "canEdit": false, "canDelete": false } }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "schema": "medrec-request/v1",
+  "id": null,
+  "received": { "bytes": 9000, "sha256": "0000000000000000000000000000000000000000000000000000000000000000" },
+  "handled": { "picked_up_at": "2026-11-22T20:04:01Z", "finished_at": "2026-11-22T20:04:01Z", "outcome": "invalid", "sources": [], "message": "The request is larger than 4 KiB.", "by": "medrec 0.3.0" }
+}

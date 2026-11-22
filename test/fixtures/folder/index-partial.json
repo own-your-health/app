@@ -1,0 +1,17 @@
+{
+  "schema": "medrec-index/v1",
+  "person": "p_aaaaaaaaaaaaaaaaaaaa",
+  "rev": 3,
+  "documents": [
+    { "id": "d_aaaaaaaaaaaaaaaaaaaa", "path": "Robin Example/Documents/2026/x.pdf", "sha256": "00", "md5": "00", "size": 1, "media_type": "application/pdf", "filed_at": "2026-01-01T00:00:00Z", "provenance": { "source": { "kind": "scan" }, "method": "scan", "filed_at": "2026-01-01T00:00:00Z", "filed_by": "medrec 0.2.11" } },
+    { "id": "d_bbbbbbbbbbbbbbbbbbbb", "path": "no provenance" }
+  ],
+  "records": [
+    { "id": "r_aaaaaaaaaaaaaaaaaaaa", "kind": "result", "key": "result|x", "display": "Glucose", "fields": { "value": { "value": 90, "unit": "mg/dL" } }, "provenance": [] },
+    { "kind": "result", "display": "no id" },
+    { "id": "r_cccccccccccccccccccc", "kind": "condition", "key": "condition|y", "provenance": [{ "nope": true }] }
+  ],
+  "studies": [],
+  "imports": [{ "id": "i_aaaaaaaaaaaaaaaaaaaa", "cli": "mychart", "imported_at": "2026-01-02T00:00:00Z" }, { "cli": "x" }],
+  "future_field": { "kept": "ignored" }
+}

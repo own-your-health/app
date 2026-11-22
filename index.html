@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!--
+      Only the app's own files, and only Google's sign-in and Drive API.
+      GitHub Pages sets no headers, so the policy is a meta tag; it cannot
+      set frame-ancestors, so the app refuses to run framed (src/ui/app.ts).
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'none'; connect-src 'self' https://www.googleapis.com https://oauth2.googleapis.com; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; require-trusted-types-for 'script'; trusted-types 'none'; upgrade-insecure-requests"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#121848" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f1430" media="(prefers-color-scheme: dark)" />
+    <meta name="description" content="Your household's health records, from your own Google Drive" />
+    <title>Own Your Health</title>
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <noscript>This app needs JavaScript. It reads your records folder in Google Drive, in this browser.</noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

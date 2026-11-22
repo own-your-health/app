@@ -1,0 +1,97 @@
+// Building the page from nodes. Every string becomes a text node, so record
+// content is never parsed as HTML; attributes that could run code or carry
+// inline styles are refused here as well as by the Content-Security-Policy.
+
+export type Child = Node | string | number | null | undefined | false | Child[];
+
+type Handler = (ev: Event) => void;
+
+export interface Attrs {
+  class?: string | (string | false | null | undefined)[];
+  on?: Partial<Record<keyof HTMLElementEventMap, Handler>>;
+  [attr: string]: unknown;
+}
+
+const SAFE_URL = /^(https:\/\/|#|\.\/|\/(?!\/)|\?|mailto:)/i;
+
+export function safeHref(url: string): string {
+  return SAFE_URL.test(url) ? url : '#';
+}
+
+function setAttrs(el: Element, attrs: Attrs | null | undefined): void {
+  if (!attrs) return;
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v === undefined || v === null || v === false) continue;
+    if (k === 'on') {
+      for (const [ev, fn] of Object.entries(v as Record<string, Handler>)) el.addEventListener(ev, fn);
+      continue;
+    }
+    if (k.startsWith('on') || k === 'style' || k === 'srcdoc') throw new Error(`Attribute ${k} is not allowed.`);
+    if (k === 'class') {
+      const cls = Array.isArray(v) ? v.filter(Boolean).join(' ') : String(v);
+      if (cls) el.setAttribute('class', cls);
+      continue;
+    }
+    if (k === 'href' || k === 'src' || k === 'action') {
+      el.setAttribute(k, safeHref(String(v)));
+      continue;
+    }
+    el.setAttribute(k, v === true ? '' : String(v));
+  }
+}
+
+function append(el: Node, children: Child[]): void {
+  for (const c of children) {
+    if (c === null || c === undefined || c === false) continue;
+    if (Array.isArray(c)) append(el, c);
+    else if (c instanceof Node) el.appendChild(c);
+    else el.appendChild(document.createTextNode(String(c)));
+  }
+}
+
+export function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs?: Attrs | null, ...children: Child[]): HTMLElementTagNameMap[K] {
+  const el = document.createElement(tag);
+  setAttrs(el, attrs);
+  append(el, children);
+  return el;
+}
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+export function s<K extends keyof SVGElementTagNameMap>(tag: K, attrs?: Attrs | null, ...children: Child[]): SVGElementTagNameMap[K] {
+  const el = document.createElementNS(SVG_NS, tag);
+  setAttrs(el, attrs);
+  append(el, children);
+  return el;
+}
+
+export function clear(el: Element): void {
+  while (el.firstChild) el.removeChild(el.firstChild);
+}
+
+// Icons: 24×24 strokes, drawn in the current text colour.
+const ICONS: Record<string, string[]> = {
+  refresh: ['M21 12a9 9 0 1 1-2.64-6.36', 'M21 3v6h-6'],
+  external: ['M14 4h6v6', 'M20 4l-9 9', 'M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5'],
+  search: ['M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z', 'M21 21l-4.3-4.3'],
+  back: ['M15 18l-6-6 6-6'],
+  next: ['M9 18l6-6-6-6'],
+  copy: ['M9 9h11v11H9z', 'M5 15H4V4h11v1'],
+  clock: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M12 7v5l3 2'],
+  list: ['M8 6h13', 'M8 12h13', 'M8 18h13', 'M3 6h.01', 'M3 12h.01', 'M3 18h.01'],
+  chart: ['M3 3v18h18', 'M7 15l4-4 3 3 5-6'],
+  pill: ['M10.5 20.5a5 5 0 0 1-7-7l10-10a5 5 0 0 1 7 7z', 'M8.5 8.5l7 7'],
+  file: ['M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z', 'M14 3v5h5'],
+  more: ['M5 12h.01', 'M12 12h.01', 'M19 12h.01'],
+  close: ['M18 6L6 18', 'M6 6l12 12'],
+  person: ['M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M4 21a8 8 0 0 1 16 0'],
+  settings: ['M4 6h16', 'M4 12h16', 'M4 18h16'],
+};
+
+export function icon(name: keyof typeof ICONS | string, size = 20): SVGSVGElement {
+  return s(
+    'svg',
+    { viewBox: '0 0 24 24', width: size, height: size, fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true', class: 'icon' },
+    (ICONS[name] ?? []).map((d) => s('path', { d })),
+  );
+}

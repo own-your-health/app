@@ -1,0 +1,54 @@
+# Builds the app and publishes it to GitHub Pages at
+# https://own-your-health.github.io/app/.
+name: pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deployment at a time, and never cancel one half-way.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # Build and deploy are separate jobs, as GitHub's Pages starter does: the
+  # artifact is complete once its job ends, so deploy never looks for it too
+  # early, and re-running a failed deploy reuses it instead of uploading a
+  # second one under the same name.
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
