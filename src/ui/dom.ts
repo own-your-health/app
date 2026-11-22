@@ -44,8 +44,9 @@ function append(el: Node, children: Child[]): void {
   for (const c of children) {
     if (c === null || c === undefined || c === false) continue;
     if (Array.isArray(c)) append(el, c);
-    else if (typeof c === 'string' || typeof c === 'number') el.appendChild(document.createTextNode(String(c)));
-    else el.appendChild(c);
+    // A single typeof test, which CodeQL recognises as keeping strings out.
+    else if (typeof c === 'object') el.appendChild(c);
+    else el.appendChild(document.createTextNode(String(c)));
   }
 }
 
