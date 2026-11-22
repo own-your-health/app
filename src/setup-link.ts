@@ -26,6 +26,24 @@ export function readSetupLink(search: string, current: string | null): SetupLink
   return id === current ? { kind: 'same', clientId: id } : { kind: 'different', clientId: id, current };
 }
 
+/**
+ * The client id in what a person pasted: the id itself, or a whole setup
+ * link. An app installed on an iPhone keeps its own storage and has no
+ * address bar, so the link is pasted there instead of opened.
+ */
+export function clientFromPaste(text: string): string | null {
+  const v = text.trim();
+  if (isClientId(v)) return v;
+  let url: URL;
+  try {
+    url = new URL(v);
+  } catch {
+    return null;
+  }
+  const link = readSetupLink(url.search, null);
+  return link.kind === 'new' ? link.clientId : null;
+}
+
 /** The address without `?client=`, keeping any other parameter and the route. */
 export function withoutClient(loc: { pathname: string; search: string; hash: string }): string {
   const params = new URLSearchParams(loc.search);

@@ -86,6 +86,8 @@ Opening it on another phone or computer stores the client id, takes it out of
 the address, and goes straight to Google's sign-in, so nobody types the id.
 If that browser already uses a different client, the app asks before replacing
 it. A link whose id is not a Google client id opens the paste field instead.
+The paste field also takes the whole link: that is how an app added to an
+iPhone's Home Screen, which has no address bar, gets the client.
 
 It is fine to send the link to the people in your household. A client id is not
 a secret: Google shows it to everyone who signs in. Only the test users listed

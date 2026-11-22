@@ -64,6 +64,23 @@ the person. The app takes `?client=` out of the address before signing in.
 The sign-in lasts an hour. When it ends, the app asks Google again without a
 prompt, and asks you only if Google needs you.
 
+### On the Home Screen
+
+The app can be installed like an app, with no app store, once it is set up in
+the browser:
+
+- **Android, in Chrome:** the menu, then **Install app** (or **Add to Home
+  screen**). The installed app shares Chrome's storage, so it keeps the client
+  and the folder. Google's sign-in opens over the app and returns to it.
+- **iPhone and iPad, in Safari:** Share, then **Add to Home Screen**. The
+  installed app keeps its own storage, apart from Safari's, and has no address
+  bar: on its first screen, paste the setup link (or the client id) and choose
+  the folder again.
+
+The app opens at its start page; nothing about the household is in the
+installed shortcut. It has no service worker, so it needs a connection, as it
+does in the browser.
+
 ### Refresh, and sign-ins that need a person
 
 Refresh writes one small request file into the folder's `_requests/`. The Mac
@@ -133,6 +150,9 @@ npm run e2e        # browser tests on the sample, phone and desktop sizes
 - Plain TypeScript, built by Vite, with no runtime dependencies.
 - The sample folder in `public/demo/` comes from `scripts/demo-folder.mjs`.
   Run `node scripts/demo-folder.mjs` after changing it, and commit both.
+- The PNG icons in `public/` (for the manifest and the iPhone Home Screen) are
+  drawn from `public/icon.svg` by `npm run icons`. Run it after changing the
+  icon, and commit them.
 - `http://localhost:5173/app/?scope-test=1&client=<client id>` runs a check of
   the two Drive permissions against a folder named `oyh-app-scope-test`. It
   exists only in the dev server and is left out of production builds.

@@ -1,7 +1,7 @@
 // Before the records: the household's own Google client id, sign-in, and
 // choosing the records folder.
 
-import { isClientId } from '../../auth';
+import { clientFromPaste } from '../../setup-link';
 import { Drive, folderIdFrom, FOLDER_MIME, HOUSEHOLD_QUERY } from '../../drive';
 import { button, card, empty } from '../components';
 import { h } from '../dom';
@@ -31,12 +31,12 @@ export function welcomeView(onSave: (clientId: string) => void, error?: string):
   const input = h('input', { class: 'input', type: 'text', inputmode: 'url', autocomplete: 'off', spellcheck: 'false', placeholder: '123456789012-abc….apps.googleusercontent.com', 'aria-label': 'Google OAuth client id' });
   const msg = h('p', { class: 'error-text small', 'aria-live': 'polite' }, error ?? '');
   const save = () => {
-    const v = input.value.trim();
-    if (!isClientId(v)) {
-      msg.textContent = 'That is not a Google OAuth client id. It ends in .apps.googleusercontent.com.';
+    const id = clientFromPaste(input.value);
+    if (!id) {
+      msg.textContent = 'That is not a Google OAuth client id or a setup link. A client id ends in .apps.googleusercontent.com.';
       return;
     }
-    onSave(v);
+    onSave(id);
   };
   input.addEventListener('keydown', (e) => e.key === 'Enter' && save());
   return h(
@@ -47,8 +47,8 @@ export function welcomeView(onSave: (clientId: string) => void, error?: string):
       { title: 'Your Google client' },
       h('p', null, 'Each household signs in through its own Google OAuth client, so no one else’s app holds access to your Drive. Creating one takes about ten minutes in Google Cloud, free.'),
       h('p', null, h('a', { href: REGISTRATION_URL, target: '_blank', rel: 'noopener noreferrer' }, 'How to create your Google client')),
-      h('p', { class: 'muted small' }, 'Someone in your household already uses the app? Ask them for the setup link in its Settings: opening it on this device skips this step.'),
-      h('label', { class: 'label' }, 'Client id', input),
+      h('p', { class: 'muted small' }, 'Someone in your household already uses the app? Ask them for the setup link in its Settings: opening it on this device skips this step. In an app added to an iPhone’s Home Screen, paste the link here instead.'),
+      h('label', { class: 'label' }, 'Client id or setup link', input),
       msg,
       h('div', { class: 'actions' }, button('Save', save, { primary: true })),
     ),

@@ -32,6 +32,9 @@ jobs:
       # The scope-test page runs only under the dev server.
       - name: Production build leaves out the scope test
         run: "! grep -rl 'scope-test' dist"
+      # Installing the app needs the manifest linked and every icon present.
+      - name: Production build carries the manifest and its icons
+        run: node scripts/check-install.mjs dist
       # The sample folder is generated; it must match its generator.
       - name: Sample folder matches its generator
         run: |

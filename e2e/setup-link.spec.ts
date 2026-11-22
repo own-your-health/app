@@ -68,3 +68,13 @@ test('a setup link without a valid client id falls back to the paste field', asy
   expect(page.url()).not.toContain('client=');
   expect(await page.evaluate(() => Object.keys(localStorage))).toEqual([]);
 });
+
+test('a setup link pasted into the client field works as the client id does', async ({ page }) => {
+  // An app added to an iPhone's Home Screen has its own storage and no
+  // address bar, so the link is pasted there.
+  await page.goto('./');
+  await page.locator('input[aria-label="Google OAuth client id"]').fill(`https://own-your-health.github.io/app/?client=${ID}`);
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
+  expect(await page.evaluate((k) => localStorage.getItem(k), KEY)).toBe(ID);
+});
