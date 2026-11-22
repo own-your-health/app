@@ -44,7 +44,7 @@ export function settingsView(
       { title: 'What this app keeps and sends' },
       h('ul', { class: 'plain' },
         h('li', null, 'Your records stay in your Drive and in this page’s memory. Closing the page forgets them.'),
-        h('li', null, 'Browser storage holds only your Google client id and which folder to open.'),
+        h('li', null, 'Browser storage holds only your Google client id, which folder to open, and the email of the Google account that signed in, so the next sign-in needs no account chooser.'),
         h('li', null, 'The Google sign-in lives in memory and ends within an hour.'),
         h('li', null, 'The page talks only to Google: the sign-in and the Drive API. It loads no other scripts, fonts or trackers.'),
         h('li', null, 'The only files it writes are refresh requests in the folder’s _requests/ folder.'),

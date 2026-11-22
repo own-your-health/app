@@ -59,7 +59,7 @@ export function welcomeView(onSave: (clientId: string) => void, error?: string):
   );
 }
 
-export function signInView(onSignIn: () => void, opts: { error?: string; onChangeClient: () => void }): HTMLElement {
+export function signInView(onSignIn: () => void, opts: { error?: string; account: string | null; onDifferentAccount: () => void; onChangeClient: () => void }): HTMLElement {
   return h(
     'div',
     { class: 'stack narrow' },
@@ -68,7 +68,14 @@ export function signInView(onSignIn: () => void, opts: { error?: string; onChang
       { title: 'Sign in' },
       h('p', null, 'Sign in with the Google account that holds the records folder, or one it is shared with. The app asks Google for two things: to read your Drive, and to create files of its own, which it uses only to ask your Mac to refresh.'),
       opts.error ? h('p', { class: 'error-text' }, opts.error) : null,
-      h('div', { class: 'actions' }, button('Sign in with Google', onSignIn, { primary: true }), button('Use another Google client', opts.onChangeClient, { ghost: true })),
+      opts.account ? h('p', { class: 'muted small' }, `As ${opts.account}, the account that signed in last.`) : null,
+      h(
+        'div',
+        { class: 'actions' },
+        button('Sign in with Google', onSignIn, { primary: true }),
+        opts.account ? button('Use a different account', opts.onDifferentAccount, { ghost: true }) : null,
+        button('Use another Google client', opts.onChangeClient, { ghost: true }),
+      ),
     ),
     card({ title: 'Just looking?' }, demoLink()),
   );

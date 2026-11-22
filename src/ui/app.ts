@@ -7,7 +7,7 @@ import { Drive, DriveError } from '../drive';
 import { DemoFolder, DriveFolder } from '../folder';
 import { FolderError } from '../model/parse';
 import type { RequestScope } from '../model/types';
-import { getClientId, getFolder, setClientId, setFolder } from '../settings';
+import { getAccount, getClientId, getFolder, setAccount, setClientId, setFolder } from '../settings';
 import { readSetupLink, setupLinkFor, withoutClient } from '../setup-link';
 import { button, type Ctx } from './components';
 import { clear, h, icon, s } from './dom';
@@ -42,6 +42,9 @@ function logo(): SVGSVGElement {
 export class App {
   private phase: Phase = { name: 'loading' };
   private token: Token | null = null;
+  /** When Google issued the token, so one Drive refuses at once is not renewed in a loop. */
+  private tokenAt = 0;
+  private renewing = false;
   private scopes: string[] = [];
   private user: { email?: string; name?: string } = {};
   private store: Store | null = null;
@@ -73,7 +76,9 @@ export class App {
     }
     window.addEventListener('hashchange', () => this.onRoute());
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') void this.pollOnce();
+      if (document.visibilityState !== 'visible') return;
+      if (this.signInEnded()) return this.renew();
+      void this.pollOnce();
     });
     if (this.demo) return this.startDemo();
 
@@ -112,8 +117,10 @@ export class App {
     if (!clientId) return this.show({ name: 'welcome' });
     if (answer.kind === 'signed_in') return this.signedIn(answer.token, clientId);
     if (answer.kind === 'failed') {
-      // A silent attempt that needs the person is not an error to show.
-      return this.show({ name: 'signin', error: answer.silent ? undefined : signInErrorText(answer.error) });
+      // A silent attempt on opening that needs the person is not an error to
+      // show; one renewing an ended sign-in says why the app stopped.
+      const error = !answer.silent ? signInErrorText(answer.error) : answer.renewal ? 'Your Google sign-in ended, as it does after an hour, and Google needs you to sign in again.' : undefined;
+      return this.show({ name: 'signin', error });
     }
     this.resume();
   }
@@ -138,10 +145,27 @@ export class App {
     return `${location.origin}${import.meta.env.BASE_URL}`;
   }
 
-  private signIn(silent = false, chooseAccount = false): void {
+  /** Leaves for Google's sign-in, as the account that last signed in when there is one. */
+  private signIn(silent = false, chooseAccount = false, renewal = false): void {
     const clientId = getClientId();
     if (!clientId) return this.show({ name: 'welcome' });
-    startSignIn({ clientId, redirectUri: this.redirectUri(), route: location.hash || '#/', silent, chooseAccount, storage: sessionStorage, go: (u) => location.assign(u) });
+    startSignIn({
+      clientId,
+      redirectUri: this.redirectUri(),
+      route: location.hash || '#/',
+      silent,
+      renewal,
+      chooseAccount,
+      loginHint: getAccount(),
+      storage: sessionStorage,
+      go: (u) => location.assign(u),
+    });
+  }
+
+  /** Forgets the account, so Google asks which one to use. */
+  private differentAccount(): void {
+    setAccount(null);
+    this.signIn(false, true);
   }
 
   private async signedIn(token: Token, clientId: string): Promise<void> {
@@ -149,6 +173,7 @@ export class App {
     const check = await verifyToken((...a) => fetch(...a), token.accessToken, clientId).catch(() => ({ ok: false, scopes: [] as string[] }));
     if (!check.ok) return this.show({ name: 'signin', error: 'Google did not confirm this sign-in for your client. Sign in again.' });
     this.token = token;
+    this.tokenAt = Date.now();
     this.scopes = check.scopes.length ? check.scopes : token.scopes;
     if (!this.scopes.includes(SCOPE_READ)) {
       return this.show({ name: 'signin', error: 'The app needs permission to read your Drive to show the records. Sign in again and allow it.' });
@@ -158,8 +183,8 @@ export class App {
       (...a) => fetch(...a),
       () => this.tokenEnded(),
     );
-    window.setTimeout(() => this.tokenEnded(), Math.max(0, token.expiresAt - Date.now()));
     this.user = await this.drive.about().catch(() => ({}));
+    if (this.user.email) setAccount(this.user.email);
     const folder = getFolder();
     if (!folder) return this.show({ name: 'folder' });
     await this.openFolder(folder);
@@ -173,12 +198,30 @@ export class App {
     return this.token.accessToken;
   }
 
+  /**
+   * The token's hour is up, or Drive refused it: a Drive call needs a new
+   * one, so sign in again silently, as the same account. A token Drive
+   * refuses right after Google issued it is not renewed again, or the app
+   * would go round in a loop.
+   */
   private tokenEnded(): void {
-    if (this.demo || !this.token) return;
-    this.token = null;
-    this.banner.replaceChildren(
-      h('div', { class: 'banner' }, h('span', null, 'Your Google sign-in ended, as it does after an hour.'), button('Continue', () => this.signIn(true), { primary: true, small: true })),
-    );
+    if (this.demo || !this.token || this.renewing) return;
+    if (Date.now() - this.tokenAt < 60_000) {
+      this.token = null;
+      return this.show({ name: 'signin', error: 'Google did not accept this sign-in for Drive. Sign in again.' });
+    }
+    this.renew();
+  }
+
+  /** Signed in once in this page, and that sign-in has ended. */
+  private signInEnded(): boolean {
+    return !this.demo && this.drive !== null && this.token !== null && Date.now() >= this.token.expiresAt;
+  }
+
+  private renew(): void {
+    if (this.renewing) return;
+    this.renewing = true;
+    this.signIn(true, false, true);
   }
 
   private async openFolder(f: { id: string; name: string }): Promise<void> {
@@ -300,6 +343,7 @@ export class App {
     this.store = null;
     this.drive = null;
     window.clearInterval(this.pollTimer);
+    setAccount(null);
     if (t) await revokeToken((...a) => fetch(...a), t.accessToken);
     this.banner.replaceChildren();
     this.show({ name: 'signin' });
@@ -361,7 +405,14 @@ export class App {
         );
         return;
       case 'signin':
-        this.main.append(signInView(() => this.signIn(false, true), { error: p.error, onChangeClient: () => (setClientId(null), this.show({ name: 'welcome' })) }));
+        this.main.append(
+          signInView(() => this.signIn(false, true), {
+            error: p.error,
+            account: getAccount(),
+            onDifferentAccount: () => this.differentAccount(),
+            onChangeClient: () => (setClientId(null), this.show({ name: 'welcome' })),
+          }),
+        );
         return;
       case 'folder':
         if (!this.drive) return this.show({ name: 'signin' });

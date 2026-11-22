@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getClientId, getFolder, setClientId, setFolder, STORAGE_KEYS } from '../src/settings';
+import { getAccount, getClientId, getFolder, setAccount, setClientId, setFolder, STORAGE_KEYS } from '../src/settings';
 
 function kv() {
   const m = new Map<string, string>();
@@ -7,16 +7,46 @@ function kv() {
 }
 
 describe('settings', () => {
-  it('keep only the client id and the folder', () => {
+  it('keep only the client id, the folder and the account', () => {
     const s = kv();
     setClientId(' 123456789012-abcdefghijklmnop.apps.googleusercontent.com ', s);
     setFolder({ id: 'folder-1', name: 'Medical Records' }, s);
+    setAccount('robin@example.com', s);
     expect([...s.m.keys()].sort()).toEqual([...STORAGE_KEYS].sort());
     expect(getClientId(s)).toBe('123456789012-abcdefghijklmnop.apps.googleusercontent.com');
     expect(getFolder(s)).toEqual({ id: 'folder-1', name: 'Medical Records' });
+    expect(getAccount(s)).toBe('robin@example.com');
     setClientId(null, s);
     setFolder(null, s);
     expect(s.m.size).toBe(0);
+  });
+
+  it('forget the account when the client changes or is cleared, and keep it otherwise', () => {
+    const s = kv();
+    const ID = '123456789012-abcdefghijklmnop.apps.googleusercontent.com';
+    setClientId(ID, s);
+    setAccount('robin@example.com', s);
+    setClientId(` ${ID} `, s);
+    expect(getAccount(s)).toBe('robin@example.com');
+    setFolder(null, s);
+    expect(getAccount(s)).toBe('robin@example.com');
+    setClientId('999999999999-zyxwvutsrqponmlk.apps.googleusercontent.com', s);
+    expect(getAccount(s)).toBeNull();
+    setAccount('robin@example.com', s);
+    setClientId(null, s);
+    expect(getAccount(s)).toBeNull();
+  });
+
+  it('take only an email as the account', () => {
+    const s = kv();
+    setAccount('robin@example.com', s);
+    setAccount('not an email', s);
+    expect(getAccount(s)).toBeNull();
+    setAccount('robin@example.com', s);
+    setAccount(undefined, s);
+    expect(getAccount(s)).toBeNull();
+    s.setItem(STORAGE_KEYS[2]!, 'x y@z');
+    expect(getAccount(s)).toBeNull();
   });
 
   it('ignore a folder setting they cannot read', () => {

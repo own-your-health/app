@@ -33,8 +33,11 @@ export interface AuthState {
   n: string;
   /** The route to return to (`#/…`). */
   r: string;
-  /** 1 when this was a sign-in without a prompt, so a failure is not retried. */
-  s?: 1;
+  /**
+   * Set when this was a sign-in without a prompt, so a failure is not
+   * retried: 1 on opening the app, 2 when renewing an ended sign-in.
+   */
+  s?: 1 | 2;
 }
 
 export interface Token {
@@ -58,7 +61,7 @@ export function decodeState(raw: string | null): AuthState | null {
     const v: unknown = JSON.parse(new TextDecoder().decode(bytes));
     if (typeof v === 'object' && v !== null && typeof (v as AuthState).n === 'string' && typeof (v as AuthState).r === 'string') {
       const s = v as AuthState;
-      return { n: s.n, r: s.r.startsWith('#/') ? s.r : '#/', ...(s.s === 1 ? { s: 1 as const } : {}) };
+      return { n: s.n, r: s.r.startsWith('#/') ? s.r : '#/', ...(s.s === 1 || s.s === 2 ? { s: s.s } : {}) };
     }
   } catch {
     // An answer we did not send.
@@ -71,6 +74,8 @@ export function buildAuthUrl(opts: {
   redirectUri: string;
   state: string;
   prompt?: 'none' | 'select_account' | 'consent';
+  /** The account to sign in as, so Google shows no account chooser. */
+  loginHint?: string;
   /** Defaults to SCOPES. */
   scopes?: string[];
   /** Whether the token also carries scopes granted earlier; defaults to true. */
@@ -85,6 +90,7 @@ export function buildAuthUrl(opts: {
     state: opts.state,
   });
   if (opts.prompt) p.set('prompt', opts.prompt);
+  if (opts.loginHint) p.set('login_hint', opts.loginHint);
   return `${AUTH_ENDPOINT}?${p.toString()}`;
 }
 
@@ -112,7 +118,7 @@ export function parseRedirect(hash: string): RedirectAnswer | null {
 
 export type SignInResult =
   | { kind: 'signed_in'; token: Token; route: string }
-  | { kind: 'failed'; error: string; route: string; silent: boolean }
+  | { kind: 'failed'; error: string; route: string; silent: boolean; renewal: boolean }
   | { kind: 'none' };
 
 /**
@@ -128,9 +134,9 @@ export function completeSignIn(hash: string, storage: Pick<Storage, 'getItem' | 
   const state = decodeState(answer.state);
   const route = state?.r ?? '#/';
   if (!state || !expected || state.n !== expected) {
-    return { kind: 'failed', error: 'state_mismatch', route, silent: false };
+    return { kind: 'failed', error: 'state_mismatch', route, silent: false, renewal: false };
   }
-  if (answer.kind === 'error') return { kind: 'failed', error: answer.error, route, silent: state.s === 1 };
+  if (answer.kind === 'error') return { kind: 'failed', error: answer.error, route, silent: state.s !== undefined, renewal: state.s === 2 };
   return {
     kind: 'signed_in',
     route,
@@ -154,7 +160,11 @@ export function startSignIn(opts: {
   redirectUri: string;
   route: string;
   silent?: boolean;
+  /** A silent sign-in that renews one that ended. */
+  renewal?: boolean;
+  /** Show Google's account chooser; ignored when `loginHint` names the account. */
   chooseAccount?: boolean;
+  loginHint?: string | null;
   scopes?: string[];
   includeGranted?: boolean;
   storage: Pick<Storage, 'setItem'>;
@@ -162,13 +172,15 @@ export function startSignIn(opts: {
 }): void {
   const n = randomNonce();
   opts.storage.setItem(NONCE_KEY, n);
-  const state = encodeState({ n, r: opts.route, ...(opts.silent ? { s: 1 as const } : {}) });
+  const state = encodeState({ n, r: opts.route, ...(opts.silent ? { s: opts.renewal ? (2 as const) : (1 as const) } : {}) });
+  const hint = opts.loginHint || undefined;
   opts.go(
     buildAuthUrl({
       clientId: opts.clientId,
       redirectUri: opts.redirectUri,
       state,
-      prompt: opts.silent ? 'none' : opts.chooseAccount ? 'select_account' : undefined,
+      prompt: opts.silent ? 'none' : opts.chooseAccount && !hint ? 'select_account' : undefined,
+      ...(hint ? { loginHint: hint } : {}),
       ...(opts.scopes ? { scopes: opts.scopes } : {}),
       ...(opts.includeGranted === false ? { includeGranted: false } : {}),
     }),

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { CLIENT, FakeGoogle, FOLDER_NAME, OTHER_CLIENT, READ, TOKEN, USER, WRITE } from './fake-google';
+import { CLIENT, FakeGoogle, FOLDER_NAME, OTHER_CLIENT, OTHER_USER, READ, TOKEN, USER, WRITE } from './fake-google';
 
 // The signed-in app against a stand-in for Google and Drive (fake-google.ts):
 // sign-in, the folder, Refresh and its answer, and what the app may change.
@@ -24,6 +24,7 @@ test.afterEach(() => {
 });
 
 const HEADLINE = '1 sign-in needs a person';
+const ACCOUNT_KEY = 'own-your-health-app.account';
 const REQUEST_FILE = /^_requests\/\d{8}T\d{6}Z_x_[a-z2-7]{20}\.json$/;
 
 /** Opens the household's setup link and picks the records folder. */
@@ -62,7 +63,7 @@ async function lookAgain(page: Page): Promise<void> {
 test('a setup link signs in, finds the records folder and reads it', async ({ page, baseURL }) => {
   await page.goto(`./?client=${CLIENT}`);
   await expect(page.locator('.row', { hasText: FOLDER_NAME })).toBeVisible();
-  expect(google.signIns).toEqual([{ clientId: CLIENT, prompt: 'select_account', scope: `${READ} ${WRITE}` }]);
+  expect(google.signIns).toEqual([{ clientId: CLIENT, prompt: 'select_account', scope: `${READ} ${WRITE}`, hint: null }]);
   // Google's answer leaves the address at once.
   expect(page.url()).toBe(`${baseURL}#/`);
   await page.locator('.row', { hasText: FOLDER_NAME }).getByRole('button', { name: 'Open' }).click();
@@ -70,17 +71,91 @@ test('a setup link signs in, finds the records folder and reads it', async ({ pa
   await expect(page.locator('.card', { hasText: 'People' }).locator('.row')).toHaveCount(3);
 
   const kept = await page.evaluate(() => ({ local: { ...localStorage }, session: { ...sessionStorage } }));
-  expect(Object.keys(kept.local).sort()).toEqual(['own-your-health-app.client_id', 'own-your-health-app.folder']);
+  expect(Object.keys(kept.local).sort()).toEqual(['own-your-health-app.account', 'own-your-health-app.client_id', 'own-your-health-app.folder']);
+  expect(kept.local[ACCOUNT_KEY]).toBe(USER.emailAddress);
   expect(kept.session).toEqual({});
   expect(JSON.stringify(kept)).not.toContain(TOKEN);
   expect(google.changes).toEqual([]);
 });
 
-test('the next visit signs in without a prompt and opens the same folder', async ({ page }) => {
+test('the next visit signs in without a prompt, as the same account, and opens the same folder', async ({ page }) => {
+  // The browser holds two Google accounts: without the hint Google would
+  // answer interaction_required.
   await signIn(page);
   await page.goto('./');
   await expect(page.locator('.glance-answer')).toHaveText(HEADLINE);
-  expect(google.signIns.map((s) => s.prompt)).toEqual(['select_account', 'none']);
+  expect(google.signIns.map((s) => [s.prompt, s.hint])).toEqual([
+    ['select_account', null],
+    ['none', USER.emailAddress],
+  ]);
+});
+
+test('with no account stored, a browser with two Google accounts asks once', async ({ page }) => {
+  await signIn(page);
+  await page.evaluate((k) => localStorage.removeItem(k), ACCOUNT_KEY);
+  await page.goto('./');
+  await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
+  await expect(page.locator('.error-text')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Use a different account' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Sign in with Google' }).click();
+  await expect(page.locator('.glance-answer')).toHaveText(HEADLINE);
+  expect(google.signIns.map((s) => [s.prompt, s.hint])).toEqual([
+    ['select_account', null],
+    ['none', null],
+    ['select_account', null],
+  ]);
+  expect(await page.evaluate((k) => localStorage.getItem(k), ACCOUNT_KEY)).toBe(USER.emailAddress);
+});
+
+test('an hour later the sign-in renews itself, as the same account, on the same screen', async ({ page }) => {
+  await page.clock.install();
+  await signIn(page);
+  await page.getByRole('link', { name: /^Robin Example/ }).first().click();
+  await expect(page.locator('.person-head h1')).toHaveText('Robin Example');
+  const route = new URL(page.url()).hash;
+  await page.clock.fastForward('01:00:00');
+  await lookAgain(page);
+  await expect(page).toHaveURL((u) => u.hash === route && google.signIns.length === 2);
+  await expect(page.locator('.person-head h1')).toHaveText('Robin Example');
+  expect(google.signIns[1]).toMatchObject({ prompt: 'none', hint: USER.emailAddress });
+  await expect(page.getByRole('button', { name: 'Sign in with Google' })).toHaveCount(0);
+});
+
+test('a Drive read after the hour renews the sign-in on its own', async ({ page }) => {
+  await page.clock.install();
+  await signIn(page);
+  await page.getByRole('button', { name: 'Refresh everything' }).click();
+  await expect(page.getByText(/waiting for the Mac/).first()).toBeVisible();
+  // While a request waits, the app looks for the answer every 30 seconds;
+  // the first look after the hour needs a new token.
+  await page.clock.fastForward('01:00:00');
+  await expect.poll(() => google.signIns.length).toBe(2);
+  expect(google.signIns[1]).toMatchObject({ prompt: 'none', hint: USER.emailAddress });
+  // Back on the same screen with the request still there; an hour on, the
+  // stand-in's Mac has not taken it.
+  await expect(page.getByText(/^Asked 1 hour ago; the Mac has not taken it yet/).first()).toBeVisible();
+  expect(google.changes).toHaveLength(1);
+});
+
+test('when Google needs the person, the renewal says so, and another account can be chosen', async ({ page }) => {
+  await page.clock.install();
+  await signIn(page);
+  google.accounts = [];
+  await page.clock.fastForward('01:00:00');
+  await lookAgain(page);
+  await expect(page.getByText('Your Google sign-in ended, as it does after an hour, and Google needs you to sign in again.')).toBeVisible();
+  await expect(page.getByText(`As ${USER.emailAddress}, the account that signed in last.`)).toBeVisible();
+
+  google.accounts = [USER, OTHER_USER];
+  google.chooses = OTHER_USER;
+  await page.getByRole('button', { name: 'Use a different account' }).click();
+  await expect(page.locator('.glance-answer')).toHaveText(HEADLINE);
+  expect(google.signIns.map((s) => [s.prompt, s.hint])).toEqual([
+    ['select_account', null],
+    ['none', USER.emailAddress],
+    ['select_account', null],
+  ]);
+  expect(await page.evaluate((k) => localStorage.getItem(k), ACCOUNT_KEY)).toBe(OTHER_USER.emailAddress);
 });
 
 test('Refresh writes one request and shows the Mac’s answer', async ({ page }) => {
@@ -149,6 +224,8 @@ test('signing out revokes the token', async ({ page }) => {
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
   expect(google.revoked).toEqual([TOKEN]);
+  expect(await page.evaluate((k) => localStorage.getItem(k), ACCOUNT_KEY)).toBeNull();
+  await expect(page.getByRole('button', { name: 'Use a different account' })).toHaveCount(0);
   expect(google.changes).toEqual([]);
 });
 
