@@ -9,7 +9,7 @@ import { REGISTRATION_URL, REPO_URL } from './setup';
 
 export function settingsView(
   ctx: Ctx,
-  opts: { clientId: string | null; scopes: string[]; onChangeFolder: () => void; onChangeClient: () => void },
+  opts: { clientId: string | null; setupLink: string | null; scopes: string[]; onChangeFolder: () => void; onChangeClient: () => void },
 ): HTMLElement {
   const f = ctx.store.folder;
   const status = ctx.store.status;
@@ -39,6 +39,7 @@ export function settingsView(
           ]),
           h('div', { class: 'actions' }, button('Sign out', () => ctx.signOut()), button('Use another Google client', opts.onChangeClient, { ghost: true })),
         ),
+    ctx.demo || !opts.setupLink ? null : setupLinkCard(ctx, opts.setupLink),
     card(
       { title: 'What this app keeps and sends' },
       h('ul', { class: 'plain' },
@@ -50,6 +51,28 @@ export function settingsView(
       ),
       h('p', null, h('a', { href: REPO_URL, target: '_blank', rel: 'noopener noreferrer' }, 'Source code'), ' · ', h('a', { href: REGISTRATION_URL, target: '_blank', rel: 'noopener noreferrer' }, 'Setting up a Google client')),
       h('p', { class: 'muted small' }, `Version ${ctx.version}`),
+    ),
+  );
+}
+
+/** The address that sets up another phone or computer in one tap. */
+function setupLinkCard(ctx: Ctx, link: string): HTMLElement {
+  const copy = () =>
+    navigator.clipboard.writeText(link).then(
+      () => ctx.toast('Setup link copied'),
+      () => ctx.toast('Copying did not work. Select the link and copy it.', 'error'),
+    );
+  const share = () => void navigator.share({ title: 'Own Your Health', url: link }).catch(() => undefined);
+  return card(
+    { title: 'Setup link for another device' },
+    h('p', null, 'Open this link on another phone or computer to set the app up there: it fills in your Google client and goes straight to sign-in.'),
+    h('p', { class: 'muted small' }, 'It is fine to share with your household. The client id is not a secret, and only the test users listed for your Google client can sign in through it.'),
+    h('code', { class: 'wrap setup-link' }, link),
+    h(
+      'div',
+      { class: 'actions' },
+      button('Copy', () => void copy(), { primary: true, icon: 'copy' }),
+      typeof navigator.share === 'function' ? button('Share', share, { icon: 'external' }) : null,
     ),
   );
 }

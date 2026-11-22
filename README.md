@@ -41,7 +41,9 @@ Refresh.
 ## Using it
 
 1. Open https://own-your-health.github.io/app/ and paste your client id (it
-   ends in `.apps.googleusercontent.com`).
+   ends in `.apps.googleusercontent.com`). On every other device, open the
+   setup link instead: Settings, **Setup link for another device**, which adds
+   `?client=<your client id>` to the address and skips this step.
 2. Sign in with the Google account that holds the records folder, or one it is
    shared with. Google warns that it has not verified the app: your client is
    in Testing mode, which is expected. Allow both permissions.
@@ -52,6 +54,12 @@ Every person and record has its own address, such as `#/p/<person id>` and
 `#/p/<person id>/r/<record id>`, so a bookmark or another app can link
 straight to it. `#/hh/<id>` opens the person whose
 `links.huishouden_health_person` is that id.
+
+A link from Huishouden Health, or any other app, can carry the setup link's
+`?client=<client id>` before the route:
+`https://own-your-health.github.io/app/?client=<client id>#/hh/<id>`. A device
+that has never opened the app then needs no setup: it signs in and lands on
+the person. The app takes `?client=` out of the address before signing in.
 
 The sign-in lasts an hour. When it ends, the app asks Google again without a
 prompt, and asks you only if Google needs you.

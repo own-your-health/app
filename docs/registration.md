@@ -70,7 +70,31 @@ and this one never uses it.
 4. Allow both permissions.
 5. Choose the records folder.
 
-Each browser and phone you use asks for the client id once.
+Each browser and phone you use needs the client id once.
+
+## 6. Set up your other devices with a link
+
+Once one device is signed in, open **Settings**, then **Setup link for
+another device**. **Copy** (or **Share**, on a phone) gives the app's address
+with your client id in it:
+
+```
+https://own-your-health.github.io/app/?client=123456789012-abc….apps.googleusercontent.com
+```
+
+Opening it on another phone or computer stores the client id, takes it out of
+the address, and goes straight to Google's sign-in, so nobody types the id.
+If that browser already uses a different client, the app asks before replacing
+it. A link whose id is not a Google client id opens the paste field instead.
+
+It is fine to send the link to the people in your household. A client id is not
+a secret: Google shows it to everyone who signs in. Only the test users listed
+on your consent screen (step 3) can sign in through it.
+
+Open a setup link only when someone in your household sent it. A link can name
+any Google client, and on a device that has none yet the app goes straight to
+Google's sign-in for it. Google's screen shows the client's developer email (the
+support email from step 3): if it is not your household's, stop there.
 
 ## Scopes
 
