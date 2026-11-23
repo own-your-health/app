@@ -936,6 +936,32 @@ pre.text {
   fill: var(--attention);
 }
 
+/* The reference range behind the line. */
+.chart-band {
+  fill: var(--tint);
+}
+
+.spark {
+  width: 96px;
+  height: 28px;
+  display: block;
+}
+
+.spark .chart-line {
+  stroke-width: 1.6;
+}
+
+.spark .chart-dot {
+  stroke-width: 1.4;
+}
+
+.result-aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
 /* ---- Person sections ---- */
 
 .person-head {

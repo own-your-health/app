@@ -3,6 +3,7 @@
 // kind, code and date). Each list here is one card on the person's first
 // screen; the sections show everything.
 
+import { isOutOfRange, resultFlag, type ResultFlag } from './flags';
 import { medicines, resultSeries, seriesKey, sortByDateDesc, type MedicineGroup, type ResultPoint, type ResultSeries } from './records';
 import type { MedDocument, MedRecord, PersonIndex } from './types';
 
@@ -11,90 +12,6 @@ const WITHDRAWN = new Set(['entered-in-error']);
 
 function live(r: MedRecord): boolean {
   return !WITHDRAWN.has(r.status ?? '');
-}
-
-// ---- Results against their range ----
-
-export type FlagLevel = 'high' | 'low' | 'abnormal' | 'normal';
-
-export interface ResultFlag {
-  level: FlagLevel;
-  critical: boolean;
-  /** Who said so: the source's own interpretation, or this app reading the range. */
-  from: 'source' | 'range';
-  label: string;
-}
-
-const NUM = '(-?\\d+(?:\\.\\d+)?)';
-const BETWEEN = new RegExp(`^\\s*${NUM}\\s*([^\\d\\s–—-][^–—-]*?)?\\s*(?:-|–|—|to)\\s*${NUM}\\s*(.*)$`, 'i');
-const BELOW = new RegExp(`^\\s*(<=|≤|<|less than|under)\\s*${NUM}\\s*(.*)$`, 'i');
-const ABOVE = new RegExp(`^\\s*(>=|≥|>|greater than|over)\\s*${NUM}\\s*(.*)$`, 'i');
-
-function sameUnit(rangeUnit: string | undefined, unit: string | undefined): boolean {
-  const a = rangeUnit?.trim().toLowerCase();
-  const b = unit?.trim().toLowerCase();
-  return !a || !b || a === b;
-}
-
-function fromInterpretation(text: string): Omit<ResultFlag, 'from' | 'label'> | undefined {
-  const s = text.trim().toLowerCase();
-  if (/^(hh|ll|aa|hu|lu)$/.test(s) || /critical|panic|alert/.test(s)) {
-    const level: FlagLevel = /^(hh|hu)$/.test(s) || /high|above/.test(s) ? 'high' : /^(ll|lu)$/.test(s) || /low|below/.test(s) ? 'low' : 'abnormal';
-    return { level, critical: true };
-  }
-  if (/^(h|>)$/.test(s) || /high|above/.test(s)) return { level: 'high', critical: false };
-  if (/^(l|<)$/.test(s) || /low|below/.test(s)) return { level: 'low', critical: false };
-  // "abnormal" before "normal": the one contains the other.
-  if (/^(a|abn)$/.test(s) || /abnormal|out of range|outside/.test(s)) return { level: 'abnormal', critical: false };
-  if (/^n$/.test(s) || /normal|^wnl$|within/.test(s)) return { level: 'normal', critical: false };
-  return undefined;
-}
-
-function fromRange(value: number, range: string, unit: string | undefined): FlagLevel | undefined {
-  const between = BETWEEN.exec(range);
-  if (between) {
-    const [, lo, unitLo, hi, unitHi] = between;
-    if (!sameUnit(unitHi || unitLo, unit)) return undefined;
-    return value < Number(lo) ? 'low' : value > Number(hi) ? 'high' : 'normal';
-  }
-  const below = BELOW.exec(range);
-  if (below) {
-    const [, op, hi, rangeUnit] = below;
-    if (!sameUnit(rangeUnit, unit)) return undefined;
-    const over = op === '<' || /less|under/i.test(op!) ? value >= Number(hi) : value > Number(hi);
-    return over ? 'high' : 'normal';
-  }
-  const above = ABOVE.exec(range);
-  if (above) {
-    const [, op, lo, rangeUnit] = above;
-    if (!sameUnit(rangeUnit, unit)) return undefined;
-    const under = op === '>' || /greater|over/i.test(op!) ? value <= Number(lo) : value < Number(lo);
-    return under ? 'low' : 'normal';
-  }
-  return undefined;
-}
-
-const LABELS: Record<FlagLevel, string> = { high: 'High', low: 'Low', abnormal: 'Abnormal', normal: 'Normal' };
-
-/**
- * Whether a result is out of its range: the source's interpretation when it
- * gave one this app can read, otherwise the value against the reference
- * range, when both are numbers in the same unit. Undefined when neither says.
- */
-export function resultFlag(p: Pick<ResultPoint, 'value' | 'unit' | 'range' | 'interpretation'>): ResultFlag | undefined {
-  const said = p.interpretation ? fromInterpretation(p.interpretation) : undefined;
-  if (said) {
-    const label = !said.critical ? LABELS[said.level] : said.level === 'abnormal' ? 'Critical' : `Critical ${LABELS[said.level].toLowerCase()}`;
-    return { ...said, from: 'source', label };
-  }
-  if (p.value === undefined || !p.range) return undefined;
-  const level = fromRange(p.value, p.range, p.unit);
-  if (!level) return undefined;
-  return { level, critical: false, from: 'range', label: level === 'high' ? 'Above range' : level === 'low' ? 'Below range' : 'In range' };
-}
-
-export function isOutOfRange(f: ResultFlag | undefined): f is ResultFlag {
-  return !!f && f.level !== 'normal';
 }
 
 export interface LatestResult {

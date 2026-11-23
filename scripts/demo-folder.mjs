@@ -282,6 +282,27 @@ R.record(src.robinChart, 'Observation', 'result', {
   fields: { value: { value: 5.4, unit: '%' }, reference_range: '4.0-5.6 %', interpretation: 'Normal', category: 'Laboratory' },
   resource: { ...obs('4548-4', 'Hemoglobin A1c', 5.4, '%', '%', '4.0-5.6 %', 'Normal'), effectiveDateTime: '2026-10-01' },
 });
+// The rest of each lipid panel and metabolic panel those visits drew.
+function lab(P, source, date, [code, name, display, v, unit, range, interp]) {
+  P.record(source, 'Observation', 'result', {
+    date,
+    code: { system: LOINC, code, display: name },
+    display,
+    status: 'final',
+    fields: { value: { value: v, unit }, reference_range: range, interpretation: interp, category: 'Laboratory' },
+    resource: { ...obs(code, display, v, unit, unit, range, interp), effectiveDateTime: date },
+  });
+}
+for (const [date, total, trig, hdl] of [['2025-03-10', 238, 168, 44], ['2025-09-15', 214, 152, 46], ['2026-03-20', 189, 128, 48], ['2026-10-01', 176, 117, 51]]) {
+  lab(R, src.robinChart, date, ['2093-3', 'Cholesterol [Mass/volume] in Serum or Plasma', 'Cholesterol, total', total, 'mg/dL', '<200 mg/dL', total >= 200 ? 'High' : 'Normal']);
+  lab(R, src.robinChart, date, ['2571-8', 'Triglyceride [Mass/volume] in Serum or Plasma', 'Triglycerides', trig, 'mg/dL', '<150 mg/dL', trig >= 150 ? 'High' : 'Normal']);
+  lab(R, src.robinChart, date, ['2085-9', 'Cholesterol in HDL [Mass/volume] in Serum or Plasma', 'HDL cholesterol', hdl, 'mg/dL', '>39 mg/dL', 'Normal']);
+}
+for (const [date, k, cr, na] of [['2025-03-10', 4.4, 0.8, 140], ['2025-09-15', 4.6, 0.9, 139], ['2026-10-01', 4.9, 0.9, 141]]) {
+  lab(R, src.robinChart, date, ['2823-3', 'Potassium [Moles/volume] in Serum or Plasma', 'Potassium', k, 'mmol/L', '3.5-5.1 mmol/L', 'Normal']);
+  lab(R, src.robinChart, date, ['2160-0', 'Creatinine [Mass/volume] in Serum or Plasma', 'Creatinine', cr, 'mg/dL', '0.6-1.2 mg/dL', 'Normal']);
+  lab(R, src.robinChart, date, ['2951-2', 'Sodium [Moles/volume] in Serum or Plasma', 'Sodium', na, 'mmol/L', '136-145 mmol/L', 'Normal']);
+}
 for (const [date, reason] of [['2025-03-10', 'Annual physical'], ['2025-09-15', 'Follow-up'], ['2026-10-01', 'Annual physical']]) {
   R.record(src.robinChart, 'Encounter', 'encounter', {
     date,
@@ -381,7 +402,7 @@ R.record(src.robinPlan, 'Coverage', 'coverage', {
 const visitText = 'Visit summary. Annual physical with Dr. Jordan Sample. Discussed home blood pressure readings and continuing lisinopril. LDL cholesterol is lower than last year. Influenza vaccine given today. Return in twelve months.';
 const visit = R.document(src.robinChart, { date: '2026-10-01', doc_type: 'visit_summary', title: 'After visit summary', organization: 'Example Health', pages: 3, text: visitText, original: 'after_visit_summary.pdf' });
 R.records.find((r) => r.kind === 'encounter' && r.date === '2026-10-01').documents.push(visit.id);
-R.document(src.robinChart, { date: '2026-10-01', doc_type: 'lab_report', title: 'Lipid panel', organization: 'Example Health', pages: 2, text: 'Lipid panel. LDL cholesterol 104 mg/dL. Total cholesterol 182 mg/dL. HDL 58 mg/dL. Triglycerides 99 mg/dL.', original: 'lipid_panel.pdf' });
+R.document(src.robinChart, { date: '2026-10-01', doc_type: 'lab_report', title: 'Lipid panel', organization: 'Example Health', pages: 2, text: 'Lipid panel, fasting 12 hours. LDL cholesterol 104 mg/dL. Total cholesterol 176 mg/dL. HDL 51 mg/dL. Triglycerides 117 mg/dL.', original: 'lipid_panel.pdf' });
 R.document(null, {
   date: '2026-10-01',
   doc_type: 'bill',
@@ -444,6 +465,12 @@ S.record(src.samLab, 'Observation', 'result', {
   fields: { value: { value: 2.1, unit: 'mIU/L' }, reference_range: '0.4-4.0 mIU/L', interpretation: 'Normal', category: 'Laboratory' },
   resource: { ...obs('3016-3', 'TSH', 2.1, 'mIU/L', 'mIU/L', '0.4-4.0 mIU/L', 'Normal'), effectiveDateTime: '2026-07-09' },
 });
+// A blood count with a low hemoglobin, drawn twice.
+for (const [date, hgb, wbc, plt] of [['2026-07-09', 11.2, 6.1, 245], ['2026-10-12', 11.8, 5.8, 260]]) {
+  lab(S, src.samLab, date, ['718-7', 'Hemoglobin [Mass/volume] in Blood', 'Hemoglobin', hgb, 'g/dL', '12.0-15.5 g/dL', hgb < 12 ? 'Low' : 'Normal']);
+  lab(S, src.samLab, date, ['6690-2', 'Leukocytes [#/volume] in Blood by Automated count', 'White blood cells', wbc, '10*3/uL', '4.5-11.0 10*3/uL', 'Normal']);
+  lab(S, src.samLab, date, ['777-3', 'Platelets [#/volume] in Blood by Automated count', 'Platelets', plt, '10*3/uL', '150-400 10*3/uL', 'Normal']);
+}
 S.record(src.samChart, 'MedicationRequest', 'medication', {
   date: '2026-04-03',
   display: 'Vitamin D3 2,000 unit capsule',

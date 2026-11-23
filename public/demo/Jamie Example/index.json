@@ -4,11 +4,11 @@
   "rev": 9,
   "documents": [
     {
-      "id": "d_3pbo3ensizj3bfmztp76",
+      "id": "d_dvtcnggy6zjs2hbkyuxf",
       "path": "Jamie Example/Documents/2026/2026-11-10_discharge_summary_example_health_newborn_discharge.pdf",
-      "sha256": "430dda647d9e75fa25a6a150fdb3ecd91ac035e2a5619e16e6d611a764fa4cce",
-      "md5": "6ef1d44f75a7cbc0e82657c45d03ddb4",
-      "size": 126734,
+      "sha256": "c3698a0a65199db3ea5ed5cef95661fa37c0a451fd4d1a007fda69d11cc53803",
+      "md5": "44057063d777fef365df932c58c73c0b",
+      "size": 98535,
       "media_type": "application/pdf",
       "pages": 2,
       "original_name": "newborn_discharge.pdf",
@@ -39,19 +39,19 @@
         "method": "fhir-api",
         "source_resource": {
           "type": "Binary",
-          "id": "binary-35f3109c",
+          "id": "binary-311e9ccf",
           "last_updated": "2026-11-22T08:00:00Z"
         },
         "fetched_at": "2026-11-22T00:00:00Z",
         "filed_at": "2026-11-22T00:00:00Z",
-        "raw_path": "Jamie Example/Records/athena-example-pediatrics/Binary/binary-35f3109c.json",
+        "raw_path": "Jamie Example/Records/athena-example-pediatrics/Binary/binary-311e9ccf.json",
         "filed_by": "medrec 0.2.11"
       }
     }
   ],
   "records": [
     {
-      "id": "r_uk4qbw6imaxtgdjxe3to",
+      "id": "r_l5kbjokjzvvwzvqgm5je",
       "kind": "encounter",
       "key": "encounter|birth hospital stay|2026-11-08",
       "date": "2026-11-08",
@@ -69,7 +69,7 @@
         }
       },
       "documents": [
-        "d_3pbo3ensizj3bfmztp76"
+        "d_dvtcnggy6zjs2hbkyuxf"
       ],
       "provenance": [
         {
@@ -83,18 +83,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Encounter",
-            "id": "encounter-1da22210",
+            "id": "encounter-2b818263",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T00:00:00Z",
           "filed_at": "2026-11-22T00:00:00Z",
-          "raw_path": "Jamie Example/Records/athena-example-pediatrics/Encounter/encounter-1da22210.json",
+          "raw_path": "Jamie Example/Records/athena-example-pediatrics/Encounter/encounter-2b818263.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_67vbpun34uoqnf4r4gwe",
+      "id": "r_4nuojfxqs4m4rc22u7ea",
       "kind": "immunization",
       "key": "immunization|http://hl7.org/fhir/sid/cvx|08|2026-11-08",
       "date": "2026-11-08",
@@ -108,7 +108,7 @@
       "fields": {
         "when": "2026-11-08",
         "performer": "Example Health Birth Center",
-        "lot_number": "LOTDA4E",
+        "lot_number": "LOTC22D",
         "site": "Right thigh",
         "route": "Intramuscular"
       },
@@ -125,18 +125,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Immunization",
-            "id": "immunization-ecdc3b03",
+            "id": "immunization-3a6ac5eb",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T00:00:00Z",
           "filed_at": "2026-11-22T00:00:00Z",
-          "raw_path": "Jamie Example/Records/athena-example-pediatrics/Immunization/immunization-ecdc3b03.json",
+          "raw_path": "Jamie Example/Records/athena-example-pediatrics/Immunization/immunization-3a6ac5eb.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_durwcpiioun23iql6b75",
+      "id": "r_p7t3ssadzbx53akjnotw",
       "kind": "result",
       "key": "result|http://loinc.org|29463-7|2026-11-08",
       "date": "2026-11-08",
@@ -168,18 +168,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-b7b003b2",
+            "id": "observation-4d9c31be",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T00:00:00Z",
           "filed_at": "2026-11-22T00:00:00Z",
-          "raw_path": "Jamie Example/Records/athena-example-pediatrics/Observation/observation-b7b003b2.json",
+          "raw_path": "Jamie Example/Records/athena-example-pediatrics/Observation/observation-4d9c31be.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_d6x7alam2kj3iv5hwjga",
+      "id": "r_7boo2dfokguriaaahyxk",
       "kind": "result",
       "key": "result|http://loinc.org|29463-7|2026-11-12",
       "date": "2026-11-12",
@@ -211,18 +211,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-66740916",
+            "id": "observation-cc3bac8e",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T00:00:00Z",
           "filed_at": "2026-11-22T00:00:00Z",
-          "raw_path": "Jamie Example/Records/athena-example-pediatrics/Observation/observation-66740916.json",
+          "raw_path": "Jamie Example/Records/athena-example-pediatrics/Observation/observation-cc3bac8e.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_yc4vwdmnjn7b5pzwaxaj",
+      "id": "r_bhthoczbsvygbphhborx",
       "kind": "result",
       "key": "result|http://loinc.org|29463-7|2026-11-19",
       "date": "2026-11-19",
@@ -254,18 +254,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-829b2b4c",
+            "id": "observation-36173c32",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T00:00:00Z",
           "filed_at": "2026-11-22T00:00:00Z",
-          "raw_path": "Jamie Example/Records/athena-example-pediatrics/Observation/observation-829b2b4c.json",
+          "raw_path": "Jamie Example/Records/athena-example-pediatrics/Observation/observation-36173c32.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_bby3sblg3vlvemvl4woj",
+      "id": "r_kyqljcjbenhhdt5bkcl7",
       "kind": "result",
       "key": "result|http://loinc.org|42719-5|2026-11-09",
       "date": "2026-11-09",
@@ -298,18 +298,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-d9805814",
+            "id": "observation-9eee0cf8",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T00:00:00Z",
           "filed_at": "2026-11-22T00:00:00Z",
-          "raw_path": "Jamie Example/Records/athena-example-pediatrics/Observation/observation-d9805814.json",
+          "raw_path": "Jamie Example/Records/athena-example-pediatrics/Observation/observation-9eee0cf8.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_4nosrk5jqhmt3omkqdef",
+      "id": "r_v24nymoempek2dgehk6h",
       "kind": "encounter",
       "key": "encounter|newborn visit|2026-11-12",
       "date": "2026-11-12",
@@ -334,18 +334,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Encounter",
-            "id": "encounter-a4eb28e9",
+            "id": "encounter-e5125fea",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T00:00:00Z",
           "filed_at": "2026-11-22T00:00:00Z",
-          "raw_path": "Jamie Example/Records/athena-example-pediatrics/Encounter/encounter-a4eb28e9.json",
+          "raw_path": "Jamie Example/Records/athena-example-pediatrics/Encounter/encounter-e5125fea.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_j4kaz75ots7negwxdwkc",
+      "id": "r_mnasm7cnyvefkgklyki2",
       "kind": "encounter",
       "key": "encounter|weight check|2026-11-19",
       "date": "2026-11-19",
@@ -370,12 +370,12 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Encounter",
-            "id": "encounter-1848d8ce",
+            "id": "encounter-1e6d4e73",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T00:00:00Z",
           "filed_at": "2026-11-22T00:00:00Z",
-          "raw_path": "Jamie Example/Records/athena-example-pediatrics/Encounter/encounter-1848d8ce.json",
+          "raw_path": "Jamie Example/Records/athena-example-pediatrics/Encounter/encounter-1e6d4e73.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
@@ -384,10 +384,10 @@
   "studies": [],
   "imports": [
     {
-      "id": "i_gr3ovetbocqmyxbsradb",
+      "id": "i_x52g2xoq4wrzsco5h6fu",
       "source_dir": "Jamie Example/Records/athena-example-pediatrics",
-      "stream_sha256": "6a45044e6515bbdbe5a61a4095a828d20424c210659cab004d188c08a769d03f",
-      "stream_bytes": 743652,
+      "stream_sha256": "3a03ac414e646329b86dca1b8c508426c90d1613aabc6659ba3f40794cdb76e2",
+      "stream_bytes": 453274,
       "cli": "athena",
       "cli_version": "0.6.1",
       "organization": "example-pediatrics",

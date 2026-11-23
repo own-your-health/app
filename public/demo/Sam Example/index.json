@@ -4,11 +4,11 @@
   "rev": 9,
   "documents": [
     {
-      "id": "d_dy25lajrlepzdwbgx4kd",
+      "id": "d_hcwjzl5nta6exqt2f7e6",
       "path": "Sam Example/Claims/2026/2026-07-09_bill_example_billing_statement.pdf",
-      "sha256": "d95254588e09ee1fa9409b9a5799ec5a835cc8e5a7f2a11e47f2af33d2d26e67",
-      "md5": "dda49fde0ebb5187969598136b323417",
-      "size": 167941,
+      "sha256": "5e5aa0f5bf57e97e9fa33ef4e0c9f1bd0ebeb498701a254edd707500c10de22c",
+      "md5": "35e6f3806398a35b22d965ad5be357f5",
+      "size": 200496,
       "media_type": "application/pdf",
       "pages": 1,
       "original_name": "statement.pdf",
@@ -50,7 +50,7 @@
   ],
   "records": [
     {
-      "id": "r_57tjsi5ot4237rjcdfzh",
+      "id": "r_l5wfoujthwud7t5peeo3",
       "kind": "result",
       "key": "result|http://loinc.org|62292-8|2026-04-02",
       "date": "2026-04-02",
@@ -84,18 +84,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-38aedcf5",
+            "id": "observation-ba2f5b78",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T14:59:00Z",
           "filed_at": "2026-11-22T14:59:00Z",
-          "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-38aedcf5.json",
+          "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-ba2f5b78.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_tnonpniw5q5ysyeqktvq",
+      "id": "r_vrkmecwwi35ragwl2tse",
       "kind": "result",
       "key": "result|http://loinc.org|62292-8|2026-07-09",
       "date": "2026-07-09",
@@ -129,18 +129,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-2c7bed21",
+            "id": "observation-2d62ff05",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T14:59:00Z",
           "filed_at": "2026-11-22T14:59:00Z",
-          "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-2c7bed21.json",
+          "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-2d62ff05.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_ia5szxdnvp4sj6aeezbu",
+      "id": "r_x2kzx62p6w42woejnhso",
       "kind": "result",
       "key": "result|http://loinc.org|62292-8|2026-10-12",
       "date": "2026-10-12",
@@ -174,18 +174,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-baa5da4d",
+            "id": "observation-a23ac288",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T14:59:00Z",
           "filed_at": "2026-11-22T14:59:00Z",
-          "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-baa5da4d.json",
+          "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-a23ac288.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_3s5wv767efc3rdrrtts7",
+      "id": "r_empvov253lz6rmybd2pb",
       "kind": "result",
       "key": "result|http://loinc.org|3016-3|2026-07-09",
       "date": "2026-07-09",
@@ -218,18 +218,282 @@
           "method": "portal",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-4eacfa72",
+            "id": "observation-575c42de",
             "last_updated": "2026-11-13T08:00:00Z"
           },
           "fetched_at": "2026-11-13T19:59:00Z",
           "filed_at": "2026-11-13T19:59:00Z",
-          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-4eacfa72.json",
+          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-575c42de.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_iktbkmxbxfmhzeiaz4oo",
+      "id": "r_tkdjgp4c5yvisq3epil5",
+      "kind": "result",
+      "key": "result|http://loinc.org|718-7|2026-07-09",
+      "date": "2026-07-09",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "718-7",
+        "display": "Hemoglobin [Mass/volume] in Blood"
+      },
+      "display": "Hemoglobin",
+      "status": "final",
+      "fields": {
+        "when": "2026-07-09",
+        "value": {
+          "value": 11.2,
+          "unit": "g/dL"
+        },
+        "reference_range": "12.0-15.5 g/dL",
+        "interpretation": "Low",
+        "category": "Laboratory"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.7.1",
+            "organization_id": "example-lab"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-4de81a04",
+            "last_updated": "2026-11-13T08:00:00Z"
+          },
+          "fetched_at": "2026-11-13T19:59:00Z",
+          "filed_at": "2026-11-13T19:59:00Z",
+          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-4de81a04.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_io225qk2qwpgmhygdbfi",
+      "kind": "result",
+      "key": "result|http://loinc.org|6690-2|2026-07-09",
+      "date": "2026-07-09",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "6690-2",
+        "display": "Leukocytes [#/volume] in Blood by Automated count"
+      },
+      "display": "White blood cells",
+      "status": "final",
+      "fields": {
+        "when": "2026-07-09",
+        "value": {
+          "value": 6.1,
+          "unit": "10*3/uL"
+        },
+        "reference_range": "4.5-11.0 10*3/uL",
+        "interpretation": "Normal",
+        "category": "Laboratory"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.7.1",
+            "organization_id": "example-lab"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-1dd1d2a6",
+            "last_updated": "2026-11-13T08:00:00Z"
+          },
+          "fetched_at": "2026-11-13T19:59:00Z",
+          "filed_at": "2026-11-13T19:59:00Z",
+          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-1dd1d2a6.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_xlnomh2dajjqxejgah7u",
+      "kind": "result",
+      "key": "result|http://loinc.org|777-3|2026-07-09",
+      "date": "2026-07-09",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "777-3",
+        "display": "Platelets [#/volume] in Blood by Automated count"
+      },
+      "display": "Platelets",
+      "status": "final",
+      "fields": {
+        "when": "2026-07-09",
+        "value": {
+          "value": 245,
+          "unit": "10*3/uL"
+        },
+        "reference_range": "150-400 10*3/uL",
+        "interpretation": "Normal",
+        "category": "Laboratory"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.7.1",
+            "organization_id": "example-lab"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-c758274b",
+            "last_updated": "2026-11-13T08:00:00Z"
+          },
+          "fetched_at": "2026-11-13T19:59:00Z",
+          "filed_at": "2026-11-13T19:59:00Z",
+          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-c758274b.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_mmpbj3lgiwq36ury7q3r",
+      "kind": "result",
+      "key": "result|http://loinc.org|718-7|2026-10-12",
+      "date": "2026-10-12",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "718-7",
+        "display": "Hemoglobin [Mass/volume] in Blood"
+      },
+      "display": "Hemoglobin",
+      "status": "final",
+      "fields": {
+        "when": "2026-10-12",
+        "value": {
+          "value": 11.8,
+          "unit": "g/dL"
+        },
+        "reference_range": "12.0-15.5 g/dL",
+        "interpretation": "Low",
+        "category": "Laboratory"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.7.1",
+            "organization_id": "example-lab"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-aeac6137",
+            "last_updated": "2026-11-13T08:00:00Z"
+          },
+          "fetched_at": "2026-11-13T19:59:00Z",
+          "filed_at": "2026-11-13T19:59:00Z",
+          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-aeac6137.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_nz4hh6jhhd7dfk7jiqri",
+      "kind": "result",
+      "key": "result|http://loinc.org|6690-2|2026-10-12",
+      "date": "2026-10-12",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "6690-2",
+        "display": "Leukocytes [#/volume] in Blood by Automated count"
+      },
+      "display": "White blood cells",
+      "status": "final",
+      "fields": {
+        "when": "2026-10-12",
+        "value": {
+          "value": 5.8,
+          "unit": "10*3/uL"
+        },
+        "reference_range": "4.5-11.0 10*3/uL",
+        "interpretation": "Normal",
+        "category": "Laboratory"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.7.1",
+            "organization_id": "example-lab"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-01e3da40",
+            "last_updated": "2026-11-13T08:00:00Z"
+          },
+          "fetched_at": "2026-11-13T19:59:00Z",
+          "filed_at": "2026-11-13T19:59:00Z",
+          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-01e3da40.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_gfo5w2psytbuibxyokqa",
+      "kind": "result",
+      "key": "result|http://loinc.org|777-3|2026-10-12",
+      "date": "2026-10-12",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "777-3",
+        "display": "Platelets [#/volume] in Blood by Automated count"
+      },
+      "display": "Platelets",
+      "status": "final",
+      "fields": {
+        "when": "2026-10-12",
+        "value": {
+          "value": 260,
+          "unit": "10*3/uL"
+        },
+        "reference_range": "150-400 10*3/uL",
+        "interpretation": "Normal",
+        "category": "Laboratory"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.7.1",
+            "organization_id": "example-lab"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-bf54864a",
+            "last_updated": "2026-11-13T08:00:00Z"
+          },
+          "fetched_at": "2026-11-13T19:59:00Z",
+          "filed_at": "2026-11-13T19:59:00Z",
+          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-bf54864a.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_7grjwjtwkucjq46muupr",
       "kind": "medication",
       "key": "medication|vitamin d3 2,000 unit capsule|2026-04-03",
       "date": "2026-04-03",
@@ -254,18 +518,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "MedicationRequest",
-            "id": "medicationrequest-54ea7e04",
+            "id": "medicationrequest-99ed2e43",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T14:59:00Z",
           "filed_at": "2026-11-22T14:59:00Z",
-          "raw_path": "Sam Example/Records/mychart-example-health/MedicationRequest/medicationrequest-54ea7e04.json",
+          "raw_path": "Sam Example/Records/mychart-example-health/MedicationRequest/medicationrequest-99ed2e43.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_63m4u3dqaqui6ocgxpqr",
+      "id": "r_jntrq225kumyjy25gdtp",
       "kind": "encounter",
       "key": "encounter|sports medicine visit|2026-05-20",
       "date": "2026-05-20",
@@ -291,12 +555,12 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Encounter",
-            "id": "encounter-05b1ba05",
+            "id": "encounter-4bdfd839",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T14:59:00Z",
           "filed_at": "2026-11-22T14:59:00Z",
-          "raw_path": "Sam Example/Records/mychart-example-health/Encounter/encounter-05b1ba05.json",
+          "raw_path": "Sam Example/Records/mychart-example-health/Encounter/encounter-4bdfd839.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
@@ -304,8 +568,8 @@
   ],
   "studies": [
     {
-      "id": "m_se4ifctsi6dy3roa5apo",
-      "study_uid": "2.25.804629526626442999",
+      "id": "m_6z5ay44av3yq6cb3m4c3",
+      "study_uid": "2.25.20884443502929807128",
       "path": "Sam Example/Imaging/2026-05-20_xr_ankle_example_imaging/",
       "date": "2026-05-20",
       "modalities": [
@@ -314,33 +578,33 @@
       "body_part": "ANKLE",
       "description": "XR ankle, 3 views",
       "facility": "Example Imaging",
-      "accession": "ACCAD701A",
+      "accession": "ACCFB0AF5",
       "series": [
         {
-          "uid": "2.25.2777667754",
+          "uid": "2.25.258973191",
           "number": 1,
           "modality": "DX",
           "description": "AP",
           "instances": {
-            "2.25.1812181803": "S001/00001.dcm"
+            "2.25.1863064605": "S001/00001.dcm"
           }
         },
         {
-          "uid": "2.25.3484773003",
+          "uid": "2.25.1626890654",
           "number": 2,
           "modality": "DX",
           "description": "Lateral",
           "instances": {
-            "2.25.1241888236": "S002/00001.dcm"
+            "2.25.1114279377": "S002/00001.dcm"
           }
         },
         {
-          "uid": "2.25.4209783864",
+          "uid": "2.25.3694084522",
           "number": 3,
           "modality": "DX",
           "description": "Oblique",
           "instances": {
-            "2.25.1121348460": "S003/00001.dcm"
+            "2.25.2458086886": "S003/00001.dcm"
           }
         }
       ],
@@ -361,10 +625,10 @@
   ],
   "imports": [
     {
-      "id": "i_eu7pbfwcmcei7w45twdn",
+      "id": "i_lrkl5txvkzryrqnvktys",
       "source_dir": "Sam Example/Records/mychart-example-health",
-      "stream_sha256": "f548a9d8a8de9b57da4a0daf3c14e6ea5da16ba58e3c6eec025c00764d51e4f5",
-      "stream_bytes": 285043,
+      "stream_sha256": "0737fe001632be60bdd1be4e2f44e7b8f88169fd9e88dd1db66eca319495e3bf",
+      "stream_bytes": 916484,
       "cli": "mychart",
       "cli_version": "0.7.1",
       "organization": "example-health",
@@ -384,10 +648,10 @@
       "documents_added": 0
     },
     {
-      "id": "i_3whe6hgi2t2v5ngbz5lr",
+      "id": "i_r6f4u2ktpyqqeokjzfv3",
       "source_dir": "Sam Example/Records/labcorp-example-lab",
-      "stream_sha256": "652837e76931a96f6f59a2d422099ae32e901c0f9c1b48aefa115ceb5a41fa72",
-      "stream_bytes": 614631,
+      "stream_sha256": "5e9ead932659d550979e07d6b7b918da6ce714f7f71e81f0a83e6f9e4d8e4041",
+      "stream_bytes": 657394,
       "cli": "labcorp",
       "cli_version": "0.2.1",
       "organization": "example-lab",
