@@ -7,8 +7,8 @@ import { join } from 'node:path';
 describe('household.json', () => {
   it('reads the sample household', () => {
     const h = parseHousehold(demoJson('household.json'));
-    expect(h.people.map((p) => p.name)).toEqual(['Robin Example', 'Sam Example', 'Alex Example']);
-    expect(h.sources).toHaveLength(7);
+    expect(h.people.map((p) => p.name)).toEqual(['Robin Example', 'Sam Example', 'Alex Example', 'Jamie Example']);
+    expect(h.sources).toHaveLength(8);
     expect(h.people[0]!.links?.huishouden_health_person).toBe('hh-demo-robin');
   });
 

@@ -60,6 +60,15 @@ top until it is made. **Sources** (`#/sources`, the stack icon in the bar,
 which carries a dot while a source needs attention) has every source: its
 sign-in, its last load and attempt, and when the Mac loads it next.
 
+For a child under 19, the overview and the Immunizations section set the
+recorded doses beside the routine rows of the CDC's child and adolescent
+immunization schedule (the July 2, 2025 version, which CDC's site serves):
+which doses the schedule places by the child's age that the records do not
+show, and which fall in the next 90 days, with each season's flu dose. It is
+the schedule's timing, not advice. Doses given elsewhere may be missing from
+the records, and the schedule's catch-up rules and exceptions are not
+applied. The table is `src/model/schedule.ts`.
+
 A result is out of range when the source's interpretation says so (High,
 Low, Abnormal, Critical), or, when it gave none the app can read, when the
 value falls outside the reference range in the same unit; the app labels

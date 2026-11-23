@@ -43,6 +43,20 @@
         "huishouden_health_person": "hh-demo-alex"
       },
       "created_at": "2026-10-13T20:00:00Z"
+    },
+    {
+      "id": "p_skrlw3od3nik2hkngezu",
+      "name": "Jamie Example",
+      "folder": "Jamie Example",
+      "birth_date": "2026-11-08",
+      "guardians": [
+        "p_xo4em46i7yj3hphlpajo",
+        "p_wwezzed7kml67hnp6s7n"
+      ],
+      "links": {
+        "huishouden_health_person": "hh-demo-jamie"
+      },
+      "created_at": "2026-11-10T20:00:00Z"
     }
   ],
   "organizations": [
@@ -151,6 +165,17 @@
       "organization_name": "Example Pediatrics",
       "fhir_base": "https://api.example.net/fhir/r4",
       "patient_id": "pat-1198d6",
+      "last_pull": "2026-11-22T18:30:00Z"
+    },
+    {
+      "id": "s_zvhdzsozzvuiecyjho6j",
+      "kind": "fhir",
+      "person": "p_skrlw3od3nik2hkngezu",
+      "cli": "athena",
+      "organization": "example-pediatrics",
+      "organization_name": "Example Pediatrics",
+      "fhir_base": "https://api.example.net/fhir/r4",
+      "patient_id": "pat-35ac49",
       "last_pull": "2026-11-22T18:30:00Z"
     }
   ]

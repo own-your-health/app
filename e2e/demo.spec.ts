@@ -57,9 +57,9 @@ test('home shows what needs a person, and leaves the sources to their screen', a
   // The failed load retries on its own, so home only counts it.
   await expect(strip).toContainText('1 source failed to load; the Mac tries again on its own.');
   await expect(page.getByRole('button', { name: 'Refresh everything' })).toBeVisible();
-  await expect(page.locator('.card', { hasText: 'People' }).locator('.row')).toHaveCount(3);
+  await expect(page.locator('.card', { hasText: 'People' }).locator('.row')).toHaveCount(4);
   // The alert's row and the people: every other source is on Sources.
-  await expect(page.locator('main .row')).toHaveCount(4);
+  await expect(page.locator('main .row')).toHaveCount(5);
   await expect(page.getByRole('link', { name: 'Sources: a source needs attention' })).toBeVisible();
 });
 
@@ -135,6 +135,50 @@ test('a child’s overview shows the visit, condition and medicine loaded yester
   await expect(page.locator('.card', { hasText: 'Recent visits' }).locator('.row').first()).toContainText('Sick visit');
 });
 
+test('a newborn’s overview lists the doses the schedule has coming up', async ({ page }) => {
+  // The sample's birth date and doses are fixed, so the clock is too.
+  await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
+  await page.goto('./?demo');
+  await page.getByRole('link', { name: /^Jamie Example/ }).first().click();
+  const card = page.locator('.card', { hasText: 'Immunizations' });
+  const schedule = card.locator('.schedule');
+  await expect(schedule.locator('.row').first()).toContainText('Hepatitis B');
+  await expect(schedule.locator('.row').first()).toContainText('Dose 2 of 3, at 1–2 months, from Dec 8, 2026');
+  await expect(schedule.locator('.row', { hasText: 'Coming up' })).toHaveCount(6);
+  await expect(schedule.locator('.row', { hasText: 'Not in these records' })).toHaveCount(0);
+  await expect(schedule.getByRole('link', { name: 'CDC child and adolescent immunization schedule' })).toHaveAttribute('href', 'https://www.cdc.gov/vaccines/hcp/imz-schedules/child-adolescent-age-compliant.html');
+  await expect(card.locator('.row', { hasText: 'Hep B, adolescent or pediatric' })).toContainText('Nov 8, 2026');
+
+  await card.getByRole('link', { name: 'Doses and the schedule' }).click();
+  await expect(page).toHaveURL(/#\/p\/p_[a-z2-7]{20}\/immunizations$/);
+  const full = page.locator('.card', { hasText: 'By the schedule' });
+  await expect(full.locator('.row')).toHaveCount(12);
+  await expect(full.locator('.row', { hasText: 'MMR' })).toContainText('0 of 2 doses in these records · next at 12–15 months, from Nov 8, 2027');
+  await expect(full.locator('.row', { hasText: 'Rotavirus' })).toContainText('0 of 2 or 3 doses in these records');
+  await expect(page.locator('.schedule')).toHaveCount(0);
+});
+
+test('a school-age child’s schedule shows only this season’s flu dose missing', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
+  await page.goto('./?demo');
+  await page.getByRole('link', { name: /^Alex Example/ }).first().click();
+  const schedule = page.locator('.card', { hasText: 'Immunizations' }).locator('.schedule');
+  await expect(schedule.locator('.row')).toHaveCount(1);
+  await expect(schedule.locator('.row')).toContainText('Flu (influenza)');
+  await expect(schedule.locator('.row')).toContainText('2026–27 season: dose 1 of 1');
+  await expect(schedule.locator('.row .chip')).toHaveText('Not in these records');
+  await openSection(page, 'Immunizations');
+  const full = page.locator('.card', { hasText: 'By the schedule' });
+  await expect(full.locator('.row', { hasText: 'All in these records' })).toHaveCount(9);
+  await expect(full.locator('.row', { hasText: 'Rotavirus' })).toContainText('2 of 2 doses in these records');
+});
+
+test('an adult has no childhood schedule', async ({ page }) => {
+  await page.goto('./?demo');
+  await page.getByRole('link', { name: /^Robin Example/ }).first().click();
+  await expect(page.locator('.schedule')).toHaveCount(0);
+});
+
 test('a result over time, down to its raw FHIR', async ({ page }) => {
   await page.goto('./?demo');
   await page.getByRole('link', { name: /^Robin Example/ }).first().click();
@@ -164,7 +208,7 @@ test('every section of every person opens', async ({ page }) => {
   // 27 sections, several through the phone's More sheet.
   test.setTimeout(120_000);
   await page.goto('./?demo');
-  for (const name of ['Robin Example', 'Sam Example', 'Alex Example']) {
+  for (const name of ['Robin Example', 'Sam Example', 'Alex Example', 'Jamie Example']) {
     await page.goto('./?demo#/');
     await page.getByRole('link', { name: new RegExp(`^${name}`) }).first().click();
     for (const section of ['Timeline', 'Results', 'Medicines', 'Conditions', 'Allergies', 'Immunizations', 'Claims and bills', 'Documents', 'Imaging', 'Overview']) {
