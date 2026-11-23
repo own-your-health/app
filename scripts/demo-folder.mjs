@@ -390,15 +390,31 @@ for (const [date, code, name] of [['2025-10-04', '141', 'Influenza, seasonal, in
     resource: { status: 'completed', vaccineCode: { coding: [{ system: CVX, code }], text: name }, occurrenceDateTime: date },
   });
 }
-for (const [date, provider, billed, allowed, paid, share] of [
-  ['2026-10-01', 'Example Health', '412.00', '268.40', '214.72', '53.68'],
-  ['2025-09-15', 'Example Health', '189.00', '121.10', '121.10', '0.00'],
-  ['2025-03-10', 'Example Health', '398.00', '255.90', '204.72', '51.18'],
+const usd = (amount) => ({ amount, currency: 'USD' });
+// The plan balances the newest statement printed: the year's deductible and out-of-pocket limit.
+const planBalance = [
+  {
+    category: '1',
+    network: 'in',
+    unit: 'individual',
+    term: 'annual',
+    financial: [
+      { type: 'Deductible', allowed: usd('1500.00'), used: usd('1120.40') },
+      { type: 'Out-of-pocket limit', allowed: usd('4000.00'), used: usd('1356.10') },
+    ],
+  },
+];
+for (const [date, provider, display, billed, allowed, paid, share, coinsurance, balances] of [
+  ['2026-11-18', 'Example Health', 'Office visit claim', '180.00', '112.50', '87.50', '25.00', '25.00'],
+  ['2026-10-03', 'Example Lab', 'Lab work claim', '220.00', '96.40', '77.12', '19.28', '19.28'],
+  ['2026-10-01', 'Example Health', 'Office visit claim', '412.00', '268.40', '214.72', '53.68', '53.68', planBalance],
+  ['2025-09-15', 'Example Health', 'Office visit claim', '189.00', '121.10', '121.10', '0.00', '0.00'],
+  ['2025-03-10', 'Example Health', 'Office visit claim', '398.00', '255.90', '204.72', '51.18', '51.18'],
 ]) {
   R.record(src.robinPlan, 'ExplanationOfBenefit', 'claim', {
     date,
     code: { system: 'http://terminology.hl7.org/CodeSystem/claim-type', code: 'professional', display: 'Professional' },
-    display: 'Office visit claim',
+    display,
     status: 'active',
     fields: {
       provider,
@@ -406,18 +422,24 @@ for (const [date, provider, billed, allowed, paid, share] of [
       outcome: 'complete',
       billable_period: { start: date, end: date },
       total: [
-        { category: 'Submitted Amount', amount: { amount: billed, currency: 'USD' } },
-        { category: 'Eligible Amount', amount: { amount: allowed, currency: 'USD' } },
-        { category: 'Benefit Amount', amount: { amount: paid, currency: 'USD' } },
-        { category: 'Member liability', amount: { amount: share, currency: 'USD' } },
+        { category: 'Submitted Amount', amount: usd(billed) },
+        { category: 'Eligible Amount', amount: usd(allowed) },
+        { category: 'Benefit Amount', amount: usd(paid) },
+        { category: 'Deductible', amount: usd('0.00') },
+        { category: 'Coinsurance', amount: usd(coinsurance) },
+        { category: 'Member liability', amount: usd(share) },
       ],
-      payment: { amount: paid, currency: 'USD' },
+      payment: usd(paid),
       type: 'Professional',
       use: 'claim',
+      ...(balances ? { benefit_balance: balances } : {}),
     },
     resource: { status: 'active', type: { coding: [{ code: 'professional' }] }, use: 'claim', billablePeriod: { start: date, end: date }, outcome: 'complete' },
   });
 }
+// The insurer's statement for the October visit, linked to its claim.
+const eob = R.document(src.robinPlan, { date: '2026-10-20', doc_type: 'eob', title: 'Explanation of Benefits', organization: 'Example Health Plan', pages: 2, text: 'Explanation of Benefits. Example Health, office visit 10/01/2026. Amount billed $412.00. Plan paid $214.72. You may owe the provider $53.68.', original: 'eob_2026-10.pdf', filed: at(-60 * 24 * 20) });
+R.records.find((r) => r.kind === 'claim' && r.date === '2026-10-01').documents.push(eob.id);
 R.record(src.robinPlan, 'Coverage', 'coverage', {
   date: '2026-01-01',
   code: { system: 'http://terminology.hl7.org/CodeSystem/v3-ActCode', code: 'HIP', display: 'health insurance plan policy' },
@@ -438,6 +460,26 @@ R.document(null, {
   text: 'Statement date 10/20/2026. Account number ****0000. Amount due $53.68. Please pay by 11/19/2026.',
   statement: { statement_date: '2026-10-20', amount_due: { amount: '53.68', currency: 'USD' }, due_date: '2026-11-19', account: '****0000' },
   original: 'statement_oct.pdf',
+});
+// Last year's bill and the receipt for paying it.
+R.document(null, {
+  date: '2025-04-02',
+  doc_type: 'bill',
+  title: 'Statement from Example Health',
+  organization: 'Example Health',
+  text: 'Statement date 04/02/2025. Account number ****0000. Amount due $51.18. Please pay by 05/02/2025.',
+  statement: { statement_date: '2025-04-02', amount_due: { amount: '51.18', currency: 'USD' }, due_date: '2025-05-02', account: '****0000' },
+  original: 'statement_apr_2025.pdf',
+});
+R.document(null, { date: '2025-04-20', doc_type: 'receipt', title: 'Payment receipt from Example Health', organization: 'Example Health', text: 'Payment received 04/20/2025. Account ****0000. Amount paid $51.18. Thank you.', original: 'receipt_apr_2025.pdf' });
+R.document(null, {
+  date: '2026-10-28',
+  doc_type: 'bill',
+  title: 'Statement from Example Lab',
+  organization: 'Example Lab',
+  text: 'Statement date 10/28/2026. Account # ****1111. Balance due $19.28. Due date 11/27/2026.',
+  statement: { statement_date: '2026-10-28', amount_due: { amount: '19.28', currency: 'USD' }, due_date: '2026-11-27', account: '****1111' },
+  original: 'lab_statement.pdf',
 });
 R.document(null, { date: '2024-02-11', doc_type: 'immunization_record', title: 'Vaccination card', organization: 'Example Health', text: 'Vaccination record. Tdap 02/11/2024.', original: 'scan_0007.pdf' });
 for (const [date, v] of [['2025-06-01', 13.9], ['2025-12-02', 14.2], ['2026-06-05', 14.0]]) {

@@ -1,8 +1,6 @@
 // One person's records: the timeline and the views over it.
 
 import {
-  bills,
-  claimTotals,
   docTypeLabel,
   documentTitle,
   formatMoney,
@@ -10,12 +8,13 @@ import {
   organizationName,
   originNames,
   recordDetail,
-  recordsOf,
   sortByDateDesc,
   studyTitle,
   timeline,
+  type Money,
   type TimelineEntry,
 } from '../../model/records';
+import { BILL_WINDOW_DAYS, claimsWithBills, owedByProvider, planBalances, toCents, type Bill, type Claim, type Owed } from '../../model/billing';
 import { isOutOfRange, rangeFor, resultFlag, type ResultFlag } from '../../model/flags';
 import { immunizationsGiven, latestResults, newInLatestLoads, recentVisits, type LatestResult } from '../../model/overview';
 import { allergyList, conditionList, CRITICALITY_TEXT, medicineList, statusText, vaccineList, type AllergyItem, type ConditionItem, type MedicineItem } from '../../model/lists';
@@ -532,41 +531,141 @@ function immunizationList(ctx: Ctx, person: Person, idx: PersonIndex): HTMLEleme
   );
 }
 
-function claimsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
-  const claims = recordsOf(idx, 'claim');
-  const bs = bills(idx);
+const money = (m: Money | undefined) => h('span', { class: 'num strong' }, formatMoney(m) ?? '');
+
+function amountsLine(c: Claim): HTMLElement | null {
+  const parts: [string, Money | undefined][] = [
+    ['Billed', c.billed],
+    ['Plan allowed', c.allowed],
+    ['Plan paid', c.planPaid],
+    ['Your share', c.yourShare],
+  ];
+  const shown = parts.filter(([, m]) => m);
+  // The gap between amounts is visual; a hidden "; " keeps them apart when read aloud.
+  return shown.length
+    ? h(
+        'div',
+        { class: 'totals' },
+        shown.map(([label, m], i) => [i ? h('span', { class: 'sr-only' }, '; ') : null, h('span', { class: 'total' }, h('span', { class: 'muted' }, label), ' ', h('span', { class: 'num' }, formatMoney(m) ?? ''))]),
+      )
+    : null;
+}
+
+/** The claim's bill, in a sentence with a link to it. */
+function billLine(person: Person, c: Claim): HTMLElement | null {
+  const share = toCents(c.yourShare);
+  if (share === undefined) return null;
+  if (share <= 0) return h('p', { class: 'small muted claim-bill' }, 'Nothing for you to pay on this claim.');
+  const m = c.bill;
+  if (!m) return h('p', { class: 'small muted claim-bill' }, `No bill${c.provider ? ` from ${c.provider}` : ''} in these records within ${BILL_WINDOW_DAYS} days of the visit.`);
+  const b = m.bill;
+  const what = link(itemRoute(person.id, b.doc.id), `statement of ${dateText(b.date)}`);
   return h(
-    'div',
-    { class: 'stack' },
-    card(
-      { title: 'Claims' },
-      claims.length
-        ? yearList(claims, (r) => {
-            const totals = claimTotals(r);
-            return row({
-              route: itemRoute(person.id, r.id),
-              title: r.display || 'Claim',
-              meta: [dateText(r.date), str(r.fields.provider), str(r.fields.outcome)].filter(Boolean).join(' · '),
-              extra: totals.length ? h('div', { class: 'totals' }, totals.map((t) => h('span', { class: 'total' }, h('span', { class: 'muted' }, t.label), ' ', h('span', { class: 'num' }, formatMoney(t.amount) ?? '')))) : null,
-            });
-          })
-        : empty('No claims yet. An insurer CLI imports them.'),
-    ),
-    card(
-      { title: 'Bills and statements' },
-      bs.length
-        ? bs.map((d) =>
-            row({
-              route: itemRoute(person.id, d.id),
-              title: documentTitle(d),
-              meta: [dateText(d.statement?.statement_date ?? d.date), docTypeLabel(d.doc_type), d.organization, d.statement?.due_date ? `due ${dateText(d.statement.due_date)}` : null, d.same_statement_as ? 'same statement as another' : null].filter(Boolean).join(' · '),
-              aside: d.statement?.amount_due ? h('span', { class: 'num strong' }, formatMoney(d.statement.amount_due)) : null,
-              extra: h('div', { class: 'row-actions' }, driveLink(ctx, d.path)),
-            }),
-          )
-        : empty('No bills filed yet.'),
-    ),
+    'p',
+    { class: 'small claim-bill' },
+    m.how === 'amount' ? ['Billed on the ', what, `: ${formatMoney(b.amount)}, your share.`] : ['The next ', what, ` from ${b.provider} says ${formatMoney(b.amount) ?? 'an amount'} is due; it may cover other visits too.`],
+    b.receipt ? [' A receipt was filed ', link(itemRoute(person.id, b.receipt.id), dateText(b.receipt.date)), '.'] : null,
   );
+}
+
+function claimsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
+  const today = localDay(ctx.now());
+  const owed = owedByProvider(idx);
+  const balances = planBalances(idx);
+  const { claims, otherBills } = claimsWithBills(idx);
+  const docs = new Map(idx.documents.map((d) => [d.id, d]));
+
+  const owedRow = (o: Owed) => {
+    const paid = !!o.bill.receipt;
+    return row({
+      route: itemRoute(person.id, o.bill.doc.id),
+      title: o.provider,
+      meta: meta(o.bill.date ? `statement ${dateText(o.bill.date)}` : null, o.bill.account ? `account ${o.bill.account}` : null, o.bill.due ? `due ${dateText(o.bill.due)}` : null, paid ? `receipt filed ${dateText(o.bill.receipt!.date)}` : null),
+      aside: h('div', { class: 'chips-aside' }, money(o.bill.amount), paid ? chip('Receipt filed', 'ok') : o.bill.due && o.bill.due < today ? chip('Due date passed', 'attention') : null),
+    });
+  };
+  const headline = owed.total && owed.due.length ? (owed.due.length === 1 ? `${formatMoney(owed.total)} due to ${owed.due[0]!.provider}` : `${formatMoney(owed.total)} due to ${owed.due.length} providers`) : null;
+  const owedCard = card(
+    { title: 'Owed to each provider' },
+    owed.due.length || owed.paid.length
+      ? [
+          headline ? h('p', { class: 'glance-answer' }, headline) : h('p', { class: 'small' }, 'Every bill in these records has a receipt filed after it.'),
+          owed.due.map(owedRow),
+          owed.paid.map(owedRow),
+          h('p', { class: 'small muted' }, 'From the newest statement of each provider and account in these records. A payment made since may not be here.'),
+        ]
+      : empty('No bills filed yet. A statement appears here once medrec files it.'),
+  );
+
+  const balancesCard = balances.length
+    ? card(
+        { title: 'Plan year so far' },
+        balances.map((b) => {
+          const used = toCents(b.used);
+          const limit = toCents(b.limit);
+          return row({
+            title: b.label,
+            meta: meta(b.scope, b.used && b.limit ? `${formatMoney(b.used)} of ${formatMoney(b.limit)} used` : formatMoney(b.used) ? `${formatMoney(b.used)} used` : null),
+            extra: used !== undefined && limit ? h('progress', { class: 'meter', max: limit, value: Math.min(used, limit), 'aria-label': `${b.label}, ${b.scope}: ${formatMoney(b.used)} of ${formatMoney(b.limit)} used` }) : null,
+          });
+        }),
+        h('p', { class: 'small muted' }, 'As printed with the claim for ', link(itemRoute(person.id, balances[0]!.claim.id), dateText(balances[0]!.asOf)), '.'),
+      )
+    : null;
+
+  const claimsCard = card(
+    { title: 'Claims' },
+    claims.length
+      ? yearList(
+          claims.map((c) => ({ ...c, date: c.service })),
+          (c) =>
+            row({
+              route: itemRoute(person.id, c.record.id),
+              title: c.provider ?? (c.record.display || 'Claim'),
+              meta: meta(dateText(c.service), c.provider ? c.record.display : null, c.insurer ? `by ${c.insurer}` : null, c.record.fields.outcome && c.record.fields.outcome !== 'complete' ? str(c.record.fields.outcome) : null),
+              aside: c.yourShare ? money(c.yourShare) : null,
+              extra: h(
+                'div',
+                { class: 'claim-extra' },
+                amountsLine(c),
+                c.parts.length ? h('p', { class: 'small muted' }, `Your share is ${c.parts.map((p) => `${p.label.toLowerCase()} ${formatMoney(p.amount)}`).join(', ')}.`) : null,
+                billLine(person, c),
+                c.record.documents.length
+                  ? h(
+                      'p',
+                      { class: 'small' },
+                      c.record.documents.map((id, i) => {
+                        const d = docs.get(id);
+                        return d ? [i ? ' · ' : null, link(itemRoute(person.id, d.id), documentTitle(d))] : null;
+                      }),
+                    )
+                  : null,
+              ),
+            }),
+        )
+      : empty('No claims yet. An insurer CLI imports them.'),
+  );
+
+  const others = sortByDateDesc([
+    ...otherBills.map((b) => ({ date: b.date, doc: b.doc, bill: b })),
+    ...idx.documents.filter((d) => (d.doc_type === 'receipt' || d.doc_type === 'eob') && !claims.some((c) => c.record.documents.includes(d.id))).map((d) => ({ date: d.date, doc: d, bill: undefined as Bill | undefined })),
+  ]);
+  const othersCard = others.length
+    ? card(
+        { title: 'Other bills and receipts' },
+        others.map(({ doc, bill }) =>
+          row({
+            route: itemRoute(person.id, doc.id),
+            title: documentTitle(doc),
+            meta: meta(dateText(bill?.date ?? doc.date), docTypeLabel(doc.doc_type), doc.organization, bill?.due ? `due ${dateText(bill.due)}` : null, bill ? 'no claim in these records matches it' : null),
+            aside: bill?.amount ? money(bill.amount) : null,
+            extra: h('div', { class: 'row-actions' }, driveLink(ctx, doc.path)),
+          }),
+        ),
+      )
+    : null;
+
+  return h('div', { class: 'stack' }, owedCard, balancesCard, claimsCard, othersCard);
 }
 
 function documentsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {

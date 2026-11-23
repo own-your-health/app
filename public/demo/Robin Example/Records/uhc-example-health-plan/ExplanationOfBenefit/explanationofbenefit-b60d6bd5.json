@@ -14,8 +14,8 @@
   },
   "use": "claim",
   "billablePeriod": {
-    "start": "2025-03-10",
-    "end": "2025-03-10"
+    "start": "2026-10-01",
+    "end": "2026-10-01"
   },
   "outcome": "complete"
 }

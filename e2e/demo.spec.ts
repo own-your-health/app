@@ -270,6 +270,50 @@ test('each vaccine is listed once, with a link to every dose', async ({ page }) 
   await expect(page.locator('main')).toContainText('Mar 5, 2018');
 });
 
+test('bills say what is owed to each provider, and each claim sits beside its bill', async ({ page }) => {
+  // Due dates are fixed in the sample, so the clock is too.
+  await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
+  await page.goto('./?demo');
+  await page.getByRole('link', { name: /^Robin Example/ }).first().click();
+  await openSection(page, 'Claims and bills');
+
+  const owed = page.locator('.card', { hasText: 'Owed to each provider' });
+  await expect(owed.locator('.glance-answer')).toHaveText('$72.96 due to 2 providers');
+  await expect(owed.locator('.row-title')).toHaveText(['Example Health', 'Example Lab']);
+  await expect(owed.locator('.row').first()).toContainText('statement Oct 20, 2026 · account ****0000 · due Nov 19, 2026');
+  await expect(owed.locator('.row').first().locator('.chip')).toHaveText('Due date passed');
+  await expect(owed.locator('.row').nth(1).locator('.chip')).toHaveCount(0);
+
+  const plan = page.locator('.card', { hasText: 'Plan year so far' });
+  await expect(plan.locator('.row').first()).toContainText('Deductible');
+  await expect(plan.locator('.row').first()).toContainText('in network, individual · $1,120.40 of $1,500.00 used');
+  await expect(plan.locator('progress').first()).toHaveAttribute('aria-label', 'Deductible, in network, individual: $1,120.40 of $1,500.00 used');
+
+  const claims = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Claims$/ }) });
+  const rows = claims.locator('.row');
+  await expect(rows).toHaveCount(5);
+  await expect(rows.nth(0)).toContainText('No bill from Example Health in these records within 120 days of the visit.');
+  await expect(rows.nth(1)).toContainText('Billed on the statement of Oct 28, 2026: $19.28, your share.');
+  await expect(rows.nth(2).locator('.totals')).toHaveText('Billed $412.00; Plan allowed $268.40; Plan paid $214.72; Your share $53.68');
+  await expect(rows.nth(2)).toContainText('Your share is coinsurance $53.68.');
+  await expect(rows.nth(2).getByRole('link', { name: 'Explanation of Benefits' })).toBeVisible();
+  await expect(rows.nth(3)).toContainText('Nothing for you to pay on this claim.');
+  await expect(rows.nth(4)).toContainText('Billed on the statement of Apr 2, 2025: $51.18, your share. A receipt was filed Apr 20, 2025.');
+
+  await rows.nth(2).getByRole('link', { name: 'statement of Oct 20, 2026' }).click();
+  await expect(page).toHaveURL(/#\/p\/p_[a-z2-7]{20}\/r\/d_[a-z2-7]{20}$/);
+  await expect(page.locator('main')).toContainText('Statement from Example Health');
+});
+
+test('a bill no claim matches is listed apart', async ({ page }) => {
+  await page.goto('./?demo');
+  await page.getByRole('link', { name: /^Sam Example/ }).first().click();
+  await openSection(page, 'Claims and bills');
+  await expect(page.locator('.card', { hasText: 'Owed to each provider' }).locator('.glance-answer')).toHaveText('$120.00 due to Example Billing');
+  const others = page.locator('.card', { hasText: 'Other bills and receipts' });
+  await expect(others.locator('.row')).toHaveText([/Statement from Example Billing.*no claim in these records matches it.*\$120\.00/]);
+});
+
 test('a result over time, down to its raw FHIR', async ({ page }) => {
   await page.goto('./?demo');
   await page.getByRole('link', { name: /^Robin Example/ }).first().click();
