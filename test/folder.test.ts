@@ -1,7 +1,9 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { Drive, type DriveFile } from '../src/drive';
-import { DriveFolder, readJson, splitPath } from '../src/folder';
-import { demoFolder, fixture, json } from './helpers';
+import { DriveFolder, KEPT_TIMES, LOAD_TIMES, readJson, splitPath } from '../src/folder';
+import { DEMO, demoFolder, fixture, json } from './helpers';
 
 function driveWith(tree: Record<string, DriveFile[]>, contents: Record<string, string> = {}) {
   const calls: string[] = [];
@@ -95,6 +97,36 @@ describe('DemoFolder', () => {
     const status = JSON.parse((await folder.readText('_status/status.json'))!) as { updated_at: string };
     const original = JSON.parse((await demoFolder().readText('_status/status.json'))!) as { updated_at: string };
     expect(Date.parse(status.updated_at) - Date.parse(original.updated_at)).toBe(86_400_000);
+  });
+
+  it('says of every time in the sample whether it moves to now or stays as written', () => {
+    const { files } = JSON.parse(readFileSync(join(DEMO, 'manifest.json'), 'utf8')) as { files: string[] };
+    const keys = new Set<string>();
+    const walk = (v: unknown, key?: string): void => {
+      // The shift moves only a time that directly follows its key; one in an array is named so no set holds it.
+      if (Array.isArray(v)) v.forEach((x) => walk(x, `${key}[]`));
+      else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) walk(x, k);
+      else if (key && typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(v)) keys.add(key);
+    };
+    for (const f of files) {
+      const text = readFileSync(join(DEMO, f), 'utf8');
+      if (f.endsWith('.json')) walk(JSON.parse(text));
+      else if (f.endsWith('.ndjson')) text.split('\n').filter(Boolean).forEach((l) => walk(JSON.parse(l)));
+    }
+    expect([...keys].filter((k) => !LOAD_TIMES.has(k) && !KEPT_TIMES.has(k))).toEqual([]);
+    expect([...LOAD_TIMES].filter((k) => KEPT_TIMES.has(k))).toEqual([]);
+    expect(keys.size).toBeGreaterThan(10);
+  });
+
+  it('keeps times of care as written, however long ago the sample was made', async () => {
+    type Index = { imports: { imported_at: string }[]; records: { fields: { period?: { start?: string }; issued?: string } }[] };
+    const read = async (now?: Date) => JSON.parse((await demoFolder(now).readText('Robin Example/index.json'))!) as Index;
+    const [later, original] = [await read(new Date('2026-11-29T20:00:00Z')), await read()];
+    expect(Date.parse(later.imports[0]!.imported_at) - Date.parse(original.imports[0]!.imported_at)).toBe(7 * 86_400_000);
+    const visit = (i: Index) => i.records.find((r) => r.fields.period?.start?.includes('T'))!.fields.period!.start;
+    const issued = (i: Index) => i.records.find((r) => r.fields.issued)!.fields.issued;
+    expect(visit(later)).toBe(visit(original));
+    expect(issued(later)).toBe(issued(original));
   });
 
   it('lists folders, including ones kept only by a placeholder', async () => {
