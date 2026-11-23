@@ -175,10 +175,13 @@ and your share, with its deductible, copay and coinsurance. A claim whose
 lines do not add up to its totals keeps the difference as a line of its own,
 so a period's totals are always its claims'. It narrows to:
 - a period: this or last plan year, a calendar year, or every year. A plan
-  year starts on the month and day the person's coverage with that insurer
-  starts in these records, or with their only coverage when the insurer has
-  none (a pharmacy benefit), else on January 1. A calendar year counts care
-  by the day it was given, not the day it was paid;
+  year starts on the day the plan's claims give for it (the benefit period an
+  ExplanationOfBenefit prints, `fields.benefit_period` in the index, when it
+  is about a year long), else on the month set in Settings, **Plan year**,
+  else on January 1, and the screen says which. Never on a coverage's start:
+  that is the day a coverage took effect, which can fall mid-year (a birth, a
+  new job). A calendar year counts care by the day it was given, not the day
+  it was paid;
 - a person, a provider, a kind of care, a month, or one billing code. Each
   is a link from the chart or the breakdown, so back undoes one.
 
@@ -291,11 +294,12 @@ The privacy policy is at https://own-your-health.github.io/app/privacy.html
   token. It loads no Google script and uses no client secret.
 - **The token stays in memory.** It is gone when the tab closes. Signing out
   revokes it with Google.
-- **Browser storage holds four settings, nothing else:** your client id
+- **Browser storage holds five settings, nothing else:** your client id
   (`own-your-health-app.client_id`), the chosen folder's id and name
   (`own-your-health-app.folder`), the email of the Google account that last
-  signed in (`own-your-health-app.account`), and the theme, when you choose
-  one (`own-your-health-app.theme`). None is a secret. The client
+  signed in (`own-your-health-app.account`), the theme, when you choose
+  one (`own-your-health-app.theme`), and the month your plan year starts,
+  when you set it (`own-your-health-app.plan_year_start`). None is a secret. The client
   id and the email go to Google as the sign-in's `client_id` and `login_hint`,
   and the folder id goes to Drive when the app reads the folder. During a
   sign-in, a random nonce sits in session storage until Google answers.

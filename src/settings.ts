@@ -1,13 +1,15 @@
 // The only things the app keeps in browser storage: the Google OAuth client
-// id the household registered, which Drive folder holds its records, and the
-// Google account that last signed in. None is a secret. Everything read from
-// the folder stays in memory.
+// id the household registered, which Drive folder holds its records, the
+// Google account that last signed in, the theme, and the day the household's
+// plan year starts when its claims do not say. None is a secret. Everything
+// read from the folder stays in memory.
 
 const PREFIX = 'own-your-health-app.';
 const CLIENT_ID = `${PREFIX}client_id`;
 const FOLDER = `${PREFIX}folder`;
 const ACCOUNT = `${PREFIX}account`;
 const THEME = `${PREFIX}theme`;
+const PLAN_START = `${PREFIX}plan_year_start`;
 
 export interface FolderSetting {
   id: string;
@@ -83,5 +85,18 @@ export function setTheme(theme: Theme, kv: KV | null = store()): void {
   else kv?.setItem(THEME, theme);
 }
 
+const MONTH_DAY = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+
+/** The day the household's plan year starts, "MM-DD", for plans whose claims do not give one; null when not set. */
+export function getPlanStart(kv: KV | null = store()): string | null {
+  const v = kv?.getItem(PLAN_START);
+  return v && MONTH_DAY.test(v) ? v : null;
+}
+
+export function setPlanStart(monthDay: string | null, kv: KV | null = store()): void {
+  if (monthDay && MONTH_DAY.test(monthDay)) kv?.setItem(PLAN_START, monthDay);
+  else kv?.removeItem(PLAN_START);
+}
+
 /** Every key this app may write, for the tests and the privacy page. */
-export const STORAGE_KEYS = [CLIENT_ID, FOLDER, ACCOUNT, THEME];
+export const STORAGE_KEYS = [CLIENT_ID, FOLDER, ACCOUNT, THEME, PLAN_START];

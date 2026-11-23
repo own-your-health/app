@@ -27,9 +27,11 @@ import {
   type CostLine,
   type Group,
   type Period,
+  type PlanBasis,
   type PlanYear,
 } from '../../model/costs';
 import { AMOUNT_LABELS, formatMoney } from '../../model/records';
+import { getPlanStart } from '../../settings';
 import type { MedRecord } from '../../model/types';
 import { monthChart, priceStrip, stackStrip } from '../costchart';
 import { button, card, empty, link, row, type Ctx } from '../components';
@@ -81,6 +83,20 @@ function shareParts(c: Cents): string | null {
   return parts.length ? `Your share is ${parts.join(', ')}.` : null;
 }
 
+/** Where each plan's year came from, in one or two sentences. */
+function planBasisText(years: { insurer?: string; basis: PlanBasis }[]): string {
+  const of = (basis: PlanBasis) => [...new Set(years.filter((y) => y.basis === basis).map((y) => y.insurer ?? 'A plan'))];
+  const all = new Set(years.map((y) => y.insurer ?? 'A plan')).size;
+  const said: string[] = [];
+  const claims = of('claims');
+  if (claims.length) said.push(claims.length === all ? 'As the plan’s claims give it.' : `${andList(claims)}: as the plan’s claims give it.`);
+  const setting = of('setting');
+  if (setting.length) said.push(setting.length === all ? 'As set in Settings; the plan’s records don’t say.' : `${andList(setting)}: as set in Settings.`);
+  const calendar = of('calendar');
+  if (calendar.length) said.push(calendar.length === all ? 'Plan year assumed to be the calendar year; your plan’s records don’t say.' : `${andList(calendar)}: plan year assumed to be the calendar year; the plan’s records don’t say.`);
+  return said.join(' ');
+}
+
 /** A plan year in words: "2026" when it is a calendar year, else "Jul 1, 2026 to Jun 30, 2027". */
 function yearText(y: PlanYear): string {
   return y.anniversary === '01-01' ? y.start.slice(0, 4) : `${dateText(y.start)} to ${dateText(y.end)}`;
@@ -109,7 +125,10 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
   const store = ctx.store;
   const people = store.household.people;
   const names = new Map(people.map((p) => [p.id, p.name]));
-  const all = householdLines(people.map((p) => ({ id: p.id, index: store.index(p.id) })));
+  const all = householdLines(
+    people.map((p) => ({ id: p.id, index: store.index(p.id) })),
+    { planStart: getPlanStart() ?? undefined },
+  );
   const records = new Map<string, MedRecord>();
   for (const p of people) for (const r of store.index(p.id)?.records ?? []) if (r.kind === 'claim') records.set(r.id, r);
   const today = localDay(ctx.now());
@@ -212,13 +231,15 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
     const calendar = /^\d{4}$/.test(chosen.id);
     // Plans that share a year are named together: "Example Health Plan and Example Pharmacy Benefits, 2026".
     const sameYear = new Map<string, string[]>();
-    for (const y of years) sameYear.set(yearText(y.year), [...(sameYear.get(yearText(y.year)) ?? []), y.insurer ?? 'A plan']);
+    for (const y of years) sameYear.set(yearText(y.year), [...new Set([...(sameYear.get(yearText(y.year)) ?? []), y.insurer ?? 'A plan'])]);
     const planNote =
       chosen.id === 'plan' || chosen.id === 'plan-1'
         ? h(
             'p',
-            { class: 'small muted' },
-            `${years.length === 1 ? 'Plan year' : 'Plan years'}: ${[...sameYear].map(([when, plans]) => `${andList(plans)}, ${when}`).join('; ')}. A plan year starts on the day its coverage in these records does; January 1 when there is none.`,
+            { class: 'small muted plan-note' },
+            `${years.length === 1 ? 'Plan year' : 'Plan years'}: ${[...sameYear].map(([when, plans]) => `${andList(plans)}, ${when}`).join('; ')}. `,
+            planBasisText(years),
+            years.some((y) => y.basis === 'calendar') ? [' ', link({ name: 'settings' }, 'Set when your plan year starts')] : null,
           )
         : null;
     const taxNote = calendar ? h('p', { class: 'small muted' }, 'A calendar year counts care by the day it was given. A tax return counts what was paid in the year, so a bill paid the next January belongs to that year.') : null;
@@ -422,7 +443,10 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
 /** For the home screen: this plan year's share so far across everyone, or null with no claims. */
 export function costsGlance(ctx: Ctx): HTMLElement | null {
   const store = ctx.store;
-  const all = householdLines(store.household.people.map((p) => ({ id: p.id, index: store.index(p.id) })));
+  const all = householdLines(
+    store.household.people.map((p) => ({ id: p.id, index: store.index(p.id) })),
+    { planStart: getPlanStart() ?? undefined },
+  );
   if (!all.length) return null;
   const today = localDay(ctx.now());
   const year = all.filter((l) => inPeriod(l, 'plan', today));

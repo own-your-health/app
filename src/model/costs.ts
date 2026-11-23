@@ -4,9 +4,11 @@
 //
 // Money is whole cents. A claim's totals are the record: where its lines do
 // not add up to them, the difference is a line of its own ("Not split by
-// line"), so a year's totals always equal its claims'. A plan year runs from
-// the start date of the person's coverage with that insurer, every year; with
-// no such coverage in the records it is the calendar year.
+// line"), so a year's totals always equal its claims'. A plan year starts on
+// the day the plan's claims give for it (their benefit period), else on the
+// day set in Settings, else on January 1. Never on a coverage's start: that
+// is the day a coverage took effect, which can fall mid-year (a new child, a
+// new job), not the day the plan's year begins.
 
 import { claimAmounts, toCents } from './billing';
 import { CATEGORY_LABELS, categoryOf, claimLines, claimTitle, type Category } from './claims';
@@ -45,6 +47,8 @@ export interface CostLine {
   system?: string;
   cents: Cents;
   planYear: PlanYear;
+  /** Where the plan year's start came from. */
+  planBasis: PlanBasis;
   /** False for the part of a claim's totals its lines do not account for. */
   split: boolean;
 }
@@ -70,18 +74,41 @@ export function shiftPlanYear(p: PlanYear, n: number): PlanYear {
   return planYearOf(p.anniversary, `${Number(p.start.slice(0, 4)) + n}-${p.start.slice(5)}`);
 }
 
-/** The anniversary of the person's coverage with this insurer: its period's start month and day. */
-function anniversaryFor(index: PersonIndex, insurer: string | undefined): string {
-  const coverages = index.records.filter((r) => r.kind === 'coverage' && !isWithdrawn(r));
-  const startOf = (r: MedRecord) => {
-    const p = r.fields.period;
-    const s = p && typeof p === 'object' && !Array.isArray(p) ? str(p.start) : undefined;
-    return s && /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(5, 10) : undefined;
-  };
-  const mine = coverages.find((r) => insurer && sameProvider(str(r.fields.payer), insurer) && startOf(r));
-  // With one plan in the records and an insurer it does not name (a pharmacy benefit), that plan's year.
-  const only = coverages.length === 1 ? coverages[0] : undefined;
-  return (mine && startOf(mine)) ?? (only && startOf(only)) ?? '01-01';
+/** Where a plan year's start came from: the plan's claims, Settings, or neither (January 1). */
+export type PlanBasis = 'claims' | 'setting' | 'calendar';
+
+const DAY = /^\d{4}-\d{2}-\d{2}/;
+
+/** A claim's benefit period (FHIR ExplanationOfBenefit.benefitPeriod), when it is a plan year: about a year long. */
+export function benefitPeriodOf(r: MedRecord): { start: string; end: string } | undefined {
+  const p = r.fields.benefit_period;
+  if (!p || typeof p !== 'object' || Array.isArray(p)) return undefined;
+  const start = str(p.start);
+  const end = str(p.end);
+  if (!start || !end || !DAY.test(start) || !DAY.test(end)) return undefined;
+  const days = (Date.parse(end.slice(0, 10)) - Date.parse(start.slice(0, 10))) / 86_400_000;
+  return days >= 330 && days <= 370 ? { start: start.slice(0, 10), end: end.slice(0, 10) } : undefined;
+}
+
+/**
+ * The day this person's plan with this insurer starts its year, "MM-DD": the
+ * benefit period its newest claim gives, else the day set in Settings, else
+ * January 1.
+ */
+function anniversaryFor(index: PersonIndex, insurer: string | undefined, planStart: string | undefined): { anniversary: string; basis: PlanBasis } {
+  const given = index.records
+    .filter((r) => r.kind === 'claim' && !isWithdrawn(r) && (insurer ? sameProvider(str(r.fields.insurer), insurer) : !str(r.fields.insurer)))
+    .map(benefitPeriodOf)
+    .filter((p): p is { start: string; end: string } => !!p)
+    .sort((a, b) => b.start.localeCompare(a.start))[0];
+  if (given) return { anniversary: given.start.slice(5), basis: 'claims' };
+  if (planStart) return { anniversary: planStart, basis: 'setting' };
+  return { anniversary: '01-01', basis: 'calendar' };
+}
+
+/** What the household set in Settings: the day its plans' years start, for plans whose claims do not say. */
+export interface CostOptions {
+  planStart?: string;
 }
 
 // ---- Lines ----
@@ -123,16 +150,17 @@ const dayOf = (v: Json | undefined): string | undefined => {
 };
 
 /** One person's claim lines, and the part of each claim's totals its lines leave out. */
-export function costLines(person: string, index: PersonIndex): CostLine[] {
+export function costLines(person: string, index: PersonIndex, opts: CostOptions = {}): CostLine[] {
   const out: CostLine[] = [];
-  const anniversaries = new Map<string, string>();
+  const anniversaries = new Map<string, { anniversary: string; basis: PlanBasis }>();
   for (const r of index.records) {
     if (r.kind !== 'claim' || isWithdrawn(r)) continue;
     const service = dayOf(r.fields.billable_period) ?? r.date?.slice(0, 10);
     if (!service) continue;
     const insurer = str(r.fields.insurer);
-    const anniversary = anniversaries.get(insurer ?? '') ?? anniversaryFor(index, insurer);
-    anniversaries.set(insurer ?? '', anniversary);
+    const plan = anniversaries.get(insurer ?? '') ?? anniversaryFor(index, insurer, opts.planStart);
+    anniversaries.set(insurer ?? '', plan);
+    const { anniversary, basis: planBasis } = plan;
     const base = {
       person,
       claim: r.id,
@@ -146,7 +174,7 @@ export function costLines(person: string, index: PersonIndex): CostLine[] {
       const cents = lineCents(l.amounts);
       for (const k of AMOUNTS) if (cents[k] !== undefined) sums[k] = (sums[k] ?? 0) + cents[k]!;
       const date = l.date ?? service;
-      out.push({ ...base, date, category: l.category, service: l.label, code: l.code, system: l.system, cents, planYear: planYearOf(anniversary, date), split: true });
+      out.push({ ...base, date, category: l.category, service: l.label, code: l.code, system: l.system, cents, planYear: planYearOf(anniversary, date), planBasis, split: true });
     }
     // What the claim's totals hold beyond its lines.
     const totals = claimCents(r);
@@ -163,6 +191,7 @@ export function costLines(person: string, index: PersonIndex): CostLine[] {
         service: lines.length ? 'Not split by line' : base.claimTitle,
         cents: rest,
         planYear: planYearOf(anniversary, service),
+        planBasis,
         split: false,
       });
     }
@@ -171,8 +200,8 @@ export function costLines(person: string, index: PersonIndex): CostLine[] {
 }
 
 /** Everyone's lines, newest first. */
-export function householdLines(people: { id: string; index: PersonIndex | undefined }[]): CostLine[] {
-  return people.flatMap((p) => (p.index ? costLines(p.id, p.index) : [])).sort((a, b) => b.date.localeCompare(a.date) || a.claim.localeCompare(b.claim));
+export function householdLines(people: { id: string; index: PersonIndex | undefined }[], opts: CostOptions = {}): CostLine[] {
+  return people.flatMap((p) => (p.index ? costLines(p.id, p.index, opts) : [])).sort((a, b) => b.date.localeCompare(a.date) || a.claim.localeCompare(b.claim));
 }
 
 // ---- Periods ----
@@ -205,11 +234,11 @@ export function inPeriod(l: CostLine, period: PeriodId, today: string): boolean 
 }
 
 /** The plan years a period covers, each once: "Example Care Plan: Jul 1, 2026 – Jun 30, 2027". */
-export function planYearsIn(lines: CostLine[]): { insurer?: string; year: PlanYear }[] {
-  const seen = new Map<string, { insurer?: string; year: PlanYear }>();
+export function planYearsIn(lines: CostLine[]): { insurer?: string; year: PlanYear; basis: PlanBasis }[] {
+  const seen = new Map<string, { insurer?: string; year: PlanYear; basis: PlanBasis }>();
   for (const l of lines) {
-    const k = `${l.insurer ?? ''}|${l.planYear.start}`;
-    if (!seen.has(k)) seen.set(k, { insurer: l.insurer, year: l.planYear });
+    const k = `${l.insurer ?? ''}|${l.planYear.start}|${l.planBasis}`;
+    if (!seen.has(k)) seen.set(k, { insurer: l.insurer, year: l.planYear, basis: l.planBasis });
   }
   return [...seen.values()].sort((a, b) => (a.insurer ?? '').localeCompare(b.insurer ?? '') || a.year.start.localeCompare(b.year.start));
 }
