@@ -422,6 +422,12 @@ function sourcesText(ctx: Ctx, person: Person, provenance: Provenance[]): string
 
 const meta = (...parts: (string | null | undefined | false)[]) => parts.filter(Boolean).join(' · ');
 
+/** Unconfirmed, Ruled out, and a status the heading does not say (in the attention colour while active). */
+function conditionChips(i: ConditionItem): HTMLElement | null {
+  const chips = [i.unconfirmed ? chip('Unconfirmed', 'muted') : null, i.refuted ? chip('Ruled out', 'muted') : null, i.statusNote ? chip(i.statusNote, i.isActive ? 'attention' : 'muted') : null].filter((c): c is HTMLElement => !!c);
+  return chips.length ? h('div', { class: 'chips-aside' }, chips) : null;
+}
+
 function conditionsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
   const { active, ended, other } = conditionList(idx);
   const render = (i: ConditionItem) =>
@@ -429,7 +435,7 @@ function conditionsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElem
       route: itemRoute(person.id, i.latest.id),
       title: i.name,
       meta: meta(i.ended ? `${i.first ? `${dateText(i.first)} to ` : 'ended '}${dateText(i.ended)}` : sinceText(i), sourcesText(ctx, person, i.provenance)),
-      aside: i.notes.length ? h('div', { class: 'chips-aside' }, i.notes.map((n) => chip(n, i.isActive && n !== 'Unconfirmed' ? 'attention' : 'muted'))) : null,
+      aside: conditionChips(i),
     });
   if (!active.length && !ended.length && !other.length) return card({ title: 'Conditions' }, empty('No conditions recorded.'));
   return h(

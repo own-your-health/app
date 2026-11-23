@@ -77,8 +77,12 @@ export interface ConditionItem extends ListItem {
   ended?: string;
   /** Active (FHIR active, recurrence or relapse) and not ruled out. */
   isActive: boolean;
-  /** Notes for the row, beyond its group: Unconfirmed, Ruled out, Recurred, Relapsed, In remission. */
-  notes: string[];
+  /** The source was not sure: verification provisional, differential or unconfirmed. */
+  unconfirmed: boolean;
+  /** The source ruled it out: verification refuted. */
+  refuted: boolean;
+  /** A status the group's heading does not already say: Recurred, Relapsed, In remission. */
+  statusNote?: string;
 }
 
 /**
@@ -92,11 +96,17 @@ export function conditionList(index: PersonIndex): { active: ConditionItem[]; en
       const status = i.latest.status ?? '';
       const verification = str(i.latest.fields.verification_status) ?? '';
       const refuted = verification === 'refuted';
-      const notes = [UNCONFIRMED.has(verification) ? 'Unconfirmed' : null, refuted ? 'Ruled out' : null, status && !PLAIN.has(status) ? statusText(status)! : null].filter((x): x is string => !!x);
-      return { ...i, ended: str(i.latest.fields.abatement), isActive: ACTIVE.has(status) && !refuted, notes };
+      return {
+        ...i,
+        ended: str(i.latest.fields.abatement),
+        isActive: ACTIVE.has(status) && !refuted,
+        unconfirmed: UNCONFIRMED.has(verification),
+        refuted,
+        statusNote: status && !PLAIN.has(status) ? statusText(status) : undefined,
+      };
     })
     .sort(newestFirst);
-  const ended = (i: ConditionItem) => !i.notes.includes('Ruled out') && ENDED.has(i.latest.status ?? '');
+  const ended = (i: ConditionItem) => !i.refuted && ENDED.has(i.latest.status ?? '');
   return { active: all.filter((i) => i.isActive), ended: all.filter(ended), other: all.filter((i) => !i.isActive && !ended(i)) };
 }
 

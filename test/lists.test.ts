@@ -41,11 +41,17 @@ describe('conditions', () => {
         { kind: 'condition', display: 'Back pain', date: '2026-08-01' },
       ]),
     );
-    expect(c.active.find((i) => i.name === 'Migraine')).toMatchObject({ isActive: true, notes: ['Unconfirmed', 'Recurred'] });
+    expect(c.active.find((i) => i.name === 'Migraine')).toMatchObject({ isActive: true, unconfirmed: true, refuted: false, statusNote: 'Recurred' });
     expect(names(c.other)).toEqual(['Anemia', 'Back pain']);
-    expect(c.other.map((i) => i.notes)).toEqual([['Ruled out'], []]);
+    expect(c.other.map((i) => [i.refuted, i.isActive])).toEqual([[true, false], [false, false]]);
     // The heading says active or resolved, so those need no note.
-    expect([...c.active, ...c.ended].filter((i) => ['Vitamin D deficiency', 'Right ankle sprain'].includes(i.name)).map((i) => i.notes)).toEqual([[], []]);
+    expect([...c.active, ...c.ended].filter((i) => ['Vitamin D deficiency', 'Right ankle sprain'].includes(i.name)).map((i) => i.statusNote)).toEqual([undefined, undefined]);
+  });
+
+  it('keeps a ruled-out condition out of Resolved, whatever its status', () => {
+    const c = conditionList(withRecords(index('Sam Example'), [{ kind: 'condition', display: 'Gout', date: '2026-09-01', status: 'resolved', fields: { verification_status: 'refuted' } }]));
+    expect(names(c.ended)).not.toContain('Gout');
+    expect(c.other.find((i) => i.name === 'Gout')).toMatchObject({ refuted: true });
   });
 });
 
