@@ -3,6 +3,7 @@
 
 import type { Household, ImagingStudy, ImportRun, Json, JsonObject, MedDocument, MedRecord, PersonIndex, Provenance } from './types';
 import { isObject } from './parse';
+import { resultName } from './labtests';
 
 export const KIND_LABELS: Record<string, string> = {
   encounter: 'Visit',
@@ -213,7 +214,7 @@ export function resultSeries(index: PersonIndex): ResultSeries[] {
     const named = [...rs].sort((x, y) => (y.date ?? '').localeCompare(x.date ?? ''))[0]!;
     out.push({
       key,
-      name: named.display || named.code?.display || 'Result',
+      name: resultName(named),
       unit: units.size === 1 ? [...units][0] : undefined,
       latest: points[points.length - 1],
       points,

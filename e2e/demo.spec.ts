@@ -361,6 +361,9 @@ test('a result over time, down to its raw FHIR', async ({ page }) => {
   await expect(page.locator('table tbody tr')).toHaveCount(4);
   await page.locator('table a').first().click();
   await expect(page.locator('h2, h1').filter({ hasText: 'LDL cholesterol' }).first()).toBeVisible();
+  // Where it came from is folded under Technical details, whole.
+  await expect(page.getByText('Where it came from')).toBeHidden();
+  await page.locator('details.tech > summary').click();
   await expect(page.getByText('Where it came from')).toBeVisible();
   await page.getByText('Show raw FHIR').click();
   await expect(page.locator('pre.json').last()).toContainText('"resourceType": "Observation"');

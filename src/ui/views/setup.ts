@@ -3,7 +3,7 @@
 
 import { readPaste, type Paste } from '../../setup-link';
 import { Drive, folderIdFrom, FOLDER_MIME, HOUSEHOLD_QUERY } from '../../drive';
-import { button, card, empty } from '../components';
+import { button, card, empty, outLink } from '../components';
 import { h } from '../dom';
 import { dateTime } from '../format';
 
@@ -14,10 +14,6 @@ export const GETTING_STARTED_URL = `${REPO_URL}/blob/main/docs/getting-started.m
 export const MEDREC_URL = 'https://github.com/own-your-health/medrec-cli';
 /** The privacy policy, a static page next to the app. */
 export const PRIVACY_URL = './privacy.html';
-
-function outLink(href: string, text: string): HTMLElement {
-  return h('a', { href, target: '_blank', rel: 'noopener noreferrer' }, text);
-}
 
 function demoLink(): HTMLElement {
   return h('a', { class: 'button button-outline', href: './?demo' }, 'Try it with sample records');

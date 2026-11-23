@@ -16,16 +16,17 @@ import {
   type TimelineEntry,
 } from '../../model/records';
 import { visitKind, visitTimeline, type Visit } from '../../model/visits';
-import { claimTitle, recordTitle } from '../../model/claims';
+import { claimTitle } from '../../model/claims';
+import { recordTitle } from '../../model/titles';
 import { BILL_WINDOW_DAYS, claimsWithBills, owedByProvider, planBalances, toCents, type Bill, type Claim, type Owed } from '../../model/billing';
-import { isOutOfRange, rangeFor, resultFlag, type ResultFlag } from '../../model/flags';
+import { isOutOfRange, rangeFor, resultFlag } from '../../model/flags';
 import { immunizationsGiven, latestResults, newInLatestLoads, type LatestResult } from '../../model/overview';
 import { allergyList, conditionList, CRITICALITY_TEXT, medicineList, statusText, vaccineList, type AllergyItem, type ConditionItem, type MedicineItem } from '../../model/lists';
 import { resultGroups } from '../../model/panels';
 import { COMING_UP_DAYS, FLU, fluSeason, SCHEDULE_SOURCE, scheduleDigest, scheduleFor, type DoseState, type FluSeason, type ScheduleRow } from '../../model/schedule';
 import type { MedRecord, Person, PersonIndex, Provenance } from '../../model/types';
 import { resultChart, resultSparkline } from '../chart';
-import { button, card, chip, command, driveLink, empty, filterChips, link, refreshControl, row, sheet, type Ctx } from '../components';
+import { button, card, chip, command, driveLink, empty, filterChips, flagChip, link, refreshControl, row, sheet, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, localDay, relative, yearOf } from '../format';
 import { searchPanel } from '../search';
@@ -368,10 +369,6 @@ function visitsTimeline(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement
 }
 
 /** A chip for a result out of its range; critical in the error colour. None in range. */
-function flagChip(flag: ResultFlag | undefined): HTMLElement | null {
-  return isOutOfRange(flag) ? chip(flag.label, flag.critical ? 'error' : 'attention') : null;
-}
-
 function resultRow(personId: string, t: LatestResult): HTMLElement {
   const spark = resultSparkline(t.series.points, t.series.unit);
   return row({

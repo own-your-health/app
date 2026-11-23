@@ -2,6 +2,7 @@
 
 import type { PendingRequest } from '../data/store';
 import type { Store } from '../data/store';
+import { isOutOfRange, type ResultFlag } from '../model/flags';
 import { requestWait } from '../model/sources';
 import type { RequestScope } from '../model/types';
 import { h, icon, type Child } from './dom';
@@ -42,6 +43,16 @@ export function card(opts: { title?: string; class?: string; actions?: Child }, 
 
 export function link(route: Route, ...children: Child[]): HTMLAnchorElement {
   return h('a', { href: href(route) }, ...children);
+}
+
+/** A link that leaves the app: a new tab, no opener, no referrer. */
+export function outLink(url: string, ...children: Child[]): HTMLAnchorElement {
+  return h('a', { href: url, target: '_blank', rel: 'noopener noreferrer', referrerpolicy: 'no-referrer' }, ...children);
+}
+
+/** A result's flag as a chip, when it is out of range. */
+export function flagChip(flag: ResultFlag | undefined): HTMLElement | null {
+  return isOutOfRange(flag) ? chip(flag.label, flag.critical ? 'error' : 'attention') : null;
 }
 
 export function row(opts: { route?: Route; title: Child; meta?: Child; aside?: Child; extra?: Child; class?: string }): HTMLElement {

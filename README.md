@@ -140,6 +140,24 @@ result comes first, then one with any result out of range, and within a
 panel the out-of-range tests come first, then the order a lab report uses.
 Each test's chart shades the reference range each result came with.
 
+Every record's page leads with the plain answer. A result shows:
+- its plain name, from a table of the common tests in
+  `src/model/labtests.ts`, else the source's own name, else its LOINC name;
+- its value, and whether it is within the lab's range, in words and as a
+  marker on the range;
+- a sentence or two on what the test measures and what a high or low result
+  can go with, written from the MedlinePlus page it links and stopping at
+  "a question for your doctor";
+- its history, with the range band;
+- the other tests from the same draw, and the visit and lab report it came
+  with.
+
+A status badge shows only when the result is not final. A medicine leads
+with how to take it and its last fill. A condition, an allergy, a vaccine, a
+visit and a claim each lead with what a person would ask first. Codes, every
+field, where a record came from, the import that brought it in, its
+identifiers and its raw FHIR stay whole under one folded Technical details.
+
 Every person and record has its own address, such as `#/p/<person id>` (the
 person's overview; `#/p/<person id>/timeline` is the visits timeline and
 `#/p/<person id>/timeline/all` every record in date order) and
@@ -219,6 +237,22 @@ The privacy policy is at https://own-your-health.github.io/app/privacy.html
   only writer of records.
 - **Records stay in the browser.** Nothing from the folder is sent anywhere
   but back to Drive. Error messages carry no record content.
+- **Links out carry the thing, never the person.** A record page links to
+  where a person can read about a test, medicine, condition, allergy,
+  procedure or vaccine:
+  - MedlinePlus Connect, by the record's code (LOINC, RxNorm, NDC,
+    ICD-10-CM, ICD-9-CM, SNOMED CT or CPT), with the test's name from this
+    app's own table when it has one;
+  - CDC's Vaccine Information Statement, for a vaccine's CVX code;
+  - otherwise a MedlinePlus search by the record's name, only when that name
+    is short, one phrase, and holds no date, long number, email address or
+    link. The page shows the exact words beside the link.
+
+  The record's name, in that last case, is the only text from the records a
+  link can carry. No link carries a value, a date, a person, or a record or
+  folder id. The app never fetches the page; it opens only when tapped, in a new tab with
+  `rel="noopener noreferrer"` and no referrer. The page says which site it
+  opens. The rules are `src/model/learn.ts`.
 
 ### Google permissions, and why
 

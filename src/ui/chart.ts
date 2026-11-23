@@ -148,3 +148,48 @@ export function resultSparkline(points: ResultPoint[], unit: string | undefined)
     pts.map((p, i) => s('circle', { cx: x(i), cy: y(p.value), r: 2.4, class: dotClass(p) })),
   );
 }
+
+/**
+ * Where one value sits against the lab's range: a track, the range shaded on
+ * it, a marker at the value, and the range's bounds below. The sentence
+ * beside it carries the reading; the picture only shows it. A one-sided
+ * range ("<130") runs from zero, or on to the end of the track.
+ */
+export function rangeBar(value: number, range: Range, outOfRange: boolean, label: string): SVGSVGElement {
+  const w = 320;
+  const h = 44;
+  const pad = 10;
+  const { low, high } = range;
+  let lo: number;
+  let hi: number;
+  if (low !== undefined && high !== undefined) {
+    const span = high - low || Math.abs(high) || 1;
+    lo = Math.min(low - span * 0.5, value);
+    hi = Math.max(high + span * 0.5, value);
+    if (low >= 0 && lo < 0) lo = 0;
+  } else if (high !== undefined) {
+    lo = Math.min(0, value);
+    hi = Math.max(high * 1.6, value);
+  } else {
+    lo = Math.min(0, value);
+    hi = Math.max((low ?? 0) * 2, value) || 1;
+  }
+  // Room past the ends, so a marker at the edge is drawn whole.
+  const margin = (hi - lo) * 0.04 || 1;
+  lo -= value <= lo ? margin : 0;
+  hi += value >= hi ? margin : 0;
+  const x = (v: number) => pad + ((v - lo) / (hi - lo || 1)) * (w - pad * 2);
+  const trackY = 12;
+  const bandFrom = x(low ?? lo);
+  const bandTo = x(high ?? hi);
+  const bound = (v: number | undefined, anchor: string) => (v === undefined ? null : s('text', { x: x(v), y: h - 4, 'text-anchor': anchor, class: 'chart-label' }, fmt(v)));
+  return s(
+    'svg',
+    { viewBox: `0 0 ${w} ${h}`, class: 'range-bar', role: 'img', 'aria-label': label },
+    s('rect', { x: pad, y: trackY - 4, width: w - pad * 2, height: 8, rx: 4, class: 'range-track' }),
+    s('rect', { x: bandFrom, y: trackY - 4, width: Math.max(2, bandTo - bandFrom), height: 8, rx: 4, class: 'range-band' }),
+    bound(low, low !== undefined && high !== undefined && x(high) - x(low) < 36 ? 'end' : 'middle'),
+    bound(high, low !== undefined && high !== undefined && x(high) - x(low) < 36 ? 'start' : 'middle'),
+    s('circle', { cx: x(value), cy: trackY, r: 7, class: outOfRange ? 'range-marker range-marker-out' : 'range-marker' }, s('title', null, label)),
+  );
+}
