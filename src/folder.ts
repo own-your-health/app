@@ -139,17 +139,12 @@ export class DriveFolder implements RecordsFolder {
 }
 
 /**
- * The synthetic records folder shipped with the app (public/demo/), read
- * over the page's own origin. Writes stay in memory, and a simulated Mac
- * answers refresh requests, so the whole flow can be tried without a Drive.
- */
-/**
  * The sample's keys for when something was loaded, filed, asked for or
  * checked: the times the demo moves to now. Times of care (a visit's period,
  * when a result was issued) and a source's own times stay as written, so a
  * visit keeps its day however long ago the sample was made.
  */
-const LOAD_TIMES = new Set([
+export const LOAD_TIMES = new Set([
   'created_at',
   'last_pull',
   'filed_at',
@@ -170,6 +165,14 @@ const LOAD_TIMES = new Set([
   'next_allowed_at',
 ]);
 
+/** The sample's keys for times that stay as written: times of care, and a source's own. */
+export const KEPT_TIMES = new Set(['start', 'end', 'issued', 'lastUpdated', 'last_updated']);
+
+/**
+ * The synthetic records folder shipped with the app (public/demo/), read
+ * over the page's own origin. Writes stay in memory, and a simulated Mac
+ * answers refresh requests, so the whole flow can be tried without a Drive.
+ */
 export class DemoFolder implements RecordsFolder {
   readonly kind = 'demo' as const;
   readonly id = 'demo';
