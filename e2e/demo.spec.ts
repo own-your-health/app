@@ -390,25 +390,37 @@ test('a claim medrec linked says what it paid for: the visit, the diagnosis and 
   await expect(page.locator('main h1')).toHaveText('Sick visit');
 });
 
-test('a lab claim lists the results medrec linked, and a fill its discount and the fill itself', async ({ page }) => {
+test('a lab claim lists the results of its day once, a claim without the payer’s figure adds up your share, and a fill gives its discount', async ({ page }) => {
   await page.goto('./?demo');
   await page.getByRole('link', { name: /^Sam Example/ }).first().click();
   await openSection(page, 'Claims and bills');
   await page.locator('.row', { hasText: 'Blood count and vitamin D test' }).locator('a.row-main').click();
+  await expect(page.locator('main h1')).toHaveText('Blood count and vitamin D test');
+  await expect(page.locator('main .result-value').first()).toHaveText('You owe $70.30');
   await expect(field(page, 'Diagnosis')).toHaveText('Vitamin D deficiency, unspecified (E55.9)');
-  await expect(paidFor(page).locator('.row-title')).toHaveText(['Hemoglobin', 'White blood cells', 'Platelets']);
-  await expect(paidFor(page).locator('.row-meta').first()).toContainText('Result · Oct 12, 2026');
-  await expect(page.locator('.claim-paid-for')).toHaveText(['Paid for: Hemoglobin, White blood cells and Platelets']);
+  // medrec links each lab line to every result and report of its day, from any source.
+  await expect(paidFor(page).locator('.row-title')).toHaveText(['Vitamin D', 'Hemoglobin', 'White blood cells', 'Platelets']);
+  await expect(paidFor(page).locator('.row-meta').nth(1)).toContainText('Result · Oct 12, 2026');
+  // Both lines link the same results, so the card says it once.
+  await expect(page.locator('.claim-paid-for')).toHaveCount(0);
+  await page.goBack();
+  // The payer gave the parts of the member's share but no figure for it.
+  await page.locator('.row', { hasText: 'Thyroid test (TSH) and blood draw' }).locator('a.row-main').click();
+  await expect(page.locator('main .result-value').first()).toHaveText('Your share $50.70');
+  await expect(field(page, 'Your share comes from')).toHaveText('Deductible $50.70');
 
   await page.goto('./?demo');
   await page.getByRole('link', { name: /^Robin Example/ }).first().click();
   await openSection(page, 'Claims and bills');
   await page.locator('.row', { hasText: 'Lisinopril 10 mg tablet, 90 days' }).first().locator('a.row-main').click();
+  // medrec's name for it ends with the pharmacy, which the page shows apart.
+  await expect(page.locator('main h1')).toHaveText('Lisinopril 10 mg tablet, 90 days');
   await expect(field(page, 'Billed')).toHaveText('$32.50');
   await expect(field(page, 'Discount')).toHaveText('$20.10');
   await expect(field(page, 'Diagnosis')).toHaveText('Essential (primary) hypertension (I10)');
   await expect(page.locator('.claim-amounts')).toHaveText(['Billed $32.50 · Discount $20.10 · Allowed $12.40 · Plan paid $2.40 · Deductible $0.00 · Copay $10.00 · Coinsurance $0.00 · You owe $10.00']);
-  await expect(page.locator('.claim-paid-for')).toHaveText(['Paid for: Lisinopril 10 mg tablet']);
+  // medrec links visit and lab lines only.
+  await expect(page.locator('.claim-paid-for')).toHaveCount(0);
 });
 
 test('a bill no claim matches is listed apart', async ({ page }) => {

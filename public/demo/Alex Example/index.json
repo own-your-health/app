@@ -1456,7 +1456,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Flu vaccine and vaccine given",
+      "display": "Flu vaccine and Vaccine given · Example Pediatrics",
       "status": "active",
       "fields": {
         "when": "2025-10-20",
@@ -1630,9 +1630,7 @@
                 "currency": "USD"
               }
             },
-            "records": [
-              "r_wtvyzmrzrt6k3y3f6rf4"
-            ]
+            "records": []
           },
           {
             "sequence": 2,
@@ -1739,9 +1737,7 @@
                 "currency": "USD"
               }
             },
-            "records": [
-              "r_wtvyzmrzrt6k3y3f6rf4"
-            ]
+            "records": []
           }
         ],
         "benefit_period": {
@@ -1824,7 +1820,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Office visit and strep test",
+      "display": "Office visit and Strep test · Example Pediatrics",
       "status": "active",
       "fields": {
         "when": "2026-11-20",

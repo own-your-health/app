@@ -826,7 +826,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Office visit and X-ray of the ankle",
+      "display": "Office visit and X-ray of the ankle · Example Health",
       "status": "active",
       "fields": {
         "when": "2026-05-20",
@@ -1193,7 +1193,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Thyroid test (TSH) and blood draw",
+      "display": "Thyroid test (TSH) and Blood draw · Example Lab",
       "status": "active",
       "fields": {
         "when": "2026-07-09",
@@ -1244,13 +1244,6 @@
             "category": "Coinsurance",
             "amount": {
               "amount": "0.00",
-              "currency": "USD"
-            }
-          },
-          {
-            "category": "Member liability",
-            "amount": {
-              "amount": "50.70",
               "currency": "USD"
             }
           }
@@ -1326,14 +1319,6 @@
                   "currency": "USD"
                 },
                 "reason": null
-              },
-              {
-                "category": "Member liability",
-                "amount": {
-                  "amount": "41.20",
-                  "currency": "USD"
-                },
-                "reason": null
               }
             ],
             "category": "lab",
@@ -1361,14 +1346,14 @@
               "coinsurance": {
                 "amount": "0.00",
                 "currency": "USD"
-              },
-              "you_owe": {
-                "amount": "41.20",
-                "currency": "USD"
               }
             },
             "records": [
-              "r_t7o3hd7qkaukzypu32u5"
+              "r_wdcfeoqm64y7te3j2rz4",
+              "r_t7o3hd7qkaukzypu32u5",
+              "r_loks2bzuyhkgmdsbxiim",
+              "r_cxktbdqss5olab7jvwhi",
+              "r_37m7inb7v4ayxigadjmo"
             ]
           },
           {
@@ -1435,14 +1420,6 @@
                   "currency": "USD"
                 },
                 "reason": null
-              },
-              {
-                "category": "Member liability",
-                "amount": {
-                  "amount": "9.50",
-                  "currency": "USD"
-                },
-                "reason": null
               }
             ],
             "category": "lab",
@@ -1470,13 +1447,15 @@
               "coinsurance": {
                 "amount": "0.00",
                 "currency": "USD"
-              },
-              "you_owe": {
-                "amount": "9.50",
-                "currency": "USD"
               }
             },
-            "records": []
+            "records": [
+              "r_wdcfeoqm64y7te3j2rz4",
+              "r_t7o3hd7qkaukzypu32u5",
+              "r_loks2bzuyhkgmdsbxiim",
+              "r_cxktbdqss5olab7jvwhi",
+              "r_37m7inb7v4ayxigadjmo"
+            ]
           }
         ],
         "benefit_period": {
@@ -1508,10 +1487,6 @@
           "coinsurance": {
             "amount": "0.00",
             "currency": "USD"
-          },
-          "you_owe": {
-            "amount": "50.70",
-            "currency": "USD"
           }
         },
         "diagnoses": [
@@ -1525,6 +1500,7 @@
           }
         ],
         "results": [
+          "r_wdcfeoqm64y7te3j2rz4",
           "r_t7o3hd7qkaukzypu32u5",
           "r_loks2bzuyhkgmdsbxiim",
           "r_cxktbdqss5olab7jvwhi",
@@ -1564,7 +1540,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Blood count and vitamin D test",
+      "display": "Blood count and Vitamin D test · Example Lab",
       "status": "active",
       "fields": {
         "when": "2026-10-12",
@@ -1739,6 +1715,7 @@
               }
             },
             "records": [
+              "r_pmyt7qaxanldszgnxut3",
               "r_ed2vxgyu5x4epii2gais",
               "r_rjhnkgt2kousvani33kp",
               "r_gxlxebjiq6wviq4fvrpm"
@@ -1849,7 +1826,12 @@
                 "currency": "USD"
               }
             },
-            "records": []
+            "records": [
+              "r_pmyt7qaxanldszgnxut3",
+              "r_ed2vxgyu5x4epii2gais",
+              "r_rjhnkgt2kousvani33kp",
+              "r_gxlxebjiq6wviq4fvrpm"
+            ]
           }
         ],
         "benefit_balance": [
@@ -1930,6 +1912,7 @@
           }
         ],
         "results": [
+          "r_pmyt7qaxanldszgnxut3",
           "r_ed2vxgyu5x4epii2gais",
           "r_rjhnkgt2kousvani33kp",
           "r_gxlxebjiq6wviq4fvrpm"

@@ -6,7 +6,7 @@
 // visit medrec linked it to, else to one of its days from a provider
 // matching the visit.
 
-import { claimLines, claimResultIds, claimVisitId } from './claims';
+import { claimLines, claimResultIds, claimVisitId, isContractClaim } from './claims';
 import { sameProvider } from './providers';
 import { day, isWithdrawn, organizationName, sortByDateDesc, str } from './records';
 import type { Household, ImagingStudy, MedDocument, MedRecord, PersonIndex } from './types';
@@ -105,9 +105,10 @@ export function visitTimeline(index: PersonIndex, household: Household, person: 
     }
   }
 
-  // A claim medrec linked to one of these visits goes there and nowhere else.
-  // A link to anything else (a withdrawn or planned visit, a record not in
-  // the index) counts as none.
+  // A claim in medrec's contract shape goes to the visit medrec linked, if it
+  // is one of these, and else to none: medrec relinks on every write of the
+  // index and leaves the link out when no single visit matches. A claim from
+  // an earlier medrec is matched here by day and provider.
   const visitIds = new Set(visits.map((v) => v.record.id));
   const linkedVisit = (r: MedRecord) => {
     const id = claimVisitId(r);
@@ -121,8 +122,7 @@ export function visitTimeline(index: PersonIndex, household: Household, person: 
       if (rs.length) v.recorded.push({ kind, records: rs });
     }
     v.claims = claims.filter((r) => {
-      const linked = linkedVisit(r);
-      if (linked) return linked === v.record.id;
+      if (isContractClaim(r)) return linkedVisit(r) === v.record.id;
       if (!mine.includes(r)) return false;
       const provider = str(r.fields.provider);
       return names(v).some((n) => sameProvider(n, provider));
@@ -133,7 +133,7 @@ export function visitTimeline(index: PersonIndex, household: Household, person: 
 }
 
 export interface ClaimContext {
-  /** The visit it paid for: the one medrec linked, else the one it matched. */
+  /** The visit it paid for: the one medrec linked, or for a claim from an earlier medrec, the one matched by day and provider. */
   visit?: Visit;
   /** The results and reports medrec linked to it. */
   results: MedRecord[];
