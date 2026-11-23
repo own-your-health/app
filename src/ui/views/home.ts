@@ -54,7 +54,17 @@ export function homeView(ctx: Ctx): HTMLElement {
   );
 
   // A search field that opens the search page with what was typed.
-  const field = h('input', { type: 'search', class: 'input', name: 'q', placeholder: 'Search records', 'aria-label': 'Search everyone’s records', autocomplete: 'off', enterkeyhint: 'search' });
+  const field = h('input', {
+    type: 'search',
+    class: 'input',
+    name: 'q',
+    placeholder: 'Search records',
+    'aria-label': 'Search everyone’s records',
+    autocomplete: 'off',
+    enterkeyhint: 'search',
+    // A search is coming: start reading the documents' text it will need.
+    on: { focus: () => people.forEach((p) => void store.text(p.id).catch(() => null)) },
+  });
   const searchForm = people.length
     ? h(
         'form',

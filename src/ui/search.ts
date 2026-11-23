@@ -295,7 +295,11 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
     timer = window.setTimeout(() => void search(), 200);
   });
   if (opts.query) void search();
-  else requestAnimationFrame(() => input.focus());
+  else {
+    requestAnimationFrame(() => input.focus());
+    // Read the documents' text while the words are typed: on a slow link it is most of the first search's wait.
+    for (const p of people) void ctx.store.text(p.id).catch(() => null);
+  }
   return card({ title: opts.title }, h('p', { class: 'muted small' }, opts.intro), input, notice, status, filters, results);
 }
 

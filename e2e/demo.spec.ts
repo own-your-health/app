@@ -426,6 +426,29 @@ test('a visit’s page shows what belongs to it, a hand-filed note among them', 
   await expect(at.locator('.visit-line')).toHaveText(['Diagnosis: Ear infection', 'Medicine: Amoxicillin 400 mg/5 mL suspension', 'Claim: your share $25.00 from Example Care Plan']);
 });
 
+test('a search starts reading the documents’ text before anything is typed, and reads it once', async ({ page }) => {
+  const reads: string[] = [];
+  page.on('request', (r) => {
+    if (r.url().endsWith('/text.json')) reads.push(decodeURIComponent(r.url()));
+  });
+  await page.goto('./?demo');
+  const field = page.getByRole('searchbox', { name: 'Search everyone’s records' });
+  await expect(field).toBeVisible();
+  expect(reads).toEqual([]);
+  await field.focus();
+  await expect.poll(() => reads.length).toBe(4);
+  await field.fill('lisinopril');
+  await field.press('Enter');
+  await expect(page.locator('main p[aria-live]')).toHaveText(/matches/);
+  expect(reads).toHaveLength(4);
+
+  // A person's own search, on a fresh load, reads only theirs, as soon as it opens.
+  await page.goto('about:blank');
+  await page.goto('./?demo#/p/p_xo4em46i7yj3hphlpajo/search');
+  await expect.poll(() => reads.filter((u) => u.includes('/Robin Example/')).length).toBe(2);
+  expect(reads).toHaveLength(5);
+});
+
 test('one search over everyone, from the home screen, with filters by kind and person', async ({ page }) => {
   await page.goto('./?demo');
   await page.getByRole('searchbox', { name: 'Search everyone’s records' }).fill('lisinopril');
