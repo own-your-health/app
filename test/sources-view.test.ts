@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ANSWER_SHOWN_MS, ATTENTION, HEALTH_ORDER, isRecentAnswer, latestAnswered, needsAttention, needsPerson, sourceViews, type AnsweredRequest } from '../src/model/sources';
-import type { RefreshRequest } from '../src/model/types';
+import type { ErrorInfo, RefreshRequest } from '../src/model/types';
 import { clock } from '../src/ui/format';
 import { remedyCommand, requestAnswer, signInWords } from '../src/ui/views/sources';
 import { demo, sourceOf } from './demo-data';
@@ -176,5 +176,9 @@ describe('remedyCommand', () => {
     expect(remedyCommand({ ...base, remedy: 'Run `athena auth login`.', provider_message: 'Session ended.' })).toBeNull();
     expect(remedyCommand({ ...base, provider_message: 'Session ended.' })).toBeNull();
     expect(remedyCommand(null)).toBeNull();
+    // JSON's null is not 0.7.0's shape; an empty string is, since medrec writes the key only on its own sign-in error.
+    const own = 'run `medrec refresh sign-in s_aaaaaaaaaaaaaaaaaaaa` on this machine';
+    expect(remedyCommand({ ...base, remedy: own, provider_message: null } as unknown as ErrorInfo)).toBeNull();
+    expect(remedyCommand({ ...base, remedy: own, provider_message: '' })).toBe('medrec refresh sign-in s_aaaaaaaaaaaaaaaaaaaa');
   });
 });

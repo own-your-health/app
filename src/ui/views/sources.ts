@@ -94,29 +94,38 @@ function nextAllowed(sources: Handled['sources'], now: Date): string {
 }
 
 /**
+ * medrec 0.7.0 and later: the error of a sign-in that ended, whose message and
+ * remedy are medrec's own. medrec writes `provider_message` only then, as a
+ * string; JSON's null, or any other type, is not that shape.
+ */
+export function isMedrecSignInError(e: ErrorInfo | null | undefined): e is ErrorInfo & { provider_message: string } {
+  return typeof e?.provider_message === 'string';
+}
+
+/**
  * What the provider's own tool said, folded away. Its words were written for
  * someone running that tool by hand, so they can name commands other than
  * the one medrec asks for.
  */
 export function errorDetails(e: ErrorInfo, opts: { commandAbove?: boolean } = {}): HTMLElement | null {
-  if (!e.message && !e.remedy && !e.provider_message) return null;
+  const said = isMedrecSignInError(e) ? e.provider_message.trim() : '';
+  if (!e.message && !e.remedy && !said) return null;
   const reported = opts.commandAbove ? 'What the provider’s tool reported. To sign in, run the medrec command above, not the tool’s own.' : 'What the provider’s tool reported.';
   // From medrec 0.7.0 a sign-in that ended has medrec's own message and remedy, and the tool's words apart.
-  const body =
-    e.provider_message !== undefined
-      ? [
-          e.message ? h('p', null, e.message) : null,
-          e.remedy && !opts.commandAbove ? h('p', null, e.remedy) : null,
-          h('p', { class: 'muted' }, reported),
-          h('p', null, e.provider_message),
-        ]
-      : [opts.commandAbove ? h('p', { class: 'muted' }, reported) : null, e.message ? h('p', null, e.message) : null, e.remedy ? h('p', null, e.remedy) : null];
+  const body = isMedrecSignInError(e)
+    ? [
+        e.message ? h('p', null, e.message) : null,
+        e.remedy && !opts.commandAbove ? h('p', null, e.remedy) : null,
+        said ? h('p', { class: 'muted' }, reported) : null,
+        said ? h('p', null, said) : null,
+      ]
+    : [opts.commandAbove ? h('p', { class: 'muted' }, reported) : null, e.message ? h('p', null, e.message) : null, e.remedy ? h('p', null, e.remedy) : null];
   return h('details', { class: 'error-details' }, h('summary', null, 'Error details'), body, e.code ? h('p', { class: 'muted' }, `Code: ${e.code}`) : null);
 }
 
 /** The command in medrec's own remedy for a sign-in that ended (0.7.0 and later), when the status gives none. */
 export function remedyCommand(e: ErrorInfo | null | undefined): string | null {
-  if (!e || e.provider_message === undefined || !e.remedy) return null;
+  if (!isMedrecSignInError(e) || !e.remedy) return null;
   const m = /`(medrec [^`]+)`/.exec(e.remedy);
   return m ? m[1]! : null;
 }
