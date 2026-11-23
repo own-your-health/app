@@ -29,12 +29,6 @@ export function immunizationsGiven(index: PersonIndex): MedRecord[] {
   return sortByDateDesc(index.records.filter((r) => r.kind === 'immunization' && isDoseGiven(r)));
 }
 
-const NOT_A_VISIT = new Set(['cancelled', 'entered-in-error', 'planned']);
-
-/** Visits that happened, newest first. */
-export function recentVisits(index: PersonIndex, today: string): MedRecord[] {
-  return sortByDateDesc(index.records.filter((r) => r.kind === 'encounter' && !NOT_A_VISIT.has(r.status ?? '') && (!r.date || r.date.slice(0, 10) <= today)));
-}
 
 // ---- New in the latest loads ----
 

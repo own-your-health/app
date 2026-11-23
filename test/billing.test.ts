@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { billList, claimsWithBills, fromCents, owedByProvider, planBalances, sameProvider, toCents } from '../src/model/billing';
+import { billList, claimsWithBills, fromCents, owedByProvider, planBalances, toCents } from '../src/model/billing';
 import type { MedDocument, MedRecord, PersonIndex } from '../src/model/types';
 import { demo, personNamed } from './demo-data';
 
@@ -34,16 +34,6 @@ describe('money in cents', () => {
     expect([toCents(usd('53.68')), toCents(usd('0.1')), toCents(usd('-12')), toCents(usd('1,000.00')), toCents(undefined)]).toEqual([5368, 10, -1200, undefined, undefined]);
     expect(fromCents(7296)).toEqual(usd('72.96'));
     expect(fromCents(-5)).toEqual(usd('-0.05'));
-  });
-});
-
-describe('providers', () => {
-  it('match by name, ignoring case, punctuation, Inc and LLC, or one name inside the other', () => {
-    expect(sameProvider('Example Health', 'EXAMPLE HEALTH, Inc.')).toBe(true);
-    expect(sameProvider('Example Health', 'Example Health Main Clinic')).toBe(true);
-    expect(sameProvider('Example Health', 'Example Lab')).toBe(false);
-    expect(sameProvider('Example Health', 'Example Healthcare')).toBe(false);
-    expect(sameProvider(undefined, 'Example Health')).toBe(false);
   });
 });
 

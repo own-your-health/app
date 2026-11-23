@@ -4,10 +4,9 @@
 // a stay's days) and comes from the same organization. A record belongs the
 // same way. Each document joins one visit at most.
 
-import { sameProvider } from './billing';
-import { recentVisits } from './overview';
-import { day, isWithdrawn, organizationName, sortByDateDesc } from './records';
-import type { Household, ImagingStudy, Json, MedDocument, MedRecord, PersonIndex } from './types';
+import { sameProvider } from './providers';
+import { day, isWithdrawn, organizationName, sortByDateDesc, str } from './records';
+import type { Household, ImagingStudy, MedDocument, MedRecord, PersonIndex } from './types';
 
 /** FHIR encounter class, in words. */
 export const VISIT_CLASS: Record<string, string> = {
@@ -28,6 +27,13 @@ export const VISIT_CLASS: Record<string, string> = {
 /** What a visit's records are, by kind, in the order a visit summary lists them. */
 const RECORDED: string[] = ['condition', 'result', 'procedure', 'medication', 'immunization', 'allergy', 'report'];
 
+const NOT_A_VISIT = new Set(['cancelled', 'entered-in-error', 'planned']);
+
+/** Visits that happened (not planned, cancelled or in the future), newest first. */
+export function recentVisits(index: PersonIndex, today: string): MedRecord[] {
+  return sortByDateDesc(index.records.filter((r) => r.kind === 'encounter' && !NOT_A_VISIT.has(r.status ?? '') && (!r.date || r.date.slice(0, 10) <= today)));
+}
+
 export interface Visit {
   record: MedRecord;
   /** The first day, and for a stay the last. */
@@ -44,7 +50,6 @@ export interface Visit {
   studies: ImagingStudy[];
 }
 
-const str = (v: Json | undefined): string | undefined => (typeof v === 'string' && v.trim() ? v : undefined);
 
 function window(r: MedRecord): { start?: string; end?: string } {
   const start = day(r.date);

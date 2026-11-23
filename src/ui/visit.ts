@@ -1,8 +1,7 @@
 // What belongs to a visit, as the visits timeline and a visit's own page show it.
 
 import { claimAmounts, toCents } from '../model/billing';
-import { docTypeLabel, documentTitle, formatMoney, KIND_LABELS, studyTitle } from '../model/records';
-import type { Json } from '../model/types';
+import { docTypeLabel, documentTitle, formatMoney, KIND_LABELS, str, studyTitle } from '../model/records';
 import type { Visit } from '../model/visits';
 import { link } from './components';
 import { h, icon, type Child } from './dom';
@@ -10,7 +9,6 @@ import { dateText } from './format';
 import type { Route } from './router';
 
 const itemRoute = (person: string, id: string): Route => ({ name: 'item', person, id });
-const str = (v: Json | undefined): string | undefined => (typeof v === 'string' && v.trim() ? v : undefined);
 
 /** Links on a line, the first few and then how many more. A dot between, since names hold commas ("Cholesterol, total"). */
 function linkList(person: string, items: { id: string; title: string }[], max = 4): Child[] {

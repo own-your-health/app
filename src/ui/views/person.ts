@@ -9,6 +9,7 @@ import {
   originNames,
   recordDetail,
   sortByDateDesc,
+  str,
   studyTitle,
   timeline,
   type Money,
@@ -22,7 +23,7 @@ import { allergyList, conditionList, CRITICALITY_TEXT, medicineList, statusText,
 import { resultGroups } from '../../model/panels';
 import { COMING_UP_DAYS, FLU, fluSeason, SCHEDULE_SOURCE, scheduleDigest, scheduleFor, type DoseState, type FluSeason, type ScheduleRow } from '../../model/schedule';
 import { search } from '../../model/search';
-import type { Json, MedRecord, Person, PersonIndex, Provenance } from '../../model/types';
+import type { MedRecord, Person, PersonIndex, Provenance } from '../../model/types';
 import { resultChart, resultSparkline } from '../chart';
 import { button, card, chip, command, driveLink, empty, link, refreshControl, row, sheet, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
@@ -35,10 +36,6 @@ const MORE: Section[] = ['documents', 'conditions', 'allergies', 'immunizations'
 const SECTION_ICONS: Partial<Record<Section, string>> = { overview: 'home', timeline: 'clock', results: 'chart', medicines: 'pill', documents: 'file' };
 
 const PAGE = 200;
-
-function str(v: Json | undefined): string | undefined {
-  return typeof v === 'string' && v ? v : undefined;
-}
 
 function itemRoute(person: string, id: string): Route {
   return { name: 'item', person, id };
@@ -371,7 +368,7 @@ function visitsTimeline(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement
               })(),
             }),
         )
-      : empty('No visits in these records yet. Every record is under Every record.'),
+      : empty('No visits in these records yet.', link({ name: 'person', person: person.id, section: 'timeline', sub: 'all' }, 'See every record')),
     loose.length
       ? h('p', { class: 'small muted' }, `${count(loose.length, 'document')} from no visit in these records (bills, scans, letters) are under `, link({ name: 'person', person: person.id, section: 'documents' }, 'Documents'), '.')
       : null,

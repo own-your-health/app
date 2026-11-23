@@ -3,8 +3,8 @@
 // (medrec keeps a record per date), its status in words, when it was first
 // and last recorded, and every source that recorded it.
 
-import { isDoseGiven, isWithdrawn, medicines, seriesKey, sortByDateDesc, type MedicineGroup } from './records';
-import type { Json, MedRecord, PersonIndex, Provenance } from './types';
+import { isDoseGiven, isWithdrawn, medicines, seriesKey, sortByDateDesc, str, type MedicineGroup } from './records';
+import type { MedRecord, PersonIndex, Provenance } from './types';
 
 /** FHIR status codes, in words. */
 export const STATUS_TEXT: Record<string, string> = {
@@ -30,8 +30,6 @@ export function statusText(status: string | undefined): string | undefined {
   if (!status) return undefined;
   return STATUS_TEXT[status] ?? status.charAt(0).toUpperCase() + status.slice(1).replace(/-/g, ' ');
 }
-
-const str = (v: Json | undefined): string | undefined => (typeof v === 'string' && v.trim() ? v : undefined);
 
 /** One condition, allergy or vaccine across the dates it was recorded. */
 export interface ListItem {
