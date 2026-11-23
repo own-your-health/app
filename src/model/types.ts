@@ -228,6 +228,9 @@ export interface ErrorInfo {
    * The provider tool's own words, when its sign-in ended (medrec 0.7.0 and
    * later). `message` and `remedy` are then medrec's, and the remedy runs
    * `medrec refresh sign-in`; these words name the tool's own sign-in.
+   * medrec writes it on every such error, an empty string when the provider
+   * said nothing. Its absence alone does not make an error the tool's: see
+   * `isMedrecOwnError`.
    */
   provider_message?: string;
 }

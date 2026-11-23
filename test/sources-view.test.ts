@@ -177,7 +177,7 @@ describe('remedyCommand', () => {
     expect(remedyCommand({ ...base, provider_message: 'Session ended.' })).toBeNull();
     expect(remedyCommand(null)).toBeNull();
   });
-  it('takes it whether the provider said something, nothing (0.7.0 writes ""), or nothing at all (0.8.0 leaves the key out)', () => {
+  it('takes it whether the provider said something, nothing (an empty string), or the key is missing', () => {
     const own = 'run `medrec refresh sign-in s_aaaaaaaaaaaaaaaaaaaa` on this machine';
     for (const said of [{ provider_message: 'Session ended.' }, { provider_message: '' }, {}, { provider_message: null } as unknown as ErrorInfo]) {
       expect(remedyCommand({ ...base, remedy: own, ...said })).toBe('medrec refresh sign-in s_aaaaaaaaaaaaaaaaaaaa');

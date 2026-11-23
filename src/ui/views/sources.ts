@@ -98,10 +98,11 @@ const MEDREC_COMMAND = /`(medrec [^`]+)`/;
 
 /**
  * An error in medrec's own words: a sign-in that ended, from medrec 0.7.0 on.
- * 0.7.0 writes `provider_message` beside it, as a string, empty when the
- * provider said nothing; 0.8.0 leaves it out then. Either way medrec's remedy
- * runs a medrec command, which a provider tool's own remedy, before 0.7.0,
- * never named. JSON's null in `provider_message` is not a string.
+ * medrec writes `provider_message` beside it, as a string, empty when the
+ * provider said nothing. Its remedy also runs a medrec command, which a
+ * provider tool's own remedy, before 0.7.0, never named, so an error written
+ * without the key is still known. JSON's null in `provider_message` is not a
+ * string.
  */
 export function isMedrecOwnError(e: ErrorInfo | null | undefined): boolean {
   return !!e && (typeof e.provider_message === 'string' || MEDREC_COMMAND.test(e.remedy ?? ''));
