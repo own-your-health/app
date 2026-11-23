@@ -51,7 +51,9 @@
   --link: var(--ultra-600);
   --tint: var(--ultra-50);
   --tint-strong: var(--ultra-100);
-  --range-band: var(--ultra-200);
+  --range-in: #bfe6dd;
+  --range-out: #f5ddb0;
+  --on-mark: #fff;
   --positive: var(--teal-700);
   --positive-rule: var(--teal-600);
   --positive-tint: var(--teal-50);
@@ -102,7 +104,9 @@
   --link: #b4bdf8;
   --tint: #2a3462;
   --tint-strong: #334077;
-  --range-band: #3f4f99;
+  --range-in: #22564f;
+  --range-out: #57461f;
+  --on-mark: var(--slate-900);
   --positive: var(--teal-300);
   --positive-rule: var(--teal-300);
   --positive-tint: #183c39;
@@ -137,7 +141,9 @@
     --link: #b4bdf8;
     --tint: #2a3462;
     --tint-strong: #334077;
-  --range-band: #3f4f99;
+  --range-in: #22564f;
+  --range-out: #57461f;
+  --on-mark: var(--slate-900);
     --positive: var(--teal-300);
     --positive-rule: var(--teal-300);
     --positive-tint: #183c39;
@@ -1007,7 +1013,13 @@ pre.text {
   fill: var(--tint);
 }
 
-/* One value on the lab's range: a quiet track, the range a step darker, the value as a ringed dot. */
+/*
+ * One value on the lab's range: the range a calm band, the stretches outside
+ * it hatched in the attention colour, the value a ringed dot whose mark (a
+ * check, an arrow) says in or out without colour. Contrast, both themes:
+ * each dot at least 4.4:1 on its stretch and on the card, its mark at least
+ * 5.9:1 on the dot.
+ */
 .range-bar {
   width: 100%;
   max-width: 420px;
@@ -1016,12 +1028,17 @@ pre.text {
   margin-top: 4px;
 }
 
-.range-track {
-  fill: var(--sunken);
+.range-band {
+  fill: var(--range-in);
 }
 
-.range-band {
-  fill: var(--range-band);
+.range-zone {
+  fill: var(--range-out);
+}
+
+.range-hatch {
+  stroke: var(--attention);
+  stroke-width: 1.5;
 }
 
 .range-marker {
@@ -1030,8 +1047,46 @@ pre.text {
   stroke-width: 2;
 }
 
+.range-marker-in {
+  fill: var(--positive);
+}
+
 .range-marker-out {
-  fill: var(--attention);
+  fill: var(--attention-text);
+}
+
+.range-glyph {
+  fill: none;
+  stroke: var(--on-mark);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (forced-colors: active) {
+  .range-band,
+  .range-zone {
+    fill: Canvas;
+    stroke: CanvasText;
+    stroke-width: 1;
+  }
+
+  .range-hatch {
+    stroke: CanvasText;
+  }
+
+  .range-marker {
+    fill: CanvasText;
+    stroke: Canvas;
+  }
+
+  .range-glyph {
+    stroke: Canvas;
+  }
+
+  .range-bar .chart-label {
+    fill: CanvasText;
+  }
 }
 
 .spark {
@@ -1562,9 +1617,41 @@ mark {
   color: var(--ink-soft);
 }
 
+.verdict-in {
+  color: var(--positive);
+}
+
 .verdict-out {
   color: var(--attention-text);
   font-weight: 600;
+}
+
+/* The bar's mark again, before the words; screen readers read the words only. */
+.verdict-in::before,
+.verdict-out::before {
+  display: inline-block;
+  min-width: 1.25em;
+  font-weight: 700;
+}
+
+.verdict-in::before {
+  content: '✓';
+  content: '✓' / '';
+}
+
+.verdict-high::before {
+  content: '↑';
+  content: '↑' / '';
+}
+
+.verdict-low::before {
+  content: '↓';
+  content: '↓' / '';
+}
+
+.verdict-abnormal::before {
+  content: '!';
+  content: '!' / '';
 }
 
 /* What a test measures, from MedlinePlus. */

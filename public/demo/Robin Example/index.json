@@ -588,12 +588,8 @@
       "status": "final",
       "fields": {
         "when": "2025-03-10",
-        "value": {
-          "value": 94,
-          "unit": "mg/dL"
-        },
-        "reference_range": "70-99 mg/dL",
-        "interpretation": "Normal",
+        "value": "94",
+        "reference_range": "70 mg/dL – 99 mg/dL",
         "category": "Laboratory"
       },
       "documents": [],

@@ -1,0 +1,173 @@
+{
+  "schema": "medrec-index/v1",
+  "person": "p_aaaaaaaaaaaaaaaaaaaa",
+  "rev": 1,
+  "documents": [],
+  "records": [
+    {
+      "id": "r_aaaaaaaaaaaaaaaaaaaa",
+      "kind": "result",
+      "key": "result|2345-7|2026-10-15",
+      "display": "Glucose",
+      "date": "2026-10-15",
+      "status": "final",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "2345-7",
+        "display": "Glucose"
+      },
+      "fields": {
+        "value": "95",
+        "reference_range": "65 mg/dL – 99 mg/dL",
+        "category": "Laboratory"
+      },
+      "documents": [],
+      "provenance": []
+    },
+    {
+      "id": "r_bbbbbbbbbbbbbbbbbbbb",
+      "kind": "result",
+      "key": "result|2345-7|2026-04-15",
+      "display": "Glucose",
+      "date": "2026-04-15",
+      "status": "final",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "2345-7",
+        "display": "Glucose"
+      },
+      "fields": {
+        "value": {
+          "value": 88,
+          "unit": "mg/dL"
+        },
+        "reference_range": "65-99 mg/dL",
+        "interpretation": "Normal",
+        "category": "Laboratory"
+      },
+      "documents": [],
+      "provenance": []
+    },
+    {
+      "id": "r_cccccccccccccccccccc",
+      "kind": "result",
+      "key": "result|1558-6|2026-10-15",
+      "display": "Fasting glucose",
+      "date": "2026-10-15",
+      "status": "final",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "1558-6",
+        "display": "Fasting glucose"
+      },
+      "fields": {
+        "value": "105",
+        "reference_range": "65 - 99 mg/dL",
+        "category": "Laboratory"
+      },
+      "documents": [],
+      "provenance": []
+    },
+    {
+      "id": "r_dddddddddddddddddddd",
+      "kind": "result",
+      "key": "result|777-3|2026-10-15",
+      "display": "Platelets",
+      "date": "2026-10-15",
+      "status": "final",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "777-3",
+        "display": "Platelets"
+      },
+      "fields": {
+        "value": "7",
+        "category": "Laboratory"
+      },
+      "documents": [],
+      "provenance": []
+    },
+    {
+      "id": "r_eeeeeeeeeeeeeeeeeeee",
+      "kind": "result",
+      "key": "result|1975-2|2026-10-15",
+      "display": "Bilirubin, total",
+      "date": "2026-10-15",
+      "status": "final",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "1975-2",
+        "display": "Bilirubin, total"
+      },
+      "fields": {
+        "value": "<0.5",
+        "reference_range": "0.0 mg/dL – 1.0 mg/dL",
+        "category": "Laboratory"
+      },
+      "documents": [],
+      "provenance": []
+    },
+    {
+      "id": "r_ffffffffffffffffffff",
+      "kind": "result",
+      "key": "result|33914-3|2026-10-15",
+      "display": "eGFR",
+      "date": "2026-10-15",
+      "status": "final",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "33914-3",
+        "display": "eGFR"
+      },
+      "fields": {
+        "value": ">60",
+        "reference_range": ">=60 mL/min/1.73m2",
+        "category": "Laboratory"
+      },
+      "documents": [],
+      "provenance": []
+    },
+    {
+      "id": "r_gggggggggggggggggggg",
+      "kind": "result",
+      "key": "result|2276-4|2026-10-15",
+      "display": "Ferritin",
+      "date": "2026-10-15",
+      "status": "final",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "2276-4",
+        "display": "Ferritin"
+      },
+      "fields": {
+        "value": "<1",
+        "reference_range": "1 ng/mL – 5 ng/mL",
+        "category": "Laboratory"
+      },
+      "documents": [],
+      "provenance": []
+    },
+    {
+      "id": "r_hhhhhhhhhhhhhhhhhhhh",
+      "kind": "result",
+      "key": "result|5778-6|2026-10-15",
+      "display": "Urine color",
+      "date": "2026-10-15",
+      "status": "final",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "5778-6",
+        "display": "Urine color"
+      },
+      "fields": {
+        "value": "Yellow",
+        "reference_range": "Yellow",
+        "category": "Laboratory"
+      },
+      "documents": [],
+      "provenance": []
+    }
+  ],
+  "studies": [],
+  "imports": []
+}

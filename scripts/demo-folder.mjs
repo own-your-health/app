@@ -268,13 +268,25 @@ for (const [date, v, interp] of ldl) {
   });
 }
 for (const [date, v] of [['2025-03-10', 94], ['2025-09-15', 101], ['2026-10-01', 92]]) {
+  // The first came the way some labs send a number: as text (a FHIR
+  // valueString), with a structured range and no flag.
+  const asText = date === '2025-03-10';
+  const quantity = obs('2345-7', 'Glucose', v, 'mg/dL', 'mg/dL', '70-99 mg/dL', v > 99 ? 'High' : 'Normal');
+  const plain = { ...quantity };
+  delete plain.valueQuantity;
+  delete plain.interpretation;
+  const mgdl = (n) => ({ value: n, unit: 'mg/dL', system: 'http://unitsofmeasure.org', code: 'mg/dL' });
   R.record(src.robinChart, 'Observation', 'result', {
     date,
     code: { system: LOINC, code: '2345-7', display: 'Glucose [Mass/volume] in Serum or Plasma' },
     display: 'Glucose',
     status: 'final',
-    fields: { value: { value: v, unit: 'mg/dL' }, reference_range: '70-99 mg/dL', interpretation: v > 99 ? 'High' : 'Normal', category: 'Laboratory' },
-    resource: { ...obs('2345-7', 'Glucose', v, 'mg/dL', 'mg/dL', '70-99 mg/dL', v > 99 ? 'High' : 'Normal'), effectiveDateTime: date },
+    fields: asText
+      ? { value: String(v), reference_range: '70 mg/dL – 99 mg/dL', category: 'Laboratory' }
+      : { value: { value: v, unit: 'mg/dL' }, reference_range: '70-99 mg/dL', interpretation: v > 99 ? 'High' : 'Normal', category: 'Laboratory' },
+    resource: asText
+      ? { ...plain, valueString: String(v), referenceRange: [{ low: mgdl(70), high: mgdl(99), text: '70 - 99 mg/dL' }], effectiveDateTime: date }
+      : { ...quantity, effectiveDateTime: date },
   });
 }
 R.record(src.robinChart, 'Observation', 'result', {

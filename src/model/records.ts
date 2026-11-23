@@ -2,6 +2,7 @@
 // medicines, lists, claims and bills.
 
 import type { Household, ImagingStudy, ImportRun, Json, JsonObject, MedDocument, MedRecord, PersonIndex, Provenance } from './types';
+import { parseRange, type Bound } from './flags';
 import { isObject } from './parse';
 import { resultName } from './labtests';
 
@@ -121,7 +122,7 @@ export function recordDetail(r: MedRecord): string | undefined {
   const f = r.fields;
   switch (r.kind) {
     case 'result':
-      return [valueText(f.value), str(f.interpretation)].filter(Boolean).join(' · ') || undefined;
+      return [resultReading(f).text, str(f.interpretation)].filter(Boolean).join(' · ') || undefined;
     case 'encounter':
       return [str(f.class), str(f.practitioner), str(f.location) ?? str(f.service_provider)].filter(Boolean).join(' · ') || undefined;
     case 'medication':
@@ -152,6 +153,42 @@ export function valueText(v: Json | undefined): string | undefined {
   return undefined;
 }
 
+/**
+ * A result's value as this app reads it. A quantity is a number in its unit.
+ * A bare number sent as text ("95", a FHIR valueString) is a number too,
+ * in the unit the lab's range names, or none. A bound ("<0.5", ">60") stays
+ * text, with that unit, and reads against the range only when it can.
+ */
+export interface Reading {
+  value?: number;
+  bound?: Bound;
+  unit?: string;
+  text?: string;
+}
+
+const BARE = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/;
+const BOUND = /^(<=|>=|≤|≥|<|>)\s*(\d+(?:\.\d*)?|\.\d+)$/;
+const OPS: Record<string, Bound['op']> = { '<': '<', '<=': '<=', '≤': '<=', '>': '>', '>=': '>=', '≥': '>=' };
+
+export function resultReading(fields: JsonObject): Reading {
+  const v = fields.value;
+  if (typeof v !== 'string') return { value: numericValue(v), unit: unitOf(v), text: valueText(v) };
+  const t = v.trim();
+  const range = str(fields.reference_range);
+  const unit = range ? parseRange(range)?.unit : undefined;
+  const text = unit ? `${t} ${unit}` : t;
+  if (BARE.test(t)) return { value: Number(t), unit, text };
+  const b = BOUND.exec(t);
+  if (b) return { bound: { op: OPS[b[1]!]!, n: Number(b[2]) }, unit, text };
+  return { text: v };
+}
+
+/** A result as a point of its series. */
+export function resultPoint(r: MedRecord): ResultPoint {
+  const { value, bound, unit, text } = resultReading(r.fields);
+  return { id: r.id, date: r.date, value, bound, text: text ?? '—', unit, range: str(r.fields.reference_range), interpretation: str(r.fields.interpretation) };
+}
+
 export function numericValue(v: Json | undefined): number | undefined {
   if (isObject(v) && typeof v.value === 'number' && Number.isFinite(v.value)) return v.value;
   return undefined;
@@ -170,6 +207,8 @@ export interface ResultPoint {
   id: string;
   date?: string;
   value?: number;
+  /** A value given only as a bound ("<0.5"): never plotted. */
+  bound?: Bound;
   text: string;
   unit?: string;
   range?: string;
@@ -195,19 +234,7 @@ export function resultSeries(index: PersonIndex): ResultSeries[] {
   }
   const out: ResultSeries[] = [];
   for (const [key, rs] of groups) {
-    const points = rs
-      .map(
-        (r): ResultPoint => ({
-          id: r.id,
-          date: r.date,
-          value: numericValue(r.fields.value),
-          text: valueText(r.fields.value) ?? '—',
-          unit: unitOf(r.fields.value),
-          range: str(r.fields.reference_range),
-          interpretation: str(r.fields.interpretation),
-        }),
-      )
-      .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+    const points = rs.map(resultPoint).sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
     const units = new Set(points.map((p) => p.unit).filter(Boolean));
     // The newest record's own name: what medrec shows, and what the source
     // calls the test today.

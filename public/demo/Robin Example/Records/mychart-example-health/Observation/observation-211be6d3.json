@@ -26,21 +26,23 @@
     ],
     "text": "Glucose"
   },
-  "valueQuantity": {
-    "value": 94,
-    "unit": "mg/dL",
-    "system": "http://unitsofmeasure.org",
-    "code": "mg/dL"
-  },
   "referenceRange": [
     {
-      "text": "70-99 mg/dL"
+      "low": {
+        "value": 70,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "high": {
+        "value": 99,
+        "unit": "mg/dL",
+        "system": "http://unitsofmeasure.org",
+        "code": "mg/dL"
+      },
+      "text": "70 - 99 mg/dL"
     }
   ],
-  "interpretation": [
-    {
-      "text": "Normal"
-    }
-  ],
+  "valueString": "94",
   "effectiveDateTime": "2025-03-10"
 }
