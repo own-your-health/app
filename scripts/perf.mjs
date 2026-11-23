@@ -48,57 +48,82 @@ const earlier = (date, years) => (typeof date === 'string' && /^\d{4}/.test(date
 
 // ---- The folder ----
 
-const dir = await mkdtemp(join(tmpdir(), 'oyh-perf-'));
-await cp('dist', dir, { recursive: true });
-const folder = join(dir, 'demo', PERSON);
-const index = JSON.parse(await readFile(join(folder, 'index.json'), 'utf8'));
-const baseRecords = [...index.records];
-const baseDocs = [...index.documents];
-let n = 1;
-// One generation is a copy of every record and document, a year earlier per generation.
-for (let years = 1; JSON.stringify(index).length < INDEX_MB * MB; years += 1) {
-  const docIds = new Map(baseDocs.map((d) => [d.id, idOf('d', 1_000_000 + n++)]));
-  for (const d of baseDocs) index.documents.push({ ...d, id: docIds.get(d.id), date: earlier(d.date, years) });
-  for (const r of baseRecords) {
-    index.records.push({ ...r, id: idOf('r', 2_000_000 + n++), key: `${r.key}|perf${years}`, date: earlier(r.date, years), documents: r.documents.map((d) => docIds.get(d) ?? d) });
+/** The build's copy in `dir`, with Robin's index and text grown to the target sizes. */
+async function buildFolder(dir) {
+  await cp('dist', dir, { recursive: true });
+  const folder = join(dir, 'demo', PERSON);
+  const index = JSON.parse(await readFile(join(folder, 'index.json'), 'utf8'));
+  const baseRecords = [...index.records];
+  const baseDocs = [...index.documents];
+  let n = 1;
+  // One generation is a copy of every record and document, a year earlier per generation.
+  for (let years = 1; JSON.stringify(index).length < INDEX_MB * MB; years += 1) {
+    const docIds = new Map(baseDocs.map((d) => [d.id, idOf('d', 1_000_000 + n++)]));
+    for (const d of baseDocs) index.documents.push({ ...d, id: docIds.get(d.id), date: earlier(d.date, years) });
+    for (const r of baseRecords) {
+      index.records.push({ ...r, id: idOf('r', 2_000_000 + n++), key: `${r.key}|perf${years}`, date: earlier(r.date, years), documents: r.documents.map((d) => docIds.get(d) ?? d) });
+    }
   }
-}
-const indexText = JSON.stringify(index);
-await writeFile(join(folder, 'index.json'), indexText);
+  const indexText = JSON.stringify(index);
+  await writeFile(join(folder, 'index.json'), indexText);
 
-// 46 words, stepped through 17 at a time: 17 shares no factor with 46, so every word is used.
-const WORDS = 'patient follow up visit result normal range fasting sample blood urine panel review plan medicine dose daily weekly report clinic office note history exam vital sign pressure rate weight height diet exercise sleep return call question answer order test value unit reference interval comment signed reviewed'.split(' ');
-const texts = {};
-let size = 0;
-let w = 0;
-for (const d of index.documents) texts[d.id] = '';
-const ids = Object.keys(texts);
-for (let i = 0; size < TEXT_MB * MB; i = (i + 1) % ids.length) {
-  const chunk = Array.from({ length: 200 }, () => WORDS[(w = (w + 17) % WORDS.length)]).join(' ') + '.\n';
-  texts[ids[i]] += chunk;
-  size += chunk.length;
+  // 46 words, stepped through 17 at a time: 17 shares no factor with 46, so every word is used.
+  const WORDS = 'patient follow up visit result normal range fasting sample blood urine panel review plan medicine dose daily weekly report clinic office note history exam vital sign pressure rate weight height diet exercise sleep return call question answer order test value unit reference interval comment signed reviewed'.split(' ');
+  const texts = {};
+  let size = 0;
+  let w = 0;
+  for (const d of index.documents) texts[d.id] = '';
+  const ids = Object.keys(texts);
+  for (let i = 0; size < TEXT_MB * MB; i = (i + 1) % ids.length) {
+    const chunk = Array.from({ length: 200 }, () => WORDS[(w = (w + 17) % WORDS.length)]).join(' ') + '.\n';
+    texts[ids[i]] += chunk;
+    size += chunk.length;
+  }
+  const textText = JSON.stringify({ schema: 'medrec-text/v1', person: index.person, texts });
+  await writeFile(join(folder, 'text.json'), textText);
+  // Without the sample's anchor, its timestamps are read as written: no shifting, as with a real folder.
+  const manifestPath = join(dir, 'demo', 'manifest.json');
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  delete manifest.anchor;
+  await writeFile(manifestPath, JSON.stringify(manifest));
+  return { index, indexText, textText };
 }
-const textText = JSON.stringify({ schema: 'medrec-text/v1', person: index.person, texts });
-await writeFile(join(folder, 'text.json'), textText);
-// Without the sample's anchor, its timestamps are read as written: no shifting, as with a real folder.
-const manifestPath = join(dir, 'demo', 'manifest.json');
-const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-delete manifest.anchor;
-await writeFile(manifestPath, JSON.stringify(manifest));
 
 // ---- Serving it ----
 
-const server = spawn('npx', ['vite', 'preview', '--outDir', dir, '--port', String(PORT), '--strictPort'], { stdio: ['ignore', 'pipe', 'pipe'] });
-await new Promise((resolve, reject) => {
-  const t = setTimeout(() => reject(new Error('vite preview did not start')), 30_000);
-  server.stdout.on('data', (b) => String(b).includes(`${PORT}`) && (clearTimeout(t), resolve()));
-});
+/** vite preview on PORT, started directly rather than through npx, so killing it stops the server. */
+function serve(dir) {
+  const server = spawn(join('node_modules', '.bin', 'vite'), ['preview', '--outDir', dir, '--port', String(PORT), '--strictPort'], { stdio: ['ignore', 'pipe', 'inherit'] });
+  return new Promise((resolve, reject) => {
+    const fail = (why) => {
+      clearTimeout(t);
+      server.kill();
+      reject(new Error(`vite preview did not start: ${why}`));
+    };
+    const t = setTimeout(() => fail('no answer in 30 s'), 30_000);
+    server.on('error', (e) => fail(e.message));
+    server.on('exit', (code) => fail(`it exited with code ${code}`));
+    // Read on after it starts, so its output never fills the pipe.
+    server.stdout.on('data', (b) => {
+      if (!String(b).includes(`${PORT}`)) return;
+      clearTimeout(t);
+      server.removeAllListeners('exit');
+      resolve(server);
+    });
+  });
+}
 
 // ---- Timing ----
 
-const browser = await chromium.launch();
+const dir = await mkdtemp(join(tmpdir(), 'oyh-perf-'));
 const times = { open: [], person: [], firstSearch: [], nextSearch: [] };
+let built;
+let server;
+let browser;
 try {
+  built = await buildFolder(dir);
+  server = await serve(dir);
+  browser = await chromium.launch();
   for (let run = 0; run < RUNS; run += 1) {
     const context = await browser.newContext({ ...devices['Pixel 7'], ...(UNCOMPRESSED ? { extraHTTPHeaders: { 'Accept-Encoding': 'identity' } } : {}) });
     const page = await context.newPage();
@@ -146,10 +171,11 @@ try {
     await context.close();
   }
 } finally {
-  await browser.close();
-  server.kill();
+  await browser?.close();
+  server?.kill();
   await rm(dir, { recursive: true, force: true });
 }
+const { index, indexText, textText } = built;
 
 const median = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
 const ms = (x) => `${Math.round(x).toLocaleString('en-US')} ms`;
