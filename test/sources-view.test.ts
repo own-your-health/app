@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { ANSWER_SHOWN_MS, ATTENTION, HEALTH_ORDER, isRecentAnswer, latestAnswered, needsAttention, needsPerson, sourceViews, type AnsweredRequest } from '../src/model/sources';
 import type { RefreshRequest } from '../src/model/types';
-import { requestAnswer } from '../src/ui/views/sources';
+import { clock } from '../src/ui/format';
+import { requestAnswer, signInWords } from '../src/ui/views/sources';
 import { demo, sourceOf } from './demo-data';
 
 const NOW = new Date('2026-11-22T20:00:00Z');
@@ -28,8 +29,32 @@ describe('the answer to a refresh request', () => {
 
   it('counts each outcome when they differ', () => {
     expect(requestAnswer(answered({ all: true }, ['ok', 'ok', 'needs_person', 'skipped_interval']), names, NOW)).toBe(
-      'Last refresh request 2 minutes ago: 2 loaded, 1 needed a person, 1 not due yet',
+      'Last refresh request 2 minutes ago: 2 loaded, 1 needed a person, 1 too soon after its last try',
     );
+  });
+
+  it('says when a source skipped as too soon may load again', () => {
+    const lab = sourceOf(household, 'Sam Example', 'labcorp');
+    const next = '2026-11-23T01:40:00Z';
+    const r = answered({ source: lab.id }, ['skipped_interval']);
+    r.handled.sources![0]!.next_allowed_at = next;
+    expect(requestAnswer(r, names, NOW)).toMatch(/^Last refresh request for .+ 2 minutes ago: not loaded, too soon after its last try; next load allowed /);
+    expect(requestAnswer(r, names, NOW).endsWith(`; next load allowed ${clock(next, NOW)}`)).toBe(true);
+  });
+
+  it('names the earliest of several skipped sources, in the plural', () => {
+    const all = answered({ all: true }, ['skipped_interval', 'skipped_interval']);
+    all.handled.sources![0]!.next_allowed_at = '2026-11-23T05:00:00Z';
+    all.handled.sources![1]!.next_allowed_at = '2026-11-23T02:00:00Z';
+    expect(requestAnswer(all, names, NOW)).toBe(`Last refresh request 2 minutes ago: none loaded, too soon after their last tries; next load allowed ${clock('2026-11-23T02:00:00Z', NOW)}`);
+    // 21:00-05:00 is 02:00Z, after 01:30Z, though it sorts first as text.
+    const offsets = answered({ all: true }, ['skipped_interval', 'skipped_interval', 'skipped_interval']);
+    offsets.handled.sources![0]!.next_allowed_at = '2026-11-22T21:00:00-05:00';
+    offsets.handled.sources![1]!.next_allowed_at = '2026-11-23T01:30:00Z';
+    offsets.handled.sources![2]!.next_allowed_at = 'not a time';
+    expect(requestAnswer(offsets, names, NOW).endsWith(`; next load allowed ${clock('2026-11-23T01:30:00Z', NOW)}`)).toBe(true);
+    const mixed = answered({ all: true }, ['ok', 'skipped_interval', 'skipped_interval']);
+    expect(requestAnswer(mixed, names, NOW)).toBe('Last refresh request 2 minutes ago: 1 loaded, 2 too soon after their last tries');
   });
 
   it('names the source or person a narrower request was for', () => {
@@ -84,5 +109,39 @@ describe('what needs attention', () => {
 
   it('leaves a failed load off the list only a person can act on', () => {
     expect(needsPerson(views).map((v) => v.health)).toEqual(['needs_person']);
+  });
+});
+
+describe('home’s line for a sign-in that needs a person', () => {
+  const plan = views.find((v) => v.source.id === sourceOf(household, 'Robin Example', 'uhc').id)!;
+  const lab = views.find((v) => v.source.id === sourceOf(household, 'Sam Example', 'labcorp').id)!;
+  const chart = views.find((v) => v.source.id === sourceOf(household, 'Robin Example', 'mychart').id)!;
+  const ended = (v: (typeof views)[number]) => ({ ...v, health: 'expired' as const });
+
+  it('names the one source, and opens it', () => {
+    expect(signInWords(views)).toEqual({ text: `${plan.name} needs a sign-in on the Mac`, route: { name: 'source', source: plan.source.id } });
+  });
+
+  it('names two, and opens Sources', () => {
+    expect(signInWords([plan, ended(lab)])).toEqual({ text: `${plan.name} and ${lab.name} need a sign-in on the Mac`, route: { name: 'sources' } });
+  });
+
+  it('counts three or more', () => {
+    expect(signInWords([plan, ended(lab), ended(chart)])?.text).toBe('3 sources need a sign-in on the Mac');
+  });
+
+  it('says a Keychain approval when that is what the Mac waits for', () => {
+    const keychain = { ...plan, status: { ...plan.status!, sign_in: { ...plan.status!.sign_in!, needs_person: { reason: 'keychain', command: 'medrec refresh sign-in s_x' } } } };
+    expect(signInWords([keychain])?.text).toBe(`${plan.name} needs a Keychain approval on the Mac`);
+    expect(signInWords([keychain, ended(lab)])?.text).toBe(`${plan.name} and ${lab.name} need a person on the Mac`);
+  });
+
+  it('tells two people’s sources of the same name apart', () => {
+    const twin = { ...ended(lab), name: plan.name };
+    expect(signInWords([plan, twin])?.text).toBe(`${plan.name} (Robin Example) and ${plan.name} (Sam Example) need a sign-in on the Mac`);
+  });
+
+  it('is absent when nothing needs a person', () => {
+    expect(signInWords(views.filter((v) => v !== plan))).toBeUndefined();
   });
 });

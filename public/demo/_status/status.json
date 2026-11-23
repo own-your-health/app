@@ -91,8 +91,8 @@
         "exit_code": 3,
         "error": {
           "code": "needs_person",
-          "message": "The member site session ended.",
-          "remedy": "Sign in again on the Mac."
+          "message": "The member site session has expired. Sign in with `uhc auth login --browser --profile <provider profile> --overwrite`.",
+          "remedy": "Run `uhc auth login`, then import again."
         },
         "import": null
       },

@@ -1,11 +1,13 @@
 // Sources: each provider medrec loads from, its sign-in, its last load and
-// attempt, and what the Mac does next. Home shows only what needs a person.
+// attempt, and what the Mac does next. Home has one line for what needs a
+// person.
 
-import { headline, isRecentAnswer, needsAttention, type AnsweredRequest, type MacState, type SourceView } from '../../model/sources';
-import { h, type Child } from '../dom';
-import { card, chip, command, empty, refreshControl, row, type Ctx, type Tone } from '../components';
-import { dateTime, duration, relative } from '../format';
-import type { Person } from '../../model/types';
+import { headline, isRecentAnswer, needsAttention, needsPerson, NEEDS_PERSON, type AnsweredRequest, type MacState, type SourceView } from '../../model/sources';
+import { h, icon, type Child } from '../dom';
+import { card, chip, command, empty, link, refreshControl, row, type Ctx, type Tone } from '../components';
+import { clock, dateTime, duration, relative } from '../format';
+import type { ErrorInfo, Handled, Person } from '../../model/types';
+import type { Route } from '../router';
 
 export const HEALTH_TEXT: Record<SourceView['health'], [string, Tone]> = {
   needs_person: ['Needs a person', 'attention'],
@@ -49,7 +51,7 @@ const OUTCOME_TEXT: Record<string, string> = {
   ok: 'loaded',
   failed: 'failed',
   needs_person: 'needed a person',
-  skipped_interval: 'skipped: not due yet',
+  skipped_interval: 'not loaded, too soon after its last try',
   skipped_paused: 'skipped: paused',
   running: 'running',
 };
@@ -74,25 +76,71 @@ export function signInText(v: SourceView): string | undefined {
   }
 }
 
+/** The earliest a source the Mac skipped may load again: "; next load allowed at 9:40 PM". */
+function nextAllowed(sources: Handled['sources'], now: Date): string {
+  // By the moment, not the text: an offset other than Z sorts wrong as a string.
+  const next = (sources ?? [])
+    .filter((x) => x.outcome === 'skipped_interval' && x.next_allowed_at && !Number.isNaN(Date.parse(x.next_allowed_at)))
+    .map((x) => x.next_allowed_at!)
+    .sort((a, b) => Date.parse(a) - Date.parse(b))[0];
+  return next ? `; next load allowed ${clock(next, now)}` : '';
+}
+
+/**
+ * What the provider's own tool said, folded away. Its words were written for
+ * someone running that tool by hand, so they can name commands other than
+ * the one medrec asks for.
+ */
+export function errorDetails(e: ErrorInfo, opts: { commandAbove?: boolean } = {}): HTMLElement | null {
+  if (!e.message && !e.remedy) return null;
+  return h(
+    'details',
+    { class: 'error-details' },
+    h('summary', null, 'Error details'),
+    opts.commandAbove ? h('p', { class: 'muted' }, 'What the provider’s tool reported. To sign in, run the medrec command above, not the tool’s own.') : null,
+    e.message ? h('p', null, e.message) : null,
+    e.remedy ? h('p', null, e.remedy) : null,
+    e.code ? h('p', { class: 'muted' }, `Code: ${e.code}`) : null,
+  );
+}
+
 /**
  * The lines under a source: last load, last attempt, sign-in, next run,
- * requests. `brief` (the lists) leaves out what is fine; the source's own
- * page shows everything.
+ * requests. `brief` (the lists) leaves out what is fine and the provider's
+ * own error text; the source's own page shows everything.
  */
 export function sourceDetail(ctx: Ctx, v: SourceView, brief = false): Child[] {
   const now = ctx.now();
   const st = v.status;
   const lines: Child[] = [h('div', null, loadText(v, now))];
   const a = v.lastAttempt;
-  if (a && a.outcome !== 'ok') {
-    const err = a.error?.message ? `: ${a.error.message}` : a.error?.code === 'interrupted' ? ': the Mac stopped before it finished' : '';
-    lines.push(h('div', { class: a.outcome === 'failed' ? 'error-text' : undefined }, `Last try ${relative(a.started_at, now)} ${OUTCOME_TEXT[a.outcome] ?? a.outcome}${err}`));
-    if (a.error?.remedy) lines.push(h('div', { class: 'muted' }, a.error.remedy));
+  const np = st?.sign_in?.needs_person;
+  const ended = NEEDS_PERSON.includes(v.health);
+  if (ended) {
+    lines.push(h('div', { class: 'attention' }, np?.reason === 'keychain' ? 'The Mac waited on a Keychain approval that nobody gave.' : `The sign-in to ${v.name} has ended.`));
+    if (np) {
+      lines.push(
+        h(
+          'div',
+          { class: 'needs-person' },
+          h('div', null, np.reason === 'keychain' ? 'Run this on the Mac, and approve the dialog:' : 'To sign in again, run this in a terminal on the Mac:'),
+          command(np.command, ctx),
+        ),
+      );
+    }
+  } else if (a && a.outcome !== 'ok') {
+    const failed = a.outcome === 'failed';
+    const retries = !!st?.auto && !st.paused;
+    const text = failed
+      ? `The last try, ${relative(a.started_at, now)}, failed${a.error?.code === 'interrupted' ? ': the Mac stopped before it finished' : ''}.${retries ? ' The Mac tries again on its own.' : ''}`
+      : `Last try ${relative(a.started_at, now)}: ${OUTCOME_TEXT[a.outcome] ?? a.outcome}`;
+    lines.push(h('div', { class: failed ? 'error-text' : undefined }, text));
     if ((st?.failures ?? 0) > 1) lines.push(h('div', { class: 'muted' }, `${st!.failures} failures in a row; the Mac waits longer before each new try`));
   }
+  if (!brief && a?.error && a.outcome !== 'ok') lines.push(errorDetails(a.error, { commandAbove: ended && !!np }));
   const si = signInText(v);
   const fine = v.status?.sign_in?.state === 'ok' || v.status?.sign_in?.state === 'not_needed';
-  if (si && !(brief && (fine || v.health === 'needs_person'))) lines.push(h('div', null, si));
+  if (si && !ended && !(brief && fine)) lines.push(h('div', null, si));
   if (st?.paused) {
     lines.push(h('div', null, `Paused${st.paused.reason === 'consent' ? ': waiting on the household’s consent to the site’s terms' : ''}${st.paused.note ? `. ${st.paused.note}` : ''}`));
   } else if (st) {
@@ -101,34 +149,59 @@ export function sourceDetail(ctx: Ctx, v: SourceView, brief = false): Child[] {
   } else {
     lines.push(h('div', { class: 'muted' }, 'Not set up for refresh on the Mac'));
   }
-  const np = st?.sign_in?.needs_person;
-  if (np) {
-    lines.push(
-      h(
-        'div',
-        { class: 'needs-person' },
-        h('div', { class: 'attention' }, np.reason === 'keychain' ? 'The Mac waited on a Keychain approval that nobody gave. Run this on the Mac, and approve the dialog:' : 'The sign-in needs a person. Run this in a terminal on the Mac:'),
-        command(np.command, ctx),
-      ),
-    );
-  }
   const handled = v.lastHandled?.handled;
   const recent = v.lastHandled ? isRecentAnswer(v.lastHandled, now) : false;
   if (handled && !v.pending.length && v.lastHandled && (!brief || recent)) {
-    const mine = handled.sources?.find((s) => s.source === v.source.id);
+    const mine = handled.sources?.find((x) => x.source === v.source.id);
     const when = relative(handled.finished_at ?? v.lastHandled.requested_at, now);
     const outcome = mine ? OUTCOME_TEXT[mine.outcome] ?? mine.outcome : handled.outcome;
-    const next = mine?.next_allowed_at && mine.outcome === 'skipped_interval' ? `; next allowed ${dateTime(mine.next_allowed_at)}` : '';
-    lines.push(h('div', { class: 'muted' }, `Last refresh request ${when}: ${outcome}${next}`));
+    lines.push(h('div', { class: 'muted' }, `Last refresh request ${when}: ${outcome}${mine ? nextAllowed([mine], now) : ''}`));
   }
   return lines;
 }
 
-/** The shorter words for an outcome counted among others ("2 not due yet"). */
-const COUNTED_TEXT: Record<string, string> = {
-  skipped_interval: 'not due yet',
-  skipped_paused: 'paused',
-};
+/** What a source that needs a person waits for, in a few words. */
+function waitsFor(v: SourceView): string {
+  return v.status?.sign_in?.needs_person?.reason === 'keychain' ? 'a Keychain approval' : 'a sign-in';
+}
+
+/**
+ * The one line for the sign-ins only a person can make ("Example Health
+ * Plan needs a sign-in on the Mac"), and where it leads: the source, or
+ * Sources for several. Undefined when none does.
+ */
+export function signInWords(views: SourceView[]): { text: string; route: Route } | undefined {
+  const needs = needsPerson(views);
+  if (needs.length === 0) return undefined;
+  const label = (v: SourceView) => (v.person && needs.some((x) => x !== v && x.name === v.name) ? `${v.name} (${v.person.name})` : v.name);
+  const what = needs.every((v) => waitsFor(v) === 'a sign-in') ? 'a sign-in' : needs.length === 1 ? waitsFor(needs[0]!) : 'a person';
+  const text =
+    needs.length === 1
+      ? `${label(needs[0]!)} needs ${what} on the Mac`
+      : needs.length === 2
+        ? `${label(needs[0]!)} and ${label(needs[1]!)} need ${what} on the Mac`
+        : `${needs.length} sources need ${what} on the Mac`;
+  return { text, route: needs.length === 1 ? { name: 'source', source: needs[0]!.source.id } : { name: 'sources' } };
+}
+
+/** signInWords as a link, for home and a person's overview. */
+export function signInNotice(views: SourceView[]): HTMLElement | null {
+  const words = signInWords(views);
+  return words ? h('p', { class: 'signin-notice' }, link(words.route, h('span', null, words.text), icon('next', 18))) : null;
+}
+
+/** The shorter words for `n` sources with an outcome, counted among others ("2 too soon after their last tries"). */
+function counted(outcome: string, n: number): string {
+  if (outcome === 'skipped_interval') return n === 1 ? 'too soon after its last try' : 'too soon after their last tries';
+  if (outcome === 'skipped_paused') return 'paused';
+  return OUTCOME_TEXT[outcome] ?? outcome.replace(/_/g, ' ');
+}
+
+/** The words for every source of a request having had the same outcome. */
+function only([outcome, n]: [string, number]): string {
+  if (outcome === 'skipped_interval' && n > 1) return 'none loaded, too soon after their last tries';
+  return OUTCOME_TEXT[outcome] ?? outcome;
+}
 
 /**
  * The Mac's answer to a refresh request, in one line: "loaded" when every
@@ -147,11 +220,11 @@ export function requestAnswer(r: AnsweredRequest, names: { sources: SourceView[]
   for (const s of handled.sources ?? []) counts.set(s.outcome, (counts.get(s.outcome) ?? 0) + 1);
   const answer =
     counts.size === 1
-      ? OUTCOME_TEXT[[...counts.keys()][0]!] ?? [...counts.keys()][0]
+      ? only([...counts][0]!)
       : counts.size > 1
-        ? [...counts].map(([o, n]) => `${n} ${COUNTED_TEXT[o] ?? OUTCOME_TEXT[o] ?? o.replace(/_/g, ' ')}`).join(', ')
+        ? [...counts].map(([o, n]) => `${n} ${counted(o, n)}`).join(', ')
         : handled.message ?? handled.outcome;
-  return `Last refresh request${what} ${relative(handled.finished_at, now)}: ${answer}`;
+  return `Last refresh request${what} ${relative(handled.finished_at, now)}: ${answer}${nextAllowed(handled.sources, now)}`;
 }
 
 /** A request would answer at once for a paused source or one that needs a person. */

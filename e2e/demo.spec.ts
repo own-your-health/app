@@ -43,24 +43,43 @@ async function openSection(page: Page, name: string) {
 const BOTTOM = ['Overview', 'Results', 'Medicines', 'Timeline'];
 const SLUGS: Record<string, string> = { 'Claims and bills': 'claims' };
 
-test('home shows what needs a person, and leaves the sources to their screen', async ({ page }) => {
+test('home leads with the people, and one line for the sign-in that needs a person', async ({ page }) => {
   await page.goto('./?demo');
   await expect(page.locator('.banner')).toContainText('Invented records');
-  const alert = page.locator('.card-attention');
-  await expect(alert.locator('.glance-answer')).toHaveText('1 sign-in needs a person');
-  await expect(alert.locator('.row')).toHaveCount(1);
-  await expect(alert).toContainText('Example Health Plan');
-  await expect(alert.locator('.command code')).toHaveText(/^medrec refresh sign-in s_[a-z2-7]{20}$/);
+  const people = page.locator('.card', { hasText: 'People' });
+  await expect(people.locator('.row')).toHaveCount(4);
+  await expect(people).toBeInViewport();
+  // The people come first, then the one line, which carries no command or provider error.
+  const notice = page.locator('.signin-notice');
+  await expect(notice).toHaveText('Example Health Plan needs a sign-in on the Mac');
+  expect(await people.evaluate((el) => el.nextElementSibling?.classList.contains('signin-notice'))).toBe(true);
+  await expect(page.locator('main .command')).toHaveCount(0);
+  await expect(page.locator('main')).not.toContainText('auth login');
   const strip = page.locator('.status-strip');
   await expect(strip).toContainText(/^Latest load \d+ hours? ago\./);
   await expect(strip).toContainText(/Last refresh request for .+ 3 hours ago: loaded/);
   // The failed load retries on its own, so home only counts it.
   await expect(strip).toContainText('1 source failed to load; the Mac tries again on its own.');
   await expect(page.getByRole('button', { name: 'Refresh everything' })).toBeVisible();
-  await expect(page.locator('.card', { hasText: 'People' }).locator('.row')).toHaveCount(4);
-  // The alert's row and the people: every other source is on Sources.
-  await expect(page.locator('main .row')).toHaveCount(5);
+  // Only the people: every source is on Sources.
+  await expect(page.locator('main .row')).toHaveCount(4);
   await expect(page.getByRole('link', { name: 'Sources: a source needs attention' })).toBeVisible();
+
+  // The line opens the source: a plain sentence and medrec's command, the provider's words folded away.
+  await notice.getByRole('link').click();
+  await expect(page).toHaveURL(/#\/s\/s_[a-z2-7]{20}$/);
+  const lines = page.locator('.card .source-lines').first();
+  await expect(lines).toContainText('The sign-in to Example Health Plan has ended.');
+  await expect(lines.locator('.command code')).toHaveText(/^medrec refresh sign-in s_[a-z2-7]{20}$/);
+  const details = lines.locator('details.error-details');
+  await expect(details.getByText(/uhc auth login --browser/)).toBeHidden();
+  await details.getByText('Error details').click();
+  await expect(details.getByText(/uhc auth login --browser/)).toBeVisible();
+  await expect(details).toContainText('To sign in, run the medrec command above, not the tool’s own.');
+  // The Mac's history folds each attempt's error too.
+  const attempts = page.locator('.card', { hasText: 'Attempts' });
+  await expect(attempts.locator('.row').first()).toBeVisible();
+  await expect(attempts.getByText(/uhc auth login --browser/)).toBeHidden();
 });
 
 test('the Sources screen lists every source and sign-in, and opens one', async ({ page }) => {
@@ -72,7 +91,11 @@ test('the Sources screen lists every source and sign-in, and opens one', async (
   const attention = page.locator('.card-attention', { hasText: 'Needs attention' });
   await expect(attention.locator('.row')).toHaveCount(2);
   await expect(attention.locator('.row').first().locator('.command code')).toHaveText(/^medrec refresh sign-in s_[a-z2-7]{20}$/);
-  await expect(attention.locator('.row').nth(1)).toContainText('The lab site answered 503 three times.');
+  await expect(attention.locator('.row').first()).toContainText('The sign-in to Example Health Plan has ended.');
+  await expect(attention.locator('.row').nth(1)).toContainText(/The last try, 2 hours ago, failed\. The Mac tries again on its own\./);
+  // The provider's own words are on the source's page, not in the list.
+  await expect(attention).not.toContainText('503');
+  await expect(attention).not.toContainText('auth login');
   const others = page.locator('.card', { hasText: 'Other sources' });
   const total = await others.locator('.row').count();
   expect(total).toBeGreaterThanOrEqual(3);
@@ -430,7 +453,7 @@ test('a refresh answer does not wipe what is being typed on the home screen', as
   // Leaving the field empty draws the answer the page held back.
   await field.fill('');
   await field.blur();
-  await expect(page.getByText(/Last refresh request just now: needed a person/)).toBeVisible({ timeout: 3000 });
+  await expect(page.locator('.status-strip')).toContainText(/Last refresh request just now: .*1 needed a person/, { timeout: 3000 });
 });
 
 test('search finds a field, says which, and narrows to one person', async ({ page }) => {
@@ -483,7 +506,11 @@ test('Refresh asks the Mac and shows its answer', async ({ page }) => {
   await expect(page.getByText(/waiting for the Mac/).first()).toBeVisible();
   // The sample Mac names the request in its running attempt for 3 seconds.
   await expect(page.getByText(/the Mac is loading .+ for it now/).first()).toBeVisible({ timeout: 10_000 });
-  await expect(page.getByText(/Last refresh request just now: needed a person/)).toBeVisible({ timeout: 15_000 });
+  // Home's one line counts each outcome, and says when a source loaded too recently may load again.
+  const answer = page.locator('.status-strip');
+  await expect(answer).toContainText(/Last refresh request just now: .*1 needed a person/, { timeout: 15_000 });
+  await expect(answer).toContainText(/too soon after (its|their) last tr(y|ies)\b.*; next load allowed (at|tomorrow at|on) /);
+  await expect(answer).not.toContainText('not due yet');
   await expect(page.getByRole('button', { name: 'Refresh everything' })).toBeVisible();
 });
 

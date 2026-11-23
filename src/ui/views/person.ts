@@ -29,6 +29,7 @@ import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, localDay, relative, yearOf } from '../format';
 import { searchPanel } from '../search';
 import { visitContents, visitWhen } from '../visit';
+import { signInNotice } from './sources';
 import { SECTION_LABELS, href, type Route, type Section } from '../router';
 
 const PRIMARY: Section[] = ['overview', 'results', 'medicines', 'timeline'];
@@ -78,7 +79,6 @@ function sectionNav(person: Person, current: Section): HTMLElement {
 function header(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
   const views = ctx.store.sources().filter((v) => v.source.person === person.id);
   const latest = views.map((v) => v.lastLoad?.at).filter(Boolean).sort().pop();
-  const needs = views.filter((v) => v.health === 'needs_person').length;
   return h(
     'section',
     { class: 'person-head' },
@@ -93,7 +93,7 @@ function header(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
       { class: 'muted small' },
       [person.birth_date ? `Born ${dateText(person.birth_date)}` : null, count(idx.records.length, 'record'), count(idx.documents.length, 'document'), latest ? `latest load ${relative(latest, ctx.now())}` : null].filter(Boolean).join(' · '),
     ),
-    needs ? h('p', { class: 'small attention' }, link({ name: 'sources' }, needs === 1 ? 'A sign-in for this person needs a person on the Mac' : `${needs} sign-ins for this person need a person on the Mac`)) : null,
+    signInNotice(views),
     views.some((v) => v.status) ? h('div', { class: 'person-actions' }, refreshControl(ctx, { person: person.id }, person.name)) : null,
   );
 }

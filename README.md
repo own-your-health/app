@@ -58,11 +58,17 @@ Refresh.
 3. Choose the records folder. The app lists the folders with a
    `household.json` that the account can see; you can also paste a folder link.
 
-Home lists the household's people, with one line on when the records last
-loaded and **Refresh everything**. A sign-in that needs a person shows at the
-top until it is made. **Sources** (`#/sources`, the stack icon in the bar,
+Home leads with the household's people and their records, then one line for
+a sign-in that needs a person ("Example Health Plan needs a sign-in on the
+Mac"), which opens the source, then search, when the records last loaded and
+**Refresh everything**. **Sources** (`#/sources`, the stack icon in the bar,
 which carries a dot while a source needs attention) has every source: its
-sign-in, its last load and attempt, and when the Mac loads it next.
+sign-in, its last load and attempt, and when the Mac loads it next. A
+source's page says in one sentence what happened and gives the medrec
+command to run; what the provider's own tool reported, which can name that
+tool's commands, is folded under **Error details**. When the Mac skips a
+source because it loaded or tried it too recently, the answer says when it
+may load again.
 
 For a child under 19, the overview and the Immunizations section set the
 recorded doses beside the routine rows of the CDC's child and adolescent

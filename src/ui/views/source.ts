@@ -5,7 +5,7 @@ import type { AttemptLine } from '../../model/types';
 import { h, icon } from '../dom';
 import { button, card, chip, empty, kv, link, refreshControl, type Ctx } from '../components';
 import { count, dateTime, duration, relative } from '../format';
-import { canRefresh, HEALTH_TEXT, sourceDetail } from './sources';
+import { canRefresh, errorDetails, HEALTH_TEXT, sourceDetail } from './sources';
 
 const OUTCOME_TONE: Record<string, 'ok' | 'error' | 'attention' | 'muted' | 'running'> = {
   ok: 'ok',
@@ -41,11 +41,12 @@ function attemptRow(a: AttemptLine): HTMLElement {
           'div',
           { class: 'row-body' },
           h('div', { class: 'row-title' }, dateTime(a.started_at)),
-          h('div', { class: 'row-meta' }, [a.trigger === 'request' ? 'Asked from the app' : a.trigger === 'manual' ? 'Run on the Mac' : 'Scheduled', counts, a.error?.message].filter(Boolean).join(' · ')),
+          h('div', { class: 'row-meta' }, [a.trigger === 'request' ? 'Asked from the app' : a.trigger === 'manual' ? 'Run on the Mac' : 'Scheduled', counts].filter(Boolean).join(' · ')),
         ),
       ),
       h('div', { class: 'row-aside' }, chip(a.outcome.replace(/_/g, ' '), OUTCOME_TONE[a.outcome] ?? 'muted')),
     ),
+    a.error ? errorDetails(a.error) : null,
   );
 }
 
