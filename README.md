@@ -190,8 +190,11 @@ adds no guess of its own to medrec's links: such a claim with no `visit`, or
 one to a record these records do not hold, joins no visit. A claim from an
 earlier medrec (no `amounts` and no `category`) still reads: its amounts come
 from the payer's own words, its categories from the codes, and its visit is
-the one of the same day from a matching provider. The rules are
-`src/model/claims.ts`, and for the visit, `src/model/visits.ts`.
+the one of the same day from a matching provider. `medrec reindex` files
+every earlier claim again in the contract's shape, from the raw file medrec
+kept for it. Every machine that imports into the folder needs medrec 0.5.0 or
+later; an earlier one files the claims it imports again in the earlier shape.
+The rules are `src/model/claims.ts`, and for the visit, `src/model/visits.ts`.
 
 Coverage, under Claims and bills, lists each insurer and plan the person has
 had, newest first, from when to when, and whose records name it. The same
