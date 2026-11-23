@@ -100,7 +100,7 @@ test('the Sources screen lists every source and sign-in, and opens one', async (
   // A sign-in nothing renews waits quietly among the others, with its command on its own page.
   const plan = others.locator('.row', { hasText: 'Example Health Plan' });
   await expect(plan.locator('.chip')).toHaveText('Waits for a sign-in');
-  await expect(plan).toContainText('Loads when someone signs in on the Mac. A sign-in to Example Health Plan lasts about 40 minutes.');
+  await expect(plan).toContainText('Loads when someone signs in on the Mac. A sign-in to Example Health Plan lasts about 30 minutes.');
   await expect(plan.locator('.command')).toHaveCount(0);
   // Where medrec has not measured how long a sign-in lasts, the row says only how the source loads.
   const blood = others.locator('.row', { hasText: 'Example Blood Center' });

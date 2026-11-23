@@ -1046,7 +1046,7 @@ write('_status/status.json', {
     },
     {
       source: src.robinPlan.id, person: robin.id, cli: 'uhc', organization: 'example-health-plan', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: null,
-      sign_in: { state: 'signed_out', expires_at: null, checked_at: at(-60 * 8), renews: false, lasts_secs: 2400, needs_person: { reason: 'sign_in', since: at(-60 * 8), command: `medrec refresh sign-in ${src.robinPlan.id}` } },
+      sign_in: { state: 'signed_out', expires_at: null, checked_at: at(-60 * 8), renews: false, lasts_secs: 1800, needs_person: { reason: 'sign_in', since: at(-60 * 8), command: `medrec refresh sign-in ${src.robinPlan.id}` } },
       last_attempt: robinPlanNeeds,
       last_success: null,
     },
