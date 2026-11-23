@@ -28,18 +28,24 @@ and click **Get started** if it asks.
    support email.
 2. **Audience:** **External**.
 3. **Contact information:** your email.
-4. Finish, then open **Audience** again:
-   - Leave the publishing status at **Testing**. A household app does not need
-     Google's verification, and Testing mode keeps the app to the people you
-     list.
-   - Under **Test users**, add the Google account of everyone who will sign in:
-     the account that holds the records folder, and anyone it is shared with.
-     Only these accounts can sign in.
-   - In Testing, Google ends each person's grant after 7 days, and the app asks
-     for consent again. To stop that, publish the app. Google then asks, on
+4. Finish, then open **Audience** again. Its publishing status decides who
+   can sign in. A household app needs no Google verification in either.
+   - **Testing**, the default: only the accounts under **Test users** can sign
+     in, up to 100. Add the Google account of everyone who will sign in: the
+     account that holds the records folder, and anyone it is shared with.
+     Google ends each person's grant after 7 days, and the app then asks for
+     consent again.
+   - **In production**, after **Publish app**: grants no longer end after 7
+     days, and the test users list no longer limits who signs in. Any Google
+     account can sign in, after Google's warning that it has not verified the
+     app. That account reaches only its own Drive and what is shared with it,
+     so it sees none of your records. Google limits an unverified app to 100
+     users, and every account that signs in counts toward it. Google asks, on
      **Branding**, for a home page and a privacy policy on an authorized
      domain: the app's are `https://own-your-health.github.io/app/` and
      `https://own-your-health.github.io/app/privacy.html`.
+
+   Either way, give the setup link (step 6) only to your household.
 5. Open **Data access**, click **Add or remove scopes**, and add these two:
    - `https://www.googleapis.com/auth/drive.readonly`
    - `https://www.googleapis.com/auth/drive.file`
@@ -69,9 +75,11 @@ and this one never uses it.
 
 1. Open https://own-your-health.github.io/app/ and paste the client id. The app
    keeps it in this browser only.
-2. Click **Sign in with Google** and choose a test user's account.
-3. Google says it **hasn't verified this app**. That is expected for a client
-   in Testing mode with a Drive permission. Click **Continue**.
+2. Click **Sign in with Google** and choose the account that holds the
+   records folder (a test user's, while the client is in Testing).
+3. Google says it **hasn't verified this app**. That is expected for a
+   household's own client that asks for a Drive permission, in Testing or
+   published. Click **Continue**.
 4. Allow both permissions.
 5. Choose the records folder.
 
@@ -100,9 +108,12 @@ it. A link whose id is not a Google client id opens the paste field instead.
 The paste field also takes the whole link: that is how an app added to an
 iPhone's Home Screen, which has no address bar, gets the client.
 
-It is fine to send the link to the people in your household. A client id is not
-a secret: Google shows it to everyone who signs in. Only the test users listed
-on your consent screen (step 3) can sign in through it.
+Send the link to the people in your household, and only to them. A client id
+is not a secret: Google shows it to everyone who signs in. While the client is
+in Testing, only the test users listed on its consent screen (step 3) can sign
+in through it. A published client lets any Google account sign in: that
+account reaches only its own Drive, but it counts toward Google's limit of 100
+users for an unverified app.
 
 Open a setup link only when someone in your household sent it. A link can name
 any Google client, and on a device that has none yet the app goes straight to
@@ -147,6 +158,6 @@ empty `_requests` folder inside it, and open
 | Google says | What it means |
 |---|---|
 | `redirect_uri_mismatch` | The redirect URI is not on the client exactly as the app sends it, trailing slash included. |
-| `access_denied`, or "has not completed the Google verification process" | The account is not a test user of the client. Add it under **Audience**. |
+| `access_denied`, or "has not completed the Google verification process" | The client is in Testing and the account is not one of its test users. Add it under **Audience**. |
 | `invalid_client` | The client id was mistyped, or the client was deleted. |
 | "This browser or app may not be secure" | Google refuses sign-in in automated browsers. Use an ordinary browser. |

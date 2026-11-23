@@ -9,8 +9,15 @@ import { dateTime } from '../format';
 
 export const REPO_URL = 'https://github.com/own-your-health/app';
 export const REGISTRATION_URL = `${REPO_URL}/blob/main/docs/registration.md`;
+/** From nothing to the records on a phone: medrec, its folder, the providers, the client, the app. */
+export const GETTING_STARTED_URL = `${REPO_URL}/blob/main/docs/getting-started.md`;
+export const MEDREC_URL = 'https://github.com/own-your-health/medrec-cli';
 /** The privacy policy, a static page next to the app. */
 export const PRIVACY_URL = './privacy.html';
+
+function outLink(href: string, text: string): HTMLElement {
+  return h('a', { href, target: '_blank', rel: 'noopener noreferrer' }, text);
+}
 
 function demoLink(): HTMLElement {
   return h('a', { class: 'button button-outline', href: './?demo' }, 'Try it with sample records');
@@ -49,9 +56,15 @@ export function welcomeView(onSave: (clientId: string) => void, error?: string):
     { class: 'stack narrow' },
     intro(),
     card(
+      { title: 'First, a records folder' },
+      h('p', null, 'The app shows a records folder that medrec made in your Google Drive. medrec is a free command-line tool that runs in a terminal on a Mac or a Linux computer: it files your documents and fetches records from your providers into that folder.'),
+      h('p', null, 'No folder yet? Set up medrec first. The Google client below comes after.'),
+      h('ul', { class: 'link-list' }, h('li', null, outLink(GETTING_STARTED_URL, 'Getting started, from nothing to your records here')), h('li', null, outLink(MEDREC_URL, 'medrec'))),
+    ),
+    card(
       { title: 'Your Google client' },
       h('p', null, 'Each household signs in through its own Google OAuth client, so no one else’s app holds access to your Drive. Creating one takes about ten minutes in Google Cloud, free.'),
-      h('p', null, h('a', { href: REGISTRATION_URL, target: '_blank', rel: 'noopener noreferrer' }, 'How to create your Google client')),
+      h('p', null, outLink(REGISTRATION_URL, 'How to create your Google client')),
       h('p', { class: 'muted small' }, 'Someone in your household already uses the app? Ask them for the setup link in its Settings: opening it on this device skips this step. In an app added to an iPhone’s Home Screen, paste the link here instead.'),
       h('label', { class: 'label' }, 'Client id or setup link', input),
       msg,
@@ -121,7 +134,10 @@ export function folderView(drive: Drive, onPick: (f: { id: string; name: string 
                 ),
               ),
             )
-          : empty('No folder with a household.json was found in this account. If the records folder was shared with you, paste its link below.'),
+          : empty(
+              'No folder with a household.json was found in this account. medrec creates one when it sets up a records folder. If the records folder was shared with you, paste its link below.',
+              outLink(GETTING_STARTED_URL, 'Getting started with medrec'),
+            ),
       );
     } catch (e) {
       list.replaceChildren(empty(e instanceof Error ? e.message : 'Drive did not answer.'));

@@ -1442,3 +1442,11 @@ mark {
   margin-top: 4px;
   overflow-wrap: anywhere;
 }
+
+/* The welcome screen's links to medrec and the guide. */
+.link-list {
+  display: grid;
+  gap: 8px;
+  padding-left: 1.2em;
+  list-style: disc;
+}
