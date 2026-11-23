@@ -114,6 +114,12 @@ test('the Sources screen lists every source and sign-in, and opens one', async (
   await blood.locator('.row-main').click();
   await expect(page.locator('.card .source-lines').first().locator('.needs-person')).toContainText('To load it now, run this in a terminal on the Mac:');
   await expect(page.locator('.card .source-lines').first().locator('.command code')).toHaveText(/^medrec refresh sign-in s_[a-z2-7]{20}$/);
+  // Its provider said nothing, so the details are medrec's words alone, not passed off as the provider's.
+  const own = page.locator('.card .source-lines').first().locator('details.error-details');
+  await own.getByText('Error details').click();
+  await expect(own).toContainText('oneblood needs a sign-in: its export answered that the sign-in has ended');
+  await expect(own).not.toContainText('What the provider’s tool reported');
+  await expect(own).not.toContainText('on this machine');
   await expect(page.getByRole('button', { name: /^Refresh/ })).toHaveCount(0);
   await page.goBack();
   const total = await others.locator('.row').count();

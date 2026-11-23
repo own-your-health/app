@@ -93,13 +93,18 @@ function nextAllowed(sources: Handled['sources'], now: Date): string {
   return next ? `; next load allowed ${clock(next, now)}` : '';
 }
 
+/** A medrec command in backticks, as medrec's own remedy gives it: `medrec refresh sign-in s_…`. */
+const MEDREC_COMMAND = /`(medrec [^`]+)`/;
+
 /**
- * medrec 0.7.0 and later: the error of a sign-in that ended, whose message and
- * remedy are medrec's own. medrec writes `provider_message` only then, as a
- * string; JSON's null, or any other type, is not that shape.
+ * An error in medrec's own words: a sign-in that ended, from medrec 0.7.0 on.
+ * 0.7.0 writes `provider_message` beside it, as a string, empty when the
+ * provider said nothing; 0.8.0 leaves it out then. Either way medrec's remedy
+ * runs a medrec command, which a provider tool's own remedy, before 0.7.0,
+ * never named. JSON's null in `provider_message` is not a string.
  */
-export function isMedrecSignInError(e: ErrorInfo | null | undefined): e is ErrorInfo & { provider_message: string } {
-  return typeof e?.provider_message === 'string';
+export function isMedrecOwnError(e: ErrorInfo | null | undefined): boolean {
+  return !!e && (typeof e.provider_message === 'string' || MEDREC_COMMAND.test(e.remedy ?? ''));
 }
 
 /**
@@ -108,11 +113,11 @@ export function isMedrecSignInError(e: ErrorInfo | null | undefined): e is Error
  * the one medrec asks for.
  */
 export function errorDetails(e: ErrorInfo, opts: { commandAbove?: boolean } = {}): HTMLElement | null {
-  const said = isMedrecSignInError(e) ? e.provider_message.trim() : '';
+  const said = typeof e.provider_message === 'string' ? e.provider_message.trim() : '';
   if (!e.message && !e.remedy && !said) return null;
   const reported = opts.commandAbove ? 'What the provider’s tool reported. To sign in, run the medrec command above, not the tool’s own.' : 'What the provider’s tool reported.';
   // From medrec 0.7.0 a sign-in that ended has medrec's own message and remedy, and the tool's words apart.
-  const body = isMedrecSignInError(e)
+  const body = isMedrecOwnError(e)
     ? [
         e.message ? h('p', null, e.message) : null,
         e.remedy && !opts.commandAbove ? h('p', null, e.remedy) : null,
@@ -123,10 +128,10 @@ export function errorDetails(e: ErrorInfo, opts: { commandAbove?: boolean } = {}
   return h('details', { class: 'error-details' }, h('summary', null, 'Error details'), body, e.code ? h('p', { class: 'muted' }, `Code: ${e.code}`) : null);
 }
 
-/** The command in medrec's own remedy for a sign-in that ended (0.7.0 and later), when the status gives none. */
+/** The command in medrec's own remedy for a sign-in that ended (0.7.0 and later), for when the status gives none. */
 export function remedyCommand(e: ErrorInfo | null | undefined): string | null {
-  if (!isMedrecSignInError(e) || !e.remedy) return null;
-  const m = /`(medrec [^`]+)`/.exec(e.remedy);
+  if (!e?.remedy || !isMedrecOwnError(e)) return null;
+  const m = MEDREC_COMMAND.exec(e.remedy);
   return m ? m[1]! : null;
 }
 

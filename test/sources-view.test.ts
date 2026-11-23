@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ANSWER_SHOWN_MS, ATTENTION, HEALTH_ORDER, isRecentAnswer, latestAnswered, needsAttention, needsPerson, sourceViews, type AnsweredRequest } from '../src/model/sources';
 import type { ErrorInfo, RefreshRequest } from '../src/model/types';
 import { clock } from '../src/ui/format';
-import { remedyCommand, requestAnswer, signInWords } from '../src/ui/views/sources';
+import { isMedrecOwnError, remedyCommand, requestAnswer, signInWords } from '../src/ui/views/sources';
 import { demo, sourceOf } from './demo-data';
 
 const NOW = new Date('2026-11-22T20:00:00Z');
@@ -176,9 +176,27 @@ describe('remedyCommand', () => {
     expect(remedyCommand({ ...base, remedy: 'Run `athena auth login`.', provider_message: 'Session ended.' })).toBeNull();
     expect(remedyCommand({ ...base, provider_message: 'Session ended.' })).toBeNull();
     expect(remedyCommand(null)).toBeNull();
-    // JSON's null is not 0.7.0's shape; an empty string is, since medrec writes the key only on its own sign-in error.
+  });
+  it('takes it whether the provider said something, nothing (0.7.0 writes ""), or nothing at all (0.8.0 leaves the key out)', () => {
     const own = 'run `medrec refresh sign-in s_aaaaaaaaaaaaaaaaaaaa` on this machine';
-    expect(remedyCommand({ ...base, remedy: own, provider_message: null } as unknown as ErrorInfo)).toBeNull();
-    expect(remedyCommand({ ...base, remedy: own, provider_message: '' })).toBe('medrec refresh sign-in s_aaaaaaaaaaaaaaaaaaaa');
+    for (const said of [{ provider_message: 'Session ended.' }, { provider_message: '' }, {}, { provider_message: null } as unknown as ErrorInfo]) {
+      expect(remedyCommand({ ...base, remedy: own, ...said })).toBe('medrec refresh sign-in s_aaaaaaaaaaaaaaaaaaaa');
+    }
+  });
+});
+
+describe('isMedrecOwnError', () => {
+  const message = 'athena needs a sign-in: its export answered that the sign-in has ended';
+  const own = 'run `medrec refresh sign-in s_aaaaaaaaaaaaaaaaaaaa` on this machine';
+  it('knows medrec’s own words, with or without the provider’s beside them', () => {
+    expect(isMedrecOwnError({ code: 'needs_person', message, remedy: own, provider_message: 'Run `athena auth login`.' })).toBe(true);
+    expect(isMedrecOwnError({ code: 'needs_person', message, remedy: own, provider_message: '' })).toBe(true);
+    expect(isMedrecOwnError({ code: 'needs_person', message, remedy: own })).toBe(true);
+  });
+  it('takes a provider tool’s error from before 0.7.0 as the tool’s', () => {
+    expect(isMedrecOwnError({ code: 'needs_person', message: 'The sign-in has expired. Run `athena auth login`.', remedy: 'Run `athena auth login`, then import again.' })).toBe(false);
+    expect(isMedrecOwnError({ code: 'needs_person', message: 'Session expired.', remedy: 'Run `athena auth login`.', provider_message: null } as unknown as ErrorInfo)).toBe(false);
+    expect(isMedrecOwnError({ code: 'upstream', message: 'The lab site answered 503 three times.' })).toBe(false);
+    expect(isMedrecOwnError(null)).toBe(false);
   });
 });

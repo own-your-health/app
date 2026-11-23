@@ -134,8 +134,7 @@
         "error": {
           "code": "needs_person",
           "message": "oneblood needs a sign-in: its export answered that the sign-in has ended",
-          "remedy": "run `medrec refresh sign-in s_e2ocktqcc75b55gjsygb` on this machine",
-          "provider_message": "Session expired. Run `oneblood auth login --profile <provider profile>`."
+          "remedy": "run `medrec refresh sign-in s_e2ocktqcc75b55gjsygb` on this machine"
         },
         "import": null
       },
