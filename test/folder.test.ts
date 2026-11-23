@@ -103,7 +103,8 @@ describe('DemoFolder', () => {
     const { files } = JSON.parse(readFileSync(join(DEMO, 'manifest.json'), 'utf8')) as { files: string[] };
     const keys = new Set<string>();
     const walk = (v: unknown, key?: string): void => {
-      if (Array.isArray(v)) v.forEach((x) => walk(x, key));
+      // The shift moves only a time that directly follows its key; one in an array is named so no set holds it.
+      if (Array.isArray(v)) v.forEach((x) => walk(x, `${key}[]`));
       else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) walk(x, k);
       else if (key && typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(v)) keys.add(key);
     };
