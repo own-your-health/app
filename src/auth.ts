@@ -7,7 +7,6 @@
 
 export const AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 export const TOKENINFO_ENDPOINT = 'https://oauth2.googleapis.com/tokeninfo';
-export const REVOKE_ENDPOINT = 'https://oauth2.googleapis.com/revoke';
 
 /** Reads every file in the records folder. */
 export const SCOPE_READ = 'https://www.googleapis.com/auth/drive.readonly';
@@ -215,18 +214,6 @@ export async function verifyToken(fetchImpl: typeof fetch, token: string, client
   const info = (await res.json()) as { aud?: string; azp?: string; scope?: string };
   const ok = info.aud === clientId || info.azp === clientId;
   return { ok, scopes: (info.scope ?? '').split(/\s+/).filter(Boolean) };
-}
-
-export async function revokeToken(fetchImpl: typeof fetch, token: string): Promise<void> {
-  try {
-    await fetchImpl(REVOKE_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ token }).toString(),
-    });
-  } catch {
-    // Signing out still forgets the token.
-  }
 }
 
 /** Google's error codes, in words for a person. */

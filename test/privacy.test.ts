@@ -28,6 +28,9 @@ describe('the privacy policy', () => {
 
   it('says how to remove access, follows Google’s user data policy, and gives a contact', () => {
     expect(text).toContain('Third-party connections');
+    // Removing access there reaches every client of the project.
+    expect(text).toContain('Signing out does not sign medrec out on the Mac.');
+    expect(text).toContain('so if medrec on the Mac signs in to Drive through that project, it is signed out too');
     expect(text).toContain('Limited Use requirements');
     expect(html).toContain('href="https://developers.google.com/terms/api-services-user-data-policy"');
     expect(html).toContain('href="https://github.com/own-your-health/app/issues"');

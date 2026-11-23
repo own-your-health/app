@@ -40,6 +40,7 @@ export function settingsView(
             ['Client id', opts.clientId ? h('code', { class: 'wrap' }, opts.clientId) : undefined],
           ]),
           h('div', { class: 'actions' }, button('Sign out', () => ctx.signOut()), button('Use another Google client', opts.onChangeClient, { ghost: true })),
+          h('p', { class: 'small muted' }, 'Signing out forgets this browser’s sign-in. medrec on the Mac stays signed in.'),
         ),
     ctx.demo || !opts.setupLink ? null : setupLinkCard(ctx, opts.setupLink),
     themeCard(),

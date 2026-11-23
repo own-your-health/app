@@ -240,12 +240,14 @@ test('Settings gives the setup link for another device', async ({ page, context,
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(`${baseURL}?client=${CLIENT}`);
 });
 
-test('signing out revokes the token', async ({ page }) => {
+test('signing out forgets the token without revoking it, so medrec on the Mac stays signed in', async ({ page }) => {
   await signIn(page);
   await page.evaluate(() => (location.hash = '#/settings'));
+  await expect(page.getByText('Signing out forgets this browser’s sign-in. medrec on the Mac stays signed in.')).toBeVisible();
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
-  expect(google.revoked).toEqual([TOKEN]);
+  // Google's revoke would end every sign-in to the project, medrec's included.
+  expect(google.revoked).toEqual([]);
   expect(await page.evaluate((k) => localStorage.getItem(k), ACCOUNT_KEY)).toBeNull();
   await expect(page.getByRole('button', { name: 'Use a different account' })).toHaveCount(0);
   expect(google.changes).toEqual([]);
