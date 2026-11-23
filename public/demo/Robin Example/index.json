@@ -588,12 +588,8 @@
       "status": "final",
       "fields": {
         "when": "2025-03-10",
-        "value": {
-          "value": 94,
-          "unit": "mg/dL"
-        },
-        "reference_range": "70-99 mg/dL",
-        "interpretation": "Normal",
+        "value": "94",
+        "reference_range": "70 mg/dL – 99 mg/dL",
         "category": "Laboratory"
       },
       "documents": [],
@@ -2344,7 +2340,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Office visit claim",
+      "display": "Professional",
       "status": "active",
       "fields": {
         "when": "2026-11-18",
@@ -2404,7 +2400,76 @@
           "currency": "USD"
         },
         "type": "Professional",
-        "use": "claim"
+        "use": "claim",
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99213",
+              "display": "Office visit"
+            },
+            "serviced": "2026-11-18",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "180.00",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "180.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "112.50",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "87.50",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "25.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "25.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ]
+          }
+        ]
       },
       "documents": [],
       "provenance": [
@@ -2438,7 +2503,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Lab work claim",
+      "display": "Professional",
       "status": "active",
       "fields": {
         "when": "2026-10-03",
@@ -2498,7 +2563,143 @@
           "currency": "USD"
         },
         "type": "Professional",
-        "use": "claim"
+        "use": "claim",
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "80061",
+              "display": "Lipid panel"
+            },
+            "serviced": "2026-10-03",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "180.00",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "180.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "78.40",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "62.72",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "15.68",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "15.68",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ]
+          },
+          {
+            "sequence": 2,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "36415",
+              "display": "Blood draw"
+            },
+            "serviced": "2026-10-03",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "40.00",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "40.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "18.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "14.40",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "3.60",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "3.60",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ]
+          }
+        ]
       },
       "documents": [],
       "provenance": [
@@ -2532,7 +2733,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Office visit claim",
+      "display": "Professional",
       "status": "active",
       "fields": {
         "when": "2026-10-01",
@@ -2593,6 +2794,209 @@
         },
         "type": "Professional",
         "use": "claim",
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99396",
+              "display": "Preventive visit"
+            },
+            "serviced": "2026-10-01",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "320.00",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "320.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "210.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "168.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "42.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "42.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ]
+          },
+          {
+            "sequence": 2,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "90686",
+              "display": "Flu vaccine"
+            },
+            "serviced": "2026-10-01",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "62.00",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "62.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "38.40",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "30.72",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "7.68",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "7.68",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "90471",
+              "display": "Vaccine given"
+            },
+            "serviced": "2026-10-01",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "30.00",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "30.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "20.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "16.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "4.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "4.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ]
+          }
+        ],
         "benefit_balance": [
           {
             "category": "1",
@@ -2660,7 +3064,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Office visit claim",
+      "display": "Professional",
       "status": "active",
       "fields": {
         "when": "2025-09-15",
@@ -2720,7 +3124,76 @@
           "currency": "USD"
         },
         "type": "Professional",
-        "use": "claim"
+        "use": "claim",
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99213",
+              "display": "Office visit"
+            },
+            "serviced": "2025-09-15",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "189.00",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "189.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "121.10",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "121.10",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ]
+          }
+        ]
       },
       "documents": [],
       "provenance": [
@@ -2754,7 +3227,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Office visit claim",
+      "display": "Professional",
       "status": "active",
       "fields": {
         "when": "2025-03-10",
@@ -2814,7 +3287,143 @@
           "currency": "USD"
         },
         "type": "Professional",
-        "use": "claim"
+        "use": "claim",
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99214",
+              "display": "Office visit"
+            },
+            "serviced": "2025-03-10",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "290.00",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "290.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "190.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "152.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "38.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "38.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ]
+          },
+          {
+            "sequence": 2,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "85025",
+              "display": "Blood count"
+            },
+            "serviced": "2025-03-10",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "108.00",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "108.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "65.90",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "52.72",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "13.18",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "13.18",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ]
+          }
+        ]
       },
       "documents": [],
       "provenance": [
@@ -2841,8 +3450,8 @@
     {
       "id": "r_27hwlsasluzk4kq5hooh",
       "kind": "coverage",
-      "key": "coverage|http://terminology.hl7.org/CodeSystem/v3-ActCode|HIP|2026-01-01",
-      "date": "2026-01-01",
+      "key": "coverage|http://terminology.hl7.org/CodeSystem/v3-ActCode|HIP|2026-11-08",
+      "date": "2026-11-08",
       "code": {
         "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
         "code": "HIP",
@@ -2851,10 +3460,11 @@
       "display": "Example Health Plan PPO",
       "status": "active",
       "fields": {
-        "when": "2026-01-01",
+        "when": "2026-11-08",
         "payer": "Example Health Plan",
         "period": {
-          "start": "2026-01-01"
+          "start": "2026-11-08",
+          "end": "9999-12-31"
         },
         "relationship": "self",
         "plan": "PPO Choice",
@@ -3145,6 +3755,451 @@
           "filed_by": "medrec 0.2.11"
         }
       ]
+    },
+    {
+      "id": "r_dujp4szu7ivn5h74n3h3",
+      "kind": "claim",
+      "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|pharmacy|2026-08-14",
+      "date": "2026-08-14",
+      "code": {
+        "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+        "code": "pharmacy",
+        "display": "Pharmacy"
+      },
+      "display": "Pharmacy",
+      "status": "active",
+      "fields": {
+        "when": "2026-08-14",
+        "provider": "Example Pharmacy",
+        "insurer": "Example Pharmacy Benefits",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-08-14",
+          "end": "2026-08-14"
+        },
+        "total": [
+          {
+            "category": "Submitted Amount",
+            "amount": {
+              "amount": "32.50",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Eligible Amount",
+            "amount": {
+              "amount": "12.40",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Benefit Amount",
+            "amount": {
+              "amount": "2.40",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Deductible",
+            "amount": {
+              "amount": "0.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Copay",
+            "amount": {
+              "amount": "10.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Coinsurance",
+            "amount": {
+              "amount": "0.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Member liability",
+            "amount": {
+              "amount": "10.00",
+              "currency": "USD"
+            }
+          }
+        ],
+        "payment": {
+          "amount": "2.40",
+          "currency": "USD"
+        },
+        "type": "Pharmacy",
+        "use": "claim",
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://hl7.org/fhir/sid/ndc",
+              "code": "00000-1111-90",
+              "display": "Lisinopril 10 mg tablet, 90 days"
+            },
+            "serviced": "2026-08-14",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "32.50",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "32.50",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "12.40",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "2.40",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Copay",
+                "amount": {
+                  "amount": "10.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "10.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ]
+          }
+        ]
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "caremark",
+            "cli_version": "0.7.1",
+            "organization_id": "example-pharmacy-benefits"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "ExplanationOfBenefit",
+            "id": "explanationofbenefit-73ef1d3a",
+            "last_updated": "2026-11-21T08:00:00Z"
+          },
+          "fetched_at": "2026-11-21T13:59:00Z",
+          "filed_at": "2026-11-21T13:59:00Z",
+          "raw_path": "Robin Example/Records/caremark-example-pharmacy-benefits/ExplanationOfBenefit/explanationofbenefit-73ef1d3a.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_ebpdh2ci2vapyqdmsh7g",
+      "kind": "claim",
+      "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|pharmacy|2026-11-12",
+      "date": "2026-11-12",
+      "code": {
+        "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+        "code": "pharmacy",
+        "display": "Pharmacy"
+      },
+      "display": "Pharmacy",
+      "status": "active",
+      "fields": {
+        "when": "2026-11-12",
+        "provider": "Example Pharmacy",
+        "insurer": "Example Pharmacy Benefits",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-11-12",
+          "end": "2026-11-12"
+        },
+        "total": [
+          {
+            "category": "Submitted Amount",
+            "amount": {
+              "amount": "32.50",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Eligible Amount",
+            "amount": {
+              "amount": "12.40",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Benefit Amount",
+            "amount": {
+              "amount": "2.40",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Deductible",
+            "amount": {
+              "amount": "0.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Copay",
+            "amount": {
+              "amount": "10.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Coinsurance",
+            "amount": {
+              "amount": "0.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Member liability",
+            "amount": {
+              "amount": "10.00",
+              "currency": "USD"
+            }
+          }
+        ],
+        "payment": {
+          "amount": "2.40",
+          "currency": "USD"
+        },
+        "type": "Pharmacy",
+        "use": "claim",
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://hl7.org/fhir/sid/ndc",
+              "code": "00000-1111-90",
+              "display": "Lisinopril 10 mg tablet, 90 days"
+            },
+            "serviced": "2026-11-12",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "32.50",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "32.50",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "12.40",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "2.40",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Copay",
+                "amount": {
+                  "amount": "10.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "10.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ]
+          }
+        ]
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "caremark",
+            "cli_version": "0.7.1",
+            "organization_id": "example-pharmacy-benefits"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "ExplanationOfBenefit",
+            "id": "explanationofbenefit-0b65cdf5",
+            "last_updated": "2026-11-21T08:00:00Z"
+          },
+          "fetched_at": "2026-11-21T13:59:00Z",
+          "filed_at": "2026-11-21T13:59:00Z",
+          "raw_path": "Robin Example/Records/caremark-example-pharmacy-benefits/ExplanationOfBenefit/explanationofbenefit-0b65cdf5.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_zky22bjfiux25a366smw",
+      "kind": "coverage",
+      "key": "coverage|http://terminology.hl7.org/CodeSystem/v3-ActCode|HIP|2024-01-01",
+      "date": "2024-01-01",
+      "code": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "HIP",
+        "display": "health insurance plan policy"
+      },
+      "display": "ExampleHealth Plan",
+      "status": "active",
+      "fields": {
+        "when": "2024-01-01",
+        "payer": "ExampleHealth Plan",
+        "period": {
+          "start": "2024-01-01",
+          "end": "2026-11-07"
+        },
+        "relationship": "self",
+        "plan": "PPO Choice"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Coverage",
+            "id": "coverage-94344442",
+            "last_updated": "2026-11-14T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T19:59:00Z",
+          "filed_at": "2026-11-14T19:59:00Z",
+          "raw_path": "Robin Example/Records/mychart-example-health/Coverage/coverage-94344442.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_g7wlpdn46gynza3seb5x",
+      "kind": "coverage",
+      "key": "coverage|http://terminology.hl7.org/CodeSystem/v3-ActCode|HIP|2026-11-08",
+      "date": "2026-11-08",
+      "code": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "HIP",
+        "display": "health insurance plan policy"
+      },
+      "display": "ExampleHealth Plan",
+      "status": "active",
+      "fields": {
+        "when": "2026-11-08",
+        "payer": "ExampleHealth Plan",
+        "period": {
+          "start": "2026-11-08"
+        },
+        "relationship": "self",
+        "plan": "PPO Choice"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Coverage",
+            "id": "coverage-235a590f",
+            "last_updated": "2026-11-14T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T19:59:00Z",
+          "filed_at": "2026-11-14T19:59:00Z",
+          "raw_path": "Robin Example/Records/mychart-example-health/Coverage/coverage-235a590f.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
     }
   ],
   "studies": [],
@@ -3239,6 +4294,29 @@
       "records_older": 0,
       "resources_written": 0,
       "resources_unchanged": 3,
+      "documents_added": 0
+    },
+    {
+      "id": "i_ntkq52xfaely6p3dccci",
+      "source_dir": "Robin Example/Records/caremark-example-pharmacy-benefits",
+      "stream_sha256": "598c22ad08b2f1c68010edc8facf66cc67d8a250121cb2126e67ca80c5c48ab2",
+      "stream_bytes": 733908,
+      "cli": "caremark",
+      "cli_version": "1.2.0",
+      "organization": "example-pharmacy-benefits",
+      "patient_id": "pat-3e26fd",
+      "pulled_at": "2026-11-21T14:00:00Z",
+      "imported_at": "2026-11-21T14:00:00Z",
+      "counts": {
+        "Patient": 1,
+        "Observation": 2
+      },
+      "records_added": 2,
+      "records_updated": 0,
+      "records_unchanged": 0,
+      "records_older": 0,
+      "resources_written": 2,
+      "resources_unchanged": 0,
       "documents_added": 0
     }
   ]

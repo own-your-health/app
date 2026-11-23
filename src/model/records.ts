@@ -2,7 +2,9 @@
 // medicines, lists, claims and bills.
 
 import type { Household, ImagingStudy, ImportRun, Json, JsonObject, MedDocument, MedRecord, PersonIndex, Provenance } from './types';
+import { parseRange, type Bound } from './flags';
 import { isObject } from './parse';
+import { resultName } from './labtests';
 
 export const KIND_LABELS: Record<string, string> = {
   encounter: 'Visit',
@@ -76,10 +78,11 @@ export function day(d: string | undefined): string | undefined {
   return d && /^\d{4}(-\d{2}(-\d{2})?)?/.test(d) ? d.slice(0, 10) : undefined;
 }
 
-export function timeline(index: PersonIndex): TimelineEntry[] {
+/** Every record, document and study by date. `title` names a record: claims.ts's recordTitle, which names a claim by its services. */
+export function timeline(index: PersonIndex, title: (r: MedRecord) => string): TimelineEntry[] {
   const out: TimelineEntry[] = [];
   for (const r of index.records) {
-    out.push({ id: r.id, kind: r.kind, date: day(r.date), title: r.display || KIND_LABELS[r.kind] || r.kind, detail: recordDetail(r) });
+    out.push({ id: r.id, kind: r.kind, date: day(r.date), title: title(r), detail: recordDetail(r) });
   }
   for (const d of index.documents) {
     out.push({ id: d.id, kind: 'document', date: day(d.date), title: documentTitle(d), detail: [docTypeLabel(d.doc_type), d.organization].filter(Boolean).join(' · ') });
@@ -119,7 +122,7 @@ export function recordDetail(r: MedRecord): string | undefined {
   const f = r.fields;
   switch (r.kind) {
     case 'result':
-      return [valueText(f.value), str(f.interpretation)].filter(Boolean).join(' · ') || undefined;
+      return [resultReading(f).text, str(f.interpretation)].filter(Boolean).join(' · ') || undefined;
     case 'encounter':
       return [str(f.class), str(f.practitioner), str(f.location) ?? str(f.service_provider)].filter(Boolean).join(' · ') || undefined;
     case 'medication':
@@ -150,6 +153,42 @@ export function valueText(v: Json | undefined): string | undefined {
   return undefined;
 }
 
+/**
+ * A result's value as this app reads it. A quantity is a number in its unit.
+ * A bare number sent as text ("95", a FHIR valueString) is a number too,
+ * in the unit the lab's range names, or none. A bound ("<0.5", ">60") stays
+ * text, with that unit, and reads against the range only when it can.
+ */
+export interface Reading {
+  value?: number;
+  bound?: Bound;
+  unit?: string;
+  text?: string;
+}
+
+const BARE = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/;
+const BOUND = /^(<=|>=|≤|≥|<|>)\s*(\d+(?:\.\d*)?|\.\d+)$/;
+const OPS: Record<string, Bound['op']> = { '<': '<', '<=': '<=', '≤': '<=', '>': '>', '>=': '>=', '≥': '>=' };
+
+export function resultReading(fields: JsonObject): Reading {
+  const v = fields.value;
+  if (typeof v !== 'string') return { value: numericValue(v), unit: unitOf(v), text: valueText(v) };
+  const t = v.trim();
+  const range = str(fields.reference_range);
+  const unit = range ? parseRange(range)?.unit : undefined;
+  const text = unit ? `${t} ${unit}` : t;
+  if (BARE.test(t)) return { value: Number(t), unit, text };
+  const b = BOUND.exec(t);
+  if (b) return { bound: { op: OPS[b[1]!]!, n: Number(b[2]) }, unit, text };
+  return { text: v };
+}
+
+/** A result as a point of its series. */
+export function resultPoint(r: MedRecord): ResultPoint {
+  const { value, bound, unit, text } = resultReading(r.fields);
+  return { id: r.id, date: r.date, value, bound, text: text ?? '—', unit, range: str(r.fields.reference_range), interpretation: str(r.fields.interpretation) };
+}
+
 export function numericValue(v: Json | undefined): number | undefined {
   if (isObject(v) && typeof v.value === 'number' && Number.isFinite(v.value)) return v.value;
   return undefined;
@@ -168,6 +207,8 @@ export interface ResultPoint {
   id: string;
   date?: string;
   value?: number;
+  /** A value given only as a bound ("<0.5"): never plotted. */
+  bound?: Bound;
   text: string;
   unit?: string;
   range?: string;
@@ -193,26 +234,14 @@ export function resultSeries(index: PersonIndex): ResultSeries[] {
   }
   const out: ResultSeries[] = [];
   for (const [key, rs] of groups) {
-    const points = rs
-      .map(
-        (r): ResultPoint => ({
-          id: r.id,
-          date: r.date,
-          value: numericValue(r.fields.value),
-          text: valueText(r.fields.value) ?? '—',
-          unit: unitOf(r.fields.value),
-          range: str(r.fields.reference_range),
-          interpretation: str(r.fields.interpretation),
-        }),
-      )
-      .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+    const points = rs.map(resultPoint).sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
     const units = new Set(points.map((p) => p.unit).filter(Boolean));
     // The newest record's own name: what medrec shows, and what the source
     // calls the test today.
     const named = [...rs].sort((x, y) => (y.date ?? '').localeCompare(x.date ?? ''))[0]!;
     out.push({
       key,
-      name: named.display || named.code?.display || 'Result',
+      name: resultName(named),
       unit: units.size === 1 ? [...units][0] : undefined,
       latest: points[points.length - 1],
       points,
@@ -298,6 +327,45 @@ export function claimTotals(r: MedRecord): ClaimTotal[] {
 
 /** A claim total that is the member's share, by its category's words. */
 export const YOUR_SHARE = /member ?liability|patient ?pay|paid ?by ?patient|your share|patient responsibility|you owe/i;
+
+/** The amounts a claim or a claim line can carry. */
+export type AmountName = 'billed' | 'allowed' | 'planPaid' | 'deductible' | 'copay' | 'coinsurance' | 'notCovered' | 'youOwe';
+
+/** The four a claim totals: what was billed, allowed, paid by the plan, and left to you. */
+const TOTALS: AmountName[] = ['billed', 'allowed', 'planPaid', 'youOwe'];
+
+/** A payer's words for each amount, in the order they are tried. */
+const AMOUNT_WORDS: [AmountName, RegExp][] = [
+  ['billed', /submitted|billed|charge/i],
+  ['allowed', /eligible|allowed/i],
+  ['planPaid', /^benefit|plan ?paid|paid ?to ?provider|paid ?by ?plan/i],
+  ['youOwe', YOUR_SHARE],
+  ['deductible', /^deductible/i],
+  ['copay', /co-?pay/i],
+  ['coinsurance', /co-?insurance/i],
+  ['notCovered', /non-?covered|not covered/i],
+];
+
+export const AMOUNT_LABELS: Record<AmountName, string> = {
+  billed: 'Billed',
+  allowed: 'Allowed',
+  planPaid: 'Plan paid',
+  deductible: 'Deductible',
+  copay: 'Copay',
+  coinsurance: 'Coinsurance',
+  notCovered: 'Not covered',
+  youOwe: 'You owe',
+};
+
+/**
+ * What a payer's amount label names: at most one of the totals and one of
+ * the parts of your share ("Member liability", "Coinsurance").
+ */
+export function amountNames(label: string): { total?: AmountName; part?: AmountName } {
+  const total = AMOUNT_WORDS.find(([k, re]) => TOTALS.includes(k) && re.test(label))?.[0];
+  const part = AMOUNT_WORDS.find(([k, re]) => !TOTALS.includes(k) && re.test(label))?.[0];
+  return { total, part };
+}
 
 export function claimYourShare(r: MedRecord): string | undefined {
   const t = claimTotals(r).find((x) => YOUR_SHARE.test(x.label));

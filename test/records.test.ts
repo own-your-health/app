@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { asMoney, claimTotals, claimYourShare, findItem, formatMoney, importFor, medicines, resultSeries, timeline, valueText } from '../src/model/records';
 import type { ImportRun, Provenance } from '../src/model/types';
+import { recordTitle } from '../src/model/titles';
 import { demo, personNamed } from './demo-data';
 
 const { household, indexes } = demo();
@@ -59,7 +60,7 @@ describe('items', () => {
   });
 
   it('put the timeline newest first', () => {
-    const t = timeline(robin).filter((e) => e.date);
+    const t = timeline(robin, recordTitle).filter((e) => e.date);
     expect(t.map((e) => e.date)).toEqual([...t.map((e) => e.date)].sort().reverse());
   });
 });

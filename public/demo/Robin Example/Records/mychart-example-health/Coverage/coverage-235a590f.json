@@ -1,0 +1,28 @@
+{
+  "resourceType": "Coverage",
+  "id": "coverage-235a590f",
+  "meta": {
+    "lastUpdated": "2026-11-14T08:00:00Z"
+  },
+  "status": "active",
+  "payor": [
+    {
+      "display": "ExampleHealth Plan"
+    }
+  ],
+  "period": {
+    "start": "2026-11-08"
+  },
+  "class": [
+    {
+      "type": {
+        "coding": [
+          {
+            "code": "plan"
+          }
+        ]
+      },
+      "name": "PPO Choice"
+    }
+  ]
+}

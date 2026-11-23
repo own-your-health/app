@@ -31,8 +31,8 @@ describe('results by panel', () => {
   it('puts the panel with an out-of-range result first, and that result first in it', () => {
     expect(shape(index('Robin Example'))).toEqual([
       ['Metabolic panel', 1, ['Potassium', 'Glucose', 'Creatinine', 'Sodium']],
-      ['Cholesterol (lipid panel)', 0, ['Cholesterol, total', 'Triglycerides', 'HDL cholesterol', 'LDL cholesterol']],
-      ['Blood sugar (A1c)', 0, ['Hemoglobin A1c']],
+      ['Cholesterol (lipid panel)', 0, ['Total cholesterol', 'Triglycerides', 'HDL cholesterol', 'LDL cholesterol']],
+      ['Blood sugar (A1c)', 0, ['A1c']],
       ['Blood count (CBC)', 0, ['Hemoglobin']],
     ]);
   });
@@ -40,15 +40,15 @@ describe('results by panel', () => {
   it('flags a low result read from its range', () => {
     expect(shape(index('Sam Example'))).toEqual([
       ['Blood count (CBC)', 1, ['Hemoglobin', 'White blood cells', 'Platelets']],
-      ['Vitamins and iron', 0, ['Vitamin D, 25-hydroxy']],
-      ['Thyroid', 0, ['TSH']],
+      ['Vitamins and iron', 0, ['Vitamin D']],
+      ['Thyroid', 0, ['TSH (thyroid)']],
     ]);
   });
 
   it('groups a newborn’s weights as vital signs and bilirubin with the liver panel', () => {
     expect(shape(index('Jamie Example'))).toEqual([
       ['Vital signs', 0, ['Weight']],
-      ['Liver panel', 0, ['Bilirubin, total']],
+      ['Liver panel', 0, ['Bilirubin']],
     ]);
   });
 

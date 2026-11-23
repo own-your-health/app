@@ -18,6 +18,10 @@ describe('routes', () => {
     { name: 'person', person: P, section: 'timeline', sub: 'all' },
     { name: 'search' },
     { name: 'search', query: '"fasting 12 hours" ldl' },
+    { name: 'costs' },
+    { name: 'costs', period: 'plan-1', by: 'category' },
+    { name: 'costs', period: 'all', only: [{ by: 'person', key: P }, { by: 'code', key: 'CPT:99213' }] },
+    { name: 'costs', only: [{ by: 'provider', key: 'example lab' }, { by: 'month', key: '2026-10' }] },
   ];
 
   it.each(routes.map((r) => [href(r), r]))('%s round-trips', (h, r) => {
@@ -34,6 +38,16 @@ describe('routes', () => {
     expect(parseRoute('#/search?q=')).toEqual({ name: 'search' });
     expect(parseRoute(`#/p/${P}/timeline/other`)).toEqual({ name: 'not_found' });
     expect(href({ name: 'sources' })).toBe('#/sources');
+  });
+
+  it('keep only the costs choices they know', () => {
+    expect(href({ name: 'costs', period: '2025', only: [{ by: 'code', key: 'CPT:99213' }] })).toBe('#/costs?period=2025&only=code%3ACPT%3A99213');
+    expect(parseRoute('#/costs?period=lifetime&by=code&only=nope:x&only=person:&only=month:2026-10')).toEqual({ name: 'costs', only: [{ by: 'month', key: '2026-10' }] });
+    // Months are a chart and a filter, never the breakdown.
+    expect(parseRoute('#/costs?by=month')).toEqual({ name: 'costs' });
+    // One key for each kind: the last one wins.
+    expect(parseRoute('#/costs?only=person:a&only=person:b')).toEqual({ name: 'costs', only: [{ by: 'person', key: 'b' }] });
+    expect(parseRoute('#/costs/x')).toEqual({ name: 'not_found' });
   });
 
   it('turn anything else into not found', () => {

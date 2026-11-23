@@ -119,8 +119,8 @@ describe('headline', () => {
   it('reads plainly when nothing is wrong', () => {
     // Without status.json, health comes from the ImportRuns alone.
     const vs = sourceViews({ household, indexes, pending: [], done: [], now: NOW });
-    expect(headline(vs)).toEqual({ text: '7 sources loaded, 1 not yet', attention: false });
-    expect(headline(vs.filter((v) => v.health === 'ok'))).toEqual({ text: 'All 7 sources loaded', attention: false });
+    expect(headline(vs)).toEqual({ text: '10 sources loaded, 1 not yet', attention: false });
+    expect(headline(vs.filter((v) => v.health === 'ok'))).toEqual({ text: 'All 10 sources loaded', attention: false });
     expect(headline([])).toEqual({ text: 'No sources yet', attention: false });
   });
 });

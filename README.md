@@ -10,8 +10,11 @@ Google Drive. It reads the records folder that
   source it came from;
 - each person's records: a timeline, results by panel and over time against
   their reference range, medicines,
-  conditions, allergies, immunizations, claims and bills, documents and
-  imaging studies;
+  conditions, allergies, immunizations, claims and bills, coverage over
+  time, documents and imaging studies;
+- what care cost across the household, from the plans' claims: by plan year
+  or calendar year, by person, provider, kind of care and month, one
+  service's prices across providers and dates, and a CSV of the lines;
 - one search over everyone's records, documents and imaging, and the text
   medrec extracted from documents, from the home screen or the search
   button in the bar, or within one person;
@@ -23,8 +26,8 @@ Google Drive. It reads the records folder that
 - a Refresh button per source, per person and for everything, which asks the
   household's Mac to load again.
 
-It runs entirely in the browser at **https://own-your-health.github.io/app/**.
-There is no server: the page signs in to Google, reads the folder from Drive,
+It runs entirely in the browser at **https://own-your-health.github.io/app/**;
+the project's page is https://own-your-health.github.io/. There is no server: the page signs in to Google, reads the folder from Drive,
 and keeps what it reads in memory.
 
 **Try it without a Drive:** https://own-your-health.github.io/app/?demo shows
@@ -88,6 +91,11 @@ A result is out of range when the source's interpretation says so (High,
 Low, Abnormal, Critical), or, when it gave none the app can read, when the
 value falls outside the reference range in the same unit; the app labels
 those **Above range** or **Below range**, so it is clear the app worked it out.
+A number the lab sent as text ("95", a FHIR valueString) reads as a number,
+in the unit its range names. A value sent as a bound ("<0.5", ">60") stays
+text and reads against the range only when every value it allows sits on one
+side of it: ">60" against "60 or more" is within, "<0.5" against 0–1 says
+nothing.
 
 Conditions, allergies, medicines and vaccines are listed once each, however
 many dates the records hold them on, by the newest record's status in words
@@ -98,14 +106,42 @@ says so. A vaccine lists every dose, and a dose recorded as not given stands
 apart. The rules are `src/model/lists.ts`, which the overview's cards use too.
 
 Search needs every word, or "a quoted phrase", somewhere in an item's name,
-its fields (a visit's reason, a medicine's dosage or prescriber, a claim's
-amounts, a statement's account and amount) or, for a document, the text in
-the person's `text.json`, ignoring case and accents. Name matches come
-first, then field matches, then matches only in a document's text, newest
-first in each, with the words marked and filters by kind and person. Each
-person's `text.json` is read from Drive on the first search, and nothing
-leaves the browser. `#/search?q=<words>` is the search page's address. The
-rules are `src/model/search.ts`.
+its fields (a visit's reason, a medicine's dosage or prescriber, each of a
+claim's lines, a statement's account and amount) or, for a document, the
+text in the person's `text.json`, ignoring case and accents. Name matches
+come first, then field matches, then matches only in a document's text,
+newest first in each, with the words marked and filters by kind and person.
+
+A few everyday words name a kind of thing instead. The other words in the
+query are searched within that kind. Each word below also matches its
+plural. `CONCEPTS` in `src/model/search.ts` is the table:
+
+| Words | Finds |
+|---|---|
+| blood test, bloodwork, blood work, lab, lab result, lab test, lab work, test result | lab results (not vital signs or other categories) and lab reports |
+| shot, vaccine, vaccination, immunization | vaccines and immunization records |
+| bill, cost, claim, charge, statement, EOB | claims, statements, receipts and explanations of benefits |
+| visit, appointment | visits and visit summaries |
+| med, medication, medicine, prescription | medicines and prescriptions |
+
+- "Flu shot" finds flu vaccines.
+- When nothing of the kind has the other words, the search is every word as
+  written: "lab statement" finds the lab's statement.
+- A phrase in quotes is always words.
+- The page offers to search the words as written instead.
+
+Results come in groups by kind:
+- health records first, then imaging and documents, then coverage and
+  claims;
+- a test found more than once is one row under its panel, with its newest
+  value and how many results it has, and opens its history;
+- a claim shows its provider and what you owe, and the line that matched.
+
+Each person's `text.json` is read from Drive once a search is coming (the
+search page opens, or the home screen's search field is chosen), so it
+downloads while the words are typed, and nothing leaves the browser. `#/search?q=<words>` is the search page's
+address, with `&words=1` when the words are searched as written. The rules
+are `src/model/search.ts`.
 
 The timeline lists visits, each with its documents, what was recorded at it
 (diagnoses, results, procedures, medicines, vaccines, allergies and
@@ -123,8 +159,59 @@ the plan's deductible and out-of-pocket limit so far from the newest claim
 that printed them, and each insurer claim beside its bill: a statement from
 the same provider within 120 days after the visit, preferring one whose
 amount is the claim's share. A claim with nothing to pay says so, and one
-with a share but no bill yet says that. Money is added in whole cents. The
+with a share but no bill yet says that. A pharmacy fill is not matched to a
+statement: its share is paid to the pharmacy, and the claim says so. Money is added in whole cents. The
 rules are `src/model/billing.ts`.
+
+A claim is named for what it paid for, from its lines ("Lipid panel and
+blood draw"), not for its type. Its page lists each line with its code, a
+category from the code (visit, lab test, imaging, vaccine and so on), its
+date and its amounts: billed, allowed, plan paid, deductible, copay,
+coinsurance, not covered and you owe. The rules are `src/model/claims.ts`.
+
+Coverage, under Claims and bills, lists each insurer and plan the person has
+had, newest first, from when to when, and whose records name it. The same
+insurer starting on the same day is one coverage, whichever source names it:
+the insurer's own record and a provider portal's copy show once, even when
+one spells the name without a space ("Example Health Plan" and "ExampleHealth
+Plan"). An end of 9999-12-31 means the coverage runs on. When a coverage
+started on the day someone in the household was born, it says so ("Changed on
+Nov 8, 2026, the day Jamie Example was born") as a date the two share. No
+source gives a reason for a change, and FHIR's Coverage has no element for
+one. Each change is also on the timeline among the visits, and Costs names
+the changes inside the period it shows: the plan, and so the deductible, can
+differ on either side of one. The rules are `src/model/coverage.ts`.
+
+Costs (`#/costs`, from the home screen or a person's claims) adds up every
+claim line in the folder: what was billed, what the plan allowed and paid,
+and your share, with its deductible, copay and coinsurance. A claim whose
+lines do not add up to its totals keeps the difference as a line of its own,
+so a period's totals are always its claims'. It narrows to:
+- a period: this or last plan year, a calendar year, or every year. A plan
+  year starts on the day the plan's claims give for it (the benefit period an
+  ExplanationOfBenefit prints, `fields.benefit_period` in the index, when it
+  is about a year long), else on the month set in Settings, **Plan year**,
+  else on January 1, and the screen says which. Never on a coverage's start:
+  that is the day a coverage took effect, which can fall mid-year (a birth, a
+  new job). A calendar year counts care by the day it was given, not the day
+  it was paid;
+- a person, a provider, a kind of care, a month, or one billing code. Each
+  is a link from the chart or the breakdown, so back undoes one.
+
+The address keeps every choice: `period=` is `plan`, `plan-1`, a year
+(`2025`) or `all`; `by=` (the breakdown) is `person`, `provider` or
+`category`; and each `only=` is one narrowing, `person:<id>`,
+`provider:<name>`, `category:<kind>`, `month:<YYYY-MM>` or
+`code:<system>:<code>` (`code:CPT:99213`).
+
+The screen shows the plan balances each plan printed with its newest claim
+in the period, plan paid and your share month by month, where it went by
+person, provider or kind of care, and every line. A code billed more than
+once is listed under "Same service, different prices"; opening one shows,
+for every time it was billed, what the provider billed beside what the plan
+allowed. Download CSV saves the lines shown, built in the browser, with any
+cell that a spreadsheet would read as a formula prefixed with `'`. Bills and
+receipts no claim covers are not counted. The rules are `src/model/costs.ts`.
 
 Results are grouped by panel (metabolic, lipid, A1c, liver, blood count,
 thyroid, vitamins and iron, urine, vital signs) by each test's LOINC code,
@@ -133,6 +220,26 @@ category its source gave, or under Other tests. A panel with a critical
 result comes first, then one with any result out of range, and within a
 panel the out-of-range tests come first, then the order a lab report uses.
 Each test's chart shades the reference range each result came with.
+
+Every record's page leads with the plain answer. A result shows:
+- its plain name, from a table of the common tests in
+  `src/model/labtests.ts`, else the source's own name, else its LOINC name;
+- its value, and whether it is within the lab's range, in words and as a
+  marker on the range: within it in a calm green with a check, outside it in
+  the attention colour with an arrow, the stretches outside the range
+  hatched, so none of it rests on colour alone;
+- a sentence or two on what the test measures and what a high or low result
+  can go with, written from the MedlinePlus page it links and stopping at
+  "a question for your doctor";
+- its history, with the range band;
+- the other tests from the same draw, and the visit and lab report it came
+  with.
+
+A status badge shows only when the result is not final. A medicine leads
+with how to take it and its last fill. A condition, an allergy, a vaccine, a
+visit and a claim each lead with what a person would ask first. Codes, every
+field, where a record came from, the import that brought it in, its
+identifiers and its raw FHIR stay whole under one folded Technical details.
 
 Every person and record has its own address, such as `#/p/<person id>` (the
 person's overview; `#/p/<person id>/timeline` is the visits timeline and
@@ -210,11 +317,12 @@ The privacy policy is at https://own-your-health.github.io/app/privacy.html
   token. It loads no Google script and uses no client secret.
 - **The token stays in memory.** It is gone when the tab closes. Signing out
   revokes it with Google.
-- **Browser storage holds four settings, nothing else:** your client id
+- **Browser storage holds five settings, nothing else:** your client id
   (`own-your-health-app.client_id`), the chosen folder's id and name
   (`own-your-health-app.folder`), the email of the Google account that last
-  signed in (`own-your-health-app.account`), and the theme, when you choose
-  one (`own-your-health-app.theme`). None is a secret. The client
+  signed in (`own-your-health-app.account`), the theme, when you choose
+  one (`own-your-health-app.theme`), and the month your plan year starts,
+  when you set it (`own-your-health-app.plan_year_start`). None is a secret. The client
   id and the email go to Google as the sign-in's `client_id` and `login_hint`,
   and the folder id goes to Drive when the app reads the folder. During a
   sign-in, a random nonce sits in session storage until Google answers.
@@ -222,7 +330,25 @@ The privacy policy is at https://own-your-health.github.io/app/privacy.html
   `_requests/`, and deletes only requests it made (a cancel). medrec is the
   only writer of records.
 - **Records stay in the browser.** Nothing from the folder is sent anywhere
-  but back to Drive. Error messages carry no record content.
+  but back to Drive. Error messages carry no record content. Download CSV
+  on the costs screen builds the file in the page and saves it to the
+  device; nothing is uploaded.
+- **Links out carry the thing, never the person.** A record page links to
+  where a person can read about a test, medicine, condition, allergy,
+  procedure or vaccine:
+  - MedlinePlus Connect, by the record's code (LOINC, RxNorm, NDC,
+    ICD-10-CM, ICD-9-CM, SNOMED CT or CPT), with the test's name from this
+    app's own table when it has one;
+  - CDC's Vaccine Information Statement, for a vaccine's CVX code;
+  - otherwise a MedlinePlus search by the record's name, only when that name
+    is short, one phrase, and holds no date, long number, email address or
+    link. The page shows the exact words beside the link.
+
+  The record's name, in that last case, is the only text from the records a
+  link can carry. No link carries a value, a date, a person, or a record or
+  folder id. The app never fetches the page; it opens only when tapped, in a new tab with
+  `rel="noopener noreferrer"` and no referrer. The page says which site it
+  opens. The rules are `src/model/learn.ts`.
 
 ### Google permissions, and why
 
@@ -258,6 +384,8 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
 ```
 
 - Plain TypeScript, built by Vite, with no runtime dependencies.
+- The browser tests serve the build on port 4317. `E2E_PORT=<port> npm run e2e`
+  moves it when another project's preview holds that port.
 - The sample folder in `public/demo/` comes from `scripts/demo-folder.mjs`.
   Run `node scripts/demo-folder.mjs` after changing it, and commit both.
 - The PNG icons in `public/` (for the manifest and the iPhone Home Screen) are
@@ -266,6 +394,11 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
 - `http://localhost:5173/app/?scope-test=1&client=<client id>` runs a check of
   the two Drive permissions against a folder named `oyh-app-scope-test`. It
   exists only in the dev server and is left out of production builds.
+- `node scripts/perf.mjs`, after `npm run build`, times opening the app and
+  searching on an emulated phone with a large folder: the sample, grown to a
+  3.9 MB `index.json` and a 4.6 MB `text.json` from invented data.
+  `--network` adds a 4G-like link and `--uncompressed` asks for the files
+  without gzip; the script's header lists every option.
 - Tests use invented data only. Never commit a real record, account, client
   id or folder id.
 
@@ -273,4 +406,8 @@ Unofficial. Not affiliated with or endorsed by Google.
 
 ## License
 
-MIT
+MIT, except the Sign in with Google button images in `public/google-sign-in/`.
+They are Google's pre-approved branding assets, unchanged, from its
+[branding guidelines](https://developers.google.com/identity/branding-guidelines),
+and Google's trademarks. The sign-in screen shows them as the button, light or
+dark with the theme, so the button is Google's own design.

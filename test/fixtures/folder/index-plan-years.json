@@ -1,0 +1,171 @@
+{
+  "schema": "medrec-index/v1",
+  "person": "p_aaaaaaaaaaaaaaaaaaaa",
+  "rev": 1,
+  "documents": [],
+  "records": [
+    {
+      "id": "r_cccccccccccccccccccc",
+      "kind": "coverage",
+      "key": "coverage|uhc",
+      "date": "2026-09-14",
+      "display": "ExampleHealth Plan",
+      "status": "active",
+      "fields": {
+        "payer": "ExampleHealth Plan",
+        "period": {
+          "start": "2026-09-14",
+          "end": "9999-12-31"
+        },
+        "relationship": "self"
+      },
+      "documents": [],
+      "provenance": []
+    },
+    {
+      "id": "r_aaaaaaaaaaaaaaaaaaaa",
+      "kind": "claim",
+      "key": "claim|a",
+      "date": "2026-03-10",
+      "display": "Professional",
+      "status": "active",
+      "fields": {
+        "provider": "Example Clinic",
+        "insurer": "Example Health Plan",
+        "billable_period": {
+          "start": "2026-03-10",
+          "end": "2026-03-10"
+        },
+        "total": [
+          {
+            "category": "Member liability",
+            "amount": {
+              "amount": "20.00",
+              "currency": "USD"
+            }
+          }
+        ]
+      },
+      "documents": [],
+      "provenance": []
+    },
+    {
+      "id": "r_bbbbbbbbbbbbbbbbbbbb",
+      "kind": "claim",
+      "key": "claim|b",
+      "date": "2026-11-20",
+      "display": "Professional",
+      "status": "active",
+      "fields": {
+        "provider": "Example Clinic",
+        "insurer": "Example Health Plan",
+        "billable_period": {
+          "start": "2026-11-20",
+          "end": "2026-11-20"
+        },
+        "total": [
+          {
+            "category": "Member liability",
+            "amount": {
+              "amount": "20.00",
+              "currency": "USD"
+            }
+          }
+        ]
+      },
+      "documents": [],
+      "provenance": []
+    },
+    {
+      "id": "r_dddddddddddddddddddd",
+      "kind": "claim",
+      "key": "claim|d",
+      "date": "2026-05-01",
+      "display": "Professional",
+      "status": "active",
+      "fields": {
+        "provider": "Example Clinic",
+        "insurer": "Example Care Plan",
+        "billable_period": {
+          "start": "2026-05-01",
+          "end": "2026-05-01"
+        },
+        "total": [
+          {
+            "category": "Member liability",
+            "amount": {
+              "amount": "20.00",
+              "currency": "USD"
+            }
+          }
+        ]
+      },
+      "documents": [],
+      "provenance": []
+    },
+    {
+      "id": "r_eeeeeeeeeeeeeeeeeeee",
+      "kind": "claim",
+      "key": "claim|e",
+      "date": "2026-08-01",
+      "display": "Professional",
+      "status": "active",
+      "fields": {
+        "provider": "Example Clinic",
+        "insurer": "Example Care Plan",
+        "billable_period": {
+          "start": "2026-08-01",
+          "end": "2026-08-01"
+        },
+        "total": [
+          {
+            "category": "Member liability",
+            "amount": {
+              "amount": "20.00",
+              "currency": "USD"
+            }
+          }
+        ],
+        "benefit_period": {
+          "start": "2026-07-01",
+          "end": "2027-06-30"
+        }
+      },
+      "documents": [],
+      "provenance": []
+    },
+    {
+      "id": "r_ffffffffffffffffffff",
+      "kind": "claim",
+      "key": "claim|f",
+      "date": "2026-09-15",
+      "display": "Professional",
+      "status": "active",
+      "fields": {
+        "provider": "Example Clinic",
+        "insurer": "Example Dental",
+        "billable_period": {
+          "start": "2026-09-15",
+          "end": "2026-09-15"
+        },
+        "total": [
+          {
+            "category": "Member liability",
+            "amount": {
+              "amount": "20.00",
+              "currency": "USD"
+            }
+          }
+        ],
+        "benefit_period": {
+          "start": "2026-09-15",
+          "end": "2026-09-15"
+        }
+      },
+      "documents": [],
+      "provenance": []
+    }
+  ],
+  "studies": [],
+  "imports": []
+}

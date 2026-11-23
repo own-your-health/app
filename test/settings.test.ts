@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getAccount, getClientId, getFolder, getTheme, setAccount, setClientId, setFolder, setTheme, STORAGE_KEYS } from '../src/settings';
+import { getAccount, getClientId, getFolder, getPlanStart, getTheme, setAccount, setClientId, setFolder, setPlanStart, setTheme, STORAGE_KEYS } from '../src/settings';
 
 function kv() {
   const m = new Map<string, string>();
@@ -7,12 +7,13 @@ function kv() {
 }
 
 describe('settings', () => {
-  it('keep only the client id, the folder, the account and the theme', () => {
+  it('keep only the client id, the folder, the account, the theme and the plan year’s start', () => {
     const s = kv();
     setClientId(' 123456789012-abcdefghijklmnop.apps.googleusercontent.com ', s);
     setFolder({ id: 'folder-1', name: 'Medical Records' }, s);
     setAccount('robin@example.com', s);
     setTheme('dark', s);
+    setPlanStart('07-01', s);
     expect([...s.m.keys()].sort()).toEqual([...STORAGE_KEYS].sort());
     expect(getClientId(s)).toBe('123456789012-abcdefghijklmnop.apps.googleusercontent.com');
     expect(getFolder(s)).toEqual({ id: 'folder-1', name: 'Medical Records' });
@@ -20,7 +21,19 @@ describe('settings', () => {
     setClientId(null, s);
     setFolder(null, s);
     setTheme('system', s);
+    setPlanStart(null, s);
     expect(s.m.size).toBe(0);
+  });
+
+  it('keep a plan year’s start only as a month and day', () => {
+    const s = kv();
+    expect(getPlanStart(s)).toBeNull();
+    setPlanStart('07-01', s);
+    expect(getPlanStart(s)).toBe('07-01');
+    setPlanStart('13-01', s);
+    expect(getPlanStart(s)).toBeNull();
+    s.setItem(STORAGE_KEYS[4]!, '2026-07-01');
+    expect(getPlanStart(s)).toBeNull();
   });
 
   it('keep a theme only when one is chosen', () => {

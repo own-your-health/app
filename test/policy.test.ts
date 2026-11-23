@@ -48,6 +48,16 @@ describe('the page', () => {
     expect(html).toContain('<a href="./privacy.html">Privacy policy</a>');
   });
 
+  it('names the project, not Google, in its titles and descriptions', () => {
+    const privacy = readFileSync(join(ROOT, 'privacy.html'), 'utf8');
+    const manifest = JSON.parse(readFileSync(join(ROOT, 'public', 'manifest.webmanifest'), 'utf8')) as { name: string; description: string };
+    const head = (page: string) => [page.match(/<title>([^<]*)<\/title>/)?.[1], page.match(/<meta name="description" content="([^"]*)"/)?.[1]];
+    for (const text of [...head(html), ...head(privacy), manifest.name, manifest.description]) {
+      expect(text).toContain('Own Your Health');
+      expect(text).not.toMatch(/google/i);
+    }
+  });
+
   it('sends no referrer and loads only its own script', () => {
     expect(html).toContain('<meta name="referrer" content="no-referrer" />');
     const scripts = [...html.matchAll(/<script\b[^>]*>/gi)].map((x) => x[0]);

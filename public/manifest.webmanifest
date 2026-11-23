@@ -1,7 +1,7 @@
 {
   "name": "Own Your Health",
   "short_name": "Own Health",
-  "description": "Your household's health records, from your own Google Drive",
+  "description": "Own Your Health is a free, open-source app for your household's health records. It runs in your browser, with no server.",
   "id": "./",
   "start_url": "./",
   "scope": "./",

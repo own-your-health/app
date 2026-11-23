@@ -6,6 +6,7 @@ import { latestAnswered } from '../../model/sources';
 import { h, icon } from '../dom';
 import { card, empty, link, refreshControl, row, type Ctx } from '../components';
 import { count, relative } from '../format';
+import { costsGlance } from './costs';
 import { macLine, requestAnswer, signInNotice } from './sources';
 
 export function homeView(ctx: Ctx): HTMLElement {
@@ -53,7 +54,17 @@ export function homeView(ctx: Ctx): HTMLElement {
   );
 
   // A search field that opens the search page with what was typed.
-  const field = h('input', { type: 'search', class: 'input', name: 'q', placeholder: 'Search records', 'aria-label': 'Search everyone’s records', autocomplete: 'off', enterkeyhint: 'search' });
+  const field = h('input', {
+    type: 'search',
+    class: 'input',
+    name: 'q',
+    placeholder: 'Search records',
+    'aria-label': 'Search everyone’s records',
+    autocomplete: 'off',
+    enterkeyhint: 'search',
+    // A search is coming: start reading the documents' text it will need.
+    on: { focus: () => people.forEach((p) => void store.text(p.id).catch(() => null)) },
+  });
   const searchForm = people.length
     ? h(
         'form',
@@ -73,5 +84,5 @@ export function homeView(ctx: Ctx): HTMLElement {
       )
     : null;
 
-  return h('div', { class: 'stack' }, h('h1', { class: 'sr-only' }, 'Own Your Health'), peopleCard, signInNotice(views), searchForm, freshness);
+  return h('div', { class: 'stack' }, h('h1', { class: 'sr-only' }, 'Own Your Health'), peopleCard, signInNotice(views), searchForm, costsGlance(ctx), freshness);
 }

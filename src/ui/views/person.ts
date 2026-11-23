@@ -16,19 +16,23 @@ import {
   type TimelineEntry,
 } from '../../model/records';
 import { visitKind, visitTimeline, type Visit } from '../../model/visits';
+import { birthWords, coverageHistory, isChange, type CoverageSegment } from '../../model/coverage';
+import { claimTitle, isPharmacyClaim } from '../../model/claims';
+import { recordTitle } from '../../model/titles';
 import { BILL_WINDOW_DAYS, claimsWithBills, owedByProvider, planBalances, toCents, type Bill, type Claim, type Owed } from '../../model/billing';
-import { isOutOfRange, rangeFor, resultFlag, type ResultFlag } from '../../model/flags';
+import { isOutOfRange, rangeFor, resultFlag } from '../../model/flags';
 import { immunizationsGiven, latestResults, newInLatestLoads, type LatestResult } from '../../model/overview';
 import { allergyList, conditionList, CRITICALITY_TEXT, medicineList, statusText, vaccineList, type AllergyItem, type ConditionItem, type MedicineItem } from '../../model/lists';
 import { resultGroups } from '../../model/panels';
 import { COMING_UP_DAYS, FLU, fluSeason, SCHEDULE_SOURCE, scheduleDigest, scheduleFor, type DoseState, type FluSeason, type ScheduleRow } from '../../model/schedule';
 import type { MedRecord, Person, PersonIndex, Provenance } from '../../model/types';
 import { resultChart, resultSparkline } from '../chart';
-import { button, card, chip, command, driveLink, empty, filterChips, link, refreshControl, row, sheet, type Ctx } from '../components';
+import { button, card, chip, command, driveLink, empty, filterChips, flagChip, link, refreshControl, row, sheet, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, localDay, relative, yearOf } from '../format';
 import { searchPanel } from '../search';
 import { visitContents, visitWhen } from '../visit';
+import { personCosts } from './costs';
 import { signInNotice } from './sources';
 import { SECTION_LABELS, href, type Route, type Section } from '../router';
 
@@ -218,7 +222,7 @@ function overviewSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElemen
   const from = (prov: Provenance[]) => originNames(prov, household, person.id).join(', ');
   const all = (section: Section, text: string) => h('p', { class: 'card-more' }, link({ name: 'person', person: person.id, section }, text, ' ', icon('next', 14)));
   const recordRow = (r: MedRecord, meta: (string | undefined | null)[], aside?: Child) =>
-    row({ route: itemRoute(person.id, r.id), title: r.display || KIND_LABELS[r.kind] || r.kind, meta: meta.filter(Boolean).join(' · '), aside });
+    row({ route: itemRoute(person.id, r.id), title: recordTitle(r), meta: meta.filter(Boolean).join(' · '), aside });
 
   const loads = newInLatestLoads(idx, now);
   const newCard = loads.length
@@ -324,7 +328,7 @@ function timelineSection(ctx: Ctx, person: Person, idx: PersonIndex, sub?: strin
 }
 
 function everyRecord(person: Person, idx: PersonIndex): HTMLElement {
-  const all = timeline(idx);
+  const all = timeline(idx, recordTitle);
   const kinds = [...new Set(all.map((e) => e.kind))];
   const options: [string, string][] = [['all', 'All'], ...kinds.map((k): [string, string] => [k, KIND_LABELS[k] ?? k])];
   const list = h('div');
@@ -339,26 +343,19 @@ function everyRecord(person: Person, idx: PersonIndex): HTMLElement {
 }
 
 function visitsTimeline(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
-  const { visits, loose } = visitTimeline(idx, ctx.store.household, person.id, localDay(ctx.now()));
-  const r = (v: Visit) => v.record;
+  const today = localDay(ctx.now());
+  const { visits, loose } = visitTimeline(idx, ctx.store.household, person.id, today);
+  const changes = coverageHistory(idx, ctx.store.household, person.id).filter((c) => isChange(c) && c.start <= today);
+  // Visits, and the days coverage changed, in one list by date.
+  const entries = sortByDateDesc<{ date?: string; visit?: Visit; change?: CoverageSegment }>([
+    ...visits.map((visit) => ({ date: visit.start, visit })),
+    ...changes.map((change) => ({ date: change.start, change })),
+  ]);
   return card(
     { title: 'Timeline' },
     timelineSwitch(person, false),
-    visits.length
-      ? yearList(
-          visits.map((v) => ({ ...v, date: v.start })),
-          (v) =>
-            row({
-              route: itemRoute(person.id, r(v).id),
-              title: r(v).display || visitKind(v) || 'Visit',
-              meta: meta(visitWhen(v), visitKind(v), str(r(v).fields.reason), str(r(v).fields.practitioner), str(r(v).fields.location) ?? str(r(v).fields.service_provider)),
-              aside: v.documents.length ? h('span', { class: 'muted small' }, count(v.documents.length, 'document')) : null,
-              extra: (() => {
-                const parts = visitContents(person.id, v);
-                return parts.length ? h('div', { class: 'visit-extra' }, parts) : null;
-              })(),
-            }),
-        )
+    entries.length
+      ? yearList(entries, ({ visit, change }) => (change ? coverageChangeRow(person, change) : visitRow(person, visit!)))
       : empty('No visits in these records yet.', link({ name: 'person', person: person.id, section: 'timeline', sub: 'all' }, 'See every record')),
     loose.length
       ? h('p', { class: 'small muted' }, `${count(loose.length, 'document')} from no visit in these records (bills, scans, letters) are under `, link({ name: 'person', person: person.id, section: 'documents' }, 'Documents'), '.')
@@ -366,11 +363,19 @@ function visitsTimeline(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement
   );
 }
 
-/** A chip for a result out of its range; critical in the error colour. None in range. */
-function flagChip(flag: ResultFlag | undefined): HTMLElement | null {
-  return isOutOfRange(flag) ? chip(flag.label, flag.critical ? 'error' : 'attention') : null;
+function visitRow(person: Person, v: Visit): HTMLElement {
+  const r = v.record;
+  const parts = visitContents(person.id, v);
+  return row({
+    route: itemRoute(person.id, r.id),
+    title: r.display || visitKind(v) || 'Visit',
+    meta: meta(visitWhen(v), visitKind(v), str(r.fields.reason), str(r.fields.practitioner), str(r.fields.location) ?? str(r.fields.service_provider)),
+    aside: v.documents.length ? h('span', { class: 'muted small' }, count(v.documents.length, 'document')) : null,
+    extra: parts.length ? h('div', { class: 'visit-extra' }, parts) : null,
+  });
 }
 
+/** A chip for a result out of its range; critical in the error colour. None in range. */
 function resultRow(personId: string, t: LatestResult): HTMLElement {
   const spark = resultSparkline(t.series.points, t.series.unit);
   return row({
@@ -585,6 +590,7 @@ function billLine(person: Person, c: Claim): HTMLElement | null {
   const share = toCents(c.yourShare);
   if (share === undefined) return null;
   if (share <= 0) return h('p', { class: 'small muted claim-bill' }, 'Nothing for you to pay on this claim.');
+  if (isPharmacyClaim(c.record)) return h('p', { class: 'small muted claim-bill' }, 'Your share of a fill is paid to the pharmacy, usually when it is picked up or shipped, so no statement follows.');
   const m = c.bill;
   if (!m) return h('p', { class: 'small muted claim-bill' }, `No bill${c.provider ? ` from ${c.provider}` : ''} in these records within ${BILL_WINDOW_DAYS} days of the visit.`);
   const b = m.bill;
@@ -643,15 +649,15 @@ function claimsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement 
     : null;
 
   const claimsCard = card(
-    { title: 'Claims' },
+    { title: 'Claims', actions: claims.length ? link(personCosts(person.id), 'Costs over time') : null },
     claims.length
       ? yearList(
           claims.map((c) => ({ ...c, date: c.service })),
           (c) =>
             row({
               route: itemRoute(person.id, c.record.id),
-              title: c.provider ?? (c.record.display || 'Claim'),
-              meta: meta(dateText(c.service), c.provider ? c.record.display : null, c.insurer ? `by ${c.insurer}` : null, c.record.fields.outcome && c.record.fields.outcome !== 'complete' ? str(c.record.fields.outcome) : null),
+              title: claimTitle(c.record),
+              meta: meta(dateText(c.service), c.provider, c.insurer ? `by ${c.insurer}` : null, c.record.fields.outcome && c.record.fields.outcome !== 'complete' ? str(c.record.fields.outcome) : null),
               aside: c.yourShare ? money(c.yourShare) : null,
               extra: h(
                 'div',
@@ -694,7 +700,57 @@ function claimsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement 
       )
     : null;
 
-  return h('div', { class: 'stack' }, owedCard, balancesCard, claimsCard, othersCard);
+  return h('div', { class: 'stack' }, owedCard, balancesCard, coverageCard(ctx, person, idx), claimsCard, othersCard);
+}
+
+const COVERED_AS: Record<string, string> = { child: 'covered as a child', spouse: 'covered as a spouse', common: 'covered as a partner', parent: 'covered as a parent' };
+
+/** "Jan 1, 2024 to Nov 7, 2026", "since Nov 8, 2026". */
+function coverageDays(s: CoverageSegment): string {
+  if (s.start && s.end) return `${dateText(s.start)} to ${dateText(s.end)}`;
+  if (s.start) return `since ${dateText(s.start)}`;
+  return s.end ? `until ${dateText(s.end)}` : 'no dates in these records';
+}
+
+const coverageName = (s: CoverageSegment) => (s.plan ? `${s.insurer}, ${s.plan}` : s.insurer);
+
+/** Each insurer and plan the person has had, newest first, and a change that fell on someone's birthday. */
+function coverageCard(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement | null {
+  const segments = coverageHistory(idx, ctx.store.household, person.id);
+  if (!segments.length) return null;
+  const from = (s: CoverageSegment) => s.organizations.map((o) => organizationName(ctx.store.household, person.id, o));
+  return card(
+    { title: 'Coverage', class: 'coverage-history' },
+    segments.map((s) => {
+      const born = birthWords(s, dateText);
+      const sources = from(s);
+      return row({
+        route: itemRoute(person.id, s.records[0]!.id),
+        title: coverageName(s),
+        meta: meta(coverageDays(s), s.relationship ? COVERED_AS[s.relationship] : null),
+        extra: h(
+          'div',
+          { class: 'coverage-extra' },
+          born ? h('p', { class: 'small coverage-born' }, born) : null,
+          sources.length ? h('p', { class: 'small muted' }, `In records from ${sources.join(' and ')}.`) : null,
+        ),
+      });
+    }),
+    segments.some((s) => s.born)
+      ? h('p', { class: 'small muted' }, 'A birthday beside a change is a date the two share. These records don’t say why coverage changed.')
+      : null,
+  );
+}
+
+/** A day coverage changed, on the timeline. */
+function coverageChangeRow(person: Person, s: CoverageSegment): HTMLElement {
+  const born = birthWords(s, dateText);
+  return row({
+    route: itemRoute(person.id, s.records[0]!.id),
+    title: s.first ? 'Coverage started' : 'Coverage changed',
+    meta: meta(dateText(s.start), coverageName(s)),
+    extra: born ? h('p', { class: 'small coverage-born' }, born) : null,
+  });
 }
 
 function documentsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
@@ -740,17 +796,18 @@ function imagingSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement
   );
 }
 
-function searchSection(ctx: Ctx, person: Person, query: string | undefined): HTMLElement {
+function searchSection(ctx: Ctx, person: Person, query: string | undefined, words: true | undefined): HTMLElement {
   return searchPanel(ctx, {
     people: [person],
     query,
-    route: (q) => ({ name: 'person', person: person.id, section: 'search', ...(q ? { query: q } : {}) }),
+    words,
+    route: (q, w) => ({ name: 'person', person: person.id, section: 'search', ...(q ? { query: q } : {}), ...(q && w ? { words: true as const } : {}) }),
     title: 'Search',
     intro: 'Searches this person’s records, documents and imaging, and the text medrec extracted from their documents, here in the browser.',
   });
 }
 
-export function personView(ctx: Ctx, personId: string, section: Section, sub?: string, query?: string): HTMLElement {
+export function personView(ctx: Ctx, personId: string, section: Section, sub?: string, query?: string, words?: true): HTMLElement {
   const person = ctx.store.person(personId);
   if (!person) return card({}, empty('This person is not in the records folder.', link({ name: 'home' }, 'Back to everyone')));
   const err = ctx.store.indexErrors.get(person.id);
@@ -789,7 +846,7 @@ export function personView(ctx: Ctx, personId: string, section: Section, sub?: s
       body = imagingSection(ctx, person, idx);
       break;
     case 'search':
-      body = searchSection(ctx, person, query);
+      body = searchSection(ctx, person, query, words);
       break;
   }
   return h('div', { class: 'stack person' }, header(ctx, person, idx), sectionNav(person, section), body);
