@@ -817,6 +817,8 @@ const samLabFail = attempt(src.samLab, sam, {
   exit: 5,
   error: { code: 'upstream', message: 'The lab site answered 503 three times.', remedy: 'Nothing to do; the Mac tries again later.' },
 });
+// A member site whose sign-in lasts about an hour and is never renewed: it loads after someone signs in, and otherwise waits quietly.
+const robinBloodWaits = attempt(src.robinBlood, robin, { started: at(-60 * 6), outcome: 'needs_person', exit: 3, error: { code: 'needs_person', message: 'Session expired. Run `oneblood auth login --profile <provider profile>`.', remedy: 'Sign in again with `oneblood auth login`.' } });
 const robinPlanNeeds = attempt(src.robinPlan, robin, { started: at(-60 * 8), outcome: 'needs_person', exit: 3, error: { code: 'needs_person', message: 'The member site session has expired. Sign in with `uhc auth login --browser --profile <provider profile> --overwrite`.', remedy: 'Run `uhc auth login`, then import again.' } });
 
 write('_status/status.json', {
@@ -835,6 +837,12 @@ write('_status/status.json', {
       source: src.robinPlan.id, person: robin.id, cli: 'uhc', organization: 'example-health-plan', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: null,
       sign_in: { state: 'signed_out', expires_at: null, checked_at: at(-60 * 8), needs_person: { reason: 'sign_in', since: at(-60 * 8), command: `medrec refresh sign-in ${src.robinPlan.id}` } },
       last_attempt: robinPlanNeeds,
+      last_success: null,
+    },
+    {
+      source: src.robinBlood.id, person: robin.id, cli: 'oneblood', organization: 'example-blood-center', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: null,
+      sign_in: { state: 'expired', expires_at: null, checked_at: at(-60 * 6), renews: false, lasts_secs: 3600, needs_person: { reason: 'sign_in', since: at(-60 * 6), command: `medrec refresh sign-in ${src.robinBlood.id}` } },
+      last_attempt: robinBloodWaits,
       last_success: null,
     },
     {

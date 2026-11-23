@@ -69,7 +69,8 @@ describe('the store over the sample folder', () => {
     expect(outcome('Sam Example', 'peryourhealth')).toBe('skipped_paused');
     expect(outcome('Sam Example', 'labcorp')).toBe('skipped_interval');
     expect(outcome('Alex Example', 'athena')).toBe('ok');
-    expect(outcome('Robin Example', 'oneblood')).toBeUndefined();
+    expect(outcome('Robin Example', 'oneblood')).toBe('needs_person');
+    expect(outcome('Jamie Example', 'athena')).toBeUndefined();
     expect(store.sources().find((v) => v.source.id === athena.id)?.lastLoad?.at).toBe('2026-11-22T20:00:06Z');
   });
 

@@ -20,6 +20,7 @@ export type Health =
   | 'failed'
   | 'expired'
   | 'signed_out'
+  | 'awaits_sign_in'
   | 'paused'
   | 'expiring'
   | 'running'
@@ -32,6 +33,7 @@ export const HEALTH_ORDER: Health[] = [
   'failed',
   'expired',
   'signed_out',
+  'awaits_sign_in',
   'paused',
   'expiring',
   'running',
@@ -159,9 +161,14 @@ function health(status: SourceStatus | undefined, lastLoad: LastLoad | undefined
   const signIn = status.sign_in?.state;
   // medrec clears needs_person once someone signs in; the attempt that asked keeps its outcome until the next.
   const asked = status.last_attempt?.outcome === 'needs_person' && status.sign_in?.needs_person === undefined;
-  if (status.sign_in?.needs_person || asked) return 'needs_person';
+  const np = status.sign_in?.needs_person;
+  // A sign-in nothing renews ends after every load: waiting for the next one is its normal state, not an alarm.
+  // A Keychain approval nobody gave is still one.
+  const byHand = status.sign_in?.renews === false && np?.reason !== 'keychain';
+  if ((np || asked) && !byHand) return 'needs_person';
   if (status.last_attempt?.outcome === 'running') return 'running';
   if (status.paused) return 'paused';
+  if (byHand && (np || asked || signIn === 'expired' || signIn === 'signed_out')) return 'awaits_sign_in';
   if (status.last_attempt?.outcome === 'failed') return 'failed';
   if (signIn === 'expired') return 'expired';
   if (signIn === 'signed_out') return 'signed_out';
@@ -281,7 +288,11 @@ export function headline(views: SourceView[]): Headline {
   const ended = count('expired') + count('signed_out');
   if (ended) return { text: `${plural(ended, 'sign-in has', 'sign-ins have')} ended`, attention: true };
   const never = count('never');
+  const waits = count('awaits_sign_in');
   if (never === views.length) return { text: 'Nothing loaded yet', attention: false };
-  if (never) return { text: `${plural(views.length - never, 'source', 'sources')} loaded, ${never} not yet`, attention: false };
+  if (never || waits) {
+    const rest = [never ? `${never} not yet` : null, waits ? `${waits} ${waits === 1 ? 'waits' : 'wait'} for a sign-in` : null].filter(Boolean).join(', ');
+    return { text: `${plural(views.length - never - waits, 'source', 'sources')} loaded, ${rest}`, attention: false };
+  }
   return { text: views.length === 1 ? 'The source is loaded' : `All ${views.length} sources loaded`, attention: false };
 }

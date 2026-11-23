@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { headline, importsFor, isOverdue, macState, requestWait, sourceViews } from '../src/model/sources';
+import { headline, importsFor, isOverdue, macState, needsAttention, needsPerson, requestWait, sourceViews } from '../src/model/sources';
 import { buildRequest } from '../src/model/requests';
 import type { RefreshStatus } from '../src/model/types';
 import { demo, sourceOf } from './demo-data';
@@ -18,6 +18,21 @@ describe('source views over the sample', () => {
     expect(view('Sam Example', 'mychart').health).toBe('expiring');
     expect(view('Robin Example', 'mychart').health).toBe('ok');
     expect(view('Alex Example', 'athena').health).toBe('ok');
+    expect(view('Robin Example', 'oneblood').health).toBe('awaits_sign_in');
+  });
+
+  it('read a sign-in nothing renews as waiting, not as needing a person, unless it waits on the Keychain', () => {
+    const blood = sourceOf(household, 'Robin Example', 'oneblood');
+    const withSignIn = (signIn: object) => sourceViews({ household, indexes, status: { ...status, sources: status.sources.map((s) => (s.source === blood.id ? { ...s, sign_in: { ...s.sign_in!, ...signIn } } : s)) }, pending: [], done: [] }).find((v) => v.source.id === blood.id)!;
+    expect(withSignIn({}).health).toBe('awaits_sign_in');
+    expect(needsPerson([withSignIn({})])).toEqual([]);
+    expect(needsAttention([withSignIn({})])).toEqual([]);
+    // Unknown, or renewing: as before.
+    expect(withSignIn({ renews: undefined }).health).toBe('needs_person');
+    expect(withSignIn({ renews: true }).health).toBe('needs_person');
+    expect(withSignIn({ needs_person: { reason: 'keychain', command: 'medrec refresh sign-in s_x' } }).health).toBe('needs_person');
+    // Signed in again: loads as any other.
+    expect(withSignIn({ state: 'ok', needs_person: null }).health).toBe('ok');
   });
 
   it('take a sign-in made since the attempt that asked for one as made', () => {
@@ -35,7 +50,7 @@ describe('source views over the sample', () => {
   });
 
   it('fall back to the ImportRun for a source the Mac does not refresh', () => {
-    const v = view('Robin Example', 'oneblood');
+    const v = view('Jamie Example', 'athena');
     expect(v.status).toBeUndefined();
     expect(v.health).toBe('ok');
     expect(v.lastLoad?.importId).toMatch(/^i_/);
@@ -63,14 +78,21 @@ describe('source views over the sample', () => {
   it('show an everything request only on sources the Mac refreshes', () => {
     const req = buildRequest({ scope: { all: true }, now: NOW, by: {}, appVersion: '0' });
     const vs = sourceViews({ household, indexes, status, pending: [req], done: [] });
-    // The blood centre and the newborn's practice are not set up for refresh.
-    const notRefreshed = [sourceOf(household, 'Robin Example', 'oneblood').id, sourceOf(household, 'Jamie Example', 'athena').id];
+    // The newborn's practice is not set up for refresh.
+    const notRefreshed = [sourceOf(household, 'Jamie Example', 'athena').id];
     for (const v of vs) expect(v.pending.length).toBe(notRefreshed.includes(v.source.id) ? 0 : 1);
   });
 });
 
 describe('headline', () => {
   const { household, indexes } = demo();
+  it('counts a source waiting for a sign-in apart from the loaded ones', () => {
+    const { status } = demo();
+    const vs = sourceViews({ household, indexes, status, pending: [], done: [] }).filter((v) => v.health === 'ok' || v.health === 'awaits_sign_in');
+    const ok = vs.filter((v) => v.health === 'ok').length;
+    expect(headline(vs)).toEqual({ text: `${ok} sources loaded, 1 waits for a sign-in`, attention: false });
+  });
+
   it('reads plainly when nothing is wrong', () => {
     // Without status.json, health comes from the ImportRuns alone.
     const vs = sourceViews({ household, indexes, pending: [], done: [] });

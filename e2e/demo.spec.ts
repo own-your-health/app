@@ -97,6 +97,16 @@ test('the Sources screen lists every source and sign-in, and opens one', async (
   await expect(attention).not.toContainText('503');
   await expect(attention).not.toContainText('auth login');
   const others = page.locator('.card', { hasText: 'Other sources' });
+  // A sign-in nothing renews waits quietly among the others, with its command on its own page.
+  const blood = others.locator('.row', { hasText: 'Example Blood Center' });
+  await expect(blood.locator('.chip')).toHaveText('Waits for a sign-in');
+  await expect(blood).toContainText('Loads when someone signs in on the Mac. A sign-in to Example Blood Center lasts about 1 hour.');
+  await expect(blood.locator('.command')).toHaveCount(0);
+  await blood.locator('.row-main').click();
+  await expect(page.locator('.card .source-lines').first().locator('.needs-person')).toContainText('To load it now, run this in a terminal on the Mac:');
+  await expect(page.locator('.card .source-lines').first().locator('.command code')).toHaveText(/^medrec refresh sign-in s_[a-z2-7]{20}$/);
+  await expect(page.getByRole('button', { name: /^Refresh/ })).toHaveCount(0);
+  await page.goBack();
   const total = await others.locator('.row').count();
   expect(total).toBeGreaterThanOrEqual(3);
   await others.locator('.row-main').first().click();

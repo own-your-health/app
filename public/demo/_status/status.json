@@ -82,7 +82,7 @@
         }
       },
       "last_attempt": {
-        "attempt": "t_m3o5ivud4nsfbxxjjrxw",
+        "attempt": "t_jrsi3yne2vvusfobf3n4",
         "started_at": "2026-11-22T12:00:00Z",
         "finished_at": "2026-11-22T12:01:00Z",
         "trigger": "schedule",
@@ -93,6 +93,45 @@
           "code": "needs_person",
           "message": "The member site session has expired. Sign in with `uhc auth login --browser --profile <provider profile> --overwrite`.",
           "remedy": "Run `uhc auth login`, then import again."
+        },
+        "import": null
+      },
+      "last_success": null
+    },
+    {
+      "source": "s_e2ocktqcc75b55gjsygb",
+      "person": "p_xo4em46i7yj3hphlpajo",
+      "cli": "oneblood",
+      "organization": "example-blood-center",
+      "auto": true,
+      "paused": null,
+      "failures": 0,
+      "min_interval_secs": 86400,
+      "next_run_at": null,
+      "sign_in": {
+        "state": "expired",
+        "expires_at": null,
+        "checked_at": "2026-11-22T14:00:00Z",
+        "renews": false,
+        "lasts_secs": 3600,
+        "needs_person": {
+          "reason": "sign_in",
+          "since": "2026-11-22T14:00:00Z",
+          "command": "medrec refresh sign-in s_e2ocktqcc75b55gjsygb"
+        }
+      },
+      "last_attempt": {
+        "attempt": "t_m3o5ivud4nsfbxxjjrxw",
+        "started_at": "2026-11-22T14:00:00Z",
+        "finished_at": "2026-11-22T14:01:00Z",
+        "trigger": "schedule",
+        "requests": [],
+        "outcome": "needs_person",
+        "exit_code": 3,
+        "error": {
+          "code": "needs_person",
+          "message": "Session expired. Run `oneblood auth login --profile <provider profile>`.",
+          "remedy": "Sign in again with `oneblood auth login`."
         },
         "import": null
       },

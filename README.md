@@ -186,6 +186,13 @@ Some sign-ins need a person: a new password, a code by text, a captcha. The
 app never asks for or holds a provider password. It shows the exact command to
 run in a terminal on the Mac, such as `medrec refresh sign-in s_…`.
 
+Some member sites keep a sign-in for an hour or so, and nothing renews it, so
+the source loads only soon after someone signs in. medrec marks such a source
+in `_status/` (`sign_in.renews: false`). The app shows it quietly, as **Waits
+for a sign-in** with "Loads when someone signs in on the Mac", and not as an
+alert: it stays off home's sign-in line and the dot on Sources. Its page
+still gives the command. A Keychain approval nobody gave is still an alert.
+
 ## Privacy and security
 
 The privacy policy is at https://own-your-health.github.io/app/privacy.html

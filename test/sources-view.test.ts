@@ -57,6 +57,18 @@ describe('the answer to a refresh request', () => {
     expect(requestAnswer(mixed, names, NOW)).toBe('Last refresh request 2 minutes ago: 1 loaded, 2 too soon after their last tries');
   });
 
+  it('says a source that loads only after a sign-in waits for one, rather than needed a person', () => {
+    const blood = sourceOf(household, 'Robin Example', 'oneblood');
+    const plan = sourceOf(household, 'Robin Example', 'uhc');
+    const r = answered({ all: true }, ['ok', 'needs_person', 'needs_person']);
+    r.handled.sources![1]!.source = blood.id;
+    r.handled.sources![2]!.source = plan.id;
+    expect(requestAnswer(r, names, NOW)).toBe('Last refresh request 2 minutes ago: 1 loaded, 1 waits for a sign-in, 1 needed a person');
+    const one = answered({ source: blood.id }, ['needs_person']);
+    one.handled.sources![0]!.source = blood.id;
+    expect(requestAnswer(one, names, NOW)).toMatch(/: waits for a sign-in on the Mac$/);
+  });
+
   it('names the source or person a narrower request was for', () => {
     const lab = sourceOf(household, 'Sam Example', 'labcorp');
     const sam = household.people.find((p) => p.name === 'Sam Example')!;
@@ -139,6 +151,13 @@ describe('home’s line for a sign-in that needs a person', () => {
   it('tells two people’s sources of the same name apart', () => {
     const twin = { ...ended(lab), name: plan.name };
     expect(signInWords([plan, twin])?.text).toBe(`${plan.name} (Robin Example) and ${plan.name} (Sam Example) need a sign-in on the Mac`);
+  });
+
+  it('leaves out a source that loads only after a sign-in', () => {
+    const blood = views.find((v) => v.source.id === sourceOf(household, 'Robin Example', 'oneblood').id)!;
+    expect(blood.health).toBe('awaits_sign_in');
+    expect(signInWords([plan, blood])).toEqual({ text: `${plan.name} needs a sign-in on the Mac`, route: { name: 'source', source: plan.source.id } });
+    expect(signInWords([blood])).toBeUndefined();
   });
 
   it('is absent when nothing needs a person', () => {
