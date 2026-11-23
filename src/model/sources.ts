@@ -190,10 +190,10 @@ export function sourceViews(opts: {
   status?: RefreshStatus;
   pending: RefreshRequest[];
   done: RefreshRequest[];
-  /** For how long a quiet source has gone unloaded. */
-  now?: Date;
+  /** The views' clock, for how long a quiet source has gone unloaded. */
+  now: Date;
 }): SourceView[] {
-  const now = opts.now ?? new Date();
+  const now = opts.now;
   const { household, indexes, status } = opts;
   const byId = new Map(status?.sources.map((s) => [s.source, s]) ?? []);
   const views = household.sources.map((source): SourceView => {

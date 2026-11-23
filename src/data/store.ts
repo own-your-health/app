@@ -132,7 +132,7 @@ export class Store {
     return t;
   }
 
-  sources(now = new Date()): SourceView[] {
+  sources(now: Date): SourceView[] {
     return sourceViews({
       now,
       household: this.household,

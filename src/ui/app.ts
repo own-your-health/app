@@ -343,7 +343,7 @@ export class App {
       user: this.user,
       canWrite: this.demo || this.scopes.includes(SCOPE_WRITE),
       version: VERSION,
-      now: () => new Date(),
+      now: () => this.now(),
       go: (r: Route) => (location.hash = href(r)),
       render: () => this.render(),
       toast: (t, kind) => this.toast(t, kind),
@@ -450,9 +450,14 @@ export class App {
     }
   }
 
+  /** The one clock the views and the bar read. */
+  private now(): Date {
+    return new Date();
+  }
+
   /** Sources, with a dot while a source needs attention at the Mac. */
   private sourcesButton(): HTMLElement {
-    const alert = this.store ? needsAttention(this.store.sources()).length > 0 : false;
+    const alert = this.store ? needsAttention(this.store.sources(this.now())).length > 0 : false;
     return h(
       'a',
       { class: ['icon-button', alert ? 'icon-button-alert' : null], href: '#/sources', 'aria-label': alert ? 'Sources: a source needs attention' : 'Sources' },
