@@ -354,11 +354,61 @@ test('bills say what is owed to each provider, and each claim sits beside its bi
   await expect(lines.locator('.row-title')).toHaveText(['Lipid panel', 'Blood draw']);
   await expect(lines.locator('.row-meta')).toHaveText(['80061 · Lab test · Oct 3, 2026', '36415 · Lab test · Oct 3, 2026']);
   await expect(lines.locator('.claim-amounts').first()).toHaveText('Billed $180.00 · Allowed $78.40 · Plan paid $62.72 · Deductible $0.00 · Coinsurance $15.68 · You owe $15.68');
+  // A claim from before medrec linked claims: no diagnosis, no line links, and no visit that day at the lab.
+  await expect(page.locator('main .kv-row dt', { hasText: /^Diagnos/ })).toHaveCount(0);
+  await expect(page.locator('.claim-paid-for')).toHaveCount(0);
+  await expect(page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Paid for$/ }) })).toHaveCount(0);
+  await page.goBack();
+  // Without medrec's link, the visit is the one of the same day from a matching provider.
+  await rows.nth(0).locator('a.row-main').click();
+  await expect(page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Paid for$/ }) }).locator('.row-title')).toHaveText(['Office visit']);
   await page.goBack();
 
   await rows.nth(3).getByRole('link', { name: 'statement of Oct 20, 2026' }).click();
   await expect(page).toHaveURL(/#\/p\/p_[a-z2-7]{20}\/r\/d_[a-z2-7]{20}$/);
   await expect(page.locator('main')).toContainText('Statement from Example Health');
+});
+
+/** A label's value in the page's key-value list. */
+const field = (page: Page, label: string) => page.locator('main .kv-row', { has: page.locator('dt', { hasText: new RegExp(`^${label}$`) }) }).locator('dd');
+const paidFor = (page: Page) => page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Paid for$/ }) });
+
+test('a claim medrec linked says what it paid for: the visit, the diagnosis and each line’s records', async ({ page }) => {
+  await page.goto('./?demo');
+  await page.getByRole('link', { name: /^Alex Example/ }).first().click();
+  await openSection(page, 'Claims and bills');
+  await page.locator('.row', { hasText: 'Office visit and strep test' }).locator('a.row-main').click();
+  await expect(page.locator('main h1')).toHaveText('Office visit and strep test');
+  await expect(field(page, 'Diagnosis')).toHaveText('Otitis media, unspecified, unspecified ear (H66.90)');
+  await expect(paidFor(page).locator('.row-title')).toHaveText(['Sick visit']);
+  await expect(paidFor(page).locator('.row-meta').first()).toContainText('Visit · Nov 20, 2026');
+  const lines = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^2 lines$/ }) });
+  await expect(lines.locator('.row-meta')).toHaveText(['99213 · Visit · Nov 20, 2026', '87880 · Lab test · Nov 20, 2026']);
+  // The strep test's result is not in these records, so only the visit line links.
+  await expect(lines.locator('.claim-paid-for')).toHaveText(['Paid for: Sick visit']);
+  await lines.locator('.claim-paid-for').getByRole('link', { name: 'Sick visit' }).click();
+  await expect(page.locator('main h1')).toHaveText('Sick visit');
+});
+
+test('a lab claim lists the results medrec linked, and a fill its discount and the fill itself', async ({ page }) => {
+  await page.goto('./?demo');
+  await page.getByRole('link', { name: /^Sam Example/ }).first().click();
+  await openSection(page, 'Claims and bills');
+  await page.locator('.row', { hasText: 'Blood count and vitamin D test' }).locator('a.row-main').click();
+  await expect(field(page, 'Diagnosis')).toHaveText('Vitamin D deficiency, unspecified (E55.9)');
+  await expect(paidFor(page).locator('.row-title')).toHaveText(['Hemoglobin', 'White blood cells', 'Platelets']);
+  await expect(paidFor(page).locator('.row-meta').first()).toContainText('Result · Oct 12, 2026');
+  await expect(page.locator('.claim-paid-for')).toHaveText(['Paid for: Hemoglobin, White blood cells and Platelets']);
+
+  await page.goto('./?demo');
+  await page.getByRole('link', { name: /^Robin Example/ }).first().click();
+  await openSection(page, 'Claims and bills');
+  await page.locator('.row', { hasText: 'Lisinopril 10 mg tablet, 90 days' }).first().locator('a.row-main').click();
+  await expect(field(page, 'Billed')).toHaveText('$32.50');
+  await expect(field(page, 'Discount')).toHaveText('$20.10');
+  await expect(field(page, 'Diagnosis')).toHaveText('Essential (primary) hypertension (I10)');
+  await expect(page.locator('.claim-amounts')).toHaveText(['Billed $32.50 · Discount $20.10 · Allowed $12.40 · Plan paid $2.40 · Deductible $0.00 · Copay $10.00 · Coinsurance $0.00 · You owe $10.00']);
+  await expect(page.locator('.claim-paid-for')).toHaveText(['Paid for: Lisinopril 10 mg tablet']);
 });
 
 test('a bill no claim matches is listed apart', async ({ page }) => {

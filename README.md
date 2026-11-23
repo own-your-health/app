@@ -107,10 +107,11 @@ apart. The rules are `src/model/lists.ts`, which the overview's cards use too.
 
 Search needs every word, or "a quoted phrase", somewhere in an item's name,
 its fields (a visit's reason, a medicine's dosage or prescriber, each of a
-claim's lines, a statement's account and amount) or, for a document, the
-text in the person's `text.json`, ignoring case and accents. Name matches
-come first, then field matches, then matches only in a document's text,
-newest first in each, with the words marked and filters by kind and person.
+claim's lines and diagnoses, a statement's account and amount) or, for a
+document, the text in the person's `text.json`, ignoring case and accents.
+Name matches come first, then field matches, then matches only in a
+document's text, newest first in each, with the words marked and filters by
+kind and person.
 
 A few everyday words name a kind of thing instead. The other words in the
 query are searched within that kind. Each word below also matches its
@@ -135,7 +136,9 @@ Results come in groups by kind:
   claims;
 - a test found more than once is one row under its panel, with its newest
   value and how many results it has, and opens its history;
-- a claim shows its provider and what you owe, and the line that matched.
+- a claim shows its provider and what you owe, and the line or diagnosis
+  that matched ("Diagnosis: Strep throat (J02.0)"). The ids and amounts
+  medrec gives a claim are not searched as words.
 
 Each person's `text.json` is read from Drive once a search is coming (the
 search page opens, or the home screen's search field is chosen), so it
@@ -165,9 +168,20 @@ rules are `src/model/billing.ts`.
 
 A claim is named for what it paid for, from its lines ("Lipid panel and
 blood draw"), not for its type. Its page lists each line with its code, a
-category from the code (visit, lab test, imaging, vaccine and so on), its
-date and its amounts: billed, allowed, plan paid, deductible, copay,
-coinsurance, not covered and you owe. The rules are `src/model/claims.ts`.
+category from the code (visit, lab test, imaging, vaccine, facility charge and
+so on), its date and its amounts: billed, discount, allowed, plan paid,
+deductible, copay, coinsurance, not covered and you owe. It names the
+diagnoses the claim gives, and under **Paid for** the visit and the results
+it paid for; each line links the records it paid for.
+
+medrec's data contract gives a claim fixed amount names (`amounts`, on the
+claim and each line), each line's `category` and the claim's (or `mixed`),
+its `diagnoses`, and links: `visit`, `results` and each line's `records`.
+Where a claim has them, they win. A claim from an older medrec still reads:
+its amounts come from the payer's own words, its categories from the codes,
+and its visit is the one of the same day from a matching provider. A link to
+a record these records do not hold is left out. The rules are
+`src/model/claims.ts`, and for the visit, `src/model/visits.ts`.
 
 Coverage, under Claims and bills, lists each insurer and plan the person has
 had, newest first, from when to when, and whose records name it. The same

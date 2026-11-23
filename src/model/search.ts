@@ -13,7 +13,7 @@
 // concept with nothing that has the other words ("Example Lab").
 
 import { claimAmounts } from './billing';
-import { claimLines } from './claims';
+import { claimDiagnoses, claimLines, diagnosisText } from './claims';
 import { panelFor } from './panels';
 import { KIND_LABELS, asMoney, docTypeLabel, documentTitle, formatMoney, resultReading, seriesKey, str, studyTitle, valueText } from './records';
 import { unitText } from './result';
@@ -247,6 +247,9 @@ function candidate(
   return { id, kind, title, date, concept, extra, names: n, fields: f, all: [n, ...f.map((x) => x.folded)].join(JOIN) };
 }
 
+/** A claim's parts searched in their own words, or not at all: lines, diagnoses, and medrec's amounts and links. */
+const CLAIM_PARTS = ['items', 'diagnoses', 'amounts', 'visit', 'results'];
+
 /** One field per claim line, "Lipid panel (80061) · billed $180.00", so a hit can say which line matched. */
 function lineFields(r: MedRecord): [string, string, true][] {
   return claimLines(r).map((l): [string, string, true] => {
@@ -299,7 +302,7 @@ function candidates(index: PersonIndex): Candidate[] {
   for (const r of index.records) {
     const title = recordTitle(r);
     // A claim's lines are searched one by one, so a hit names the line.
-    const fields = r.kind === 'claim' ? [...fieldsOf(r.fields, ['items']), ...lineFields(r)] : fieldsOf(r.fields);
+    const fields = r.kind === 'claim' ? [...fieldsOf(r.fields, CLAIM_PARTS), ...claimDiagnoses(r).map((d): [string, string] => ['Diagnosis', diagnosisText(d)]), ...lineFields(r)] : fieldsOf(r.fields);
     out.push(candidate(r.id, r.kind, title, r.date, [title, r.code?.display ?? '', r.code?.code ?? '', KIND_LABELS[r.kind] ?? r.kind, statusText(r.status) ?? ''], fields, recordConcept(r), recordExtra(r)));
   }
   for (const d of index.documents) {

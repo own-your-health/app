@@ -826,7 +826,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Professional",
+      "display": "Office visit and X-ray of the ankle",
       "status": "active",
       "fields": {
         "when": "2026-05-20",
@@ -968,6 +968,40 @@
                 },
                 "reason": null
               }
+            ],
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "260.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "168.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "128.00",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "copay": {
+                "amount": "40.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "40.00",
+                "currency": "USD"
+              }
+            },
+            "records": [
+              "r_7vbpun34uoqnf4r4gwe3"
             ]
           },
           {
@@ -1043,13 +1077,88 @@
                 },
                 "reason": null
               }
-            ]
+            ],
+            "category": "imaging",
+            "amounts": {
+              "billed": {
+                "amount": "145.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "82.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "65.60",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "copay": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "16.40",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "16.40",
+                "currency": "USD"
+              }
+            },
+            "records": []
           }
         ],
         "benefit_period": {
           "start": "2025-07-01",
           "end": "2026-06-30"
-        }
+        },
+        "category": "mixed",
+        "amounts": {
+          "billed": {
+            "amount": "405.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "250.00",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "193.60",
+            "currency": "USD"
+          },
+          "deductible": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "copay": {
+            "amount": "40.00",
+            "currency": "USD"
+          },
+          "coinsurance": {
+            "amount": "16.40",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "56.40",
+            "currency": "USD"
+          }
+        },
+        "diagnoses": [
+          {
+            "sequence": 1,
+            "code": {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "S93.401A",
+              "display": "Sprain of unspecified ligament of right ankle, initial encounter"
+            }
+          }
+        ],
+        "visit": "r_7vbpun34uoqnf4r4gwe3",
+        "results": []
       },
       "documents": [],
       "provenance": [
@@ -1084,7 +1193,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Professional",
+      "display": "Thyroid test (TSH) and blood draw",
       "status": "active",
       "fields": {
         "when": "2026-07-09",
@@ -1226,6 +1335,40 @@
                 },
                 "reason": null
               }
+            ],
+            "category": "lab",
+            "amounts": {
+              "billed": {
+                "amount": "95.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "41.20",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "41.20",
+                "currency": "USD"
+              },
+              "copay": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "41.20",
+                "currency": "USD"
+              }
+            },
+            "records": [
+              "r_t7o3hd7qkaukzypu32u5"
             ]
           },
           {
@@ -1301,13 +1444,92 @@
                 },
                 "reason": null
               }
-            ]
+            ],
+            "category": "lab",
+            "amounts": {
+              "billed": {
+                "amount": "25.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "9.50",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "9.50",
+                "currency": "USD"
+              },
+              "copay": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "9.50",
+                "currency": "USD"
+              }
+            },
+            "records": []
           }
         ],
         "benefit_period": {
           "start": "2026-07-01",
           "end": "2027-06-30"
-        }
+        },
+        "category": "lab",
+        "amounts": {
+          "billed": {
+            "amount": "120.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "50.70",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "deductible": {
+            "amount": "50.70",
+            "currency": "USD"
+          },
+          "copay": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "coinsurance": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "50.70",
+            "currency": "USD"
+          }
+        },
+        "diagnoses": [
+          {
+            "sequence": 1,
+            "code": {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z13.29",
+              "display": "Encounter for screening for other suspected endocrine disorder"
+            }
+          }
+        ],
+        "results": [
+          "r_t7o3hd7qkaukzypu32u5",
+          "r_loks2bzuyhkgmdsbxiim",
+          "r_cxktbdqss5olab7jvwhi",
+          "r_37m7inb7v4ayxigadjmo"
+        ]
       },
       "documents": [],
       "provenance": [
@@ -1342,7 +1564,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Professional",
+      "display": "Blood count and vitamin D test",
       "status": "active",
       "fields": {
         "when": "2026-10-12",
@@ -1484,6 +1706,42 @@
                 },
                 "reason": null
               }
+            ],
+            "category": "lab",
+            "amounts": {
+              "billed": {
+                "amount": "98.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "31.40",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "31.40",
+                "currency": "USD"
+              },
+              "copay": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "31.40",
+                "currency": "USD"
+              }
+            },
+            "records": [
+              "r_ed2vxgyu5x4epii2gais",
+              "r_rjhnkgt2kousvani33kp",
+              "r_gxlxebjiq6wviq4fvrpm"
             ]
           },
           {
@@ -1559,7 +1817,39 @@
                 },
                 "reason": null
               }
-            ]
+            ],
+            "category": "lab",
+            "amounts": {
+              "billed": {
+                "amount": "150.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "38.90",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "38.90",
+                "currency": "USD"
+              },
+              "copay": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "38.90",
+                "currency": "USD"
+              }
+            },
+            "records": []
           }
         ],
         "benefit_balance": [
@@ -1597,7 +1887,53 @@
         "benefit_period": {
           "start": "2026-07-01",
           "end": "2027-06-30"
-        }
+        },
+        "category": "lab",
+        "amounts": {
+          "billed": {
+            "amount": "248.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "70.30",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "deductible": {
+            "amount": "70.30",
+            "currency": "USD"
+          },
+          "copay": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "coinsurance": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "70.30",
+            "currency": "USD"
+          }
+        },
+        "diagnoses": [
+          {
+            "sequence": 1,
+            "code": {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "E55.9",
+              "display": "Vitamin D deficiency, unspecified"
+            }
+          }
+        ],
+        "results": [
+          "r_ed2vxgyu5x4epii2gais",
+          "r_rjhnkgt2kousvani33kp",
+          "r_gxlxebjiq6wviq4fvrpm"
+        ]
       },
       "documents": [],
       "provenance": [

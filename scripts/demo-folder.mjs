@@ -886,7 +886,67 @@ function julyYear(date) {
   return { start: `${y}-07-01`, end: `${y + 1}-06-30` };
 }
 
-function claimOf(P, s, { date, provider, insurer, type = 'Professional', system = CPT, lines, balances, benefitPeriod }) {
+// What a medrec that writes the claim fields of its data contract adds to a
+// claim: a name from its lines, each line's category and the claim's,
+// amounts under fixed names, the diagnoses, and links to the visit, the
+// results and what each line paid for, matched by day and provider. The
+// plans' and the pharmacy benefit's claims carry them; Robin's member-site
+// plan keeps the older shape, so the sample shows both.
+const LINE_CATEGORY = { 99213: 'visit', 99214: 'visit', 73610: 'imaging', 84443: 'lab', 36415: 'lab', 85025: 'lab', 82306: 'lab', 87880: 'lab', 90686: 'vaccine', 90471: 'vaccine' };
+// The results each lab line paid for, by their LOINC codes.
+const PAID_FOR = { 84443: ['3016-3'], 85025: ['718-7', '6690-2', '777-3'], 82306: ['62292-8'] };
+const lowerFirst = (s) => (/^[A-Z][a-z]+(?![\w])/.test(s) ? s[0].toLowerCase() + s.slice(1) : s);
+function nameFrom(labels) {
+  const [first, ...rest] = [...new Map(labels.map((l) => [l.toLowerCase(), l])).values()];
+  const later = rest.map(lowerFirst);
+  if (later.length === 0) return first;
+  if (later.length === 1) return `${first} and ${later[0]}`;
+  return `${first}, ${later[0]} and ${later.length - 1} more`;
+}
+function claimFields(P, { date, provider, type, lines, diagnoses }) {
+  const orgName = (r) => Object.values(src).find((s) => s.organization === r.provenance[0].source.organization_id)?.organization_name;
+  const sameDay = P.records.filter((r) => r.date?.slice(0, 10) === date);
+  const visit = sameDay.find((r) => r.kind === 'encounter' && orgName(r) === provider);
+  const results = sameDay.filter((r) => (r.kind === 'result' || r.kind === 'report') && orgName(r) === provider);
+  const pharmacy = type === 'Pharmacy';
+  const categoryOf = (code) => {
+    if (pharmacy) return 'pharmacy';
+    const c = LINE_CATEGORY[code];
+    if (!c) throw new Error(`no category for ${code}`);
+    return c;
+  };
+  const paidFor = (code) => {
+    const c = categoryOf(code);
+    if (c === 'visit') return visit ? [visit.id] : [];
+    if (c === 'lab') return results.filter((r) => (PAID_FOR[code] ?? []).includes(r.code?.code)).map((r) => r.id);
+    if (c === 'vaccine') return sameDay.filter((r) => r.kind === 'immunization' && orgName(r) === provider).map((r) => r.id);
+    if (c === 'pharmacy') return sameDay.filter((r) => r.kind === 'medication' && r.fields.pharmacy === provider).map((r) => r.id);
+    return [];
+  };
+  const named = (l) => ({
+    billed: usd(l[2]),
+    ...(pharmacy ? { discount: dollars(cents(l[2]) - cents(l[3])) } : {}),
+    allowed: usd(l[3]),
+    plan_paid: usd(l[7]),
+    deductible: usd(l[4]),
+    copay: usd(l[5]),
+    coinsurance: usd(l[6]),
+    you_owe: dollars(cents(l[4]) + cents(l[5]) + cents(l[6])),
+  });
+  const kinds = [...new Set(lines.map((l) => categoryOf(l[0])))];
+  const total = (i) => (lines.reduce((t, l) => t + cents(l[i]), 0) / 100).toFixed(2);
+  return {
+    display: pharmacy ? lines[0][1] : nameFrom(lines.map((l) => l[1])),
+    category: kinds.length === 1 ? kinds[0] : 'mixed',
+    amounts: named(['', '', total(2), total(3), total(4), total(5), total(6), total(7)]),
+    diagnoses: diagnoses.map(([code, display], i) => ({ sequence: i + 1, code: { system: ICD10, code, display } })),
+    ...(visit ? { visit: visit.id } : {}),
+    results: results.map((r) => r.id),
+    items: lines.map((l) => ({ category: categoryOf(l[0]), amounts: named(l), records: paidFor(l[0]) })),
+  };
+}
+
+function claimOf(P, s, { date, provider, insurer, type = 'Professional', system = CPT, lines, balances, benefitPeriod, diagnoses = [] }) {
   for (const l of lines) if (cents(l[3]) !== cents(l[4]) + cents(l[5]) + cents(l[6]) + cents(l[7])) throw new Error(`allowed is not paid plus share: ${l}`);
   const share = (l) => cents(l[4]) + cents(l[5]) + cents(l[6]);
   const amounts = (l) => [
@@ -897,13 +957,15 @@ function claimOf(P, s, { date, provider, insurer, type = 'Professional', system 
     ['Copay', usd(l[5])],
     ['Coinsurance', usd(l[6])],
     ['Member liability', dollars(share(l))],
+    ...(type === 'Pharmacy' ? [['Discount', dollars(cents(l[2]) - cents(l[3]))]] : []),
   ];
   const sumAt = (i) => (lines.reduce((t, l) => t + cents(l[i]), 0) / 100).toFixed(2);
   const totals = amounts(['', '', sumAt(2), sumAt(3), sumAt(4), sumAt(5), sumAt(6), sumAt(7)]);
+  const medrec = claimFields(P, { date, provider, type, lines, diagnoses });
   P.record(s, 'ExplanationOfBenefit', 'claim', {
     date,
     code: { system: 'http://terminology.hl7.org/CodeSystem/claim-type', code: type.toLowerCase(), display: type },
-    display: type,
+    display: medrec.display,
     status: 'active',
     fields: {
       provider,
@@ -921,9 +983,15 @@ function claimOf(P, s, { date, provider, insurer, type = 'Professional', system 
         quantity: { value: 1, unit: null },
         net: usd(l[2]),
         adjudication: amounts(l).map(([category, amount]) => ({ category, amount, reason: null })),
+        ...medrec.items[i],
       })),
       ...(balances ? { benefit_balance: balances } : {}),
       ...(benefitPeriod ? { benefit_period: benefitPeriod } : {}),
+      category: medrec.category,
+      amounts: medrec.amounts,
+      diagnoses: medrec.diagnoses,
+      ...(medrec.visit ? { visit: medrec.visit } : {}),
+      results: medrec.results,
     },
     resource: {
       status: 'active',
@@ -961,22 +1029,22 @@ const coverage = (P, s, display, relationship) =>
 // Sam: a sports-medicine visit with an X-ray late in one plan year; then, in
 // the next, lab work that went to the deductible.
 coverage(S, src.samPlan, 'Example Care Plan HMO', 'self');
-claimOf(S, src.samPlan, { date: '2026-05-20', provider: 'Example Health', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-05-20'), lines: [['99214', 'Office visit', '260.00', '168.00', '0.00', '40.00', '0.00', '128.00'], ['73610', 'X-ray of the ankle', '145.00', '82.00', '0.00', '0.00', '16.40', '65.60']] });
-claimOf(S, src.samPlan, { date: '2026-07-09', provider: 'Example Lab', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-07-09'), lines: [['84443', 'Thyroid test (TSH)', '95.00', '41.20', '41.20', '0.00', '0.00', '0.00'], ['36415', 'Blood draw', '25.00', '9.50', '9.50', '0.00', '0.00', '0.00']] });
-claimOf(S, src.samPlan, { date: '2026-10-12', provider: 'Example Lab', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-10-12'), lines: [['85025', 'Blood count', '98.00', '31.40', '31.40', '0.00', '0.00', '0.00'], ['82306', 'Vitamin D test', '150.00', '38.90', '38.90', '0.00', '0.00', '0.00']], balances: careBalance('121.00', '121.00') });
+claimOf(S, src.samPlan, { date: '2026-05-20', provider: 'Example Health', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-05-20'), diagnoses: [['S93.401A', 'Sprain of unspecified ligament of right ankle, initial encounter']], lines: [['99214', 'Office visit', '260.00', '168.00', '0.00', '40.00', '0.00', '128.00'], ['73610', 'X-ray of the ankle', '145.00', '82.00', '0.00', '0.00', '16.40', '65.60']] });
+claimOf(S, src.samPlan, { date: '2026-07-09', provider: 'Example Lab', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-07-09'), diagnoses: [['Z13.29', 'Encounter for screening for other suspected endocrine disorder']], lines: [['84443', 'Thyroid test (TSH)', '95.00', '41.20', '41.20', '0.00', '0.00', '0.00'], ['36415', 'Blood draw', '25.00', '9.50', '9.50', '0.00', '0.00', '0.00']] });
+claimOf(S, src.samPlan, { date: '2026-10-12', provider: 'Example Lab', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-10-12'), diagnoses: [['E55.9', 'Vitamin D deficiency, unspecified']], lines: [['85025', 'Blood count', '98.00', '31.40', '31.40', '0.00', '0.00', '0.00'], ['82306', 'Vitamin D test', '150.00', '38.90', '38.90', '0.00', '0.00', '0.00']], balances: careBalance('121.00', '121.00') });
 S.importRun(src.samPlan, { importedAt: PLANS_LOAD, added: 4, updated: 0, unchanged: 0, cliVersion: '0.4.0' });
 S.write();
 
 // Alex, on Sam's plan: a flu shot, and a sick visit at the pediatric practice.
 coverage(A, src.alexPlan, 'Example Care Plan HMO (dependent)', 'child');
-claimOf(A, src.alexPlan, { date: '2025-10-20', provider: 'Example Pediatrics', insurer: 'Example Care Plan', benefitPeriod: julyYear('2025-10-20'), lines: [['90686', 'Flu vaccine', '55.00', '32.00', '0.00', '0.00', '0.00', '32.00'], ['90471', 'Vaccine given', '28.00', '18.00', '0.00', '0.00', '0.00', '18.00']] });
-claimOf(A, src.alexPlan, { date: '2026-11-20', provider: 'Example Pediatrics', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-11-20'), lines: [['99213', 'Office visit', '165.00', '98.00', '0.00', '25.00', '0.00', '73.00'], ['87880', 'Strep test', '48.00', '21.30', '0.00', '0.00', '0.00', '21.30']], balances: careBalance('0.00', '25.00') });
+claimOf(A, src.alexPlan, { date: '2025-10-20', provider: 'Example Pediatrics', insurer: 'Example Care Plan', benefitPeriod: julyYear('2025-10-20'), diagnoses: [['Z23', 'Encounter for immunization']], lines: [['90686', 'Flu vaccine', '55.00', '32.00', '0.00', '0.00', '0.00', '32.00'], ['90471', 'Vaccine given', '28.00', '18.00', '0.00', '0.00', '0.00', '18.00']] });
+claimOf(A, src.alexPlan, { date: '2026-11-20', provider: 'Example Pediatrics', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-11-20'), diagnoses: [['H66.90', 'Otitis media, unspecified, unspecified ear']], lines: [['99213', 'Office visit', '165.00', '98.00', '0.00', '25.00', '0.00', '73.00'], ['87880', 'Strep test', '48.00', '21.30', '0.00', '0.00', '0.00', '21.30']], balances: careBalance('0.00', '25.00') });
 A.importRun(src.alexPlan, { importedAt: PLANS_LOAD, added: 3, updated: 0, unchanged: 0, cliVersion: '0.4.0' });
 A.write();
 
 // Robin's lisinopril fills, as the pharmacy benefit's claims.
 for (const date of ['2026-08-14', '2026-11-12']) {
-  claimOf(R, src.robinRx, { date, provider: 'Example Pharmacy', insurer: 'Example Pharmacy Benefits', type: 'Pharmacy', system: NDC, lines: [['00000-1111-90', 'Lisinopril 10 mg tablet, 90 days', '32.50', '12.40', '0.00', '10.00', '0.00', '2.40']] });
+  claimOf(R, src.robinRx, { date, provider: 'Example Pharmacy', insurer: 'Example Pharmacy Benefits', type: 'Pharmacy', system: NDC, diagnoses: [['I10', 'Essential (primary) hypertension']], lines: [['00000-1111-90', 'Lisinopril 10 mg tablet, 90 days', '32.50', '12.40', '0.00', '10.00', '0.00', '2.40']] });
 }
 R.importRun(src.robinRx, { importedAt: PLANS_LOAD, added: 2, updated: 0, unchanged: 0, cliVersion: '1.2.0' });
 R.write();
