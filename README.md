@@ -26,8 +26,8 @@ Google Drive. It reads the records folder that
 - a Refresh button per source, per person and for everything, which asks the
   household's Mac to load again.
 
-It runs entirely in the browser at **https://own-your-health.github.io/app/**.
-There is no server: the page signs in to Google, reads the folder from Drive,
+It runs entirely in the browser at **https://own-your-health.github.io/app/**;
+the project's page is https://own-your-health.github.io/. There is no server: the page signs in to Google, reads the folder from Drive,
 and keeps what it reads in memory.
 
 **Try it without a Drive:** https://own-your-health.github.io/app/?demo shows
@@ -370,4 +370,8 @@ Unofficial. Not affiliated with or endorsed by Google.
 
 ## License
 
-MIT
+MIT, except the Sign in with Google button images in `public/google-sign-in/`.
+They are Google's pre-approved branding assets, unchanged, from its
+[branding guidelines](https://developers.google.com/identity/branding-guidelines),
+and Google's trademarks. The sign-in screen shows them as the button, light or
+dark with the theme, so the button is Google's own design.

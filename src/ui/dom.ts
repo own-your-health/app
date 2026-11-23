@@ -18,6 +18,19 @@ export function safeHref(url: string): string {
   return SAFE_URL.test(url) ? url : '#';
 }
 
+/**
+ * A srcset whose every image is an address safeHref keeps, with no comma in
+ * it, and one density or width; null for any other, so only src is set.
+ */
+export function safeSrcset(srcset: string): string | null {
+  const candidates = srcset.split(',').map((c) => c.trim());
+  const ok = candidates.every((c) => {
+    const m = /^(\S+)\s+(\d+(?:\.\d+)?x|\d+w)$/.exec(c);
+    return m !== null && safeHref(m[1]!) === m[1];
+  });
+  return ok ? candidates.join(', ') : null;
+}
+
 function setAttrs(el: Element, attrs: Attrs | null | undefined): void {
   if (!attrs) return;
   for (const [k, v] of Object.entries(attrs)) {
@@ -34,6 +47,11 @@ function setAttrs(el: Element, attrs: Attrs | null | undefined): void {
     }
     if (k === 'href' || k === 'src' || k === 'action') {
       el.setAttribute(k, safeHref(String(v)));
+      continue;
+    }
+    if (k === 'srcset') {
+      const srcset = safeSrcset(String(v));
+      if (srcset) el.setAttribute(k, srcset);
       continue;
     }
     el.setAttribute(k, v === true ? '' : String(v));

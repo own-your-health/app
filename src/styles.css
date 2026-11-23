@@ -474,6 +474,62 @@ code,
   margin-bottom: 8px;
 }
 
+.intro-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Google's Sign in with Google button, its images unchanged (setup.ts). */
+.google-button {
+  display: inline-block;
+  align-self: center;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.google-button img {
+  width: 180px;
+  height: 40px;
+  border-radius: 4px;
+}
+
+.google-button:hover img {
+  box-shadow:
+    0 1px 2px 0 rgb(60 64 67 / 30%),
+    0 1px 3px 1px rgb(60 64 67 / 15%);
+}
+
+.google-button-light {
+  display: block;
+}
+
+.google-button-dark,
+:root[data-theme='dark'] .google-button-light {
+  display: none;
+}
+
+:root[data-theme='dark'] .google-button-dark {
+  display: block;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .google-button-light {
+    display: none;
+  }
+
+  :root:not([data-theme]) .google-button-dark {
+    display: block;
+  }
+}
+
 /* ---- Rows ---- */
 
 .row {

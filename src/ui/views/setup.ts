@@ -7,6 +7,8 @@ import { button, card, empty, outLink } from '../components';
 import { h } from '../dom';
 import { dateTime } from '../format';
 
+/** The project's own page, which says what Own Your Health is. */
+export const SITE_URL = 'https://own-your-health.github.io/';
 export const REPO_URL = 'https://github.com/own-your-health/app';
 export const REGISTRATION_URL = `${REPO_URL}/blob/main/docs/registration.md`;
 /** From nothing to the records on a phone: medrec, its folder, the providers, the client, the app. */
@@ -23,13 +25,39 @@ function intro(): HTMLElement {
   return h(
     'div',
     { class: 'intro' },
-    h('h1', null, 'Your household’s health records, from your own Google Drive'),
+    h('h1', null, 'Your household’s health records, in your browser'),
     h(
       'p',
       null,
-      'This page reads the records folder that medrec keeps in your Drive and shows it here, in your browser. Nothing is stored on a server, and nothing from your records is sent anywhere but back to Google Drive.',
+      'Own Your Health is a free, open-source app for looking through your household’s health records: visits, results, medicines, claims and what care cost. It shows the records folder that medrec, its companion tool, keeps in your own Google Drive.',
+    ),
+    h('p', null, 'The app runs in this browser and has no server. Nothing from your records is sent anywhere but back to your Drive.'),
+    h(
+      'ul',
+      { class: 'intro-links' },
+      h('li', null, outLink(SITE_URL, 'About the project')),
+      h('li', null, outLink(REPO_URL, 'Source code on GitHub')),
+      h('li', null, h('a', { href: PRIVACY_URL }, 'Privacy policy')),
     ),
   );
+}
+
+/**
+ * Google's own Sign in with Google button: the pre-approved images from its
+ * branding guidelines (public/google-sign-in/), light or dark with the theme,
+ * so the button is Google's and nothing on the page imitates Google's sign-in.
+ */
+function googleButton(onClick: () => void): HTMLButtonElement {
+  const image = (theme: 'light' | 'dark') =>
+    h('img', {
+      class: `google-button-${theme}`,
+      src: `./google-sign-in/${theme}-1x.png`,
+      srcset: [1, 2, 3, 4].map((n) => `./google-sign-in/${theme}-${n}x.png ${n}x`).join(', '),
+      width: '180',
+      height: '40',
+      alt: '',
+    });
+  return h('button', { type: 'button', class: 'google-button', 'aria-label': 'Sign in with Google', on: { click: onClick } }, image('light'), image('dark'));
 }
 
 const PASTE_PROBLEM: Record<Exclude<Paste['kind'], 'client'>, string> = {
@@ -83,7 +111,7 @@ export function signInView(onSignIn: () => void, opts: { error?: string; account
       h(
         'div',
         { class: 'actions' },
-        button('Sign in with Google', onSignIn, { primary: true }),
+        googleButton(onSignIn),
         opts.account ? button('Use a different account', opts.onDifferentAccount, { ghost: true }) : null,
         button('Use another Google client', opts.onChangeClient, { ghost: true }),
       ),
