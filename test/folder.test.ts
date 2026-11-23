@@ -97,6 +97,17 @@ describe('DemoFolder', () => {
     expect(Date.parse(status.updated_at) - Date.parse(original.updated_at)).toBe(86_400_000);
   });
 
+  it('keeps times of care as written, however long ago the sample was made', async () => {
+    type Index = { imports: { imported_at: string }[]; records: { fields: { period?: { start?: string }; issued?: string } }[] };
+    const read = async (now?: Date) => JSON.parse((await demoFolder(now).readText('Robin Example/index.json'))!) as Index;
+    const [later, original] = [await read(new Date('2026-11-29T20:00:00Z')), await read()];
+    expect(Date.parse(later.imports[0]!.imported_at) - Date.parse(original.imports[0]!.imported_at)).toBe(7 * 86_400_000);
+    const visit = (i: Index) => i.records.find((r) => r.fields.period?.start?.includes('T'))!.fields.period!.start;
+    const issued = (i: Index) => i.records.find((r) => r.fields.issued)!.fields.issued;
+    expect(visit(later)).toBe(visit(original));
+    expect(issued(later)).toBe(issued(original));
+  });
+
   it('lists folders, including ones kept only by a placeholder', async () => {
     const folder = demoFolder();
     const root = (await folder.list(''))!.map((e) => e.name);

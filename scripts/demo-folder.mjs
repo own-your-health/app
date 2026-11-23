@@ -3,9 +3,10 @@
 // invented. Run `node scripts/demo-folder.mjs` after changing it, and commit
 // the result; the tests check the manifest against the files.
 //
-// The folder's times are anchored at ANCHOR. The demo moves every full
-// timestamp forward by (now - ANCHOR) when it reads them, so the sample's
-// loads always look recent; dates of service stay as written.
+// The folder's times are anchored at ANCHOR. The demo moves the times of
+// loads, filings, requests and checks forward by (now - ANCHOR) when it reads
+// them (LOAD_TIMES in src/folder.ts), so the sample's loads always look
+// recent; times of care stay as written.
 
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
