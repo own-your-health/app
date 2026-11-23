@@ -20,7 +20,8 @@ export const PANELS: Panel[] = [
   { id: 'lipid', name: 'Cholesterol (lipid panel)', loinc: ['2093-3', '2571-8', '2085-9', '13457-7', '18262-6', '43396-1', '9830-1'] },
   { id: 'a1c', name: 'Blood sugar (A1c)', loinc: ['4548-4', '17856-6', '27353-2', '1558-6'] },
   { id: 'liver', name: 'Liver panel', loinc: ['1742-6', '1920-8', '6768-6', '1975-2', '42719-5', '2885-2', '1751-7'] },
-  { id: 'cbc', name: 'Blood count (CBC)', loinc: ['6690-2', '789-8', '718-7', '4544-3', '787-2', '785-6', '786-4', '788-0', '777-3', '26515-7', '751-8'] },
+  // A blood count, then its differential: each kind of white cell as a count, then as a share.
+  { id: 'cbc', name: 'Blood count (CBC)', loinc: ['6690-2', '789-8', '718-7', '4544-3', '787-2', '785-6', '786-4', '788-0', '777-3', '26515-7', '32623-1', '751-8', '731-0', '742-7', '711-2', '704-7', '770-8', '736-9', '5905-5', '713-8', '706-2'] },
   { id: 'thyroid', name: 'Thyroid', loinc: ['3016-3', '11580-8', '3024-7', '3051-0'] },
   { id: 'vitamins', name: 'Vitamins and iron', loinc: ['62292-8', '1989-3', '14635-7', '2132-9', '2284-8', '2498-4', '2500-7', '2276-4'] },
   { id: 'urine', name: 'Urine and kidney', loinc: ['14959-1', '2888-6', '5811-5', '5803-2'] },
@@ -43,7 +44,12 @@ function loincOf(key: string): string | undefined {
 
 /** The group a test falls in, and its place there. */
 export function panelOf(t: LatestResult, category?: string): { id: string; name: string; order: number } {
-  const code = loincOf(t.series.key);
+  return panelFor(t.series.key, category);
+}
+
+/** The same, by a test's series key (records.ts's seriesKey). */
+export function panelFor(key: string, category?: string): { id: string; name: string; order: number } {
+  const code = loincOf(key);
   const hit = code ? BY_LOINC.get(code) : undefined;
   if (hit) return { id: hit.panel.id, name: hit.panel.name, order: hit.order };
   if (category && /vital/i.test(category)) return { id: 'vitals', name: 'Vital signs', order: 100 };

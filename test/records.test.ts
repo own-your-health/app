@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { asMoney, claimTotals, claimYourShare, findItem, formatMoney, importFor, medicines, resultSeries, timeline, valueText } from '../src/model/records';
 import type { ImportRun, Provenance } from '../src/model/types';
-import { recordTitle } from '../src/model/claims';
+import { recordTitle } from '../src/model/titles';
 import { demo, personNamed } from './demo-data';
 
 const { household, indexes } = demo();

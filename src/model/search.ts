@@ -7,7 +7,7 @@
 
 import { KIND_LABELS, asMoney, docTypeLabel, documentTitle, formatMoney, studyTitle, valueText } from './records';
 import { statusText } from './lists';
-import { recordTitle } from './claims';
+import { recordTitle } from './titles';
 import type { Json, PersonIndex, PersonText } from './types';
 
 export type Where = 'title' | 'field' | 'text';

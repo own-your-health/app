@@ -51,6 +51,7 @@
   --link: var(--ultra-600);
   --tint: var(--ultra-50);
   --tint-strong: var(--ultra-100);
+  --range-band: var(--ultra-200);
   --positive: var(--teal-700);
   --positive-rule: var(--teal-600);
   --positive-tint: var(--teal-50);
@@ -98,6 +99,7 @@
   --link: #b4bdf8;
   --tint: #2a3462;
   --tint-strong: #334077;
+  --range-band: #3f4f99;
   --positive: var(--teal-300);
   --positive-rule: var(--teal-300);
   --positive-tint: #183c39;
@@ -130,6 +132,7 @@
     --link: #b4bdf8;
     --tint: #2a3462;
     --tint-strong: #334077;
+  --range-band: #3f4f99;
     --positive: var(--teal-300);
     --positive-rule: var(--teal-300);
     --positive-tint: #183c39;
@@ -941,6 +944,33 @@ pre.text {
   fill: var(--tint);
 }
 
+/* One value on the lab's range: a quiet track, the range a step darker, the value as a ringed dot. */
+.range-bar {
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  display: block;
+  margin-top: 4px;
+}
+
+.range-track {
+  fill: var(--sunken);
+}
+
+.range-band {
+  fill: var(--range-band);
+}
+
+.range-marker {
+  fill: var(--primary);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.range-marker-out {
+  fill: var(--attention);
+}
+
 .spark {
   width: 96px;
   height: 28px;
@@ -1449,4 +1479,89 @@ mark {
   gap: 8px;
   padding-left: 1.2em;
   list-style: disc;
+}
+
+/* A record page: the value and its reading lead; the rest follows. */
+.result-value {
+  margin: 12px 0 2px;
+  font-size: 28px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.result-value-text {
+  font-size: 19px;
+  line-height: 1.35;
+}
+
+.verdict {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.verdict-out {
+  color: var(--attention-text);
+  font-weight: 600;
+}
+
+/* What a test measures, from MedlinePlus. */
+.about {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.about h2 {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.about p + p {
+  margin-top: 6px;
+}
+
+.learn-more {
+  margin-top: 14px;
+}
+
+.learn-more a {
+  display: inline-block;
+  padding: 10px 0;
+  font-weight: 600;
+}
+
+.learn-more a svg {
+  vertical-align: -2px;
+}
+
+.learn-more p {
+  margin-top: 0;
+}
+
+.group-head {
+  margin: 14px 0 2px;
+  font-size: 15px;
+  color: var(--ink-soft);
+}
+
+.table tr.current td {
+  font-weight: 600;
+}
+
+/* Technical details: one fold under the plain page, holding every field, source and identifier. */
+.tech > summary {
+  padding: 13px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tech[open] > summary {
+  margin-bottom: 12px;
 }

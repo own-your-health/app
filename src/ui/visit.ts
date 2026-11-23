@@ -4,6 +4,7 @@ import { claimAmounts, toCents } from '../model/billing';
 import { docTypeLabel, documentTitle, formatMoney, KIND_LABELS, str, studyTitle } from '../model/records';
 import type { Visit } from '../model/visits';
 import { claimTitle } from '../model/claims';
+import { recordTitle } from '../model/titles';
 import { link } from './components';
 import { h, icon, type Child } from './dom';
 import { dateText } from './format';
@@ -42,7 +43,7 @@ export function visitContents(person: string, v: Visit): HTMLElement[] {
   }
   for (const g of v.recorded) {
     const [one, many] = RECORDED_LABEL[g.kind] ?? [KIND_LABELS[g.kind] ?? g.kind, KIND_LABELS[g.kind] ?? g.kind];
-    out.push(line(g.records.length === 1 ? one : many, linkList(person, g.records.map((r) => ({ id: r.id, title: r.display || r.code?.display || one })))));
+    out.push(line(g.records.length === 1 ? one : many, linkList(person, g.records.map((r) => ({ id: r.id, title: recordTitle(r) })))));
   }
   for (const c of v.claims) {
     const share = claimAmounts(c).yourShare;

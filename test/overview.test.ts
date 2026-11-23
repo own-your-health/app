@@ -68,13 +68,13 @@ describe('the latest results', () => {
     expect(latest.map((r) => r.series.name)).toEqual([
       'Potassium',
       'Creatinine',
-      // The rest by date, then by name.
-      'Cholesterol, total',
+      // The rest by date, then by name (each test's plain name, labtests.ts).
+      'A1c',
       'Glucose',
       'HDL cholesterol',
-      'Hemoglobin A1c',
       'LDL cholesterol',
       'Sodium',
+      'Total cholesterol',
       'Triglycerides',
       'Hemoglobin',
     ]);

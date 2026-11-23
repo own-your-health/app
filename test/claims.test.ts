@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { categoryOf, claimLines, claimTitle, recordTitle } from '../src/model/claims';
+import { categoryOf, claimLines, claimTitle } from '../src/model/claims';
+import { recordTitle } from '../src/model/titles';
 import { claimAmounts, toCents } from '../src/model/billing';
 import type { MedRecord } from '../src/model/types';
 import { demo, personNamed } from './demo-data';

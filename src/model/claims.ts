@@ -4,7 +4,7 @@
 // words; they are named by records.ts's amount words, as the claim's totals
 // are in billing.ts.
 
-import { amountNames, asMoney, KIND_LABELS, str, type AmountName, type Money } from './records';
+import { amountNames, asMoney, str, type AmountName, type Money } from './records';
 import { isObject } from './parse';
 import type { Json, MedRecord } from './types';
 
@@ -172,10 +172,4 @@ export function claimTitle(r: MedRecord): string {
   if (display && display.toLowerCase() !== type?.toLowerCase()) return display;
   const provider = str(r.fields.provider);
   return provider ? `Claim from ${provider}` : 'Claim';
-}
-
-/** A record's title as every list shows it: a claim by its services, the rest by their names, else their kind. */
-export function recordTitle(r: MedRecord): string {
-  if (r.kind === 'claim') return claimTitle(r);
-  return r.display || r.code?.display || KIND_LABELS[r.kind] || r.kind;
 }
