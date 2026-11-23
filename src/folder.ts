@@ -139,6 +139,36 @@ export class DriveFolder implements RecordsFolder {
 }
 
 /**
+ * The sample's keys for when something was loaded, filed, asked for or
+ * checked: the times the demo moves to now. Times of care (a visit's period,
+ * when a result was issued) and a source's own times stay as written, so a
+ * visit keeps its day however long ago the sample was made.
+ */
+export const LOAD_TIMES = new Set([
+  'created_at',
+  'last_pull',
+  'filed_at',
+  'fetched_at',
+  'imported_at',
+  'pulled_at',
+  'started_at',
+  'finished_at',
+  'last_pass_at',
+  'next_pass_at',
+  'since',
+  'next_run_at',
+  'checked_at',
+  'expires_at',
+  'updated_at',
+  'requested_at',
+  'picked_up_at',
+  'next_allowed_at',
+]);
+
+/** The sample's keys for times that stay as written: times of care, and a source's own. */
+export const KEPT_TIMES = new Set(['start', 'end', 'issued', 'lastUpdated', 'last_updated']);
+
+/**
  * The synthetic records folder shipped with the app (public/demo/), read
  * over the page's own origin. Writes stay in memory, and a simulated Mac
  * answers refresh requests, so the whole flow can be tried without a Drive.
@@ -171,7 +201,9 @@ export class DemoFolder implements RecordsFolder {
 
   private shift(text: string): string {
     if (!this.shiftMs) return text;
-    return text.replace(/\b(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})Z\b/g, (t) => new Date(Date.parse(t) + this.shiftMs).toISOString().replace(/\.\d{3}Z$/, 'Z'));
+    return text.replace(/"([a-z_]+)"(\s*:\s*)"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})Z"/g, (all, key: string, sep: string, t: string) =>
+      LOAD_TIMES.has(key) ? `"${key}"${sep}"${new Date(Date.parse(`${t}Z`) + this.shiftMs).toISOString().replace(/\.\d{3}Z$/, 'Z')}"` : all,
+    );
   }
 
   private url(path: string): string {
