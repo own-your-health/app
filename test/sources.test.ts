@@ -20,6 +20,20 @@ describe('source views over the sample', () => {
     expect(view('Alex Example', 'athena').health).toBe('ok');
   });
 
+  it('take a sign-in made since the attempt that asked for one as made', () => {
+    const plan = sourceOf(household, 'Robin Example', 'uhc');
+    const signedIn: RefreshStatus = {
+      ...status,
+      sources: status.sources.map((s) => (s.source === plan.id ? { ...s, sign_in: { ...s.sign_in!, state: 'ok', needs_person: null } } : s)),
+    };
+    const v = sourceViews({ household, indexes, status: signedIn, pending: [], done: [] }).find((x) => x.source.id === plan.id)!;
+    expect(v.lastAttempt?.outcome).toBe('needs_person');
+    expect(v.health).not.toBe('needs_person');
+    // An older status.json without the field still reads the attempt.
+    const older: RefreshStatus = { ...status, sources: status.sources.map((s) => (s.source === plan.id ? { ...s, sign_in: { state: 'ok' } } : s)) };
+    expect(sourceViews({ household, indexes, status: older, pending: [], done: [] }).find((x) => x.source.id === plan.id)!.health).toBe('needs_person');
+  });
+
   it('fall back to the ImportRun for a source the Mac does not refresh', () => {
     const v = view('Robin Example', 'oneblood');
     expect(v.status).toBeUndefined();

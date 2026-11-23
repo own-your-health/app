@@ -1400,3 +1400,45 @@ mark {
 .home-search .button {
   flex: none;
 }
+
+/* Home's one line for a sign-in that needs a person, below the people. */
+.signin-notice a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--attention);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--attention-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.signin-notice a:hover span {
+  text-decoration: underline;
+}
+
+.signin-notice svg {
+  flex: none;
+}
+
+/* What a provider's tool said, folded away under a source. */
+.error-details {
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+.error-details summary {
+  cursor: pointer;
+  color: var(--ink-soft);
+  padding: 6px 0;
+}
+
+.error-details p {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}

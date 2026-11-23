@@ -75,3 +75,18 @@ export function count(n: number, one: string, many = `${one}s`): string {
 export function localDay(now: Date): string {
   return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 }
+
+/** When a coming moment falls: "now", "at 9:40 PM", "tomorrow at 4:04 PM", or the date and time. */
+export function clock(iso: string | undefined | null, now: Date = new Date()): string {
+  if (!iso) return 'at an unknown time';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return 'at an unknown time';
+  if (d.getTime() <= now.getTime()) return 'now';
+  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  const day = localDay(d);
+  if (day === localDay(now)) return `at ${time}`;
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (day === localDay(tomorrow)) return `tomorrow at ${time}`;
+  return `on ${dateTime(iso)}`;
+}

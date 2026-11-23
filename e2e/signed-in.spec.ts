@@ -23,7 +23,8 @@ test.afterEach(() => {
   expect(google.strays).toEqual([]);
 });
 
-const HEADLINE = '1 sign-in needs a person';
+// Home's line for the sample's one sign-in that needs a person: the folder has loaded.
+const NOTICE = 'Example Health Plan needs a sign-in on the Mac';
 const ACCOUNT_KEY = 'own-your-health-app.account';
 const REQUEST_FILE = /^_requests\/\d{8}T\d{6}Z_x_[a-z2-7]{20}\.json$/;
 
@@ -32,7 +33,7 @@ async function signIn(page: Page): Promise<void> {
   await page.goto(`./?client=${CLIENT}`);
   const row = page.locator('.row', { hasText: FOLDER_NAME });
   await row.getByRole('button', { name: 'Open' }).click();
-  await expect(page.locator('.glance-answer')).toHaveText(HEADLINE);
+  await expect(page.locator('.signin-notice')).toHaveText(NOTICE);
 }
 
 /** medrec on the Mac takes a request: its answer in done/, the pending file gone. */
@@ -67,7 +68,7 @@ test('a setup link signs in, finds the records folder and reads it', async ({ pa
   // Google's answer leaves the address at once.
   expect(page.url()).toBe(`${baseURL}#/`);
   await page.locator('.row', { hasText: FOLDER_NAME }).getByRole('button', { name: 'Open' }).click();
-  await expect(page.locator('.glance-answer')).toHaveText(HEADLINE);
+  await expect(page.locator('.signin-notice')).toHaveText(NOTICE);
   await expect(page.locator('.card', { hasText: 'People' }).locator('.row')).toHaveCount(4);
 
   const kept = await page.evaluate(() => ({ local: { ...localStorage }, session: { ...sessionStorage } }));
@@ -83,7 +84,7 @@ test('the next visit signs in without a prompt, as the same account, and opens t
   // answer interaction_required.
   await signIn(page);
   await page.goto('./');
-  await expect(page.locator('.glance-answer')).toHaveText(HEADLINE);
+  await expect(page.locator('.signin-notice')).toHaveText(NOTICE);
   expect(google.signIns.map((s) => [s.prompt, s.hint])).toEqual([
     ['select_account', null],
     ['none', USER.emailAddress],
@@ -98,7 +99,7 @@ test('with no account stored, a browser with two Google accounts asks once', asy
   await expect(page.locator('.error-text')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Use a different account' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Sign in with Google' }).click();
-  await expect(page.locator('.glance-answer')).toHaveText(HEADLINE);
+  await expect(page.locator('.signin-notice')).toHaveText(NOTICE);
   expect(google.signIns.map((s) => [s.prompt, s.hint])).toEqual([
     ['select_account', null],
     ['none', null],
@@ -163,7 +164,7 @@ test('when Google needs the person, the renewal says so, and another account can
   google.accounts = [USER, OTHER_USER];
   google.chooses = OTHER_USER;
   await page.getByRole('button', { name: 'Use a different account' }).click();
-  await expect(page.locator('.glance-answer')).toHaveText(HEADLINE);
+  await expect(page.locator('.signin-notice')).toHaveText(NOTICE);
   expect(google.signIns.map((s) => [s.prompt, s.hint])).toEqual([
     ['select_account', null],
     ['none', USER.emailAddress],

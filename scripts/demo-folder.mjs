@@ -817,7 +817,7 @@ const samLabFail = attempt(src.samLab, sam, {
   exit: 5,
   error: { code: 'upstream', message: 'The lab site answered 503 three times.', remedy: 'Nothing to do; the Mac tries again later.' },
 });
-const robinPlanNeeds = attempt(src.robinPlan, robin, { started: at(-60 * 8), outcome: 'needs_person', exit: 3, error: { code: 'needs_person', message: 'The member site session ended.', remedy: 'Sign in again on the Mac.' } });
+const robinPlanNeeds = attempt(src.robinPlan, robin, { started: at(-60 * 8), outcome: 'needs_person', exit: 3, error: { code: 'needs_person', message: 'The member site session has expired. Sign in with `uhc auth login --browser --profile <provider profile> --overwrite`.', remedy: 'Run `uhc auth login`, then import again.' } });
 
 write('_status/status.json', {
   schema: 'medrec-status/v1',

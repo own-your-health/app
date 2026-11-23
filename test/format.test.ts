@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bytes, count, dateText, duration, relative, yearOf } from '../src/ui/format';
+import { bytes, clock, count, dateText, duration, relative, yearOf } from '../src/ui/format';
 
 const NOW = new Date('2026-11-22T20:00:00Z');
 
@@ -34,5 +34,16 @@ describe('format', () => {
     expect(duration(3 * 86400)).toBe('3 days');
     expect(count(1, 'record')).toBe('1 record');
     expect(count(2, 'study', 'studies')).toBe('2 studies');
+  });
+
+  it('says when a coming moment falls, in local days', () => {
+    // Local times, so the test holds in any time zone.
+    const now = new Date(2026, 10, 22, 14, 0);
+    const iso = (d: Date) => d.toISOString();
+    expect(clock(iso(new Date(2026, 10, 22, 13, 0)), now)).toBe('now');
+    expect(clock(iso(new Date(2026, 10, 22, 21, 40)), now)).toMatch(/^at \S/);
+    expect(clock(iso(new Date(2026, 10, 23, 0, 30)), now)).toMatch(/^tomorrow at \S/);
+    expect(clock(iso(new Date(2026, 10, 25, 9, 0)), now)).toMatch(/^on \S.*2026/);
+    expect(clock(null, now)).toBe('at an unknown time');
   });
 });

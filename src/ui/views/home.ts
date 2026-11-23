@@ -1,11 +1,12 @@
-// Home: the household's people, and, at the top, anything that needs a
-// person at the Mac. Every source's own state is on the Sources screen.
+// Home: the household's people and their records first, then one line for
+// a sign-in that needs a person at the Mac. Every source's own state is on
+// the Sources screen.
 
-import { headline, latestAnswered, needsPerson } from '../../model/sources';
+import { latestAnswered } from '../../model/sources';
 import { h, icon } from '../dom';
 import { card, empty, link, refreshControl, row, type Ctx } from '../components';
 import { count, relative } from '../format';
-import { macLine, requestAnswer, sourceRow } from './sources';
+import { macLine, requestAnswer, signInNotice } from './sources';
 
 export function homeView(ctx: Ctx): HTMLElement {
   const store = ctx.store;
@@ -14,21 +15,10 @@ export function homeView(ctx: Ctx): HTMLElement {
   const mac = macLine(store.mac(now), now);
   const latest = views.map((v) => v.lastLoad?.at).filter(Boolean).sort().pop();
   const people = store.household.people;
-  const attention = needsPerson(views);
   const failed = views.filter((v) => v.health === 'failed').length;
   // The Mac's last answer, while no request for everything waits.
   const answered = latestAnswered(store.done, now);
   const waiting = store.pendingFor({ all: true });
-
-  // Only when something needs a person: the sign-in to make, with its command.
-  const alert = attention.length
-    ? h(
-        'section',
-        { class: 'card card-attention glance glance-needs' },
-        h('h2', { class: 'glance-answer attention' }, headline(attention).text),
-        attention.map((v) => sourceRow(ctx, v, { showPerson: people.length > 1 })),
-      )
-    : null;
 
   // One line on how fresh the records are, Refresh, and the way to Sources.
   const freshness = h(
@@ -83,5 +73,5 @@ export function homeView(ctx: Ctx): HTMLElement {
       )
     : null;
 
-  return h('div', { class: 'stack' }, h('h1', { class: 'sr-only' }, 'Own Your Health'), alert, searchForm, freshness, peopleCard);
+  return h('div', { class: 'stack' }, h('h1', { class: 'sr-only' }, 'Own Your Health'), peopleCard, signInNotice(views), searchForm, freshness);
 }

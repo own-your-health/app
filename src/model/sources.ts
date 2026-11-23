@@ -157,7 +157,9 @@ function fromImport(run: ImportRun): LastLoad {
 function health(status: SourceStatus | undefined, lastLoad: LastLoad | undefined): Health {
   if (!status) return lastLoad ? 'ok' : 'never';
   const signIn = status.sign_in?.state;
-  if (status.sign_in?.needs_person || status.last_attempt?.outcome === 'needs_person') return 'needs_person';
+  // medrec clears needs_person once someone signs in; the attempt that asked keeps its outcome until the next.
+  const asked = status.last_attempt?.outcome === 'needs_person' && status.sign_in?.needs_person === undefined;
+  if (status.sign_in?.needs_person || asked) return 'needs_person';
   if (status.last_attempt?.outcome === 'running') return 'running';
   if (status.paused) return 'paused';
   if (status.last_attempt?.outcome === 'failed') return 'failed';
