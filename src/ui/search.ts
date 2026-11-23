@@ -1,7 +1,9 @@
 // The search box and its results, for everyone (#/search) or one person
 // (#/p/<id>/search). Everything is searched here in the browser: the
 // records, documents and imaging in each person's index, and the text medrec
-// extracted from documents (text.json), read from Drive on the first search.
+// extracted from documents (text.json), read from Drive once a search is
+// coming (this page opens, or the home screen's search field is chosen), so
+// it downloads while the words are typed.
 // The words (?q=) and whether to search them as written (&words=1) are part
 // of the address; the filters are not.
 //
@@ -295,7 +297,11 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
     timer = window.setTimeout(() => void search(), 200);
   });
   if (opts.query) void search();
-  else requestAnimationFrame(() => input.focus());
+  else {
+    requestAnimationFrame(() => input.focus());
+    // Read the documents' text while the words are typed: on a slow link it is most of the first search's wait.
+    for (const p of people) void ctx.store.text(p.id).catch(() => null);
+  }
   return card({ title: opts.title }, h('p', { class: 'muted small' }, opts.intro), input, notice, status, filters, results);
 }
 

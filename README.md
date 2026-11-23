@@ -132,8 +132,9 @@ Results come in groups by kind:
   value and how many results it has, and opens its history;
 - a claim shows its provider and what you owe, and the line that matched.
 
-Each person's `text.json` is read from Drive on the first search, and
-nothing leaves the browser. `#/search?q=<words>` is the search page's
+Each person's `text.json` is read from Drive once a search is coming (the
+search page opens, or the home screen's search field is chosen), so it
+downloads while the words are typed, and nothing leaves the browser. `#/search?q=<words>` is the search page's
 address, with `&words=1` when the words are searched as written. The rules
 are `src/model/search.ts`.
 
@@ -357,6 +358,11 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
 - `http://localhost:5173/app/?scope-test=1&client=<client id>` runs a check of
   the two Drive permissions against a folder named `oyh-app-scope-test`. It
   exists only in the dev server and is left out of production builds.
+- `node scripts/perf.mjs`, after `npm run build`, times opening the app and
+  searching on an emulated phone with a large folder: the sample, grown to a
+  3.9 MB `index.json` and a 4.6 MB `text.json` from invented data.
+  `--network` adds a 4G-like link and `--uncompressed` asks for the files
+  without gzip; the script's header lists every option.
 - Tests use invented data only. Never commit a real record, account, client
   id or folder id.
 
