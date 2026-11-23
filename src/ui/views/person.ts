@@ -16,6 +16,7 @@ import {
   type TimelineEntry,
 } from '../../model/records';
 import { visitKind, visitTimeline, type Visit } from '../../model/visits';
+import { birthWords, coverageHistory, isChange, type CoverageSegment } from '../../model/coverage';
 import { claimTitle, isPharmacyClaim } from '../../model/claims';
 import { recordTitle } from '../../model/titles';
 import { BILL_WINDOW_DAYS, claimsWithBills, owedByProvider, planBalances, toCents, type Bill, type Claim, type Owed } from '../../model/billing';
@@ -342,31 +343,36 @@ function everyRecord(person: Person, idx: PersonIndex): HTMLElement {
 }
 
 function visitsTimeline(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
-  const { visits, loose } = visitTimeline(idx, ctx.store.household, person.id, localDay(ctx.now()));
-  const r = (v: Visit) => v.record;
+  const today = localDay(ctx.now());
+  const { visits, loose } = visitTimeline(idx, ctx.store.household, person.id, today);
+  const changes = coverageHistory(idx, ctx.store.household, person.id).filter((c) => isChange(c) && c.start <= today);
+  // Visits, and the days coverage changed, in one list by date.
+  const entries = sortByDateDesc<{ date?: string; visit?: Visit; change?: CoverageSegment }>([
+    ...visits.map((visit) => ({ date: visit.start, visit })),
+    ...changes.map((change) => ({ date: change.start, change })),
+  ]);
   return card(
     { title: 'Timeline' },
     timelineSwitch(person, false),
-    visits.length
-      ? yearList(
-          visits.map((v) => ({ ...v, date: v.start })),
-          (v) =>
-            row({
-              route: itemRoute(person.id, r(v).id),
-              title: r(v).display || visitKind(v) || 'Visit',
-              meta: meta(visitWhen(v), visitKind(v), str(r(v).fields.reason), str(r(v).fields.practitioner), str(r(v).fields.location) ?? str(r(v).fields.service_provider)),
-              aside: v.documents.length ? h('span', { class: 'muted small' }, count(v.documents.length, 'document')) : null,
-              extra: (() => {
-                const parts = visitContents(person.id, v);
-                return parts.length ? h('div', { class: 'visit-extra' }, parts) : null;
-              })(),
-            }),
-        )
+    entries.length
+      ? yearList(entries, ({ visit, change }) => (change ? coverageChangeRow(person, change) : visitRow(person, visit!)))
       : empty('No visits in these records yet.', link({ name: 'person', person: person.id, section: 'timeline', sub: 'all' }, 'See every record')),
     loose.length
       ? h('p', { class: 'small muted' }, `${count(loose.length, 'document')} from no visit in these records (bills, scans, letters) are under `, link({ name: 'person', person: person.id, section: 'documents' }, 'Documents'), '.')
       : null,
   );
+}
+
+function visitRow(person: Person, v: Visit): HTMLElement {
+  const r = v.record;
+  const parts = visitContents(person.id, v);
+  return row({
+    route: itemRoute(person.id, r.id),
+    title: r.display || visitKind(v) || 'Visit',
+    meta: meta(visitWhen(v), visitKind(v), str(r.fields.reason), str(r.fields.practitioner), str(r.fields.location) ?? str(r.fields.service_provider)),
+    aside: v.documents.length ? h('span', { class: 'muted small' }, count(v.documents.length, 'document')) : null,
+    extra: parts.length ? h('div', { class: 'visit-extra' }, parts) : null,
+  });
 }
 
 /** A chip for a result out of its range; critical in the error colour. None in range. */
@@ -694,7 +700,56 @@ function claimsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement 
       )
     : null;
 
-  return h('div', { class: 'stack' }, owedCard, balancesCard, claimsCard, othersCard);
+  return h('div', { class: 'stack' }, owedCard, balancesCard, coverageCard(ctx, person, idx), claimsCard, othersCard);
+}
+
+const COVERED_AS: Record<string, string> = { child: 'covered as a child', spouse: 'covered as a spouse', common: 'covered as a partner', parent: 'covered as a parent' };
+
+/** "Jan 1, 2024 to Nov 7, 2026", "since Nov 8, 2026". */
+function coverageDays(s: CoverageSegment): string {
+  if (s.start && s.end) return `${dateText(s.start)} to ${dateText(s.end)}`;
+  if (s.start) return `since ${dateText(s.start)}`;
+  return s.end ? `until ${dateText(s.end)}` : 'no dates in these records';
+}
+
+const coverageName = (s: CoverageSegment) => (s.plan ? `${s.insurer}, ${s.plan}` : s.insurer);
+
+/** Each insurer and plan the person has had, newest first, and a change that fell on someone's birthday. */
+function coverageCard(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement | null {
+  const segments = coverageHistory(idx, ctx.store.household, person.id);
+  if (!segments.length) return null;
+  const from = (s: CoverageSegment) => s.organizations.map((o) => organizationName(ctx.store.household, person.id, o));
+  return card(
+    { title: 'Coverage', class: 'coverage-history' },
+    segments.map((s) => {
+      const born = birthWords(s, dateText);
+      return row({
+        route: itemRoute(person.id, s.records[0]!.id),
+        title: coverageName(s),
+        meta: meta(coverageDays(s), s.relationship ? COVERED_AS[s.relationship] : null),
+        extra: h(
+          'div',
+          { class: 'coverage-extra' },
+          born ? h('p', { class: 'small coverage-born' }, born) : null,
+          h('p', { class: 'small muted' }, `In records from ${from(s).join(' and ')}.`),
+        ),
+      });
+    }),
+    segments.some((s) => s.born)
+      ? h('p', { class: 'small muted' }, 'A birthday beside a change is a date the two share. These records don’t say why coverage changed.')
+      : null,
+  );
+}
+
+/** A day coverage changed, on the timeline. */
+function coverageChangeRow(person: Person, s: CoverageSegment): HTMLElement {
+  const born = birthWords(s, dateText);
+  return row({
+    route: itemRoute(person.id, s.records[0]!.id),
+    title: s.first ? 'Coverage started' : 'Coverage changed',
+    meta: meta(dateText(s.start), coverageName(s)),
+    extra: born ? h('p', { class: 'small coverage-born' }, born) : null,
+  });
 }
 
 function documentsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {

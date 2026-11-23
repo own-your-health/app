@@ -3450,8 +3450,8 @@
     {
       "id": "r_27hwlsasluzk4kq5hooh",
       "kind": "coverage",
-      "key": "coverage|http://terminology.hl7.org/CodeSystem/v3-ActCode|HIP|2026-01-01",
-      "date": "2026-01-01",
+      "key": "coverage|http://terminology.hl7.org/CodeSystem/v3-ActCode|HIP|2026-11-08",
+      "date": "2026-11-08",
       "code": {
         "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
         "code": "HIP",
@@ -3460,10 +3460,11 @@
       "display": "Example Health Plan PPO",
       "status": "active",
       "fields": {
-        "when": "2026-01-01",
+        "when": "2026-11-08",
         "payer": "Example Health Plan",
         "period": {
-          "start": "2026-01-01"
+          "start": "2026-11-08",
+          "end": "9999-12-31"
         },
         "relationship": "self",
         "plan": "PPO Choice",
@@ -4107,6 +4108,95 @@
           "fetched_at": "2026-11-21T13:59:00Z",
           "filed_at": "2026-11-21T13:59:00Z",
           "raw_path": "Robin Example/Records/caremark-example-pharmacy-benefits/ExplanationOfBenefit/explanationofbenefit-349fc294.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_ewjfubj6a265zedeuuec",
+      "kind": "coverage",
+      "key": "coverage|http://terminology.hl7.org/CodeSystem/v3-ActCode|HIP|2024-01-01",
+      "date": "2024-01-01",
+      "code": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "HIP",
+        "display": "health insurance plan policy"
+      },
+      "display": "ExampleHealth Plan",
+      "status": "active",
+      "fields": {
+        "when": "2024-01-01",
+        "payer": "ExampleHealth Plan",
+        "period": {
+          "start": "2024-01-01",
+          "end": "2026-11-07"
+        },
+        "relationship": "self",
+        "plan": "PPO Choice"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Coverage",
+            "id": "coverage-a4e2c66b",
+            "last_updated": "2026-11-14T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T19:59:00Z",
+          "filed_at": "2026-11-14T19:59:00Z",
+          "raw_path": "Robin Example/Records/mychart-example-health/Coverage/coverage-a4e2c66b.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_iux25a366smwsdvkvzap",
+      "kind": "coverage",
+      "key": "coverage|http://terminology.hl7.org/CodeSystem/v3-ActCode|HIP|2026-11-08",
+      "date": "2026-11-08",
+      "code": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "HIP",
+        "display": "health insurance plan policy"
+      },
+      "display": "ExampleHealth Plan",
+      "status": "active",
+      "fields": {
+        "when": "2026-11-08",
+        "payer": "ExampleHealth Plan",
+        "period": {
+          "start": "2026-11-08"
+        },
+        "relationship": "self",
+        "plan": "PPO Choice"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Coverage",
+            "id": "coverage-9a8aa195",
+            "last_updated": "2026-11-14T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T19:59:00Z",
+          "filed_at": "2026-11-14T19:59:00Z",
+          "raw_path": "Robin Example/Records/mychart-example-health/Coverage/coverage-9a8aa195.json",
           "filed_by": "medrec 0.2.11"
         }
       ]

@@ -10,8 +10,8 @@ Google Drive. It reads the records folder that
   source it came from;
 - each person's records: a timeline, results by panel and over time against
   their reference range, medicines,
-  conditions, allergies, immunizations, claims and bills, documents and
-  imaging studies;
+  conditions, allergies, immunizations, claims and bills, coverage over
+  time, documents and imaging studies;
 - what care cost across the household, from the plans' claims: by plan year
   or calendar year, by person, provider, kind of care and month, one
   service's prices across providers and dates, and a CSV of the lines;
@@ -168,6 +168,19 @@ blood draw"), not for its type. Its page lists each line with its code, a
 category from the code (visit, lab test, imaging, vaccine and so on), its
 date and its amounts: billed, allowed, plan paid, deductible, copay,
 coinsurance, not covered and you owe. The rules are `src/model/claims.ts`.
+
+Coverage, under Claims and bills, lists each insurer and plan the person has
+had, newest first, from when to when, and whose records name it. The same
+insurer starting on the same day is one coverage, whichever source names it:
+the insurer's own record and a provider portal's copy show once, even when
+one spells the name without a space ("Example Health Plan" and "ExampleHealth
+Plan"). An end of 9999-12-31 means the coverage runs on. When a coverage
+started on the day someone in the household was born, it says so ("Changed on
+Nov 8, 2026, the day Jamie Example was born") as a date the two share. No
+source gives a reason for a change, and FHIR's Coverage has no element for
+one. Each change is also on the timeline among the visits, and Costs names
+the changes inside the period it shows: the plan, and so the deductible, can
+differ on either side of one. The rules are `src/model/coverage.ts`.
 
 Costs (`#/costs`, from the home screen or a person's claims) adds up every
 claim line in the folder: what was billed, what the plan allowed and paid,
@@ -361,6 +374,8 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
 ```
 
 - Plain TypeScript, built by Vite, with no runtime dependencies.
+- The browser tests serve the build on port 4317. `E2E_PORT=<port> npm run e2e`
+  moves it when another project's preview holds that port.
 - The sample folder in `public/demo/` comes from `scripts/demo-folder.mjs`.
   Run `node scripts/demo-folder.mjs` after changing it, and commit both.
 - The PNG icons in `public/` (for the manifest and the iPhone Home Screen) are

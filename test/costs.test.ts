@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { balances, breakdown, codeLines, comparableCodes, costLines, csvText, householdLines, inPeriod, monthsSpanned, periods, planYearOf, toCsv, totals, type CostLine } from '../src/model/costs';
+import { balances, breakdown, codeLines, comparableCodes, costLines, csvText, dayInPeriod, householdLines, inPeriod, monthsSpanned, periods, planYearOf, toCsv, totals, type CostLine } from '../src/model/costs';
 import { parseIndex } from '../src/model/parse';
 import type { MedRecord, PersonIndex } from '../src/model/types';
 import { demo, personNamed } from './demo-data';
@@ -45,8 +45,8 @@ describe('plan years', () => {
 
   it('never start on the day a coverage took effect', () => {
     expect(yearsOf()).toEqual({
-      'United Healthcare 2026-03-10': '2026-01-01 to 2026-12-31, calendar',
-      'United Healthcare 2026-11-20': '2026-01-01 to 2026-12-31, calendar',
+      'Example Health Plan 2026-03-10': '2026-01-01 to 2026-12-31, calendar',
+      'Example Health Plan 2026-11-20': '2026-01-01 to 2026-12-31, calendar',
       'Example Care Plan 2026-05-01': '2025-07-01 to 2026-06-30, claims',
       'Example Care Plan 2026-08-01': '2026-07-01 to 2027-06-30, claims',
       'Example Dental 2026-09-15': '2026-01-01 to 2026-12-31, calendar',
@@ -55,10 +55,19 @@ describe('plan years', () => {
 
   it('take the start set in Settings for a plan whose claims do not say, and only for that', () => {
     expect(yearsOf({ planStart: '04-01' })).toMatchObject({
-      'United Healthcare 2026-03-10': '2025-04-01 to 2026-03-31, setting',
-      'United Healthcare 2026-11-20': '2026-04-01 to 2027-03-31, setting',
+      'Example Health Plan 2026-03-10': '2025-04-01 to 2026-03-31, setting',
+      'Example Health Plan 2026-11-20': '2026-04-01 to 2027-03-31, setting',
       'Example Care Plan 2026-08-01': '2026-07-01 to 2027-06-30, claims',
     });
+  });
+});
+
+describe('a day in a period', () => {
+  it('is in a person’s plan year, the calendar year, or any day for every year', () => {
+    const sam = inPlanYear.filter((l) => l.person === id('Sam Example'));
+    expect([dayInPeriod('2026-07-01', 'plan', sam), dayInPeriod('2027-06-30', 'plan', sam), dayInPeriod('2026-06-30', 'plan', sam)]).toEqual([true, true, false]);
+    expect([dayInPeriod('2026-11-08', '2026', []), dayInPeriod('2025-12-31', '2026', [])]).toEqual([true, false]);
+    expect(dayInPeriod('1999-01-01', 'all', [])).toBe(true);
   });
 });
 

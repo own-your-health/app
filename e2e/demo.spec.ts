@@ -391,13 +391,17 @@ test('the timeline lists visits with their documents, and switches to every reco
   const tl = page.locator('.card', { has: page.locator('.card-head h2', { hasText: 'Timeline' }) });
   await expect(tl.getByRole('link', { name: 'Visits' })).toHaveAttribute('aria-current', 'page');
   const rows = tl.locator('.row');
-  await expect(rows).toHaveCount(4);
-  const october = rows.nth(1);
+  await expect(rows).toHaveCount(5);
+  // The day Robin's coverage changed sits among the visits, between Nov 18 and Oct 1.
+  await expect(rows.nth(1)).toContainText('Coverage changed');
+  await expect(rows.nth(1)).toContainText('Nov 8, 2026 · Example Health Plan, PPO Choice');
+  await expect(rows.nth(1).locator('.coverage-born')).toHaveText('Changed on Nov 8, 2026, the day Jamie Example was born.');
+  const october = rows.nth(2);
   await expect(october).toContainText('Oct 1, 2026 · Annual physical · Dr. Jordan Sample · Example Health Main Clinic');
   await expect(october).toContainText('3 documents');
   await expect(october.locator('.visit-docs li')).toHaveText(['After visit summary Visit summary', 'Lipid panel Lab report', 'Statement from Example Health Bill']);
   await expect(october.locator('.visit-line')).toHaveText([/^Results: LDL cholesterol · Glucose · .+ and 5 more$/, 'Vaccine: Influenza, seasonal, injectable', 'Claim: your share $53.68 from Example Health Plan']);
-  await expect(rows.nth(2).locator('.visit-line').last()).toHaveText('Claim: nothing for you to pay from Example Health Plan');
+  await expect(rows.nth(3).locator('.visit-line').last()).toHaveText('Claim: nothing for you to pay from Example Health Plan');
   await expect(tl).toContainText('5 documents from no visit in these records (bills, scans, letters) are under Documents.');
 
   await october.getByRole('link', { name: 'Lipid panel' }).click();
@@ -632,4 +636,40 @@ test('bills finds claims and statements, records before claims, and a claim name
   const claim = page.locator('main .row', { hasText: 'Lipid panel and blood draw' });
   await expect(claim.locator('.snippet')).toHaveText('Line: Blood draw (36415) · you owe $3.60');
   await expect(page.locator('.search-concept')).toHaveCount(0);
+});
+
+test('coverage over time: each insurer and plan, newest first, the same coverage from two sources once, a change on a birthday marked', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
+  await page.goto('./?demo');
+  await page.getByRole('link', { name: /^Robin Example/ }).first().click();
+  await openSection(page, 'Claims and bills');
+
+  const coverage = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Coverage$/ }) });
+  const rows = coverage.locator('.row');
+  await expect(rows.locator('.row-title')).toHaveText(['Example Health Plan, PPO Choice', 'ExampleHealth Plan, PPO Choice']);
+  await expect(rows.nth(0)).toContainText('since Nov 8, 2026');
+  // The insurer's record and the portal's copy, spelled without the space, are one coverage.
+  await expect(rows.nth(0)).toContainText('In records from Example Health Plan and Example Health.');
+  await expect(rows.nth(0).locator('.coverage-born')).toHaveText('Changed on Nov 8, 2026, the day Jamie Example was born.');
+  await expect(rows.nth(1)).toContainText('Jan 1, 2024 to Nov 7, 2026');
+  await expect(rows.nth(1)).toContainText('In records from Example Health.');
+  await expect(rows.nth(1).locator('.coverage-born')).toHaveCount(0);
+  await expect(coverage).toContainText('A birthday beside a change is a date the two share. These records don’t say why coverage changed.');
+
+  await rows.nth(0).getByRole('link', { name: 'Example Health Plan, PPO Choice' }).click();
+  await expect(page.locator('.card-head h1')).toHaveText('Example Health Plan PPO');
+});
+
+test('costs say when a coverage changed inside the period shown', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
+  await page.goto('./?demo#/costs');
+  const note = page.locator('.cost-summary .coverage-note');
+  await expect(note).toHaveText('Coverage changed in this period: Robin Example, Example Health Plan from Nov 8, 2026, the day Jamie Example was born.');
+  await page.getByRole('group', { name: 'Period' }).getByRole('button', { name: '2025' }).click();
+  await expect(page.locator('.cost-summary')).toBeVisible();
+  await expect(note).toHaveCount(0);
+  await page.getByRole('group', { name: 'Period' }).getByRole('button', { name: '2026' }).click();
+  await note.getByRole('link', { name: 'Robin Example' }).click();
+  await expect(page).toHaveURL(/\/claims$/);
+  await expect(page.locator('.card-head h2', { hasText: /^Coverage$/ })).toBeVisible();
 });

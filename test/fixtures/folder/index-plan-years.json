@@ -8,13 +8,13 @@
       "id": "r_cccccccccccccccccccc",
       "kind": "coverage",
       "key": "coverage|uhc",
-      "date": "2026-11-06",
-      "display": "UnitedHealthcare",
+      "date": "2026-09-14",
+      "display": "ExampleHealth Plan",
       "status": "active",
       "fields": {
-        "payer": "UnitedHealthcare",
+        "payer": "ExampleHealth Plan",
         "period": {
-          "start": "2026-11-06",
+          "start": "2026-09-14",
           "end": "9999-12-31"
         },
         "relationship": "self"
@@ -31,7 +31,7 @@
       "status": "active",
       "fields": {
         "provider": "Example Clinic",
-        "insurer": "United Healthcare",
+        "insurer": "Example Health Plan",
         "billable_period": {
           "start": "2026-03-10",
           "end": "2026-03-10"
@@ -58,7 +58,7 @@
       "status": "active",
       "fields": {
         "provider": "Example Clinic",
-        "insurer": "United Healthcare",
+        "insurer": "Example Health Plan",
         "billable_period": {
           "start": "2026-11-20",
           "end": "2026-11-20"

@@ -243,6 +243,13 @@ export function planYearsIn(lines: CostLine[]): { insurer?: string; year: PlanYe
   return [...seen.values()].sort((a, b) => (a.insurer ?? '').localeCompare(b.insurer ?? '') || a.year.start.localeCompare(b.year.start));
 }
 
+/** Whether a day falls in a period, for one person's lines in it: their plan years, the calendar year, or any day. */
+export function dayInPeriod(d: string, period: PeriodId, lines: CostLine[]): boolean {
+  if (period === 'all') return true;
+  if (/^\d{4}$/.test(period)) return d.startsWith(period);
+  return planYearsIn(lines).some((y) => y.year.start <= d && d <= y.year.end);
+}
+
 // ---- Totals and breakdowns ----
 
 export interface Totals {
