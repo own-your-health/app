@@ -9,6 +9,7 @@
 // household was born, the app says so, as a date the two share; it does not
 // claim that the birth is the reason.
 
+import { dayInPeriod, type CostLine, type PeriodId } from './costs';
 import { sameProvider } from './providers';
 import { day, isWithdrawn, organizationName, str } from './records';
 import type { Household, JsonObject, MedRecord, PersonIndex } from './types';
@@ -90,8 +91,35 @@ export function isChange(s: CoverageSegment): s is CoverageSegment & { start: st
   return !!s.start && (!s.first || !!s.born);
 }
 
+/** "the day Jamie Example was born". Nothing when no one was born the day the coverage started. */
+export function bornClause(s: CoverageSegment): string | undefined {
+  return s.born && s.start ? `the day ${s.born.name} was born` : undefined;
+}
+
 /** "Changed on Nov 8, 2026, the day Jamie Example was born." Nothing when no one was born that day. */
 export function birthWords(s: CoverageSegment, dateText: (d: string) => string): string | undefined {
-  if (!s.born || !s.start) return undefined;
-  return `${s.first ? 'Started' : 'Changed'} on ${dateText(s.start)}, the day ${s.born.name} was born.`;
+  const born = bornClause(s);
+  return born ? `${s.first ? 'Started' : 'Changed'} on ${dateText(s.start!)}, ${born}.` : undefined;
+}
+
+/**
+ * The coverage changes inside a period, for the people whose cost lines are
+ * in it: each judged against that person's own lines (their plan years, the
+ * calendar year, or any day), in the order the people first appear.
+ */
+export function coverageChangesIn(
+  lines: CostLine[],
+  period: PeriodId,
+  indexOf: (person: string) => PersonIndex | undefined,
+  household: Household,
+): { person: string; change: CoverageSegment & { start: string } }[] {
+  return [...new Set(lines.map((l) => l.person))].flatMap((person) => {
+    const index = indexOf(person);
+    if (!index) return [];
+    const own = lines.filter((l) => l.person === person);
+    return coverageHistory(index, household, person)
+      .filter(isChange)
+      .filter((c) => dayInPeriod(c.start, period, own))
+      .map((change) => ({ person, change }));
+  });
 }

@@ -12,7 +12,6 @@ import {
   codeKey,
   codeLines,
   comparableCodes,
-  dayInPeriod,
   DIMENSION_LABELS,
   householdLines,
   inPeriod,
@@ -31,7 +30,7 @@ import {
   type PlanBasis,
   type PlanYear,
 } from '../../model/costs';
-import { coverageHistory, isChange } from '../../model/coverage';
+import { bornClause, coverageChangesIn } from '../../model/coverage';
 import { AMOUNT_LABELS, formatMoney } from '../../model/records';
 import { getPlanStart } from '../../settings';
 import type { MedRecord } from '../../model/types';
@@ -254,21 +253,20 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
         : null;
     const taxNote = calendar ? h('p', { class: 'small muted' }, 'A calendar year counts care by the day it was given. A tax return counts what was paid in the year, so a bill paid the next January belongs to that year.') : null;
     // A coverage that changed inside the period: the plan, and so the deductible, may differ either side of it.
-    const changes = [...new Set(lines.map((l) => l.person))].flatMap((pid) => {
-      const idx = store.index(pid);
-      const own = lines.filter((l) => l.person === pid);
-      return idx ? coverageHistory(idx, store.household, pid).filter((c) => isChange(c) && dayInPeriod(c.start, chosen.id, own)).map((c) => ({ pid, c })) : [];
-    });
+    const changes = coverageChangesIn(lines, chosen.id, (pid) => store.index(pid), store.household);
     const coverageNote = changes.length
       ? h(
           'p',
           { class: 'small muted coverage-note' },
           'Coverage changed in this period: ',
-          changes.map(({ pid, c }, i) => [
-            i ? '; ' : null,
-            link({ name: 'person', person: pid, section: 'claims' }, names.get(pid) ?? 'Someone'),
-            `, ${c.insurer} from ${dateText(c.start)}${c.born ? `, the day ${c.born.name} was born` : ''}`,
-          ]),
+          changes.map(({ person, change }, i) => {
+            const born = bornClause(change);
+            return [
+              i ? '; ' : null,
+              link({ name: 'person', person, section: 'claims' }, names.get(person) ?? 'Someone'),
+              `, ${change.insurer} from ${dateText(change.start)}${born ? `, ${born}` : ''}`,
+            ];
+          }),
           '.',
         )
       : null;

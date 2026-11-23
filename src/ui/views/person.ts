@@ -723,6 +723,7 @@ function coverageCard(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement |
     { title: 'Coverage', class: 'coverage-history' },
     segments.map((s) => {
       const born = birthWords(s, dateText);
+      const sources = from(s);
       return row({
         route: itemRoute(person.id, s.records[0]!.id),
         title: coverageName(s),
@@ -731,7 +732,7 @@ function coverageCard(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement |
           'div',
           { class: 'coverage-extra' },
           born ? h('p', { class: 'small coverage-born' }, born) : null,
-          h('p', { class: 'small muted' }, `In records from ${from(s).join(' and ')}.`),
+          sources.length ? h('p', { class: 'small muted' }, `In records from ${sources.join(' and ')}.`) : null,
         ),
       });
     }),
