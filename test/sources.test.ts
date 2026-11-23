@@ -12,12 +12,13 @@ describe('source views over the sample', () => {
   const view = (person: string, cli: string) => views.find((v) => v.source.id === sourceOf(household, person, cli).id)!;
 
   it('give each source its health', () => {
-    expect(view('Robin Example', 'uhc').health).toBe('needs_person');
+    expect(view('Alex Example', 'athena').health).toBe('needs_person');
     expect(view('Sam Example', 'labcorp').health).toBe('failed');
     expect(view('Sam Example', 'peryourhealth').health).toBe('paused');
     expect(view('Sam Example', 'mychart').health).toBe('expiring');
     expect(view('Robin Example', 'mychart').health).toBe('ok');
-    expect(view('Alex Example', 'athena').health).toBe('ok');
+    expect(view('Robin Example', 'caremark').health).toBe('ok');
+    expect(view('Robin Example', 'uhc').health).toBe('awaits_sign_in');
     expect(view('Robin Example', 'oneblood').health).toBe('awaits_sign_in');
   });
 
@@ -54,7 +55,7 @@ describe('source views over the sample', () => {
   });
 
   it('take a sign-in made since the attempt that asked for one as made', () => {
-    const plan = sourceOf(household, 'Robin Example', 'uhc');
+    const plan = sourceOf(household, 'Alex Example', 'athena');
     const signedIn: RefreshStatus = {
       ...status,
       sources: status.sources.map((s) => (s.source === plan.id ? { ...s, sign_in: { ...s.sign_in!, state: 'ok', needs_person: null } } : s)),
@@ -108,12 +109,13 @@ describe('headline', () => {
     const { status } = demo();
     const vs = sourceViews({ household, indexes, status, pending: [], done: [], now: NOW }).filter((v) => v.health === 'ok' || v.health === 'awaits_sign_in');
     const ok = vs.filter((v) => v.health === 'ok').length;
-    expect(headline(vs)).toEqual({ text: `${ok} sources loaded, 1 waits for a sign-in`, attention: false });
+    expect(headline(vs)).toEqual({ text: `${ok} sources loaded, 2 wait for a sign-in`, attention: false });
     // No "0 sources loaded" when every source waits.
     const waiting = vs.filter((v) => v.health === 'awaits_sign_in');
-    expect(headline(waiting)).toEqual({ text: 'The source waits for a sign-in', attention: false });
-    expect(headline([...waiting, ...waiting])).toEqual({ text: 'All 2 sources wait for a sign-in', attention: false });
-    expect(headline([...waiting, { ...waiting[0]!, health: 'never' }])).toEqual({ text: '1 not loaded yet, 1 waits for a sign-in', attention: false });
+    expect(waiting).toHaveLength(2);
+    expect(headline([waiting[0]!])).toEqual({ text: 'The source waits for a sign-in', attention: false });
+    expect(headline(waiting)).toEqual({ text: 'All 2 sources wait for a sign-in', attention: false });
+    expect(headline([waiting[0]!, { ...waiting[0]!, health: 'never' }])).toEqual({ text: '1 not loaded yet, 1 waits for a sign-in', attention: false });
   });
 
   it('reads plainly when nothing is wrong', () => {

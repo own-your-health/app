@@ -1,6 +1,6 @@
 {
   "resourceType": "ExplanationOfBenefit",
-  "id": "explanationofbenefit-4ed0dcab",
+  "id": "explanationofbenefit-5fcf6dcb",
   "meta": {
     "lastUpdated": "2026-11-21T08:00:00Z"
   },
@@ -14,12 +14,12 @@
   },
   "use": "claim",
   "billablePeriod": {
-    "start": "2026-07-09",
-    "end": "2026-07-09"
+    "start": "2025-10-20",
+    "end": "2025-10-20"
   },
   "benefitPeriod": {
-    "start": "2026-07-01",
-    "end": "2027-06-30"
+    "start": "2025-07-01",
+    "end": "2026-06-30"
   },
   "outcome": "complete",
   "item": [
@@ -29,14 +29,14 @@
         "coding": [
           {
             "system": "http://www.ama-assn.org/go/cpt",
-            "code": "84443",
-            "display": "Thyroid test (TSH)"
+            "code": "90686",
+            "display": "Flu vaccine"
           }
         ]
       },
-      "servicedDate": "2026-07-09",
+      "servicedDate": "2025-10-20",
       "net": {
-        "value": 95,
+        "value": 55,
         "currency": "USD"
       }
     },
@@ -46,14 +46,14 @@
         "coding": [
           {
             "system": "http://www.ama-assn.org/go/cpt",
-            "code": "36415",
-            "display": "Blood draw"
+            "code": "90471",
+            "display": "Vaccine given"
           }
         ]
       },
-      "servicedDate": "2026-07-09",
+      "servicedDate": "2025-10-20",
       "net": {
-        "value": 25,
+        "value": 28,
         "currency": "USD"
       }
     }

@@ -772,7 +772,7 @@
       ]
     },
     {
-      "id": "r_fhoxa22kw4ghnwkkh2lz",
+      "id": "r_hi2yuodosg7nlmabr3eb",
       "kind": "coverage",
       "key": "coverage|http://terminology.hl7.org/CodeSystem/v3-ActCode|HIP|2025-07-01",
       "date": "2025-07-01",
@@ -806,18 +806,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Coverage",
-            "id": "coverage-bc011b41",
+            "id": "coverage-f187087d",
             "last_updated": "2026-11-21T08:00:00Z"
           },
           "fetched_at": "2026-11-21T13:59:00Z",
           "filed_at": "2026-11-21T13:59:00Z",
-          "raw_path": "Sam Example/Records/kp-example-care-plan/Coverage/coverage-bc011b41.json",
+          "raw_path": "Sam Example/Records/kp-example-care-plan/Coverage/coverage-f187087d.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_5pqijc2nzekejrg25efj",
+      "id": "r_w4ghnwkkh2lze5w2s6ab",
       "kind": "claim",
       "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|professional|2026-05-20",
       "date": "2026-05-20",
@@ -1064,18 +1064,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "ExplanationOfBenefit",
-            "id": "explanationofbenefit-4d6a2e01",
+            "id": "explanationofbenefit-57e70aaa",
             "last_updated": "2026-11-21T08:00:00Z"
           },
           "fetched_at": "2026-11-21T13:59:00Z",
           "filed_at": "2026-11-21T13:59:00Z",
-          "raw_path": "Sam Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-4d6a2e01.json",
+          "raw_path": "Sam Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-57e70aaa.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_lugzsq2h6xu2xucsavps",
+      "id": "r_zekejrg25efjeo5qnm23",
       "kind": "claim",
       "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|professional|2026-07-09",
       "date": "2026-07-09",
@@ -1322,18 +1322,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "ExplanationOfBenefit",
-            "id": "explanationofbenefit-4ed0dcab",
+            "id": "explanationofbenefit-df0892ad",
             "last_updated": "2026-11-21T08:00:00Z"
           },
           "fetched_at": "2026-11-21T13:59:00Z",
           "filed_at": "2026-11-21T13:59:00Z",
-          "raw_path": "Sam Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-4ed0dcab.json",
+          "raw_path": "Sam Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-df0892ad.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_svk5mgyh6ukqqgy3fyxi",
+      "id": "r_6xu2xucsavpsl2uwzgdn",
       "kind": "claim",
       "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|professional|2026-10-12",
       "date": "2026-10-12",
@@ -1612,12 +1612,12 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "ExplanationOfBenefit",
-            "id": "explanationofbenefit-ba46963d",
+            "id": "explanationofbenefit-b46920a7",
             "last_updated": "2026-11-21T08:00:00Z"
           },
           "fetched_at": "2026-11-21T13:59:00Z",
           "filed_at": "2026-11-21T13:59:00Z",
-          "raw_path": "Sam Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-ba46963d.json",
+          "raw_path": "Sam Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-b46920a7.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
@@ -1728,14 +1728,14 @@
       "documents_added": 0
     },
     {
-      "id": "i_xqwmq7i2pf6jacfknkq6",
+      "id": "i_svk5mgyh6ukqqgy3fyxi",
       "source_dir": "Sam Example/Records/kp-example-care-plan",
-      "stream_sha256": "7261e7a9c861827d8202eb2de9cc129488f2f6c995305a93cfef7ef6f9688af3",
-      "stream_bytes": 240300,
+      "stream_sha256": "706c0f8af5e9025ada0e7261e7a9c861827d8202eb2de9cc129488f2f6c99530",
+      "stream_bytes": 392149,
       "cli": "kp",
       "cli_version": "0.4.0",
       "organization": "example-care-plan",
-      "patient_id": "pat-370cb4",
+      "patient_id": "pat-3c733a",
       "pulled_at": "2026-11-21T14:00:00Z",
       "imported_at": "2026-11-21T14:00:00Z",
       "counts": {

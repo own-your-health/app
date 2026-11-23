@@ -3757,7 +3757,7 @@
       ]
     },
     {
-      "id": "r_dujp4szu7ivn5h74n3h3",
+      "id": "r_22vqezugfxrlht67r5dk",
       "kind": "claim",
       "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|pharmacy|2026-08-14",
       "date": "2026-08-14",
@@ -3924,18 +3924,18 @@
           "method": "portal",
           "source_resource": {
             "type": "ExplanationOfBenefit",
-            "id": "explanationofbenefit-73ef1d3a",
+            "id": "explanationofbenefit-838ae340",
             "last_updated": "2026-11-21T08:00:00Z"
           },
           "fetched_at": "2026-11-21T13:59:00Z",
           "filed_at": "2026-11-21T13:59:00Z",
-          "raw_path": "Robin Example/Records/caremark-example-pharmacy-benefits/ExplanationOfBenefit/explanationofbenefit-73ef1d3a.json",
+          "raw_path": "Robin Example/Records/caremark-example-pharmacy-benefits/ExplanationOfBenefit/explanationofbenefit-838ae340.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_ebpdh2ci2vapyqdmsh7g",
+      "id": "r_7ivn5h74n3h3qlgvmnpf",
       "kind": "claim",
       "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|pharmacy|2026-11-12",
       "date": "2026-11-12",
@@ -4102,18 +4102,18 @@
           "method": "portal",
           "source_resource": {
             "type": "ExplanationOfBenefit",
-            "id": "explanationofbenefit-0b65cdf5",
+            "id": "explanationofbenefit-349fc294",
             "last_updated": "2026-11-21T08:00:00Z"
           },
           "fetched_at": "2026-11-21T13:59:00Z",
           "filed_at": "2026-11-21T13:59:00Z",
-          "raw_path": "Robin Example/Records/caremark-example-pharmacy-benefits/ExplanationOfBenefit/explanationofbenefit-0b65cdf5.json",
+          "raw_path": "Robin Example/Records/caremark-example-pharmacy-benefits/ExplanationOfBenefit/explanationofbenefit-349fc294.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_zky22bjfiux25a366smw",
+      "id": "r_ewjfubj6a265zedeuuec",
       "kind": "coverage",
       "key": "coverage|http://terminology.hl7.org/CodeSystem/v3-ActCode|HIP|2024-01-01",
       "date": "2024-01-01",
@@ -4147,18 +4147,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Coverage",
-            "id": "coverage-94344442",
+            "id": "coverage-a4e2c66b",
             "last_updated": "2026-11-14T08:00:00Z"
           },
           "fetched_at": "2026-11-14T19:59:00Z",
           "filed_at": "2026-11-14T19:59:00Z",
-          "raw_path": "Robin Example/Records/mychart-example-health/Coverage/coverage-94344442.json",
+          "raw_path": "Robin Example/Records/mychart-example-health/Coverage/coverage-a4e2c66b.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_g7wlpdn46gynza3seb5x",
+      "id": "r_iux25a366smwsdvkvzap",
       "kind": "coverage",
       "key": "coverage|http://terminology.hl7.org/CodeSystem/v3-ActCode|HIP|2026-11-08",
       "date": "2026-11-08",
@@ -4191,12 +4191,12 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Coverage",
-            "id": "coverage-235a590f",
+            "id": "coverage-9a8aa195",
             "last_updated": "2026-11-14T08:00:00Z"
           },
           "fetched_at": "2026-11-14T19:59:00Z",
           "filed_at": "2026-11-14T19:59:00Z",
-          "raw_path": "Robin Example/Records/mychart-example-health/Coverage/coverage-235a590f.json",
+          "raw_path": "Robin Example/Records/mychart-example-health/Coverage/coverage-9a8aa195.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
@@ -4297,14 +4297,14 @@
       "documents_added": 0
     },
     {
-      "id": "i_ntkq52xfaely6p3dccci",
+      "id": "i_ebpdh2ci2vapyqdmsh7g",
       "source_dir": "Robin Example/Records/caremark-example-pharmacy-benefits",
-      "stream_sha256": "598c22ad08b2f1c68010edc8facf66cc67d8a250121cb2126e67ca80c5c48ab2",
-      "stream_bytes": 733908,
+      "stream_sha256": "d3a0da7504b8efb32228598c22ad08b2f1c68010edc8facf66cc67d8a250121c",
+      "stream_bytes": 742091,
       "cli": "caremark",
       "cli_version": "1.2.0",
       "organization": "example-pharmacy-benefits",
-      "patient_id": "pat-3e26fd",
+      "patient_id": "pat-acda31",
       "pulled_at": "2026-11-21T14:00:00Z",
       "imported_at": "2026-11-21T14:00:00Z",
       "counts": {

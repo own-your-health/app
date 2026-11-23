@@ -1,6 +1,6 @@
 {
   "resourceType": "ExplanationOfBenefit",
-  "id": "explanationofbenefit-55430fba",
+  "id": "explanationofbenefit-57e70aaa",
   "meta": {
     "lastUpdated": "2026-11-21T08:00:00Z"
   },
@@ -14,8 +14,8 @@
   },
   "use": "claim",
   "billablePeriod": {
-    "start": "2025-10-20",
-    "end": "2025-10-20"
+    "start": "2026-05-20",
+    "end": "2026-05-20"
   },
   "benefitPeriod": {
     "start": "2025-07-01",
@@ -29,14 +29,14 @@
         "coding": [
           {
             "system": "http://www.ama-assn.org/go/cpt",
-            "code": "90686",
-            "display": "Flu vaccine"
+            "code": "99214",
+            "display": "Office visit"
           }
         ]
       },
-      "servicedDate": "2025-10-20",
+      "servicedDate": "2026-05-20",
       "net": {
-        "value": 55,
+        "value": 260,
         "currency": "USD"
       }
     },
@@ -46,14 +46,14 @@
         "coding": [
           {
             "system": "http://www.ama-assn.org/go/cpt",
-            "code": "90471",
-            "display": "Vaccine given"
+            "code": "73610",
+            "display": "X-ray of the ankle"
           }
         ]
       },
-      "servicedDate": "2025-10-20",
+      "servicedDate": "2026-05-20",
       "net": {
-        "value": 28,
+        "value": 145,
         "currency": "USD"
       }
     }

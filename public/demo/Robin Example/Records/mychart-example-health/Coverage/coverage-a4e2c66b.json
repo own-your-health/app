@@ -1,6 +1,6 @@
 {
   "resourceType": "Coverage",
-  "id": "coverage-235a590f",
+  "id": "coverage-a4e2c66b",
   "meta": {
     "lastUpdated": "2026-11-14T08:00:00Z"
   },
@@ -11,7 +11,8 @@
     }
   ],
   "period": {
-    "start": "2026-11-08"
+    "start": "2024-01-01",
+    "end": "2026-11-07"
   },
   "class": [
     {

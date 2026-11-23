@@ -25,6 +25,7 @@
         "state": "ok",
         "expires_at": "2027-06-10T20:00:00Z",
         "checked_at": "2026-11-22T16:59:00Z",
+        "renews": true,
         "needs_person": null
       },
       "last_attempt": {
@@ -75,6 +76,8 @@
         "state": "signed_out",
         "expires_at": null,
         "checked_at": "2026-11-22T12:00:00Z",
+        "renews": false,
+        "lasts_secs": 2400,
         "needs_person": {
           "reason": "sign_in",
           "since": "2026-11-22T12:00:00Z",
@@ -82,7 +85,7 @@
         }
       },
       "last_attempt": {
-        "attempt": "t_jrsi3yne2vvusfobf3n4",
+        "attempt": "t_m3o5ivud4nsfbxxjjrxw",
         "started_at": "2026-11-22T12:00:00Z",
         "finished_at": "2026-11-22T12:01:00Z",
         "trigger": "schedule",
@@ -113,7 +116,6 @@
         "expires_at": null,
         "checked_at": "2026-11-22T14:00:00Z",
         "renews": false,
-        "lasts_secs": 3600,
         "needs_person": {
           "reason": "sign_in",
           "since": "2026-11-22T14:00:00Z",
@@ -121,7 +123,7 @@
         }
       },
       "last_attempt": {
-        "attempt": "t_m3o5ivud4nsfbxxjjrxw",
+        "attempt": "t_g7wlpdn46gynza3seb5x",
         "started_at": "2026-11-22T14:00:00Z",
         "finished_at": "2026-11-22T14:01:00Z",
         "trigger": "schedule",
@@ -151,6 +153,7 @@
         "state": "expiring",
         "expires_at": "2026-11-24T12:00:00Z",
         "checked_at": "2026-11-22T14:59:00Z",
+        "renews": true,
         "needs_person": null
       },
       "last_attempt": {
@@ -234,6 +237,7 @@
         "state": "unknown",
         "expires_at": null,
         "checked_at": "2026-11-20T20:00:00Z",
+        "renews": false,
         "needs_person": null
       },
       "last_attempt": null,
@@ -248,23 +252,32 @@
       "paused": null,
       "failures": 0,
       "min_interval_secs": 86400,
-      "next_run_at": "2026-11-23T17:34:00Z",
+      "next_run_at": null,
       "sign_in": {
-        "state": "ok",
-        "expires_at": "2027-02-17T20:00:00Z",
-        "checked_at": "2026-11-21T17:59:00Z",
-        "needs_person": null
+        "state": "expired",
+        "expires_at": null,
+        "checked_at": "2026-11-22T18:00:00Z",
+        "renews": true,
+        "needs_person": {
+          "reason": "sign_in",
+          "since": "2026-11-22T18:00:00Z",
+          "command": "medrec refresh sign-in s_zyx7rfb4ftctwkd3wfhn"
+        }
       },
       "last_attempt": {
-        "attempt": "t_sxlgikcz7ikjjeljdfpm",
-        "started_at": "2026-11-21T17:59:00Z",
-        "finished_at": "2026-11-21T18:00:00Z",
+        "attempt": "t_jwoajntxs35lyqjrouap",
+        "started_at": "2026-11-22T18:00:00Z",
+        "finished_at": "2026-11-22T18:01:00Z",
         "trigger": "schedule",
         "requests": [],
-        "outcome": "ok",
-        "exit_code": 0,
-        "error": null,
-        "import": "i_vgdqaad4hjj6uoy5afo6"
+        "outcome": "needs_person",
+        "exit_code": 3,
+        "error": {
+          "code": "needs_person",
+          "message": "The sign-in has expired and could not be renewed. Run `athena auth login --profile <provider profile>`.",
+          "remedy": "Run `athena auth login`, then import again."
+        },
+        "import": null
       },
       "last_success": {
         "attempt": "t_sxlgikcz7ikjjeljdfpm",
@@ -286,7 +299,7 @@
       }
     },
     {
-      "source": "s_t4hddku7hhk3jzor4zlq",
+      "source": "s_mmy3oa5lpz7usgbyyteu",
       "person": "p_wwezzed7kml67hnp6s7n",
       "cli": "kp",
       "organization": "example-care-plan",
@@ -299,10 +312,11 @@
         "state": "ok",
         "expires_at": "2027-01-21T20:00:00Z",
         "checked_at": "2026-11-21T13:59:00Z",
+        "renews": true,
         "needs_person": null
       },
       "last_attempt": {
-        "attempt": "t_urriufquzhy2k3mxdwwy",
+        "attempt": "t_cbcw6wxm2ya4fmeyk3su",
         "started_at": "2026-11-21T13:59:00Z",
         "finished_at": "2026-11-21T14:00:00Z",
         "trigger": "schedule",
@@ -310,12 +324,12 @@
         "outcome": "ok",
         "exit_code": 0,
         "error": null,
-        "import": "i_xqwmq7i2pf6jacfknkq6"
+        "import": "i_svk5mgyh6ukqqgy3fyxi"
       },
       "last_success": {
-        "attempt": "t_urriufquzhy2k3mxdwwy",
+        "attempt": "t_cbcw6wxm2ya4fmeyk3su",
         "finished_at": "2026-11-21T14:00:00Z",
-        "import": "i_xqwmq7i2pf6jacfknkq6",
+        "import": "i_svk5mgyh6ukqqgy3fyxi",
         "counts": {
           "records_added": 4,
           "records_updated": 0,
@@ -332,7 +346,7 @@
       }
     },
     {
-      "source": "s_5l6z5bmt4teyfk7s6vby",
+      "source": "s_u7hhk3jzor4zlqdhamle",
       "person": "p_bjpnvyvnmxv74q335tk4",
       "cli": "kp",
       "organization": "example-care-plan",
@@ -345,10 +359,11 @@
         "state": "ok",
         "expires_at": "2027-01-21T20:00:00Z",
         "checked_at": "2026-11-21T13:59:00Z",
+        "renews": true,
         "needs_person": null
       },
       "last_attempt": {
-        "attempt": "t_flko3gucto5fkxq3cqd4",
+        "attempt": "t_urriufquzhy2k3mxdwwy",
         "started_at": "2026-11-21T13:59:00Z",
         "finished_at": "2026-11-21T14:00:00Z",
         "trigger": "schedule",
@@ -356,12 +371,12 @@
         "outcome": "ok",
         "exit_code": 0,
         "error": null,
-        "import": "i_az45dcnyjjofwvcgfwy2"
+        "import": "i_ydixr4c2peancug2yblt"
       },
       "last_success": {
-        "attempt": "t_flko3gucto5fkxq3cqd4",
+        "attempt": "t_urriufquzhy2k3mxdwwy",
         "finished_at": "2026-11-21T14:00:00Z",
-        "import": "i_az45dcnyjjofwvcgfwy2",
+        "import": "i_ydixr4c2peancug2yblt",
         "counts": {
           "records_added": 3,
           "records_updated": 0,
@@ -378,7 +393,7 @@
       }
     },
     {
-      "source": "s_km5ktr7bixqyhnhi2yuo",
+      "source": "s_mt4teyfk7s6vbyxogm7c",
       "person": "p_xo4em46i7yj3hphlpajo",
       "cli": "caremark",
       "organization": "example-pharmacy-benefits",
@@ -391,10 +406,11 @@
         "state": "ok",
         "expires_at": "2027-01-21T20:00:00Z",
         "checked_at": "2026-11-21T13:59:00Z",
+        "renews": false,
         "needs_person": null
       },
       "last_attempt": {
-        "attempt": "t_kuos4gwlewjfubj6a265",
+        "attempt": "t_flko3gucto5fkxq3cqd4",
         "started_at": "2026-11-21T13:59:00Z",
         "finished_at": "2026-11-21T14:00:00Z",
         "trigger": "schedule",
@@ -402,12 +418,12 @@
         "outcome": "ok",
         "exit_code": 0,
         "error": null,
-        "import": "i_ntkq52xfaely6p3dccci"
+        "import": "i_ebpdh2ci2vapyqdmsh7g"
       },
       "last_success": {
-        "attempt": "t_kuos4gwlewjfubj6a265",
+        "attempt": "t_flko3gucto5fkxq3cqd4",
         "finished_at": "2026-11-21T14:00:00Z",
-        "import": "i_ntkq52xfaely6p3dccci",
+        "import": "i_ebpdh2ci2vapyqdmsh7g",
         "counts": {
           "records_added": 2,
           "records_updated": 0,

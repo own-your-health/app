@@ -1,6 +1,6 @@
 {
   "resourceType": "ExplanationOfBenefit",
-  "id": "explanationofbenefit-e212d3ee",
+  "id": "explanationofbenefit-df0892ad",
   "meta": {
     "lastUpdated": "2026-11-21T08:00:00Z"
   },
@@ -14,8 +14,8 @@
   },
   "use": "claim",
   "billablePeriod": {
-    "start": "2026-11-20",
-    "end": "2026-11-20"
+    "start": "2026-07-09",
+    "end": "2026-07-09"
   },
   "benefitPeriod": {
     "start": "2026-07-01",
@@ -29,14 +29,14 @@
         "coding": [
           {
             "system": "http://www.ama-assn.org/go/cpt",
-            "code": "99213",
-            "display": "Office visit"
+            "code": "84443",
+            "display": "Thyroid test (TSH)"
           }
         ]
       },
-      "servicedDate": "2026-11-20",
+      "servicedDate": "2026-07-09",
       "net": {
-        "value": 165,
+        "value": 95,
         "currency": "USD"
       }
     },
@@ -46,14 +46,14 @@
         "coding": [
           {
             "system": "http://www.ama-assn.org/go/cpt",
-            "code": "87880",
-            "display": "Strep test"
+            "code": "36415",
+            "display": "Blood draw"
           }
         ]
       },
-      "servicedDate": "2026-11-20",
+      "servicedDate": "2026-07-09",
       "net": {
-        "value": 48,
+        "value": 25,
         "currency": "USD"
       }
     }

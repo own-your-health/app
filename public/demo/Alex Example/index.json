@@ -1402,7 +1402,7 @@
       ]
     },
     {
-      "id": "r_f7mpgn4ljbqgvba54v6c",
+      "id": "r_o7gpjwyyk7dmnwuofaxt",
       "kind": "coverage",
       "key": "coverage|http://terminology.hl7.org/CodeSystem/v3-ActCode|HIP|2025-07-01",
       "date": "2025-07-01",
@@ -1436,18 +1436,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Coverage",
-            "id": "coverage-d64e5073",
+            "id": "coverage-a93cfef7",
             "last_updated": "2026-11-21T08:00:00Z"
           },
           "fetched_at": "2026-11-21T13:59:00Z",
           "filed_at": "2026-11-21T13:59:00Z",
-          "raw_path": "Alex Example/Records/kp-example-care-plan/Coverage/coverage-d64e5073.json",
+          "raw_path": "Alex Example/Records/kp-example-care-plan/Coverage/coverage-a93cfef7.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_3yk6wvac37377bnnog2m",
+      "id": "r_jbqgvba54v6cfvetq73k",
       "kind": "claim",
       "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|professional|2025-10-20",
       "date": "2025-10-20",
@@ -1694,18 +1694,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "ExplanationOfBenefit",
-            "id": "explanationofbenefit-55430fba",
+            "id": "explanationofbenefit-5fcf6dcb",
             "last_updated": "2026-11-21T08:00:00Z"
           },
           "fetched_at": "2026-11-21T13:59:00Z",
           "filed_at": "2026-11-21T13:59:00Z",
-          "raw_path": "Alex Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-55430fba.json",
+          "raw_path": "Alex Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-5fcf6dcb.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_ydixr4c2peancug2yblt",
+      "id": "r_37377bnnog2m6srs5doo",
       "kind": "claim",
       "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|professional|2026-11-20",
       "date": "2026-11-20",
@@ -1984,12 +1984,12 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "ExplanationOfBenefit",
-            "id": "explanationofbenefit-e212d3ee",
+            "id": "explanationofbenefit-b8ae6502",
             "last_updated": "2026-11-21T08:00:00Z"
           },
           "fetched_at": "2026-11-21T13:59:00Z",
           "filed_at": "2026-11-21T13:59:00Z",
-          "raw_path": "Alex Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-e212d3ee.json",
+          "raw_path": "Alex Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-b8ae6502.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
@@ -2021,14 +2021,14 @@
       "documents_added": 1
     },
     {
-      "id": "i_az45dcnyjjofwvcgfwy2",
+      "id": "i_ydixr4c2peancug2yblt",
       "source_dir": "Alex Example/Records/kp-example-care-plan",
-      "stream_sha256": "1a687c0d36f9674724e00286a2cd5c77bfa0b17c141f1838ae340aa504946571",
-      "stream_bytes": 678219,
+      "stream_sha256": "09cd32d899e56526568a1a687c0d36f9674724e00286a2cd5c77bfa0b17c141f",
+      "stream_bytes": 985009,
       "cli": "kp",
       "cli_version": "0.4.0",
       "organization": "example-care-plan",
-      "patient_id": "pat-7e6cf2",
+      "patient_id": "pat-dbe9d1",
       "pulled_at": "2026-11-21T14:00:00Z",
       "imported_at": "2026-11-21T14:00:00Z",
       "counts": {

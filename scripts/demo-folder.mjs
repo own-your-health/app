@@ -859,8 +859,6 @@ const samLabFail = attempt(src.samLab, sam, {
   exit: 5,
   error: { code: 'upstream', message: 'The lab site answered 503 three times.', remedy: 'Nothing to do; the Mac tries again later.' },
 });
-// A member site whose sign-in lasts about an hour and is never renewed: it loads after someone signs in, and otherwise waits quietly.
-const robinBloodWaits = attempt(src.robinBlood, robin, { started: at(-60 * 6), outcome: 'needs_person', exit: 3, error: { code: 'needs_person', message: 'Session expired. Run `oneblood auth login --profile <provider profile>`.', remedy: 'Sign in again with `oneblood auth login`.' } });
 const robinPlanNeeds = attempt(src.robinPlan, robin, { started: at(-60 * 8), outcome: 'needs_person', exit: 3, error: { code: 'needs_person', message: 'The member site session has expired. Sign in with `uhc auth login --browser --profile <provider profile> --overwrite`.', remedy: 'Run `uhc auth login`, then import again.' } });
 
 
@@ -988,71 +986,10 @@ const alexPlanOk = planOk(src.alexPlan, alex, A.imports.at(-1));
 const robinRxOk = planOk(src.robinRx, robin, R.imports.at(-1));
 const planStatus = (s, person, ok, run) => ({
   source: s.id, person: person.id, cli: s.cli, organization: s.organization, auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: at(60 * 24 - 30),
-  sign_in: { state: 'ok', expires_at: at(60 * 24 * 60), checked_at: at(-60 * 30 - 1), needs_person: null },
+  sign_in: { state: 'ok', expires_at: at(60 * 24 * 60), checked_at: at(-60 * 30 - 1), renews: s.cli !== 'caremark', needs_person: null },
   last_attempt: ok,
   last_success: { attempt: ok.attempt, finished_at: ok.finished_at, import: run.id, counts: counts(run), withheld_types: [] },
 });
-
-write('_status/status.json', {
-  schema: 'medrec-status/v1',
-  format: 1,
-  updated_at: at(-2),
-  refresher: { medrec_version: '0.3.0', machine, last_pass_at: at(-2), next_pass_at: at(3), pass_every_secs: 300, heartbeat_every_secs: 3600 },
-  sources: [
-    {
-      source: src.robinChart.id, person: robin.id, cli: 'mychart', organization: 'example-health', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: at(60 * 21),
-      sign_in: { state: 'ok', expires_at: at(60 * 24 * 200), checked_at: at(-60 * 3 - 1), needs_person: null },
-      last_attempt: robinChartOk,
-      last_success: { attempt: robinChartOk.attempt, finished_at: robinChartOk.finished_at, import: rChart.id, counts: counts(rChart), withheld_types: ['ExplanationOfBenefit'] },
-    },
-    {
-      source: src.robinPlan.id, person: robin.id, cli: 'uhc', organization: 'example-health-plan', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: null,
-      sign_in: { state: 'signed_out', expires_at: null, checked_at: at(-60 * 8), needs_person: { reason: 'sign_in', since: at(-60 * 8), command: `medrec refresh sign-in ${src.robinPlan.id}` } },
-      last_attempt: robinPlanNeeds,
-      last_success: null,
-    },
-    {
-      source: src.robinBlood.id, person: robin.id, cli: 'oneblood', organization: 'example-blood-center', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: null,
-      sign_in: { state: 'expired', expires_at: null, checked_at: at(-60 * 6), renews: false, lasts_secs: 3600, needs_person: { reason: 'sign_in', since: at(-60 * 6), command: `medrec refresh sign-in ${src.robinBlood.id}` } },
-      last_attempt: robinBloodWaits,
-      last_success: null,
-    },
-    {
-      source: src.samChart.id, person: sam.id, cli: 'mychart', organization: 'example-health', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: at(60 * 19),
-      sign_in: { state: 'expiring', expires_at: at(60 * 40), checked_at: at(-60 * 5 - 1), needs_person: null },
-      last_attempt: samChartOk,
-      last_success: { attempt: samChartOk.attempt, finished_at: samChartOk.finished_at, import: S.imports[0].id, counts: counts(S.imports[0]), withheld_types: [] },
-    },
-    {
-      source: src.samLab.id, person: sam.id, cli: 'labcorp', organization: 'example-lab', auto: true, paused: null, failures: 2, min_interval_secs: 86400, next_run_at: at(60),
-      sign_in: { state: 'ok', expires_at: null, checked_at: at(-60 * 2), needs_person: null },
-      last_attempt: samLabFail,
-      last_success: null,
-    },
-    {
-      source: src.samBilling.id, person: sam.id, cli: 'peryourhealth', organization: 'example-billing', auto: false, paused: { reason: 'user', note: 'Paused by hand on the Mac.', since: at(-60 * 24 * 2) }, failures: 0, min_interval_secs: 86400, next_run_at: null,
-      sign_in: { state: 'unknown', expires_at: null, checked_at: at(-60 * 24 * 2), needs_person: null },
-      last_attempt: null,
-      last_success: null,
-    },
-    {
-      source: src.alexPeds.id, person: alex.id, cli: 'athena', organization: 'example-pediatrics', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: at(60 * 22 - 26),
-      sign_in: { state: 'ok', expires_at: at(60 * 24 * 87), checked_at: at(-60 * 26 - 1), needs_person: null },
-      last_attempt: alexOk,
-      last_success: { attempt: alexOk.attempt, finished_at: alexOk.finished_at, import: aPeds.id, counts: counts(aPeds), withheld_types: [] },
-    },
-    planStatus(src.samPlan, sam, samPlanOk, S.imports.at(-1)),
-    planStatus(src.alexPlan, alex, alexPlanOk, A.imports.at(-1)),
-    planStatus(src.robinRx, robin, robinRxOk, R.imports.at(-1)),
-  ],
-});
-attempts.sort((a, b) => a.started_at.localeCompare(b.started_at));
-const byMonth = new Map();
-for (const a of attempts) {
-  const m = a.started_at.slice(0, 7);
-  byMonth.set(m, [...(byMonth.get(m) ?? []), a]);
-}
-for (const [m, lines] of byMonth) write(`_status/attempts/${m}.ndjson`, lines.map((l) => JSON.stringify(l)).join('\n') + '\n');
 
 write('_requests/.keep', '');
 const compact = (iso) => iso.replace(/[-:]/g, '');
@@ -1084,6 +1021,77 @@ const portalCoverage = (start, end) =>
 portalCoverage('2024-01-01', '2026-11-07');
 portalCoverage('2026-11-08');
 R.write();
+
+// ---- The Mac's status ----
+
+// Robin's plan and blood centre are member sites whose sign-ins nothing
+// renews: each loads after someone signs in, and otherwise waits quietly.
+const robinBloodWaits = attempt(src.robinBlood, robin, { started: at(-60 * 6), outcome: 'needs_person', exit: 3, error: { code: 'needs_person', message: 'Session expired. Run `oneblood auth login --profile <provider profile>`.', remedy: 'Sign in again with `oneblood auth login`.' } });
+// Alex's practice loaded yesterday, and its next load found the sign-in
+// ended. medrec renews this sign-in on its own, so an end is news: a person
+// must sign in. These attempts are drawn last, so no other id moves.
+const alexPedsEnded = attempt(src.alexPeds, alex, { started: at(-60 * 2), outcome: 'needs_person', exit: 3, error: { code: 'needs_person', message: 'The sign-in has expired and could not be renewed. Run `athena auth login --profile <provider profile>`.', remedy: 'Run `athena auth login`, then import again.' } });
+
+write('_status/status.json', {
+  schema: 'medrec-status/v1',
+  format: 1,
+  updated_at: at(-2),
+  refresher: { medrec_version: '0.3.0', machine, last_pass_at: at(-2), next_pass_at: at(3), pass_every_secs: 300, heartbeat_every_secs: 3600 },
+  sources: [
+    {
+      source: src.robinChart.id, person: robin.id, cli: 'mychart', organization: 'example-health', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: at(60 * 21),
+      sign_in: { state: 'ok', expires_at: at(60 * 24 * 200), checked_at: at(-60 * 3 - 1), renews: true, needs_person: null },
+      last_attempt: robinChartOk,
+      last_success: { attempt: robinChartOk.attempt, finished_at: robinChartOk.finished_at, import: rChart.id, counts: counts(rChart), withheld_types: ['ExplanationOfBenefit'] },
+    },
+    {
+      source: src.robinPlan.id, person: robin.id, cli: 'uhc', organization: 'example-health-plan', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: null,
+      sign_in: { state: 'signed_out', expires_at: null, checked_at: at(-60 * 8), renews: false, lasts_secs: 2400, needs_person: { reason: 'sign_in', since: at(-60 * 8), command: `medrec refresh sign-in ${src.robinPlan.id}` } },
+      last_attempt: robinPlanNeeds,
+      last_success: null,
+    },
+    {
+      source: src.robinBlood.id, person: robin.id, cli: 'oneblood', organization: 'example-blood-center', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: null,
+      sign_in: { state: 'expired', expires_at: null, checked_at: at(-60 * 6), renews: false, needs_person: { reason: 'sign_in', since: at(-60 * 6), command: `medrec refresh sign-in ${src.robinBlood.id}` } },
+      last_attempt: robinBloodWaits,
+      last_success: null,
+    },
+    {
+      source: src.samChart.id, person: sam.id, cli: 'mychart', organization: 'example-health', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: at(60 * 19),
+      sign_in: { state: 'expiring', expires_at: at(60 * 40), checked_at: at(-60 * 5 - 1), renews: true, needs_person: null },
+      last_attempt: samChartOk,
+      last_success: { attempt: samChartOk.attempt, finished_at: samChartOk.finished_at, import: S.imports[0].id, counts: counts(S.imports[0]), withheld_types: [] },
+    },
+    {
+      source: src.samLab.id, person: sam.id, cli: 'labcorp', organization: 'example-lab', auto: true, paused: null, failures: 2, min_interval_secs: 86400, next_run_at: at(60),
+      sign_in: { state: 'ok', expires_at: null, checked_at: at(-60 * 2), needs_person: null },
+      last_attempt: samLabFail,
+      last_success: null,
+    },
+    {
+      source: src.samBilling.id, person: sam.id, cli: 'peryourhealth', organization: 'example-billing', auto: false, paused: { reason: 'user', note: 'Paused by hand on the Mac.', since: at(-60 * 24 * 2) }, failures: 0, min_interval_secs: 86400, next_run_at: null,
+      sign_in: { state: 'unknown', expires_at: null, checked_at: at(-60 * 24 * 2), renews: false, needs_person: null },
+      last_attempt: null,
+      last_success: null,
+    },
+    {
+      source: src.alexPeds.id, person: alex.id, cli: 'athena', organization: 'example-pediatrics', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: null,
+      sign_in: { state: 'expired', expires_at: null, checked_at: at(-60 * 2), renews: true, needs_person: { reason: 'sign_in', since: at(-60 * 2), command: `medrec refresh sign-in ${src.alexPeds.id}` } },
+      last_attempt: alexPedsEnded,
+      last_success: { attempt: alexOk.attempt, finished_at: alexOk.finished_at, import: aPeds.id, counts: counts(aPeds), withheld_types: [] },
+    },
+    planStatus(src.samPlan, sam, samPlanOk, S.imports.at(-1)),
+    planStatus(src.alexPlan, alex, alexPlanOk, A.imports.at(-1)),
+    planStatus(src.robinRx, robin, robinRxOk, R.imports.at(-1)),
+  ],
+});
+attempts.sort((a, b) => a.started_at.localeCompare(b.started_at));
+const byMonth = new Map();
+for (const a of attempts) {
+  const m = a.started_at.slice(0, 7);
+  byMonth.set(m, [...(byMonth.get(m) ?? []), a]);
+}
+for (const [m, lines] of byMonth) write(`_status/attempts/${m}.ndjson`, lines.map((l) => JSON.stringify(l)).join('\n') + '\n');
 
 write('README.md', '# Sample records\n\nA synthetic medrec records folder for the app’s demo mode and tests. Every person, organization and value in it is invented.\n');
 

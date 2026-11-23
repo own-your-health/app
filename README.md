@@ -293,12 +293,13 @@ Some sign-ins need a person: a new password, a code by text, a captcha. The
 app never asks for or holds a provider password. It shows the exact command to
 run in a terminal on the Mac, such as `medrec refresh sign-in s_…`.
 
-Some member sites keep a sign-in for an hour or so, and nothing renews it, so
-the source loads only soon after someone signs in. medrec marks such a source
-in `_status/` (`sign_in.renews: false`). The app shows it quietly, as **Waits
-for a sign-in** with "Loads when someone signs in on the Mac", and not as an
-alert: it stays off home's sign-in line and the dot on Sources. Its page
-still gives the command. That holds for a week after its last load; after a
+Some member sites keep a sign-in for less than an hour, and nothing renews
+it, so the source loads only soon after someone signs in. medrec marks such a
+source in `_status/` (`sign_in.renews: false`), and where it has measured how
+long a sign-in lasts, says that too (`sign_in.lasts_secs`). The app shows the
+source quietly, as **Waits for a sign-in** with "Loads when someone signs in
+on the Mac" and the length where known, and not as an alert: it stays off
+home's sign-in line and the dot on Sources. Its page still gives the command. That holds for a week after its last load; after a
 week without one, or if it never loaded, its sign-in is an alert again. A
 Keychain approval nobody gave is always an alert, and a failed load shows as
 failed.

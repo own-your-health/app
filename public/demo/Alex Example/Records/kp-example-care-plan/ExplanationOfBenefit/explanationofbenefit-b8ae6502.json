@@ -1,6 +1,6 @@
 {
   "resourceType": "ExplanationOfBenefit",
-  "id": "explanationofbenefit-ba46963d",
+  "id": "explanationofbenefit-b8ae6502",
   "meta": {
     "lastUpdated": "2026-11-21T08:00:00Z"
   },
@@ -14,8 +14,8 @@
   },
   "use": "claim",
   "billablePeriod": {
-    "start": "2026-10-12",
-    "end": "2026-10-12"
+    "start": "2026-11-20",
+    "end": "2026-11-20"
   },
   "benefitPeriod": {
     "start": "2026-07-01",
@@ -29,14 +29,14 @@
         "coding": [
           {
             "system": "http://www.ama-assn.org/go/cpt",
-            "code": "85025",
-            "display": "Blood count"
+            "code": "99213",
+            "display": "Office visit"
           }
         ]
       },
-      "servicedDate": "2026-10-12",
+      "servicedDate": "2026-11-20",
       "net": {
-        "value": 98,
+        "value": 165,
         "currency": "USD"
       }
     },
@@ -46,14 +46,14 @@
         "coding": [
           {
             "system": "http://www.ama-assn.org/go/cpt",
-            "code": "82306",
-            "display": "Vitamin D test"
+            "code": "87880",
+            "display": "Strep test"
           }
         ]
       },
-      "servicedDate": "2026-10-12",
+      "servicedDate": "2026-11-20",
       "net": {
-        "value": 150,
+        "value": 48,
         "currency": "USD"
       }
     }

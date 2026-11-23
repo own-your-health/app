@@ -1,6 +1,6 @@
 {
   "resourceType": "ExplanationOfBenefit",
-  "id": "explanationofbenefit-73ef1d3a",
+  "id": "explanationofbenefit-349fc294",
   "meta": {
     "lastUpdated": "2026-11-21T08:00:00Z"
   },
@@ -14,8 +14,8 @@
   },
   "use": "claim",
   "billablePeriod": {
-    "start": "2026-08-14",
-    "end": "2026-08-14"
+    "start": "2026-11-12",
+    "end": "2026-11-12"
   },
   "outcome": "complete",
   "item": [
@@ -30,7 +30,7 @@
           }
         ]
       },
-      "servicedDate": "2026-08-14",
+      "servicedDate": "2026-11-12",
       "net": {
         "value": 32.5,
         "currency": "USD"
