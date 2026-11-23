@@ -5,9 +5,9 @@
 // balances (the deductible and out-of-pocket limit so far) come from the
 // newest claim that printed them. Money stays in whole cents, never floats.
 
-import { isPharmacyClaim } from './claims';
+import { isPharmacyClaim, namedAmounts } from './claims';
 import { providerKey, sameProvider } from './providers';
-import { AMOUNT_LABELS, amountNames, asMoney, claimTotals, isWithdrawn, sortByDateDesc, str, type AmountName, type Money } from './records';
+import { AMOUNT_LABELS, amountNames, asMoney, claimTotals, isWithdrawn, SHARE_PARTS, sortByDateDesc, str, type AmountName, type Money } from './records';
 import type { Json, MedDocument, MedRecord, PersonIndex } from './types';
 
 // ---- Money ----
@@ -96,6 +96,8 @@ export interface ClaimAmounts {
   allowed?: Money;
   planPaid?: Money;
   yourShare?: Money;
+  /** What the provider took off the bill, when the payer says. */
+  discount?: Money;
 }
 
 export interface BillMatch {
@@ -123,15 +125,29 @@ function addDays(day: string, n: number): string {
   return new Date(Date.parse(`${day.slice(0, 10)}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 }
 
+/**
+ * A claim's totals: medrec's fixed names (`amounts`) where it gives them,
+ * else the payer's words for each, else the payment.
+ */
 export function claimAmounts(r: MedRecord): ClaimAmounts & { parts: Claim['parts'] } {
-  const out: ClaimAmounts & { parts: Claim['parts'] } = { parts: [] };
+  const named = namedAmounts(r.fields.amounts);
+  const worded: Partial<Record<AmountName, Money>> = {};
   for (const t of claimTotals(r)) {
     const { total, part } = amountNames(t.label);
-    const field = total && TOTAL_FIELD[total];
-    if (field && !out[field]) out[field] = t.amount;
-    if (part && (toCents(t.amount) ?? 0) > 0) out.parts.push({ label: AMOUNT_LABELS[part], amount: t.amount });
+    for (const name of [total, part]) if (name && !worded[name]) worded[name] = t.amount;
+  }
+  const amount = (name: AmountName): Money | undefined => named[name] ?? worded[name];
+  const out: ClaimAmounts & { parts: Claim['parts'] } = { parts: [] };
+  for (const [name, field] of Object.entries(TOTAL_FIELD) as [AmountName, keyof ClaimAmounts][]) {
+    const m = amount(name);
+    if (m) out[field] = m;
   }
   out.planPaid ??= asMoney(r.fields.payment);
+  out.discount = amount('discount');
+  for (const part of SHARE_PARTS) {
+    const m = amount(part);
+    if (m && (toCents(m) ?? 0) > 0) out.parts.push({ label: AMOUNT_LABELS[part], amount: m });
+  }
   return out;
 }
 

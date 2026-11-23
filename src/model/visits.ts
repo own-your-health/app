@@ -2,8 +2,11 @@
 // what was recorded at it, and its claim. A document belongs to a visit
 // when medrec linked it, or when it is dated within the visit (one day, or
 // a stay's days) and comes from the same organization. A record belongs the
-// same way. Each document joins one visit at most.
+// same way. Each document joins one visit at most. A claim belongs to the
+// visit medrec linked it to, else to one of its days from a provider
+// matching the visit.
 
+import { claimLines, claimResultIds, claimVisitId } from './claims';
 import { sameProvider } from './providers';
 import { day, isWithdrawn, organizationName, sortByDateDesc, str } from './records';
 import type { Household, ImagingStudy, MedDocument, MedRecord, PersonIndex } from './types';
@@ -45,7 +48,7 @@ export interface Visit {
   documents: { doc: MedDocument; linked: boolean }[];
   /** Records of the visit's days and organizations, by kind in RECORDED order. */
   recorded: { kind: string; records: MedRecord[] }[];
-  /** Claims for it: the same days, from a provider matching the visit's organization or location. */
+  /** Claims for it: those medrec linked to it, then the same days from a provider matching the visit's organization or location. */
   claims: MedRecord[];
   studies: ImagingStudy[];
 }
@@ -102,20 +105,46 @@ export function visitTimeline(index: PersonIndex, household: Household, person: 
     }
   }
 
+  // A claim medrec linked to a visit in this index goes there and nowhere else.
+  const encounterIds = new Set(index.records.filter((r) => r.kind === 'encounter').map((r) => r.id));
+  const linkedVisit = (r: MedRecord) => {
+    const id = claimVisitId(r);
+    return id && encounterIds.has(id) ? id : undefined;
+  };
+  const claims = index.records.filter((r) => r.kind === 'claim' && !isWithdrawn(r));
   for (const v of visits) {
     const mine = index.records.filter((r) => r !== v.record && !isWithdrawn(r) && within(day(r.date), v));
     for (const kind of RECORDED) {
       const rs = mine.filter((r) => r.kind === kind && orgsOf(r).some((o) => v.organizations.includes(o)));
       if (rs.length) v.recorded.push({ kind, records: rs });
     }
-    v.claims = mine.filter((r) => {
-      if (r.kind !== 'claim') return false;
+    v.claims = claims.filter((r) => {
+      const linked = linkedVisit(r);
+      if (linked) return linked === v.record.id;
+      if (!mine.includes(r)) return false;
       const provider = str(r.fields.provider);
       return names(v).some((n) => sameProvider(n, provider));
     });
     v.studies = index.studies.filter((s) => within(day(s.date), v));
   }
   return { visits, loose: sortByDateDesc(index.documents.filter((d) => !taken.has(d.id))) };
+}
+
+export interface ClaimContext {
+  /** The visit it paid for: the one medrec linked, else the one it matched. */
+  visit?: Visit;
+  /** The results and reports medrec linked to it. */
+  results: MedRecord[];
+  /** The records each line paid for, as medrec linked them, in claimLines order. */
+  lineRecords: MedRecord[][];
+}
+
+/** What a claim paid for, as far as these records say. */
+export function claimContext(index: PersonIndex, household: Household, person: string, today: string, r: MedRecord): ClaimContext {
+  const visit = visitTimeline(index, household, person, today).visits.find((v) => v.claims.includes(r));
+  const byId = new Map(index.records.filter((x) => x !== r && !isWithdrawn(x)).map((x) => [x.id, x]));
+  const pick = (ids: string[]) => [...new Set(ids)].map((id) => byId.get(id)).filter((x): x is MedRecord => !!x);
+  return { visit, results: pick(claimResultIds(r)), lineRecords: claimLines(r).map((l) => pick(l.records)) };
 }
 
 /** The visit a record is, with what belongs to it; undefined for a record that is not a visit that happened. */

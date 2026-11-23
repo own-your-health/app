@@ -329,7 +329,7 @@ export function claimTotals(r: MedRecord): ClaimTotal[] {
 export const YOUR_SHARE = /member ?liability|patient ?pay|paid ?by ?patient|your share|patient responsibility|you owe/i;
 
 /** The amounts a claim or a claim line can carry. */
-export type AmountName = 'billed' | 'allowed' | 'planPaid' | 'deductible' | 'copay' | 'coinsurance' | 'notCovered' | 'youOwe';
+export type AmountName = 'billed' | 'allowed' | 'planPaid' | 'deductible' | 'copay' | 'coinsurance' | 'notCovered' | 'discount' | 'youOwe';
 
 /** The four a claim totals: what was billed, allowed, paid by the plan, and left to you. */
 const TOTALS: AmountName[] = ['billed', 'allowed', 'planPaid', 'youOwe'];
@@ -344,10 +344,16 @@ const AMOUNT_WORDS: [AmountName, RegExp][] = [
   ['copay', /co-?pay/i],
   ['coinsurance', /co-?insurance/i],
   ['notCovered', /non-?covered|not covered/i],
+  ['discount', /discount/i],
 ];
 
+/** The amounts that make up your share, in the order a claim reads them. */
+export const SHARE_PARTS: AmountName[] = ['deductible', 'copay', 'coinsurance', 'notCovered'];
+
+/** Each amount's name, in the order a claim's line lists them. */
 export const AMOUNT_LABELS: Record<AmountName, string> = {
   billed: 'Billed',
+  discount: 'Discount',
   allowed: 'Allowed',
   planPaid: 'Plan paid',
   deductible: 'Deductible',
@@ -358,8 +364,9 @@ export const AMOUNT_LABELS: Record<AmountName, string> = {
 };
 
 /**
- * What a payer's amount label names: at most one of the totals and one of
- * the parts of your share ("Member liability", "Coinsurance").
+ * What a payer's amount label names: at most one of the totals and one
+ * other amount, a part of your share or a discount ("Member liability",
+ * "Coinsurance").
  */
 export function amountNames(label: string): { total?: AmountName; part?: AmountName } {
   const total = AMOUNT_WORDS.find(([k, re]) => TOTALS.includes(k) && re.test(label))?.[0];

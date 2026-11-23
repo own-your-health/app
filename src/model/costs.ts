@@ -11,7 +11,7 @@
 // new job), not the day the plan's year begins.
 
 import { claimAmounts, toCents } from './billing';
-import { CATEGORY_LABELS, categoryOf, claimLines, claimTitle, type Category } from './claims';
+import { CATEGORY_LABELS, categoryOf, claimCategory, claimLines, claimTitle, type Category } from './claims';
 import { providerKey, sameProvider } from './providers';
 import { asMoney, isWithdrawn, str, type AmountName } from './records';
 import type { Json, MedRecord, PersonIndex } from './types';
@@ -149,6 +149,12 @@ const dayOf = (v: Json | undefined): string | undefined => {
   return undefined;
 };
 
+/** A claim without lines: the one category medrec gave it, else its type's. */
+function wholeClaimCategory(r: MedRecord): Category {
+  const given = claimCategory(r);
+  return given && given !== 'mixed' ? given : categoryOf(undefined, undefined, str(r.fields.type) ?? r.code?.code);
+}
+
 /** One person's claim lines, and the part of each claim's totals its lines leave out. */
 export function costLines(person: string, index: PersonIndex, opts: CostOptions = {}): CostLine[] {
   const out: CostLine[] = [];
@@ -187,7 +193,7 @@ export function costLines(person: string, index: PersonIndex, opts: CostOptions 
       out.push({
         ...base,
         date: service,
-        category: lines.length ? 'other' : categoryOf(undefined, undefined, str(r.fields.type) ?? r.code?.code),
+        category: lines.length ? 'other' : wholeClaimCategory(r),
         service: lines.length ? 'Not split by line' : base.claimTitle,
         cents: rest,
         planYear: planYearOf(anniversary, service),

@@ -1456,7 +1456,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Professional",
+      "display": "Flu vaccine and vaccine given",
       "status": "active",
       "fields": {
         "when": "2025-10-20",
@@ -1598,6 +1598,40 @@
                 },
                 "reason": null
               }
+            ],
+            "category": "vaccine",
+            "amounts": {
+              "billed": {
+                "amount": "55.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "32.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "32.00",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "copay": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "0.00",
+                "currency": "USD"
+              }
+            },
+            "records": [
+              "r_wtvyzmrzrt6k3y3f6rf4"
             ]
           },
           {
@@ -1673,13 +1707,89 @@
                 },
                 "reason": null
               }
+            ],
+            "category": "vaccine",
+            "amounts": {
+              "billed": {
+                "amount": "28.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "18.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "18.00",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "copay": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "0.00",
+                "currency": "USD"
+              }
+            },
+            "records": [
+              "r_wtvyzmrzrt6k3y3f6rf4"
             ]
           }
         ],
         "benefit_period": {
           "start": "2025-07-01",
           "end": "2026-06-30"
-        }
+        },
+        "category": "vaccine",
+        "amounts": {
+          "billed": {
+            "amount": "83.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "50.00",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "50.00",
+            "currency": "USD"
+          },
+          "deductible": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "copay": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "coinsurance": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "0.00",
+            "currency": "USD"
+          }
+        },
+        "diagnoses": [
+          {
+            "sequence": 1,
+            "code": {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "Z23",
+              "display": "Encounter for immunization"
+            }
+          }
+        ],
+        "results": []
       },
       "documents": [],
       "provenance": [
@@ -1714,7 +1824,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Professional",
+      "display": "Office visit and strep test",
       "status": "active",
       "fields": {
         "when": "2026-11-20",
@@ -1856,6 +1966,40 @@
                 },
                 "reason": null
               }
+            ],
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "165.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "98.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "73.00",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "copay": {
+                "amount": "25.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "25.00",
+                "currency": "USD"
+              }
+            },
+            "records": [
+              "r_hh2prly7o3vxhre55eph"
             ]
           },
           {
@@ -1931,7 +2075,39 @@
                 },
                 "reason": null
               }
-            ]
+            ],
+            "category": "lab",
+            "amounts": {
+              "billed": {
+                "amount": "48.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "21.30",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "21.30",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "copay": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "0.00",
+                "currency": "USD"
+              }
+            },
+            "records": []
           }
         ],
         "benefit_balance": [
@@ -1969,7 +2145,50 @@
         "benefit_period": {
           "start": "2026-07-01",
           "end": "2027-06-30"
-        }
+        },
+        "category": "mixed",
+        "amounts": {
+          "billed": {
+            "amount": "213.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "119.30",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "94.30",
+            "currency": "USD"
+          },
+          "deductible": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "copay": {
+            "amount": "25.00",
+            "currency": "USD"
+          },
+          "coinsurance": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "25.00",
+            "currency": "USD"
+          }
+        },
+        "diagnoses": [
+          {
+            "sequence": 1,
+            "code": {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "H66.90",
+              "display": "Otitis media, unspecified, unspecified ear"
+            }
+          }
+        ],
+        "visit": "r_hh2prly7o3vxhre55eph",
+        "results": []
       },
       "documents": [],
       "provenance": [

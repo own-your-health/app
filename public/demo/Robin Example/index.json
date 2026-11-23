@@ -3766,7 +3766,7 @@
         "code": "pharmacy",
         "display": "Pharmacy"
       },
-      "display": "Pharmacy",
+      "display": "Lisinopril 10 mg tablet, 90 days",
       "status": "active",
       "fields": {
         "when": "2026-08-14",
@@ -3824,6 +3824,13 @@
             "category": "Member liability",
             "amount": {
               "amount": "10.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Discount",
+            "amount": {
+              "amount": "20.10",
               "currency": "USD"
             }
           }
@@ -3907,10 +3914,102 @@
                   "currency": "USD"
                 },
                 "reason": null
+              },
+              {
+                "category": "Discount",
+                "amount": {
+                  "amount": "20.10",
+                  "currency": "USD"
+                },
+                "reason": null
               }
+            ],
+            "category": "pharmacy",
+            "amounts": {
+              "billed": {
+                "amount": "32.50",
+                "currency": "USD"
+              },
+              "discount": {
+                "amount": "20.10",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "12.40",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "2.40",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "copay": {
+                "amount": "10.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "10.00",
+                "currency": "USD"
+              }
+            },
+            "records": [
+              "r_7lgfazbb7fjkz6vrv2cp"
             ]
           }
-        ]
+        ],
+        "category": "pharmacy",
+        "amounts": {
+          "billed": {
+            "amount": "32.50",
+            "currency": "USD"
+          },
+          "discount": {
+            "amount": "20.10",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "12.40",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "2.40",
+            "currency": "USD"
+          },
+          "deductible": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "copay": {
+            "amount": "10.00",
+            "currency": "USD"
+          },
+          "coinsurance": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "10.00",
+            "currency": "USD"
+          }
+        },
+        "diagnoses": [
+          {
+            "sequence": 1,
+            "code": {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "I10",
+              "display": "Essential (primary) hypertension"
+            }
+          }
+        ],
+        "results": []
       },
       "documents": [],
       "provenance": [
@@ -3944,7 +4043,7 @@
         "code": "pharmacy",
         "display": "Pharmacy"
       },
-      "display": "Pharmacy",
+      "display": "Lisinopril 10 mg tablet, 90 days",
       "status": "active",
       "fields": {
         "when": "2026-11-12",
@@ -4002,6 +4101,13 @@
             "category": "Member liability",
             "amount": {
               "amount": "10.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Discount",
+            "amount": {
+              "amount": "20.10",
               "currency": "USD"
             }
           }
@@ -4085,10 +4191,102 @@
                   "currency": "USD"
                 },
                 "reason": null
+              },
+              {
+                "category": "Discount",
+                "amount": {
+                  "amount": "20.10",
+                  "currency": "USD"
+                },
+                "reason": null
               }
+            ],
+            "category": "pharmacy",
+            "amounts": {
+              "billed": {
+                "amount": "32.50",
+                "currency": "USD"
+              },
+              "discount": {
+                "amount": "20.10",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "12.40",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "2.40",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "copay": {
+                "amount": "10.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "10.00",
+                "currency": "USD"
+              }
+            },
+            "records": [
+              "r_37l5dnabfwsdyfqhd5ue"
             ]
           }
-        ]
+        ],
+        "category": "pharmacy",
+        "amounts": {
+          "billed": {
+            "amount": "32.50",
+            "currency": "USD"
+          },
+          "discount": {
+            "amount": "20.10",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "12.40",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "2.40",
+            "currency": "USD"
+          },
+          "deductible": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "copay": {
+            "amount": "10.00",
+            "currency": "USD"
+          },
+          "coinsurance": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "10.00",
+            "currency": "USD"
+          }
+        },
+        "diagnoses": [
+          {
+            "sequence": 1,
+            "code": {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "I10",
+              "display": "Essential (primary) hypertension"
+            }
+          }
+        ],
+        "results": []
       },
       "documents": [],
       "provenance": [

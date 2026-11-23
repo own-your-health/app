@@ -165,9 +165,20 @@ rules are `src/model/billing.ts`.
 
 A claim is named for what it paid for, from its lines ("Lipid panel and
 blood draw"), not for its type. Its page lists each line with its code, a
-category from the code (visit, lab test, imaging, vaccine and so on), its
-date and its amounts: billed, allowed, plan paid, deductible, copay,
-coinsurance, not covered and you owe. The rules are `src/model/claims.ts`.
+category from the code (visit, lab test, imaging, vaccine, facility charge and
+so on), its date and its amounts: billed, discount, allowed, plan paid,
+deductible, copay, coinsurance, not covered and you owe. It names the
+diagnoses the claim gives, and under **Paid for** the visit and the results
+it paid for; each line links the records it paid for.
+
+medrec's data contract gives a claim fixed amount names (`amounts`, on the
+claim and each line), each line's `category` and the claim's (or `mixed`),
+its `diagnoses`, and links: `visit`, `results` and each line's `records`.
+Where a claim has them, they win. A claim from an older medrec still reads:
+its amounts come from the payer's own words, its categories from the codes,
+and its visit is the one of the same day from a matching provider. A link to
+a record these records do not hold is left out. The rules are
+`src/model/claims.ts`, and for the visit, `src/model/visits.ts`.
 
 Coverage, under Claims and bills, lists each insurer and plan the person has
 had, newest first, from when to when, and whose records name it. The same

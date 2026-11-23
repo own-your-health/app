@@ -5,7 +5,7 @@
 
 import { readJson } from '../../folder';
 import { claimAmounts, toCents } from '../../model/billing';
-import { CATEGORY_LABELS, claimLines, type ClaimLine } from '../../model/claims';
+import { CATEGORY_LABELS, claimDiagnoses, claimLines, diagnosisText, type ClaimLine } from '../../model/claims';
 import { isOutOfRange, rangeFor, resultFlag } from '../../model/flags';
 import { labTest } from '../../model/labtests';
 import { learnMore } from '../../model/learn';
@@ -15,7 +15,7 @@ import { AMOUNT_LABELS, asMoney, docTypeLabel, documentTitle, findItem, formatMo
 import { resultContext, unitText, verdict } from '../../model/result';
 import { recordTitle } from '../../model/titles';
 import type { ImagingStudy, Json, MedDocument, MedRecord, PersonIndex, Provenance } from '../../model/types';
-import { visitKind, visitOf } from '../../model/visits';
+import { claimContext, visitKind, visitOf } from '../../model/visits';
 import { rangeBar, resultChart } from '../chart';
 import { button, card, chip, command, driveLink, empty, flagChip, jsonBlock, kv, link, outLink, row, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
@@ -129,16 +129,25 @@ function provenanceCard(ctx: Ctx, idx: PersonIndex, p: Provenance, i: number, to
   );
 }
 
-/** A claim's lines: what each paid for, its code, and the amounts. */
-function linesCard(lines: ClaimLine[]): HTMLElement {
+/** Links to records, "LDL cholesterol, Glucose and HDL cholesterol". */
+function recordLinks(person: string, rs: MedRecord[]): Child[] {
+  return rs.flatMap((x, i) => [i === 0 ? null : i === rs.length - 1 ? ' and ' : ', ', link(itemRoute(person, x.id), recordTitle(x))]);
+}
+
+/** A claim's lines: what each paid for, its code, the amounts, and the records medrec linked to it. */
+function linesCard(person: string, lines: ClaimLine[], lineRecords: MedRecord[][]): HTMLElement {
   return card(
     { title: lines.length === 1 ? 'Line' : `${lines.length} lines` },
-    lines.map((l) => {
+    lines.map((l, i) => {
       const amounts = (Object.keys(AMOUNT_LABELS) as AmountName[]).filter((k) => l.amounts[k]).map((k) => `${AMOUNT_LABELS[k]} ${formatMoney(l.amounts[k])}`);
+      const paidFor = lineRecords[i] ?? [];
       return row({
         title: l.label,
         meta: [l.code, CATEGORY_LABELS[l.category].one, l.date ? dateText(l.date) : null].filter(Boolean).join(' · '),
-        extra: h('p', { class: ['small', 'claim-amounts', amounts.length ? null : 'muted'] }, amounts.length ? amounts.join(' · ') : 'The claim gives no amounts for this line.'),
+        extra: [
+          h('p', { class: ['small', 'claim-amounts', amounts.length ? null : 'muted'] }, amounts.length ? amounts.join(' · ') : 'The claim gives no amounts for this line.'),
+          paidFor.length ? h('p', { class: 'small claim-paid-for' }, 'Paid for: ', ...recordLinks(person, paidFor)) : null,
+        ],
       });
     }),
   );
@@ -441,6 +450,8 @@ function encounterView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
 function claimView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   const lines = claimLines(r);
   const a = claimAmounts(r);
+  const c = claimContext(idx, ctx.store.household, idx.person, localDay(ctx.now()), r);
+  const diagnoses = claimDiagnoses(r).map(diagnosisText);
   const docs = r.documents.map((id) => idx.documents.find((d) => d.id === id)).filter((d): d is MedDocument => !!d);
   const start = isObject(r.fields.billable_period) ? str(r.fields.billable_period.start) : undefined;
   return [
@@ -451,13 +462,25 @@ function claimView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
       a.yourShare ? h('p', { class: 'result-value' }, toCents(a.yourShare) === 0 ? 'Nothing for you to pay' : `You owe ${formatMoney(a.yourShare)}`) : null,
       kv([
         ['Billed', formatMoney(a.billed)],
+        ['Discount', toCents(a.discount) ? formatMoney(a.discount) : undefined],
         ['Plan allowed', formatMoney(a.allowed)],
         ['Plan paid', formatMoney(a.planPaid)],
         ['Your share comes from', a.parts.length ? sentence(a.parts.map((p) => `${p.label.toLowerCase()} ${formatMoney(p.amount)}`).join(', ')) : undefined],
+        [diagnoses.length > 1 ? 'Diagnoses' : 'Diagnosis', diagnoses.length ? diagnoses.join(', ') : undefined],
         ['Outcome', str(r.fields.outcome) && r.fields.outcome !== 'complete' ? str(r.fields.outcome) : undefined],
       ]),
     ),
-    lines.length ? linesCard(lines) : null,
+    c.visit || c.results.length
+      ? card(
+          { title: 'Paid for' },
+          c.visit ? row({ route: itemRoute(idx.person, c.visit.record.id), title: recordTitle(c.visit.record), meta: ['Visit', visitWhen(c.visit), str(c.visit.record.fields.location)].filter(Boolean).join(' · ') }) : null,
+          c.results.map((x) => {
+            const reading = x.kind === 'result' ? resultReading(x.fields).text : undefined;
+            return row({ route: itemRoute(idx.person, x.id), title: recordTitle(x), meta: [KIND_LABELS[x.kind] ?? x.kind, dateText(x.date), reading ? (unitText(reading) ?? reading) : null].filter(Boolean).join(' · '), aside: x.kind === 'result' ? flagChip(resultFlag(resultPoint(x))) : null });
+          }),
+        )
+      : null,
+    lines.length ? linesCard(idx.person, lines, c.lineRecords) : null,
     docs.length ? card({ title: 'Documents' }, docs.map((d) => row({ route: itemRoute(idx.person, d.id), title: documentTitle(d), meta: [docTypeLabel(d.doc_type), dateText(d.date)].filter(Boolean).join(' · ') }))) : null,
     recordTechnical(ctx, idx, r, lines.length ? ['items'] : []),
   ];

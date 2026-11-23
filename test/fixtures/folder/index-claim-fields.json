@@ -1,0 +1,630 @@
+{
+  "schema": "medrec-index/v1",
+  "person": "p_fixtureclaimsaaaaaaa",
+  "rev": 1,
+  "documents": [],
+  "records": [
+    {
+      "id": "r_visitaaaaaaaaaaaaaaa",
+      "kind": "encounter",
+      "key": "encounter|r_visitaaaaaaaaaaaaaaa",
+      "date": "2026-03-04",
+      "display": "Sick visit",
+      "status": "finished",
+      "fields": {
+        "when": "2026-03-04",
+        "class": "ambulatory",
+        "location": "Example Clinic",
+        "reason": "Sore throat"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.1.0",
+            "organization_id": "example-clinic"
+          },
+          "method": "fhir-api",
+          "filed_at": "2026-03-20T08:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "r_visitbbbbbbbbbbbbbbb",
+      "kind": "encounter",
+      "key": "encounter|r_visitbbbbbbbbbbbbbbb",
+      "date": "2026-03-11",
+      "display": "Follow-up visit",
+      "status": "finished",
+      "fields": {
+        "when": "2026-03-11",
+        "class": "ambulatory",
+        "location": "Example Clinic"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.1.0",
+            "organization_id": "example-clinic"
+          },
+          "method": "fhir-api",
+          "filed_at": "2026-03-20T08:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "r_strepaaaaaaaaaaaaaaa",
+      "kind": "result",
+      "key": "result|r_strepaaaaaaaaaaaaaaa",
+      "date": "2026-03-04",
+      "display": "Strep A test",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "78012-2",
+        "display": "Streptococcus pyogenes Ag [Presence] in Throat"
+      },
+      "status": "final",
+      "fields": {
+        "when": "2026-03-04",
+        "value": "Positive",
+        "interpretation": "Abnormal",
+        "category": "Laboratory"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.1.0",
+            "organization_id": "example-clinic"
+          },
+          "method": "fhir-api",
+          "filed_at": "2026-03-20T08:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "r_hgbaaaaaaaaaaaaaaaaa",
+      "kind": "result",
+      "key": "result|r_hgbaaaaaaaaaaaaaaaaa",
+      "date": "2026-03-04",
+      "display": "Hemoglobin",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "718-7",
+        "display": "Hemoglobin [Mass/volume] in Blood"
+      },
+      "status": "final",
+      "fields": {
+        "when": "2026-03-04",
+        "value": {
+          "value": 13.9,
+          "unit": "g/dL"
+        },
+        "reference_range": "12.0-15.5 g/dL",
+        "interpretation": "Normal",
+        "category": "Laboratory"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.1.0",
+            "organization_id": "example-clinic"
+          },
+          "method": "fhir-api",
+          "filed_at": "2026-03-20T08:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "r_claimlinkedaaaaaaaaa",
+      "kind": "claim",
+      "key": "claim|r_claimlinkedaaaaaaaa",
+      "date": "2026-03-06",
+      "display": "Office visit and strep test",
+      "fields": {
+        "when": "2026-03-06",
+        "provider": "Example Physicians Group",
+        "insurer": "Example Health Plan",
+        "outcome": "complete",
+        "type": "Professional",
+        "billable_period": {
+          "start": "2026-03-06",
+          "end": "2026-03-06"
+        },
+        "category": "mixed",
+        "amounts": {
+          "billed": {
+            "amount": "230.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "130.00",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "99.00",
+            "currency": "USD"
+          },
+          "copay": {
+            "amount": "25.00",
+            "currency": "USD"
+          },
+          "coinsurance": {
+            "amount": "6.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "31.00",
+            "currency": "USD"
+          }
+        },
+        "diagnoses": [
+          {
+            "sequence": 2,
+            "code": {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "J02.0",
+              "display": "Strep throat"
+            }
+          },
+          {
+            "sequence": 1,
+            "code": {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "R50.9",
+              "display": "Fever"
+            }
+          }
+        ],
+        "visit": "r_visitaaaaaaaaaaaaaaa",
+        "results": [
+          "r_strepaaaaaaaaaaaaaaa",
+          "r_hgbaaaaaaaaaaaaaaaaa",
+          "r_goneaaaaaaaaaaaaaaaa"
+        ],
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99213",
+              "display": "Office visit"
+            },
+            "serviced": "2026-03-06",
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "180.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "100.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "75.00",
+                "currency": "USD"
+              },
+              "copay": {
+                "amount": "25.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "25.00",
+                "currency": "USD"
+              }
+            },
+            "records": [
+              "r_visitaaaaaaaaaaaaaaa"
+            ]
+          },
+          {
+            "sequence": 2,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "87880",
+              "display": "Strep test"
+            },
+            "serviced": "2026-03-06",
+            "category": "lab",
+            "amounts": {
+              "billed": {
+                "amount": "50.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "30.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "24.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "6.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "6.00",
+                "currency": "USD"
+              }
+            },
+            "records": [
+              "r_strepaaaaaaaaaaaaaaa",
+              "r_goneaaaaaaaaaaaaaaaa"
+            ]
+          }
+        ]
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-03-20T08:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "r_claimwordsaaaaaaaaaa",
+      "kind": "claim",
+      "key": "claim|r_claimwordsaaaaaaaaa",
+      "date": "2026-03-11",
+      "display": "Professional",
+      "fields": {
+        "when": "2026-03-11",
+        "provider": "Example Clinic",
+        "insurer": "Example Health Plan",
+        "outcome": "complete",
+        "type": "Professional",
+        "billable_period": {
+          "start": "2026-03-11",
+          "end": "2026-03-11"
+        },
+        "total": [
+          {
+            "category": "Submitted Amount",
+            "amount": {
+              "amount": "120.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Eligible Amount",
+            "amount": {
+              "amount": "80.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Benefit Amount",
+            "amount": {
+              "amount": "55.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Copay",
+            "amount": {
+              "amount": "25.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Member liability",
+            "amount": {
+              "amount": "25.00",
+              "currency": "USD"
+            }
+          }
+        ],
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99212",
+              "display": "Office visit"
+            },
+            "serviced": "2026-03-11",
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "120.00",
+                  "currency": "USD"
+                }
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "80.00",
+                  "currency": "USD"
+                }
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "25.00",
+                  "currency": "USD"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-03-20T08:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "r_claimlostlinkaaaaaaa",
+      "kind": "claim",
+      "key": "claim|r_claimlostlinkaaaaaa",
+      "date": "2026-03-11",
+      "display": "Strep test",
+      "fields": {
+        "when": "2026-03-11",
+        "provider": "Example Clinic",
+        "insurer": "Example Health Plan",
+        "type": "Professional",
+        "visit": "r_elsewhereaaaaaaaaaaa",
+        "billable_period": {
+          "start": "2026-03-11",
+          "end": "2026-03-11"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "50.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "0.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "87880",
+              "display": "Strep test"
+            },
+            "amounts": {
+              "billed": {
+                "amount": "50.00",
+                "currency": "USD"
+              }
+            }
+          }
+        ]
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-03-20T08:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "r_claimpharmacyaaaaaaa",
+      "kind": "claim",
+      "key": "claim|r_claimpharmacyaaaaaa",
+      "date": "2026-03-05",
+      "display": "Amoxicillin 500 mg capsule, 10 days",
+      "fields": {
+        "when": "2026-03-05",
+        "provider": "Example Pharmacy",
+        "insurer": "Example Pharmacy Benefits",
+        "type": "Pharmacy",
+        "category": "pharmacy",
+        "billable_period": {
+          "start": "2026-03-05",
+          "end": "2026-03-05"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "32.50",
+            "currency": "USD"
+          },
+          "discount": {
+            "amount": "20.10",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "12.40",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "2.40",
+            "currency": "USD"
+          },
+          "copay": {
+            "amount": "10.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "10.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://hl7.org/fhir/sid/ndc",
+              "code": "00000-2222-30",
+              "display": "Amoxicillin 500 mg capsule, 10 days"
+            },
+            "category": "pharmacy",
+            "amounts": {
+              "billed": {
+                "amount": "32.50",
+                "currency": "USD"
+              },
+              "discount": {
+                "amount": "20.10",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "12.40",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "2.40",
+                "currency": "USD"
+              },
+              "copay": {
+                "amount": "10.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "10.00",
+                "currency": "USD"
+              }
+            }
+          }
+        ]
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-pharmacy-benefits"
+          },
+          "method": "portal",
+          "filed_at": "2026-03-20T08:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "r_claimfacilityaaaaaaa",
+      "kind": "claim",
+      "key": "claim|r_claimfacilityaaaaaa",
+      "date": "2026-02-14",
+      "display": "Institutional",
+      "fields": {
+        "when": "2026-02-14",
+        "provider": "Example Hospital",
+        "insurer": "Example Health Plan",
+        "type": "Institutional",
+        "billable_period": {
+          "start": "2026-02-14",
+          "end": "2026-02-14"
+        },
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "https://www.nubc.org/CodeSystem/RevenueCodes",
+              "code": "0450",
+              "display": "Emergency room"
+            },
+            "amounts": {
+              "billed": {
+                "amount": "900.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "150.00",
+                "currency": "USD"
+              }
+            }
+          }
+        ]
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-03-20T08:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "r_claimnolinesaaaaaaaa",
+      "kind": "claim",
+      "key": "claim|r_claimnolinesaaaaaaa",
+      "date": "2026-01-20",
+      "display": "Professional",
+      "fields": {
+        "when": "2026-01-20",
+        "provider": "Example Imaging",
+        "insurer": "Example Health Plan",
+        "type": "Professional",
+        "category": "imaging",
+        "billable_period": {
+          "start": "2026-01-20",
+          "end": "2026-01-20"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "400.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "60.00",
+            "currency": "USD"
+          }
+        }
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-03-20T08:00:00Z"
+        }
+      ]
+    }
+  ],
+  "studies": [],
+  "imports": []
+}

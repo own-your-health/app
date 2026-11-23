@@ -2,7 +2,9 @@
 // paid; and the claim's title from its services, not its FHIR type
 // ("Professional"). medrec keeps each line's adjudication in the payer's own
 // words; they are named by records.ts's amount words, as the claim's totals
-// are in billing.ts.
+// are in billing.ts. A medrec that writes the claim fields of its data
+// contract also gives fixed amount names, each line's category, the claim's
+// diagnoses and links to what it paid for; where it does, those win.
 
 import { amountNames, asMoney, str, type AmountName, type Money } from './records';
 import { isObject } from './parse';
@@ -10,7 +12,7 @@ import type { Json, MedRecord } from './types';
 
 export type LineAmounts = Partial<Record<AmountName, Money>>;
 
-/** medrec's fixed amount names, once it writes them (`amounts`), mapped to these. */
+/** medrec's fixed amount names (`amounts`, on a claim and on each line), mapped to these. */
 const AMOUNT_NAMES: Record<string, AmountName> = {
   billed: 'billed',
   allowed: 'allowed',
@@ -19,10 +21,11 @@ const AMOUNT_NAMES: Record<string, AmountName> = {
   copay: 'copay',
   coinsurance: 'coinsurance',
   not_covered: 'notCovered',
+  discount: 'discount',
   you_owe: 'youOwe',
 };
 
-export type Category = 'visit' | 'lab' | 'imaging' | 'vaccine' | 'medicine' | 'procedure' | 'anesthesia' | 'drug' | 'supply' | 'pharmacy' | 'other';
+export type Category = 'visit' | 'lab' | 'imaging' | 'vaccine' | 'medicine' | 'procedure' | 'anesthesia' | 'drug' | 'supply' | 'facility' | 'pharmacy' | 'other';
 
 /** Each category's name for one line, and for a group of them. */
 export const CATEGORY_LABELS: Record<Category, { one: string; many: string }> = {
@@ -35,17 +38,20 @@ export const CATEGORY_LABELS: Record<Category, { one: string; many: string }> = 
   anesthesia: { one: 'Anesthesia', many: 'Anesthesia' },
   drug: { one: 'Drug given', many: 'Drugs given' },
   supply: { one: 'Supply or equipment', many: 'Supplies and equipment' },
+  facility: { one: 'Facility charge', many: 'Facility charges' },
   pharmacy: { one: 'Pharmacy', many: 'Pharmacy' },
   other: { one: 'Other', many: 'Other' },
 };
 
 /**
  * A line's category from its code: CPT ranges (AMA), HCPCS level II's first
- * letter, and a pharmacy claim's drug codes. A medrec `category` wins.
+ * letter, a hospital's revenue codes, and a pharmacy claim's drug codes. A
+ * medrec `category` wins.
  */
 export function categoryOf(code: string | undefined, system?: string, claimType?: string): Category {
   if (/pharmacy/i.test(claimType ?? '')) return 'pharmacy';
   if (system && /rxnorm|ndc/i.test(system)) return 'pharmacy';
+  if (system && /revenue|nubc/i.test(system)) return 'facility';
   const c = (code ?? '').trim().toUpperCase();
   if (/^\d{5}$/.test(c)) {
     const n = Number(c);
@@ -74,9 +80,16 @@ export interface ClaimLine {
   date?: string;
   category: Category;
   amounts: LineAmounts;
+  /** The records this line paid for, as medrec linked them. */
+  records: string[];
 }
 
-function amountsFrom(o: Json | undefined): LineAmounts {
+const isCategory = (v: string | undefined): v is Category => !!v && Object.hasOwn(CATEGORY_LABELS, v);
+
+const ids = (v: Json | undefined): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x !== '') : []);
+
+/** Amounts under medrec's fixed names; a name it leaves out is unknown, not zero. */
+export function namedAmounts(o: Json | undefined): LineAmounts {
   const out: LineAmounts = {};
   if (!isObject(o)) return out;
   for (const [k, v] of Object.entries(o)) {
@@ -120,7 +133,7 @@ export function claimLines(r: MedRecord): ClaimLine[] {
     const label = str(service?.display) ?? str(service?.text) ?? code;
     if (!label) continue;
     const given = str(it.category);
-    const amounts = { ...adjudicated(it.adjudication), ...amountsFrom(it.amounts) };
+    const amounts = { ...adjudicated(it.adjudication), ...namedAmounts(it.amounts) };
     amounts.billed ??= asMoney(it.net);
     out.push({
       sequence: typeof it.sequence === 'number' ? it.sequence : undefined,
@@ -128,8 +141,9 @@ export function claimLines(r: MedRecord): ClaimLine[] {
       code,
       system,
       date: dayOf(it.serviced),
-      category: given && Object.hasOwn(CATEGORY_LABELS, given) ? (given as Category) : categoryOf(code, system, type),
+      category: isCategory(given) ? given : categoryOf(code, system, type),
       amounts,
+      records: ids(it.records),
     });
   }
   return out;
@@ -179,4 +193,52 @@ export function claimTitle(r: MedRecord): string {
   if (display && display.toLowerCase() !== type?.toLowerCase()) return display;
   const provider = str(r.fields.provider);
   return provider ? `Claim from ${provider}` : 'Claim';
+}
+
+/**
+ * What kind of care a claim paid for: the category medrec gave the claim,
+ * else its lines' one category, else `mixed`. Undefined for a claim without
+ * either.
+ */
+export function claimCategory(r: MedRecord): Category | 'mixed' | undefined {
+  const given = str(r.fields.category);
+  if (given === 'mixed' || isCategory(given)) return given;
+  const kinds = new Set(claimLines(r).map((l) => l.category));
+  if (kinds.size === 0) return undefined;
+  return kinds.size === 1 ? [...kinds][0] : 'mixed';
+}
+
+export interface Diagnosis {
+  code?: string;
+  system?: string;
+  display?: string;
+}
+
+/** The diagnoses a claim names, in the payer's order. */
+export function claimDiagnoses(r: MedRecord): Diagnosis[] {
+  const list = r.fields.diagnoses;
+  if (!Array.isArray(list)) return [];
+  const out: { sequence: number; d: Diagnosis }[] = [];
+  list.forEach((x, i) => {
+    if (!isObject(x)) return;
+    const c = isObject(x.code) ? x.code : undefined;
+    const d: Diagnosis = { code: str(c?.code), system: str(c?.system), display: str(c?.display) };
+    if (d.code || d.display) out.push({ sequence: typeof x.sequence === 'number' ? x.sequence : i + 1, d });
+  });
+  return out.sort((a, b) => a.sequence - b.sequence).map((x) => x.d);
+}
+
+/** "Ear infection (H66.90)", or whichever of the two the claim gives. */
+export function diagnosisText(d: Diagnosis): string {
+  return d.display && d.code ? `${d.display} (${d.code})` : (d.display ?? d.code ?? '');
+}
+
+/** The visit a claim paid for, as medrec linked it. */
+export function claimVisitId(r: MedRecord): string | undefined {
+  return str(r.fields.visit) || undefined;
+}
+
+/** The results and reports from the claim's service, as medrec linked them. */
+export function claimResultIds(r: MedRecord): string[] {
+  return ids(r.fields.results);
 }
