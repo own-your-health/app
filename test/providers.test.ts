@@ -8,8 +8,8 @@ describe('providers', () => {
     expect(sameProvider('Example Health', 'Example Lab')).toBe(false);
     expect(sameProvider('Example Health', 'Example Healthcare')).toBe(false);
     // One name, spelled with and without the space.
-    expect(sameProvider('United Healthcare', 'UnitedHealthcare')).toBe(true);
-    expect(sameProvider('UnitedHealthcare', 'United Healthcare Insurance Company')).toBe(true);
+    expect(sameProvider('Example Health Plan', 'ExampleHealth Plan')).toBe(true);
+    expect(sameProvider('ExampleHealth', 'Example Health Insurance Company')).toBe(true);
     expect(sameProvider('Example Health Plan', 'ExampleHealth')).toBe(true);
     expect(sameProvider('Example Health', 'Example Healthcare Plan')).toBe(false);
     expect(sameProvider(undefined, 'Example Health')).toBe(false);

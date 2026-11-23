@@ -1482,7 +1482,8 @@ body:has(.bottom-nav) {
   accent-color: var(--primary);
 }
 
-.claim-extra > p {
+.claim-extra > p,
+.coverage-extra > p {
   margin: 6px 0 0;
 }
 

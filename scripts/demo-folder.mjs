@@ -479,13 +479,16 @@ for (const [date, provider, lines, balances] of claims) {
 // The insurer's statement for the October visit, linked to its claim.
 const eob = R.document(src.robinPlan, { date: '2026-10-20', doc_type: 'eob', title: 'Explanation of Benefits', organization: 'Example Health Plan', pages: 2, text: 'Explanation of Benefits. Example Health, office visit 10/01/2026. Amount billed $412.00. Plan paid $214.72. You may owe the provider $53.68.', original: 'eob_2026-10.pdf', filed: at(-60 * 24 * 20) });
 R.records.find((r) => r.kind === 'claim' && r.date === '2026-10-01').documents.push(eob.id);
+// Robin's coverage as the insurer gives it: the family coverage that took
+// effect the day Jamie was born, open-ended. The portal keeps the one before.
+const HIP = { system: 'http://terminology.hl7.org/CodeSystem/v3-ActCode', code: 'HIP', display: 'health insurance plan policy' };
 R.record(src.robinPlan, 'Coverage', 'coverage', {
-  date: '2026-01-01',
-  code: { system: 'http://terminology.hl7.org/CodeSystem/v3-ActCode', code: 'HIP', display: 'health insurance plan policy' },
+  date: '2026-11-08',
+  code: HIP,
   display: 'Example Health Plan PPO',
   status: 'active',
-  fields: { payer: 'Example Health Plan', period: { start: '2026-01-01' }, relationship: 'self', plan: 'PPO Choice', group: 'GRP-000000' },
-  resource: { status: 'active', period: { start: '2026-01-01' } },
+  fields: { payer: 'Example Health Plan', period: { start: '2026-11-08', end: '9999-12-31' }, relationship: 'self', plan: 'PPO Choice', group: 'GRP-000000' },
+  resource: { status: 'active', period: { start: '2026-11-08', end: '9999-12-31' } },
 });
 const visitText = 'Visit summary. Annual physical with Dr. Jordan Sample. Discussed home blood pressure readings and continuing lisinopril. LDL cholesterol is lower than last year. Influenza vaccine given today. Return in twelve months.';
 const visit = R.document(src.robinChart, { date: '2026-10-01', doc_type: 'visit_summary', title: 'After visit summary', organization: 'Example Health', pages: 3, text: visitText, original: 'after_visit_summary.pdf' });
@@ -1056,6 +1059,23 @@ write(`_requests/done/${compact(doneReq.requested_at)}_${doneReq.id}.json`, {
     by: 'medrec 0.3.0',
   },
 });
+
+// ---- Coverage over time ----
+
+// Robin's portal lists the coverage before Jamie was born and the one since,
+// naming the insurer without its space. Written last, so no other id moves.
+const portalCoverage = (start, end) =>
+  R.record(src.robinChart, 'Coverage', 'coverage', {
+    date: start,
+    code: HIP,
+    display: 'ExampleHealth Plan',
+    status: 'active',
+    fields: { payer: 'ExampleHealth Plan', period: { start, ...(end ? { end } : {}) }, relationship: 'self', plan: 'PPO Choice' },
+    resource: { status: 'active', payor: [{ display: 'ExampleHealth Plan' }], period: { start, ...(end ? { end } : {}) }, class: [{ type: { coding: [{ code: 'plan' }] }, name: 'PPO Choice' }] },
+  });
+portalCoverage('2024-01-01', '2026-11-07');
+portalCoverage('2026-11-08');
+R.write();
 
 write('README.md', '# Sample records\n\nA synthetic medrec records folder for the app’s demo mode and tests. Every person, organization and value in it is invented.\n');
 

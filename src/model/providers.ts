@@ -28,8 +28,8 @@ function insideRun(outer: string, inner: string): boolean {
 /**
  * The same provider: one name, or one inside the other ("Example Health" in
  * "Example Health Main Clinic"), with or without the spaces between words
- * ("United Healthcare" is "UnitedHealthcare"). Whole words only: "Example
- * Health" is not "Example Healthcare".
+ * ("Example Health Plan" is "ExampleHealth Plan"). Whole words only:
+ * "Example Health" is not "Example Healthcare".
  */
 export function sameProvider(a: string | undefined, b: string | undefined): boolean {
   const ka = providerKey(a);

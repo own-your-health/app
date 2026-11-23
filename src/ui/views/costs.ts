@@ -30,6 +30,7 @@ import {
   type PlanBasis,
   type PlanYear,
 } from '../../model/costs';
+import { bornClause, coverageChangesIn } from '../../model/coverage';
 import { AMOUNT_LABELS, formatMoney } from '../../model/records';
 import { getPlanStart } from '../../settings';
 import type { MedRecord } from '../../model/types';
@@ -251,6 +252,24 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
           )
         : null;
     const taxNote = calendar ? h('p', { class: 'small muted' }, 'A calendar year counts care by the day it was given. A tax return counts what was paid in the year, so a bill paid the next January belongs to that year.') : null;
+    // A coverage that changed inside the period: the plan, and so the deductible, may differ either side of it.
+    const changes = coverageChangesIn(lines, chosen.id, (pid) => store.index(pid), store.household);
+    const coverageNote = changes.length
+      ? h(
+          'p',
+          { class: 'small muted coverage-note' },
+          'Coverage changed in this period: ',
+          changes.map(({ person, change }, i) => {
+            const born = bornClause(change);
+            return [
+              i ? '; ' : null,
+              link({ name: 'person', person, section: 'claims' }, names.get(person) ?? 'Someone'),
+              `, ${change.insurer} from ${dateText(change.start)}${born ? `, ${born}` : ''}`,
+            ];
+          }),
+          '.',
+        )
+      : null;
     const fileName = `costs-${chosen.id}${drilled.length ? '-filtered' : ''}.csv`;
     const title = `${chosen.label}, ${whose.toLowerCase() === 'everyone' ? 'everyone' : whose}`;
     const summary = card(
@@ -259,6 +278,7 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
       totalsLine(t.cents),
       h('p', { class: 'small muted' }, `${count(t.claims, 'claim')}, ${count(t.lines, 'line')}.`, shareParts(t.cents) ? ` ${shareParts(t.cents)}` : null),
       planNote,
+      coverageNote,
       taxNote,
       h('p', { class: 'small muted' }, 'Bills and receipts no claim covers are not counted; they are under each person’s Claims and bills.'),
       h(

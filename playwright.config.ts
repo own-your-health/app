@@ -4,8 +4,15 @@ import { defineConfig, devices } from '@playwright/test';
 // see the same Content-Security-Policy as GitHub Pages. They use demo mode,
 // or a stand-in for Google and Drive (e2e/fake-google.ts): no Google account.
 // The port is the app's own, strict, so a local run never reuses another
-// project's preview on Vite's default.
-const PORT = 4317;
+// project's preview on Vite's default. E2E_PORT moves it when another
+// project's preview already holds it.
+const PORT = (() => {
+  const set = process.env.E2E_PORT;
+  if (!set) return 4317;
+  const port = Number(set);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error(`E2E_PORT must be a port number, got "${set}"`);
+  return port;
+})();
 
 export default defineConfig({
   testDir: 'e2e',
