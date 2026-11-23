@@ -241,12 +241,16 @@ The privacy policy is at https://own-your-health.github.io/app/privacy.html
   where a person can read about a test, medicine, condition, allergy,
   procedure or vaccine:
   - MedlinePlus Connect, by the record's code (LOINC, RxNorm, NDC,
-    ICD-10-CM, ICD-9-CM, SNOMED CT or CPT) and the code's own name;
+    ICD-10-CM, ICD-9-CM, SNOMED CT or CPT), with the test's name from this
+    app's own table when it has one;
   - CDC's Vaccine Information Statement, for a vaccine's CVX code;
-  - otherwise a MedlinePlus search by the record's name.
+  - otherwise a MedlinePlus search by the record's name, only when that name
+    is short, one phrase, and holds no date, long number, email address or
+    link. The page shows the exact words beside the link.
 
-  The link carries no value, date, person, or record or folder id. The app
-  never fetches the page; it opens only when tapped, in a new tab with
+  The record's name, in that last case, is the only text from the records a
+  link can carry. No link carries a value, a date, a person, or a record or
+  folder id. The app never fetches the page; it opens only when tapped, in a new tab with
   `rel="noopener noreferrer"` and no referrer. The page says which site it
   opens. The rules are `src/model/learn.ts`.
 

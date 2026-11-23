@@ -3,8 +3,11 @@
 // connect-src reaches only Google). MedlinePlus Connect takes a code in one
 // of six systems and opens the page for it; a vaccine opens CDC's Vaccine
 // Information Statement for its CVX code. A record without such a code
-// searches MedlinePlus by name. The link carries the code and the name of
-// the thing, never a value, a date, a person or an id.
+// searches MedlinePlus by its name, which the page shows beside the link.
+// The link carries a code, a name from this app's own table, or that one
+// name, never a value, a date, a person or an id. The record's name is the
+// only text from the records that can leave, so it goes only when it reads as
+// the name of a thing (`searchable`) and the page says the exact words.
 
 import { labTest } from './labtests';
 import type { MedRecord } from './types';
@@ -13,6 +16,24 @@ export interface LearnMore {
   url: string;
   /** Who runs the page: said beside the link, since it leaves the app. */
   site: 'MedlinePlus' | 'CDC';
+  /** What the link carries: a vaccine's code, a code, a code with this app's name for it, or the words searched for. */
+  carries: { code: true; named: boolean; vaccine?: true } | { search: string };
+}
+
+const MAX_SEARCH = 60;
+
+/**
+ * Whether a record's name can go to a search as it is: short, one line, one
+ * phrase, and nothing like a date, a long number, an address or a link. A
+ * clinic or a person may have written it, so anything else stays home.
+ */
+export function searchable(name: string): boolean {
+  const t = name.trim();
+  if (!t || t.length > MAX_SEARCH || /[\n\r]/.test(t)) return false;
+  if (t.split(/\s+/).length > 8) return false;
+  // A second sentence, a date, five digits in a row, an email or a link.
+  if (/[.!?;:]\s|\d{1,4}[/-]\d{1,2}[/-]\d{1,4}|\d{5,}|@|https?:|www\./i.test(t)) return false;
+  return true;
 }
 
 /** MedlinePlus Connect's page for a code (medlineplus.gov/medlineplus-connect/web-application/). */
@@ -112,18 +133,18 @@ export function learnMore(r: Pick<MedRecord, 'kind' | 'code' | 'display'>, name:
   const system = r.code?.system?.trim().toLowerCase().replace(/\/+$/, '');
   if (r.kind === 'immunization' && code && system === CVX) {
     const slug = Object.hasOwn(VIS_BY_CVX, code.padStart(2, '0')) ? VIS_BY_CVX[code.padStart(2, '0')] : undefined;
-    if (slug) return { url: `${VIS}${slug}.html`, site: 'CDC' };
+    if (slug) return { url: `${VIS}${slug}.html`, site: 'CDC', carries: { code: true, named: false, vaccine: true } };
   }
   const oid = connectOid(r.code?.system);
   if (oid && code) {
     const q = new URLSearchParams({ 'mainSearchCriteria.v.cs': oid, 'mainSearchCriteria.v.c': code });
-    // The code's own name (the code system's), not the record's text, which a person or a clinic may have written.
-    const dn = labTest(r.code)?.name ?? r.code?.display?.trim();
+    // Only this app's own name for the code: the source's display text may be a clinic's or a person's words.
+    const dn = labTest(r.code)?.name;
     if (dn) q.set('mainSearchCriteria.v.dn', dn);
     q.set('informationRecipient.languageCode.c', 'en');
-    return { url: `${CONNECT}?${q.toString()}`, site: 'MedlinePlus' };
+    return { url: `${CONNECT}?${q.toString()}`, site: 'MedlinePlus', carries: { code: true, named: Boolean(dn) } };
   }
-  const term = name.trim();
-  if (!term) return undefined;
-  return { url: `${SEARCH}?${new URLSearchParams({ 'v:project': 'medlineplus', query: term }).toString()}`, site: 'MedlinePlus' };
+  const term = name.trim().replace(/\s+/g, ' ');
+  if (!searchable(term)) return undefined;
+  return { url: `${SEARCH}?${new URLSearchParams({ 'v:project': 'medlineplus', query: term }).toString()}`, site: 'MedlinePlus', carries: { search: term } };
 }

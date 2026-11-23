@@ -57,7 +57,8 @@ test('a result leads with its value, the lab’s range and what the test measure
   const history = page.locator('.card', { has: page.locator('h2', { hasText: /^Over time$/ }) });
   await expect(history.locator('svg.chart')).toBeVisible();
   await expect(history.locator('tbody tr')).toHaveCount(4);
-  await expect(history.locator('tbody tr.current')).toContainText('104 mg/dL');
+  await expect(history.locator('tbody tr[aria-current="true"]')).toContainText('104 mg/dL');
+  await expect(history.locator('tbody tr[aria-current="true"] .sr-only')).toHaveText(' (this result)');
 
   const draw = page.locator('.card', { has: page.locator('h2', { hasText: /^Also tested on Oct 1, 2026$/ }) });
   await expect(draw.locator('.group-head').first()).toHaveText('Cholesterol (lipid panel)');
@@ -88,7 +89,9 @@ test('a medicine leads with how to take it and its last fill', async ({ page }) 
   await expect(head.locator('.result-value')).toHaveText('Take 1 tablet by mouth once a day');
   await expect(head).toContainText('Last filled');
   await expect(head).toContainText('at Example Pharmacy for 90 days');
-  await expectLearnLink(page, /Read about Lisinopril 10 mg tablet on MedlinePlus/, /mainSearchCriteria\.v\.cs=2\.16\.840\.1\.113883\.6\.88&mainSearchCriteria\.v\.c=314076&/);
+  await expectLearnLink(page, /Read about Lisinopril 10 mg tablet on MedlinePlus/, /mainSearchCriteria\.v\.cs=2\.16\.840\.1\.113883\.6\.88&mainSearchCriteria\.v\.c=314076&informationRecipient/);
+  // The source's own name for the drug stays home.
+  await expect(page.locator('.learn-more p')).toHaveText('Opens the National Library of Medicine’s health site. The link carries only the code, nothing about the person.');
   await expectFolded(page);
 });
 

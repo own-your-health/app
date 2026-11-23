@@ -174,15 +174,27 @@ function recordTechnical(ctx: Ctx, idx: PersonIndex, r: MedRecord, skip: string[
   );
 }
 
+/** The newest `n` points, newest first, with the one shown always among them. */
+function newestWith<T extends { id: string }>(points: T[], id: string, n: number): T[] {
+  const newest = [...points].reverse();
+  const out = newest.slice(0, n);
+  if (out.some((p) => p.id === id)) return out;
+  const own = newest.find((p) => p.id === id);
+  return own ? [...out.slice(0, n - 1), own] : out;
+}
+
 /** "Read about LDL cholesterol on MedlinePlus", saying where it goes and what it carries. */
 function learnLink(r: MedRecord, name: string): HTMLElement | null {
   const l = learnMore(r, name);
   if (!l) return null;
   const site = l.site === 'CDC' ? 'CDC' : 'MedlinePlus';
+  const c = l.carries;
   const note =
-    l.site === 'CDC'
-      ? 'Opens the CDC’s statement on this vaccine. The link names only the vaccine, nothing about the person.'
-      : `Opens the National Library of Medicine’s health site. The link carries only ${l.url.includes('mainSearchCriteria') ? 'the code and its name' : 'the name'}, nothing about the person.`;
+    'search' in c
+      ? `Searches the National Library of Medicine’s health site for “${c.search}”, the name in these records. Nothing else goes with it.`
+      : c.vaccine
+        ? 'Opens the CDC’s statement on this vaccine. The link names only the vaccine, nothing about the person.'
+        : `Opens the National Library of Medicine’s health site. The link carries only ${c.named ? 'the code and its name' : 'the code'}, nothing about the person.`;
   // The site's name and the icon stay on one line.
   return h(
     'div',
@@ -259,15 +271,13 @@ function resultView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
             h(
               'tbody',
               null,
-              [...series.points]
-                .reverse()
-                .slice(0, 6)
-                .map((p) => {
+              newestWith(series.points, r.id, 6).map((p) => {
                   const f = resultFlag(p);
+                  const current = p.id === r.id;
                   return h(
                     'tr',
-                    { class: p.id === r.id ? 'current' : undefined },
-                    h('td', null, p.id === r.id ? dateText(p.date) : link(itemRoute(person, p.id), dateText(p.date))),
+                    { class: current ? 'current' : undefined, 'aria-current': current ? 'true' : undefined },
+                    h('td', null, current ? [dateText(p.date), h('span', { class: 'sr-only' }, ' (this result)')] : link(itemRoute(person, p.id), dateText(p.date))),
                     h('td', { class: 'num' }, unitText(p.text) ?? p.text, isOutOfRange(f) ? [' ', flagChip(f)] : null),
                     h('td', null, p.range ? (unitText(p.range) ?? p.range) : ''),
                   );
