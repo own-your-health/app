@@ -8,7 +8,8 @@ Google Drive. It reads the records folder that
   each test with those out of range first, active conditions, current
   medicines, allergies, immunizations and recent visits, each naming the
   source it came from;
-- each person's records: a timeline, results over time, medicines,
+- each person's records: a timeline, results by panel and over time against
+  their reference range, medicines,
   conditions, allergies, immunizations, claims and bills, documents and
   imaging studies, with search over titles and the text of documents;
 - for any record, the raw FHIR the source served, where it came from, and the
@@ -73,6 +74,14 @@ A result is out of range when the source's interpretation says so (High,
 Low, Abnormal, Critical), or, when it gave none the app can read, when the
 value falls outside the reference range in the same unit; the app labels
 those **Above range** or **Below range**, so it is clear the app worked it out.
+
+Results are grouped by panel (metabolic, lipid, A1c, liver, blood count,
+thyroid, vitamins and iron, urine, vital signs) by each test's LOINC code,
+from a table in `src/model/panels.ts`; a test outside the table goes by the
+category its source gave, or under Other tests. A panel with a critical
+result comes first, then one with any result out of range, and within a
+panel the out-of-range tests come first, then the order a lab report uses.
+Each test's chart shades the reference range each result came with.
 
 Every person and record has its own address, such as `#/p/<person id>` (the
 person's overview; `#/p/<person id>/timeline` is the timeline) and

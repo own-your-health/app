@@ -4,13 +4,12 @@ import {
   currentAllergies,
   currentMedicines,
   immunizationsGiven,
-  isOutOfRange,
   latestResults,
   newInLatestLoads,
   recentVisits,
-  resultFlag,
   RECENT_LOAD_MS,
 } from '../src/model/overview';
+import { isOutOfRange, parseRange, resultFlag } from '../src/model/flags';
 import { organizationName, originNames } from '../src/model/records';
 import type { MedRecord, PersonIndex } from '../src/model/types';
 import { demo, personNamed } from './demo-data';
@@ -47,6 +46,15 @@ describe('a result against its range', () => {
     expect(resultFlag({ interpretation: 'Susceptible', value: 6, range: '1-5' })).toMatchObject({ level: 'high', from: 'range' });
   });
 
+  it('reads a range as numbers, with which bounds count as out', () => {
+    expect(parseRange('70-99 mg/dL')).toEqual({ low: 70, high: 99, unit: 'mg/dL' });
+    expect(parseRange('11 g/dL – 15 g/dL')).toEqual({ low: 11, high: 15, unit: 'g/dL' });
+    expect(parseRange('<130 mg/dL')).toEqual({ high: 130, highStrict: true, unit: 'mg/dL' });
+    expect(parseRange('≤ 5')).toEqual({ high: 5, highStrict: false, unit: undefined });
+    expect(parseRange('> 40 mg/dL')).toEqual({ low: 40, lowStrict: true, unit: 'mg/dL' });
+    expect(parseRange('Negative')).toBeUndefined();
+  });
+
   it('says nothing when it cannot tell', () => {
     expect(resultFlag({ value: 5, range: 'Negative' })).toBeUndefined();
     expect(resultFlag({ value: 5.4, range: '3.5-5.1 mmol/L', unit: 'mg/dL' })).toBeUndefined();
@@ -60,7 +68,19 @@ describe('a result against its range', () => {
 describe('the latest results', () => {
   it('put each test once, out of range first, then newest first', () => {
     const latest = latestResults(index('Robin Example'));
-    expect(latest.map((r) => r.series.name)).toEqual(['Potassium', 'Creatinine', 'Glucose', 'Hemoglobin A1c', 'LDL cholesterol', 'Hemoglobin']);
+    expect(latest.map((r) => r.series.name)).toEqual([
+      'Potassium',
+      'Creatinine',
+      // The rest by date, then by name.
+      'Cholesterol, total',
+      'Glucose',
+      'HDL cholesterol',
+      'Hemoglobin A1c',
+      'LDL cholesterol',
+      'Sodium',
+      'Triglycerides',
+      'Hemoglobin',
+    ]);
     expect(latest[0]!.flag).toMatchObject({ level: 'high', from: 'source' });
     expect(latest.filter((r) => isOutOfRange(r.flag))).toHaveLength(1);
     expect(latest.find((r) => r.series.name === 'LDL cholesterol')!.latest.text).toBe('104 mg/dL');

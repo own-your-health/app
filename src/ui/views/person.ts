@@ -12,17 +12,18 @@ import {
   originNames,
   recordDetail,
   recordsOf,
-  resultSeries,
   sortByDateDesc,
   studyTitle,
   timeline,
   type TimelineEntry,
 } from '../../model/records';
-import { activeConditions, currentAllergies, currentMedicines, immunizationsGiven, isOutOfRange, latestResults, newInLatestLoads, recentVisits } from '../../model/overview';
+import { isOutOfRange, rangeFor, resultFlag, type ResultFlag } from '../../model/flags';
+import { activeConditions, currentAllergies, currentMedicines, immunizationsGiven, latestResults, newInLatestLoads, recentVisits, type LatestResult } from '../../model/overview';
+import { resultGroups } from '../../model/panels';
 import { COMING_UP_DAYS, FLU, fluSeason, SCHEDULE_SOURCE, scheduleDigest, scheduleFor, type DoseState, type FluSeason, type ScheduleRow } from '../../model/schedule';
 import { search } from '../../model/search';
 import type { Json, MedRecord, Person, PersonIndex, Provenance } from '../../model/types';
-import { resultChart } from '../chart';
+import { resultChart, resultSparkline } from '../chart';
 import { button, card, chip, command, driveLink, empty, link, refreshControl, row, sheet, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, relative, yearOf } from '../format';
@@ -272,7 +273,7 @@ function overviewSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElemen
             route: { name: 'person', person: person.id, section: 'results', sub: series.key },
             title: series.name,
             meta: [latest.text, dateText(latest.date), latest.range ? `range ${latest.range}` : null].filter(Boolean).join(' · '),
-            aside: isOutOfRange(flag) ? chip(flag.label, flag.critical ? 'error' : 'attention') : null,
+            aside: flagChip(flag),
           }),
         )
       : empty('No results recorded.'),
@@ -338,21 +339,40 @@ function timelineSection(person: Person, idx: PersonIndex): HTMLElement {
   return card({ title: 'Timeline' }, all.length ? chipsBox : null, all.length ? list : empty('No records yet. They appear once medrec imports or files something for this person.'));
 }
 
+/** A chip for a result out of its range; critical in the error colour. None in range. */
+function flagChip(flag: ResultFlag | undefined): HTMLElement | null {
+  return isOutOfRange(flag) ? chip(flag.label, flag.critical ? 'error' : 'attention') : null;
+}
+
+function resultRow(personId: string, t: LatestResult): HTMLElement {
+  const spark = resultSparkline(t.series.points, t.series.unit);
+  return row({
+    route: { name: 'person', person: personId, section: 'results', sub: t.series.key },
+    title: t.series.name,
+    meta: [`${t.latest.text} on ${dateText(t.latest.date)}`, t.latest.range ? `range ${t.latest.range}` : null, t.series.points.length > 1 ? count(t.series.points.length, 'result') : null].filter(Boolean).join(' · '),
+    aside: spark || t.flag ? h('div', { class: 'result-aside' }, spark, flagChip(t.flag)) : null,
+  });
+}
+
 function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLElement {
-  const series = resultSeries(idx);
+  const groups = resultGroups(idx);
   if (sub) {
-    const s = series.find((x) => x.key === sub);
-    if (!s) return card({}, empty('This test is not in the records.'));
+    const group = groups.find((g) => g.tests.some((t) => t.series.key === sub));
+    const t = group?.tests.find((x) => x.series.key === sub);
+    if (!group || !t) return card({}, empty('This test is not in the records.'));
+    const s = t.series;
     const chart = resultChart(s.points, s.unit, s.name);
+    const others = group.tests.filter((x) => x !== t);
     return h(
       'div',
       { class: 'stack' },
       h('p', null, link({ name: 'person', person: person.id, section: 'results' }, icon('back', 16), ' All results')),
       card(
         {},
-        h('div', { class: 'card-head' }, h('h1', null, s.name)),
-        h('p', { class: 'muted small' }, [count(s.points.length, 'result'), s.unit].filter(Boolean).join(' · ')),
+        h('div', { class: 'card-head' }, h('h1', null, s.name), flagChip(t.flag)),
+        h('p', { class: 'muted small' }, [group.name, count(s.points.length, 'result'), s.unit, t.latest.range ? `range ${t.latest.range}` : null].filter(Boolean).join(' · ')),
         chart ? h('div', { class: 'chart-box' }, chart) : null,
+        chart && s.points.some((p) => rangeFor(p.range, p.unit ?? s.unit)) ? h('p', { class: 'small muted' }, 'The shaded band is the reference range each result came with.') : null,
         h(
           'table',
           { class: 'table' },
@@ -360,33 +380,33 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
           h(
             'tbody',
             null,
-            [...s.points].reverse().map((p) =>
-              h(
+            [...s.points].reverse().map((p) => {
+              const flag = resultFlag(p);
+              return h(
                 'tr',
                 null,
                 h('td', null, link(itemRoute(person.id, p.id), dateText(p.date))),
                 h('td', { class: 'num' }, p.text),
                 h('td', null, p.range ?? ''),
-                h('td', { class: p.interpretation && !/normal/i.test(p.interpretation) ? 'attention' : undefined }, p.interpretation ?? ''),
-              ),
-            ),
+                h('td', { class: isOutOfRange(flag) ? 'attention' : undefined }, flag?.label ?? ''),
+              );
+            }),
           ),
         ),
       ),
+      others.length ? card({ title: `Also in ${group.name}` }, others.map((x) => resultRow(person.id, x))) : null,
     );
   }
-  return card(
-    { title: 'Results' },
-    series.length
-      ? series.map((s) =>
-          row({
-            route: { name: 'person', person: person.id, section: 'results', sub: s.key },
-            title: s.name,
-            meta: [s.latest ? `${s.latest.text} on ${dateText(s.latest.date)}` : null, s.points.length > 1 ? count(s.points.length, 'result') : null].filter(Boolean).join(' · '),
-            aside: s.latest?.interpretation && !/normal/i.test(s.latest.interpretation) ? chip(s.latest.interpretation, 'attention') : null,
-          }),
-        )
-      : empty('No results yet.'),
+  if (!groups.length) return card({ title: 'Results' }, empty('No results yet.'));
+  return h(
+    'div',
+    { class: 'stack' },
+    groups.map((g) =>
+      card(
+        { title: g.name, actions: g.outOfRange ? chip(`${g.outOfRange} out of range`, 'attention') : null },
+        g.tests.map((t) => resultRow(person.id, t)),
+      ),
+    ),
   );
 }
 

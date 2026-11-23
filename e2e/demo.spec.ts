@@ -118,9 +118,8 @@ test('a person opens on what is current: new loads, results out of range first, 
   await expect(visits.locator('.row').first()).toContainText('Annual physical');
   await expect(visits.locator('.row').first()).toContainText('1 document');
 
-  // A card's link opens its whole section.
-  // Robin has 6 tests, all shown here, so the link offers them over time.
-  await results.getByRole('link', { name: 'Results over time' }).click();
+  // A card's link opens its whole section: 6 of Robin's 10 tests are shown here.
+  await results.getByRole('link', { name: 'All 10 tests' }).click();
   await expect(page).toHaveURL(/#\/p\/p_[a-z2-7]{20}\/results$/);
 });
 
@@ -179,6 +178,44 @@ test('an adult has no childhood schedule', async ({ page }) => {
   await expect(page.locator('.schedule')).toHaveCount(0);
 });
 
+test('results come by panel, the panel with an out-of-range result first', async ({ page }) => {
+  await page.goto('./?demo');
+  await page.getByRole('link', { name: /^Robin Example/ }).first().click();
+  await openSection(page, 'Results');
+  const panels = page.locator('main .card');
+  await expect(panels.locator('.card-head h2')).toHaveText(['Metabolic panel', 'Cholesterol (lipid panel)', 'Blood sugar (A1c)', 'Blood count (CBC)']);
+  const metabolic = panels.first();
+  await expect(metabolic.locator('.card-head .chip')).toHaveText('1 out of range');
+  await expect(metabolic.locator('.row-title')).toHaveText(['Potassium', 'Glucose', 'Creatinine', 'Sodium']);
+  await expect(metabolic.locator('.row').first().locator('.chip')).toHaveText('High');
+  await expect(metabolic.locator('.row').first()).toContainText('5.4 mmol/L on Nov 18, 2026 · range 3.5-5.1 mmol/L · 4 results');
+  // Each test with two or more results draws a sparkline, hidden from screen readers.
+  await expect(metabolic.locator('svg.spark')).toHaveCount(4);
+  await expect(metabolic.locator('svg.spark').first()).toHaveAttribute('aria-hidden', 'true');
+  await expect(panels.nth(3).locator('.row .chip')).toHaveCount(0);
+
+  // A test's page shades its range and links the rest of its panel.
+  await metabolic.getByRole('link', { name: /Potassium/ }).click();
+  await expect(page.locator('main .card-head h1')).toHaveText('Potassium');
+  await expect(page.locator('main .card-head .chip')).toHaveText('High');
+  await expect(page.locator('main')).toContainText('Metabolic panel · 4 results · mmol/L · range 3.5-5.1 mmol/L');
+  await expect(page.locator('svg.chart rect.chart-band')).toHaveCount(1);
+  await expect(page.locator('svg.chart')).toHaveAttribute('aria-label', /against the range 3\.5-5\.1 mmol\/L$/);
+  await expect(page.locator('svg.chart circle.chart-dot-flag')).toHaveCount(1);
+  await expect(page.locator('table tbody tr').first().locator('td').last()).toHaveText('High');
+  await expect(page.locator('.card', { hasText: 'Also in Metabolic panel' }).locator('.row-title')).toHaveText(['Glucose', 'Creatinine', 'Sodium']);
+});
+
+test('a low result read from its range is flagged in its panel', async ({ page }) => {
+  await page.goto('./?demo');
+  await page.getByRole('link', { name: /^Sam Example/ }).first().click();
+  await openSection(page, 'Results');
+  const cbc = page.locator('main .card').first();
+  await expect(cbc.locator('.card-head h2')).toHaveText('Blood count (CBC)');
+  await expect(cbc.locator('.row').first()).toContainText('Hemoglobin');
+  await expect(cbc.locator('.row').first().locator('.chip')).toHaveText('Low');
+});
+
 test('a result over time, down to its raw FHIR', async ({ page }) => {
   await page.goto('./?demo');
   await page.getByRole('link', { name: /^Robin Example/ }).first().click();
@@ -199,9 +236,9 @@ test('search finds words inside documents', async ({ page }) => {
   await page.goto('./?demo');
   await page.getByRole('link', { name: /^Robin Example/ }).first().click();
   await openSection(page, 'Search');
-  await page.fill('input[type=search]', 'triglycerides');
-  await expect(page.locator('.snippet')).toContainText('Triglycerides 99 mg/dL');
-  await expect(page).toHaveURL(/\/search\?q=triglycerides$/);
+  await page.fill('input[type=search]', 'fasting');
+  await expect(page.locator('.snippet')).toContainText('Lipid panel, fasting 12 hours');
+  await expect(page).toHaveURL(/\/search\?q=fasting$/);
 });
 
 test('every section of every person opens', async ({ page }) => {

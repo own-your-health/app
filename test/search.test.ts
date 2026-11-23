@@ -17,10 +17,10 @@ describe('search', () => {
   });
 
   it('finds words inside a document’s text, with the words around them', () => {
-    const hits = search(index, text, 'triglycerides');
+    const hits = search(index, text, 'fasting');
     expect(hits).toHaveLength(1);
     expect(hits[0]!.inText).toBe(true);
-    expect(hits[0]!.snippet).toContain('Triglycerides 99 mg/dL');
+    expect(hits[0]!.snippet).toContain('Lipid panel, fasting 12 hours');
   });
 
   it('finds nothing in the text when the text is not loaded', () => {
