@@ -22,12 +22,12 @@ import { immunizationsGiven, latestResults, newInLatestLoads, type LatestResult 
 import { allergyList, conditionList, CRITICALITY_TEXT, medicineList, statusText, vaccineList, type AllergyItem, type ConditionItem, type MedicineItem } from '../../model/lists';
 import { resultGroups } from '../../model/panels';
 import { COMING_UP_DAYS, FLU, fluSeason, SCHEDULE_SOURCE, scheduleDigest, scheduleFor, type DoseState, type FluSeason, type ScheduleRow } from '../../model/schedule';
-import { search } from '../../model/search';
 import type { MedRecord, Person, PersonIndex, Provenance } from '../../model/types';
 import { resultChart, resultSparkline } from '../chart';
-import { button, card, chip, command, driveLink, empty, link, refreshControl, row, sheet, type Ctx } from '../components';
+import { button, card, chip, command, driveLink, empty, filterChips, link, refreshControl, row, sheet, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, localDay, relative, yearOf } from '../format';
+import { searchPanel } from '../search';
 import { visitContents, visitWhen } from '../visit';
 import { SECTION_LABELS, href, type Route, type Section } from '../router';
 
@@ -104,14 +104,6 @@ function entryRow(person: string, e: TimelineEntry): HTMLElement {
     title: e.title,
     meta: [dateText(e.date), KIND_LABELS[e.kind] ?? e.kind, e.detail].filter(Boolean).join(' · '),
   });
-}
-
-function filterChips<T extends string>(options: [T, string][], current: T, onPick: (v: T) => void): HTMLElement {
-  return h(
-    'div',
-    { class: 'chips', role: 'group', 'aria-label': 'Filter' },
-    options.map(([v, label]) => h('button', { type: 'button', class: ['filter', v === current ? 'filter-on' : null], 'aria-pressed': v === current ? 'true' : 'false', on: { click: () => onPick(v) } }, label)),
-  );
 }
 
 /** A list grouped by year, a page at a time, so a phone draws only what it shows. */
@@ -337,14 +329,13 @@ function everyRecord(person: Person, idx: PersonIndex): HTMLElement {
   const options: [string, string][] = [['all', 'All'], ...kinds.map((k): [string, string] => [k, KIND_LABELS[k] ?? k])];
   const list = h('div');
   let current = 'all';
-  const chipsBox = h('div');
   const draw = () => {
     const items = current === 'all' ? all : all.filter((e) => e.kind === current);
-    chipsBox.replaceChildren(filterChips(options, current, (v) => ((current = v), draw())));
     list.replaceChildren(items.length ? yearList(items, (e) => entryRow(person.id, e)) : empty('Nothing here yet.'));
   };
+  const chips = filterChips(options, current, (v) => ((current = v), draw()), 'Filter by kind');
   draw();
-  return card({ title: 'Timeline' }, timelineSwitch(person, true), all.length ? chipsBox : null, all.length ? list : empty('No records yet. They appear once medrec imports or files something for this person.'));
+  return card({ title: 'Timeline' }, timelineSwitch(person, true), all.length ? chips : null, all.length ? list : empty('No records yet. They appear once medrec imports or files something for this person.'));
 }
 
 function visitsTimeline(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
@@ -711,11 +702,9 @@ function documentsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLEleme
   const types = [...new Set(docs.map((d) => d.doc_type ?? 'other'))];
   const options: [string, string][] = [['all', 'All'], ...types.map((t): [string, string] => [t, docTypeLabel(t)])];
   let current = 'all';
-  const chipsBox = h('div');
   const list = h('div');
   const draw = () => {
     const items = current === 'all' ? docs : docs.filter((d) => (d.doc_type ?? 'other') === current);
-    chipsBox.replaceChildren(filterChips(options, current, (v) => ((current = v), draw())));
     list.replaceChildren(
       yearList(items, (d) =>
         row({
@@ -728,8 +717,9 @@ function documentsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLEleme
     );
   };
   if (!docs.length) return card({ title: 'Documents' }, empty('No documents yet.'));
+  const chips = filterChips(options, current, (v) => ((current = v), draw()), 'Filter by type');
   draw();
-  return card({ title: 'Documents' }, chipsBox, list);
+  return card({ title: 'Documents' }, chips, list);
 }
 
 function imagingSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
@@ -750,45 +740,14 @@ function imagingSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement
   );
 }
 
-function searchSection(ctx: Ctx, person: Person, idx: PersonIndex, query: string | undefined): HTMLElement {
-  const input = h('input', { type: 'search', class: 'input', placeholder: 'Search titles and document text', 'aria-label': 'Search', value: query ?? '', autocomplete: 'off', enterkeyhint: 'search' });
-  const results = h('div');
-  const status = h('p', { class: 'muted small', 'aria-live': 'polite' });
-  let timer: number | undefined;
-  let text: Awaited<ReturnType<typeof ctx.store.text>> = null;
-  let textLoaded = false;
-  const run = async () => {
-    const q = input.value.trim();
-    history.replaceState(null, '', href({ name: 'person', person: person.id, section: 'search', ...(q ? { query: q } : {}) }));
-    if (!q) {
-      results.replaceChildren();
-      status.textContent = '';
-      return;
-    }
-    if (!textLoaded) {
-      status.textContent = 'Reading document text…';
-      text = await ctx.store.text(person.id).catch(() => null);
-      textLoaded = true;
-    }
-    const hits = search(idx, text, q);
-    status.textContent = `${count(hits.length, 'match', 'matches')}${text ? '' : ' (titles only; this folder has no extracted text)'}`;
-    results.replaceChildren(
-      ...hits.map((hit) =>
-        row({
-          route: itemRoute(person.id, hit.id),
-          title: hit.title,
-          meta: [dateText(hit.date), KIND_LABELS[hit.kind] ?? hit.kind].join(' · '),
-          extra: hit.snippet ? h('p', { class: 'snippet' }, hit.snippet) : null,
-        }),
-      ),
-    );
-  };
-  input.addEventListener('input', () => {
-    window.clearTimeout(timer);
-    timer = window.setTimeout(() => void run(), 200);
+function searchSection(ctx: Ctx, person: Person, query: string | undefined): HTMLElement {
+  return searchPanel(ctx, {
+    people: [person],
+    query,
+    route: (q) => ({ name: 'person', person: person.id, section: 'search', ...(q ? { query: q } : {}) }),
+    title: 'Search',
+    intro: 'Searches this person’s records, documents and imaging, and the text medrec extracted from their documents, here in the browser.',
   });
-  if (query) void run();
-  return card({ title: 'Search' }, h('p', { class: 'muted small' }, 'Searches this person’s records and the text medrec extracted from their documents, here in the browser.'), input, status, results);
 }
 
 export function personView(ctx: Ctx, personId: string, section: Section, sub?: string, query?: string): HTMLElement {
@@ -830,7 +789,7 @@ export function personView(ctx: Ctx, personId: string, section: Section, sub?: s
       body = imagingSection(ctx, person, idx);
       break;
     case 'search':
-      body = searchSection(ctx, person, idx, query);
+      body = searchSection(ctx, person, query);
       break;
   }
   return h('div', { class: 'stack person' }, header(ctx, person, idx), sectionNav(person, section), body);

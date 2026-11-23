@@ -195,3 +195,21 @@ export function sheet(title: string, body: Child, onClose: () => void): HTMLElem
   document.addEventListener('keydown', onKey);
   return scrim;
 }
+
+/**
+ * One choice among a few, as a row of toggle buttons named by `label` ("Filter
+ * by kind"). The row marks the pressed button itself, so a caller that leaves
+ * it in place keeps keyboard focus on the button just pressed.
+ */
+export function filterChips<T extends string>(options: [T, string][], current: T, onPick: (v: T) => void, label = 'Filter'): HTMLElement {
+  const press = (v: T) => {
+    for (const b of buttons) {
+      const on = b.dataset.value === v;
+      b.classList.toggle('filter-on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+    onPick(v);
+  };
+  const buttons = options.map(([v, text]) => h('button', { type: 'button', class: ['filter', v === current ? 'filter-on' : null], 'aria-pressed': v === current ? 'true' : 'false', 'data-value': v, on: { click: () => press(v) } }, text));
+  return h('div', { class: 'chips', role: 'group', 'aria-label': label }, buttons);
+}
