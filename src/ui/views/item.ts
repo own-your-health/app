@@ -183,7 +183,13 @@ function learnLink(r: MedRecord, name: string): HTMLElement | null {
     l.site === 'CDC'
       ? 'Opens the CDC’s statement on this vaccine. The link names only the vaccine, nothing about the person.'
       : `Opens the National Library of Medicine’s health site. The link carries only ${l.url.includes('mainSearchCriteria') ? 'the code and its name' : 'the name'}, nothing about the person.`;
-  return h('div', { class: 'learn-more' }, outLink(l.url, `Read about ${name} on ${site}`, ' ', icon('external', 14), h('span', { class: 'sr-only' }, ' (opens in a new tab)')), h('p', { class: 'small muted' }, note));
+  // The site's name and the icon stay on one line.
+  return h(
+    'div',
+    { class: 'learn-more' },
+    outLink(l.url, `Read about ${name} on `, h('span', { class: 'learn-site' }, site, ' ', icon('external', 14)), h('span', { class: 'sr-only' }, ' (opens in a new tab)')),
+    h('p', { class: 'small muted' }, note),
+  );
 }
 
 /** A record page's head: its name, a chip only when it says something, and one plain line. */
