@@ -67,7 +67,7 @@ your documents and providers, the Google client, the app and Refresh.
    `household.json` that the account can see; you can also paste a folder link.
 
 Home leads with the household's people and their records, then one line for
-a sign-in that needs a person ("Example Health Plan needs a sign-in on the
+a sign-in that needs a person ("Example Pediatrics needs a sign-in on the
 Mac"), which opens the source, then search, when the records last loaded and
 **Refresh everything**. **Sources** (`#/sources`, the stack icon in the bar,
 which carries a dot while a source needs attention) has every source: its
