@@ -14,9 +14,10 @@ import {
   type Money,
   type TimelineEntry,
 } from '../../model/records';
+import { visitKind, visitTimeline, type Visit } from '../../model/visits';
 import { BILL_WINDOW_DAYS, claimsWithBills, owedByProvider, planBalances, toCents, type Bill, type Claim, type Owed } from '../../model/billing';
 import { isOutOfRange, rangeFor, resultFlag, type ResultFlag } from '../../model/flags';
-import { immunizationsGiven, latestResults, newInLatestLoads, recentVisits, type LatestResult } from '../../model/overview';
+import { immunizationsGiven, latestResults, newInLatestLoads, type LatestResult } from '../../model/overview';
 import { allergyList, conditionList, CRITICALITY_TEXT, medicineList, statusText, vaccineList, type AllergyItem, type ConditionItem, type MedicineItem } from '../../model/lists';
 import { resultGroups } from '../../model/panels';
 import { COMING_UP_DAYS, FLU, fluSeason, SCHEDULE_SOURCE, scheduleDigest, scheduleFor, type DoseState, type FluSeason, type ScheduleRow } from '../../model/schedule';
@@ -25,7 +26,8 @@ import type { Json, MedRecord, Person, PersonIndex, Provenance } from '../../mod
 import { resultChart, resultSparkline } from '../chart';
 import { button, card, chip, command, driveLink, empty, link, refreshControl, row, sheet, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
-import { bytes, count, dateText, relative, yearOf } from '../format';
+import { bytes, count, dateText, localDay, relative, yearOf } from '../format';
+import { visitContents, visitWhen } from '../visit';
 import { SECTION_LABELS, href, type Route, type Section } from '../router';
 
 const PRIMARY: Section[] = ['overview', 'results', 'medicines', 'timeline'];
@@ -136,11 +138,6 @@ function yearList<T extends { date?: string }>(items: T[], render: (x: T) => HTM
   };
   draw();
   return box;
-}
-
-/** The person's local calendar day, for "has this visit happened". */
-function localDay(now: Date): string {
-  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 }
 
 type Chip = [string, 'attention' | 'muted' | 'ok'];
@@ -309,11 +306,12 @@ function overviewSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElemen
     doses.length || schedule ? all('immunizations', doses.length > 5 ? `All ${count(doses.length, 'dose')} and the schedule` : schedule ? 'Doses and the schedule' : 'All immunizations') : null,
   );
 
-  const visits = recentVisits(idx, localDay(now));
+  // The same visits, and the same documents for each, as the timeline shows.
+  const { visits } = visitTimeline(idx, ctx.store.household, person.id, localDay(now));
   const visitsCard = card(
     { title: 'Recent visits' },
     visits.length
-      ? visits.slice(0, 3).map((r) => recordRow(r, [dateText(r.date), str(r.fields.reason), str(r.fields.practitioner), str(r.fields.location) ?? str(r.fields.service_provider), r.documents.length ? count(r.documents.length, 'document') : null]))
+      ? visits.slice(0, 3).map((v) => recordRow(v.record, [visitWhen(v), str(v.record.fields.reason), str(v.record.fields.practitioner), str(v.record.fields.location) ?? str(v.record.fields.service_provider), v.documents.length ? count(v.documents.length, 'document') : null]))
       : empty('No visits recorded.'),
     all('timeline', 'Timeline'),
   );
@@ -321,7 +319,22 @@ function overviewSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElemen
   return h('div', { class: 'overview' }, newCard, resultsCard, conditionsCard, medsCard, allergiesCard, immunizationsCard, visitsCard);
 }
 
-function timelineSection(person: Person, idx: PersonIndex): HTMLElement {
+/** Visits or every record: the two ways to read the timeline. */
+function timelineSwitch(person: Person, all: boolean): HTMLElement {
+  const opt = (label: string, on: boolean, route: Route) => h('a', { href: href(route), class: ['filter', on ? 'filter-on' : null], 'aria-current': on ? 'page' : null }, label);
+  return h(
+    'nav',
+    { class: 'chips', 'aria-label': 'Timeline' },
+    opt('Visits', !all, { name: 'person', person: person.id, section: 'timeline' }),
+    opt('Every record', all, { name: 'person', person: person.id, section: 'timeline', sub: 'all' }),
+  );
+}
+
+function timelineSection(ctx: Ctx, person: Person, idx: PersonIndex, sub?: string): HTMLElement {
+  return sub === 'all' ? everyRecord(person, idx) : visitsTimeline(ctx, person, idx);
+}
+
+function everyRecord(person: Person, idx: PersonIndex): HTMLElement {
   const all = timeline(idx);
   const kinds = [...new Set(all.map((e) => e.kind))];
   const options: [string, string][] = [['all', 'All'], ...kinds.map((k): [string, string] => [k, KIND_LABELS[k] ?? k])];
@@ -334,7 +347,35 @@ function timelineSection(person: Person, idx: PersonIndex): HTMLElement {
     list.replaceChildren(items.length ? yearList(items, (e) => entryRow(person.id, e)) : empty('Nothing here yet.'));
   };
   draw();
-  return card({ title: 'Timeline' }, all.length ? chipsBox : null, all.length ? list : empty('No records yet. They appear once medrec imports or files something for this person.'));
+  return card({ title: 'Timeline' }, timelineSwitch(person, true), all.length ? chipsBox : null, all.length ? list : empty('No records yet. They appear once medrec imports or files something for this person.'));
+}
+
+function visitsTimeline(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
+  const { visits, loose } = visitTimeline(idx, ctx.store.household, person.id, localDay(ctx.now()));
+  const r = (v: Visit) => v.record;
+  return card(
+    { title: 'Timeline' },
+    timelineSwitch(person, false),
+    visits.length
+      ? yearList(
+          visits.map((v) => ({ ...v, date: v.start })),
+          (v) =>
+            row({
+              route: itemRoute(person.id, r(v).id),
+              title: r(v).display || visitKind(v) || 'Visit',
+              meta: meta(visitWhen(v), visitKind(v), str(r(v).fields.reason), str(r(v).fields.practitioner), str(r(v).fields.location) ?? str(r(v).fields.service_provider)),
+              aside: v.documents.length ? h('span', { class: 'muted small' }, count(v.documents.length, 'document')) : null,
+              extra: (() => {
+                const parts = visitContents(person.id, v);
+                return parts.length ? h('div', { class: 'visit-extra' }, parts) : null;
+              })(),
+            }),
+        )
+      : empty('No visits in these records yet. Every record is under Every record.'),
+    loose.length
+      ? h('p', { class: 'small muted' }, `${count(loose.length, 'document')} from no visit in these records (bills, scans, letters) are under `, link({ name: 'person', person: person.id, section: 'documents' }, 'Documents'), '.')
+      : null,
+  );
 }
 
 /** A chip for a result out of its range; critical in the error colour. None in range. */
@@ -765,7 +806,7 @@ export function personView(ctx: Ctx, personId: string, section: Section, sub?: s
       body = overviewSection(ctx, person, idx);
       break;
     case 'timeline':
-      body = timelineSection(person, idx);
+      body = timelineSection(ctx, person, idx, sub);
       break;
     case 'results':
       body = resultsSection(person, idx, sub);

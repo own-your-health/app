@@ -506,6 +506,15 @@ for (const [code, name, display, v, unit, range, interp] of [
     filed: ROBIN_CHART_LOAD,
   });
 }
+// The follow-up visit the November claim is for; its results came in a later load.
+R.record(src.robinChart, 'Encounter', 'encounter', {
+  date: '2026-11-18',
+  code: { system: 'http://www.ama-assn.org/go/cpt', code: '99213', display: 'Office visit' },
+  display: 'Office visit',
+  status: 'finished',
+  fields: { class: 'ambulatory', practitioner: 'Dr. Jordan Sample', location: 'Example Health Main Clinic', reason: 'Blood pressure follow-up', period: { start: '2026-11-18T15:00:00Z', end: '2026-11-18T15:20:00Z' } },
+  resource: { status: 'finished', class: { code: 'AMB', display: 'ambulatory' }, type: [{ text: 'Office visit' }], period: { start: '2026-11-18T15:00:00Z', end: '2026-11-18T15:20:00Z' }, reasonCode: [{ text: 'Blood pressure follow-up' }] },
+});
 R.document(src.robinChart, { date: '2026-11-18', doc_type: 'lab_report', title: 'Basic metabolic panel', organization: 'Example Health', text: 'Basic metabolic panel. Potassium 5.4 mmol/L (high). Creatinine 0.9 mg/dL.', original: 'basic_metabolic_panel.pdf', filed: ROBIN_CHART_LOAD });
 const rChart = R.importRun(src.robinChart, { importedAt: ROBIN_CHART_LOAD, added: 2, updated: 0, unchanged: 41, docs: 1 });
 R.importRun(src.robinChart, { importedAt: at(-60 * 24 * 8), added: 5, updated: 1, unchanged: 36 });
@@ -585,6 +594,17 @@ S.record(src.samChart, 'Encounter', 'encounter', {
   fields: { class: 'ambulatory', practitioner: 'Dr. Casey Placeholder', location: 'Example Health Orthopedics', reason: 'Ankle sprain' },
   resource: { status: 'finished', class: { code: 'AMB' }, type: [{ text: 'Sports medicine visit' }], period: { start: '2026-05-20T15:00:00Z' }, reasonCode: [{ text: 'Ankle sprain' }] },
 });
+const samNote = S.document(src.samChart, {
+  date: '2026-05-20',
+  doc_type: 'visit_summary',
+  title: 'Sports medicine visit note',
+  organization: 'Example Health',
+  pages: 2,
+  text: 'Sports medicine visit with Dr. Casey Placeholder. Right ankle sprain while running. X-ray of the ankle shows no fracture. Brace, ice and rest for two weeks, then physical therapy exercises.',
+  original: 'visit_note.pdf',
+  filed: at(-60 * 24 * 150),
+});
+S.records.find((r) => r.kind === 'encounter' && r.date === '2026-05-20').documents.push(samNote.id);
 S.studies.push({
   id: id('m'),
   study_uid: `2.25.${String(rand())}${String(rand())}`,
@@ -682,6 +702,8 @@ A.record(src.alexPeds, 'Encounter', 'encounter', {
   resource: { status: 'finished', type: [{ text: 'Sick visit' }], period: { start: '2026-11-20T16:00:00Z' }, reasonCode: [{ text: 'Ear pain' }] },
   filed: ALEX_PEDS_LOAD,
 });
+// A note from the sick visit, scanned and filed by hand: it carries only the practice's name.
+A.document(null, { date: '2026-11-20', doc_type: 'letter', title: 'School note', organization: 'Example Pediatrics', text: 'Alex Example was seen in clinic on 11/20/2026 and may return to school on 11/22/2026.', original: 'scan_0012.pdf' });
 A.record(src.alexPeds, 'Condition', 'condition', {
   date: '2026-11-20',
   code: { system: ICD10, code: 'H66.90', display: 'Otitis media, unspecified, unspecified ear' },

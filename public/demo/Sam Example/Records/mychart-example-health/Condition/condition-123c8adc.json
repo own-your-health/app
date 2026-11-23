@@ -7,7 +7,7 @@
   "clinicalStatus": {
     "coding": [
       {
-        "code": "resolved"
+        "code": "active"
       }
     ]
   },
@@ -15,11 +15,10 @@
     "coding": [
       {
         "system": "http://hl7.org/fhir/sid/icd-10-cm",
-        "code": "S93.401A"
+        "code": "E55.9"
       }
     ],
-    "text": "Right ankle sprain"
+    "text": "Vitamin D deficiency"
   },
-  "onsetDateTime": "2026-05-20",
-  "abatementDateTime": "2026-07-01"
+  "onsetDateTime": "2026-04-02"
 }

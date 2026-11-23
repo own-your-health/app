@@ -115,8 +115,10 @@ test('a person opens on what is current: new loads, results out of range first, 
   await expect(page.locator('.card', { hasText: 'Allergies' }).locator('.row')).toHaveText([/Sulfa drugs.*Rash/]);
   await expect(page.locator('.card', { hasText: 'Immunizations' }).locator('.row').first()).toContainText('Influenza');
   const visits = page.locator('.card', { hasText: 'Recent visits' });
-  await expect(visits.locator('.row').first()).toContainText('Annual physical');
+  await expect(visits.locator('.row').first()).toContainText('Nov 18, 2026 · Blood pressure follow-up');
   await expect(visits.locator('.row').first()).toContainText('1 document');
+  await expect(visits.locator('.row').nth(1)).toContainText('Oct 1, 2026 · Annual physical');
+  await expect(visits.locator('.row').nth(1)).toContainText('3 documents');
 
   // A card's link opens its whole section: 6 of Robin's 10 tests are shown here.
   await results.getByRole('link', { name: 'All 10 tests' }).click();
@@ -337,6 +339,50 @@ test('search finds words inside documents', async ({ page }) => {
   await page.fill('input[type=search]', 'fasting');
   await expect(page.locator('.snippet')).toContainText('Lipid panel, fasting 12 hours');
   await expect(page).toHaveURL(/\/search\?q=fasting$/);
+});
+
+test('the timeline lists visits with their documents, and switches to every record', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
+  await page.goto('./?demo');
+  await page.getByRole('link', { name: /^Robin Example/ }).first().click();
+  await openSection(page, 'Timeline');
+
+  const tl = page.locator('.card', { has: page.locator('.card-head h2', { hasText: 'Timeline' }) });
+  await expect(tl.getByRole('link', { name: 'Visits' })).toHaveAttribute('aria-current', 'page');
+  const rows = tl.locator('.row');
+  await expect(rows).toHaveCount(4);
+  const october = rows.nth(1);
+  await expect(october).toContainText('Oct 1, 2026 · Annual physical · Dr. Jordan Sample · Example Health Main Clinic');
+  await expect(october).toContainText('3 documents');
+  await expect(october.locator('.visit-docs li')).toHaveText(['After visit summary Visit summary', 'Lipid panel Lab report', 'Statement from Example Health Bill']);
+  await expect(october.locator('.visit-line')).toHaveText([/^Results: LDL cholesterol · Glucose · .+ and 5 more$/, 'Vaccine: Influenza, seasonal, injectable', 'Claim: your share $53.68 from Example Health Plan']);
+  await expect(rows.nth(2).locator('.visit-line').last()).toHaveText('Claim: nothing for you to pay from Example Health Plan');
+  await expect(tl).toContainText('5 documents from no visit in these records (bills, scans, letters) are under Documents.');
+
+  await october.getByRole('link', { name: 'Lipid panel' }).click();
+  await expect(page.locator('.card-head h1')).toHaveText('Lipid panel');
+  await page.goBack();
+
+  await tl.getByRole('link', { name: 'Every record' }).click();
+  await expect(page).toHaveURL(/\/timeline\/all$/);
+  await expect(page.locator('.chips[role=group]').getByRole('button', { name: 'All', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('link', { name: 'Every record' })).toHaveAttribute('aria-current', 'page');
+  await page.goBack();
+  await expect(page.getByRole('link', { name: 'Visits' })).toHaveAttribute('aria-current', 'page');
+});
+
+test('a visit’s page shows what belongs to it, a hand-filed note among them', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
+  await page.goto('./?demo');
+  await page.getByRole('link', { name: /^Alex Example/ }).first().click();
+  await openSection(page, 'Timeline');
+  const sick = page.locator('.row', { hasText: 'Sick visit' });
+  await expect(sick).toContainText('Nov 20, 2026 · Office visit · Ear pain');
+  await sick.locator('a.row-link, a').first().click();
+  await expect(page.locator('.card-head h1').first()).toHaveText('Sick visit');
+  const at = page.locator('.card', { hasText: 'At this visit' });
+  await expect(at.locator('.visit-docs li')).toHaveText(['School note Letter']);
+  await expect(at.locator('.visit-line')).toHaveText(['Diagnosis: Ear infection', 'Medicine: Amoxicillin 400 mg/5 mL suspension']);
 });
 
 test('every section of every person opens', async ({ page }) => {

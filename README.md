@@ -83,6 +83,15 @@ fills: who prescribed it and the last fill and pharmacy. One only reported
 says so. A vaccine lists every dose, and a dose recorded as not given stands
 apart. The rules are `src/model/lists.ts`, which the overview's cards use too.
 
+The timeline lists visits, each with its documents, what was recorded at it
+(diagnoses, results, medicines, vaccines), its insurer claim and imaging. A
+document belongs to a visit when medrec linked it, or when it is dated within
+the visit (its day, or a stay's days) and comes from the same organization,
+by medrec's organization id or, for a document filed by hand, by name. Each
+document joins one visit at most, and a linked one is never taken by another.
+Every record, in the order it happened, is one tap away. The rules are
+`src/model/visits.ts`.
+
 Claims and bills show what each provider's newest statement says is due
 (per provider and account, with a receipt filed after it counted as paid),
 the plan's deductible and out-of-pocket limit so far from the newest claim

@@ -20,26 +20,26 @@
     "coding": [
       {
         "system": "http://loinc.org",
-        "code": "6690-2",
-        "display": "White blood cells"
+        "code": "718-7",
+        "display": "Hemoglobin"
       }
     ],
-    "text": "White blood cells"
+    "text": "Hemoglobin"
   },
   "valueQuantity": {
-    "value": 6.1,
-    "unit": "10*3/uL",
+    "value": 11.2,
+    "unit": "g/dL",
     "system": "http://unitsofmeasure.org",
-    "code": "10*3/uL"
+    "code": "g/dL"
   },
   "referenceRange": [
     {
-      "text": "4.5-11.0 10*3/uL"
+      "text": "12.0-15.5 g/dL"
     }
   ],
   "interpretation": [
     {
-      "text": "Normal"
+      "text": "Low"
     }
   ],
   "effectiveDateTime": "2026-07-09"

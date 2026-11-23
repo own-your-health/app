@@ -1337,3 +1337,34 @@ body:has(.bottom-nav) {
 .claim-extra > p {
   margin: 6px 0 0;
 }
+
+/* A visit's documents and what was recorded at it. */
+a.filter {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.visit-docs {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.visit-docs li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.visit-docs .icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--muted);
+}
+
+.visit-line {
+  margin: 4px 0 0;
+}

@@ -70,3 +70,8 @@ export function duration(secs: number): string {
 export function count(n: number, one: string, many = `${one}s`): string {
   return `${n.toLocaleString()} ${n === 1 ? one : many}`;
 }
+
+/** The local calendar day of a moment, YYYY-MM-DD: for "has this visit happened". */
+export function localDay(now: Date): string {
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+}
