@@ -39,6 +39,12 @@ function fromInterpretation(text: string): Omit<ResultFlag, 'from' | 'label'> | 
   return undefined;
 }
 
+/** A value a lab gave only as a bound: "<0.5" is { op: '<', n: 0.5 }. */
+export interface Bound {
+  op: '<' | '<=' | '>' | '>=';
+  n: number;
+}
+
 /** A reference range as numbers, when it reads as one. */
 export interface Range {
   low?: number;
@@ -78,12 +84,38 @@ export function rangeFor(range: string | undefined, unit: string | undefined): R
   return r && sameUnit(r.unit, unit) ? r : undefined;
 }
 
-function fromRange(value: number, range: string, unit: string | undefined): FlagLevel | undefined {
+/** Values from lo to hi; an open end leaves the bound itself out. */
+interface Span {
+  lo: number;
+  loOpen: boolean;
+  hi: number;
+  hiOpen: boolean;
+}
+
+const inside = (a: Span, b: Span) =>
+  (a.lo > b.lo || (a.lo === b.lo && (a.loOpen || !b.loOpen))) && (a.hi < b.hi || (a.hi === b.hi && (a.hiOpen || !b.hiOpen)));
+
+function boundSpan({ op, n }: Bound): Span {
+  return op === '<' || op === '<='
+    ? { lo: -Infinity, loOpen: true, hi: n, hiOpen: op === '<' }
+    : { lo: n, loOpen: op === '>', hi: Infinity, hiOpen: true };
+}
+
+/**
+ * Where a value sits against the range. A bound ("<0.5") reads only when
+ * every value it allows sits on the same side: "<0.5" against 0–1 could be
+ * either, so it says nothing.
+ */
+function fromRange(p: { value?: number; bound?: Bound }, range: string, unit: string | undefined): FlagLevel | undefined {
   const r = rangeFor(range, unit);
   if (!r) return undefined;
-  if (r.low !== undefined && (r.lowStrict ? value <= r.low : value < r.low)) return 'low';
-  if (r.high !== undefined && (r.highStrict ? value >= r.high : value > r.high)) return 'high';
-  return 'normal';
+  const span: Span | undefined = p.value !== undefined ? { lo: p.value, loOpen: false, hi: p.value, hiOpen: false } : p.bound ? boundSpan(p.bound) : undefined;
+  if (!span) return undefined;
+  if (r.low !== undefined && inside(span, { lo: -Infinity, loOpen: true, hi: r.low, hiOpen: !r.lowStrict })) return 'low';
+  if (r.high !== undefined && inside(span, { lo: r.high, loOpen: !r.highStrict, hi: Infinity, hiOpen: true })) return 'high';
+  const normal: Span = { lo: r.low ?? -Infinity, loOpen: r.low === undefined || !!r.lowStrict, hi: r.high ?? Infinity, hiOpen: r.high === undefined || !!r.highStrict };
+  // A single value is always somewhere; only a bound can straddle the range's edge.
+  return p.value !== undefined || inside(span, normal) ? 'normal' : undefined;
 }
 
 const LABELS: Record<FlagLevel, string> = { high: 'High', low: 'Low', abnormal: 'Abnormal', normal: 'Normal' };
@@ -93,14 +125,14 @@ const LABELS: Record<FlagLevel, string> = { high: 'High', low: 'Low', abnormal: 
  * gave one this app can read, otherwise the value against the reference
  * range, when both are numbers in the same unit. Undefined when neither says.
  */
-export function resultFlag(p: Pick<ResultPoint, 'value' | 'unit' | 'range' | 'interpretation'>): ResultFlag | undefined {
+export function resultFlag(p: Pick<ResultPoint, 'value' | 'bound' | 'unit' | 'range' | 'interpretation'>): ResultFlag | undefined {
   const said = p.interpretation ? fromInterpretation(p.interpretation) : undefined;
   if (said) {
     const label = !said.critical ? LABELS[said.level] : said.level === 'abnormal' ? 'Critical' : `Critical ${LABELS[said.level].toLowerCase()}`;
     return { ...said, from: 'source', label };
   }
-  if (p.value === undefined || !p.range) return undefined;
-  const level = fromRange(p.value, p.range, p.unit);
+  if ((p.value === undefined && !p.bound) || !p.range) return undefined;
+  const level = fromRange(p, p.range, p.unit);
   if (!level) return undefined;
   return { level, critical: false, from: 'range', label: level === 'high' ? 'Above range' : level === 'low' ? 'Below range' : 'In range' };
 }

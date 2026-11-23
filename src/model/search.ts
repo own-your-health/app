@@ -15,7 +15,7 @@
 import { claimAmounts } from './billing';
 import { claimLines } from './claims';
 import { panelFor } from './panels';
-import { KIND_LABELS, asMoney, docTypeLabel, documentTitle, formatMoney, seriesKey, str, studyTitle, valueText } from './records';
+import { KIND_LABELS, asMoney, docTypeLabel, documentTitle, formatMoney, resultReading, seriesKey, str, studyTitle, valueText } from './records';
 import { unitText } from './result';
 import { statusText } from './lists';
 import { recordTitle } from './titles';
@@ -260,7 +260,7 @@ function recordExtra(r: MedRecord): Candidate['extra'] {
   if (r.kind === 'result') {
     const key = seriesKey(r);
     const panel = panelFor(key, str(r.fields.category));
-    const v = valueText(r.fields.value);
+    const v = resultReading(r.fields).text;
     return { test: { key, panel: panel.name, panelOrder: panel.order, value: v ? (unitText(v) ?? v) : undefined } };
   }
   if (r.kind === 'claim') {

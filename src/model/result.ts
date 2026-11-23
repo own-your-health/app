@@ -39,13 +39,13 @@ export interface Verdict {
  * unit, else what the lab marked. Never more than that: what it means for
  * the person is for their doctor.
  */
-export function verdict(p: Pick<ResultPoint, 'value' | 'unit' | 'range' | 'interpretation'>): Verdict {
+export function verdict(p: Pick<ResultPoint, 'value' | 'bound' | 'unit' | 'range' | 'interpretation'>): Verdict {
   const flag = resultFlag(p);
   const range = rangeFor(p.range, p.unit);
   const words = range ? rangeWords(range, p.unit) : p.range;
   const out = isOutOfRange(flag);
   // The range read on its own, to say where the value sits when the lab's mark agrees with it.
-  const byRange = range && p.value !== undefined ? resultFlag({ value: p.value, unit: p.unit, range: p.range }) : undefined;
+  const byRange = range && (p.value !== undefined || p.bound) ? resultFlag({ value: p.value, bound: p.bound, unit: p.unit, range: p.range }) : undefined;
   if (flag && byRange && range && (flag.from === 'range' || flag.level === byRange.level)) {
     const where = byRange.level === 'high' ? 'Above' : byRange.level === 'low' ? 'Below' : 'Within';
     const of = range.low !== undefined && range.high !== undefined ? `of ${words}` : `(${words})`;

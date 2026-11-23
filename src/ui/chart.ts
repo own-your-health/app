@@ -2,7 +2,7 @@
 // the reference range shaded behind it, and a small sparkline for a list
 // row. The table beside the chart, and the row's text, carry every value.
 
-import { isOutOfRange, rangeFor, resultFlag, type Range } from '../model/flags';
+import { isOutOfRange, rangeFor, resultFlag, type FlagLevel, type Range } from '../model/flags';
 import type { ResultPoint } from '../model/records';
 import { s } from './dom';
 import { dateText } from './format';
@@ -149,15 +149,27 @@ export function resultSparkline(points: ResultPoint[], unit: string | undefined)
   );
 }
 
+/** The mark inside the value's dot, so in or out of range never rests on colour alone. */
+const GLYPH: Record<FlagLevel, (x: number, y: number) => string> = {
+  normal: (x, y) => `M${x - 4} ${y} l3 3 l5 -6`,
+  high: (x, y) => `M${x} ${y + 4.5} V${y - 4.5} M${x - 4} ${y - 0.5} L${x} ${y - 4.5} L${x + 4} ${y - 0.5}`,
+  low: (x, y) => `M${x} ${y - 4.5} V${y + 4.5} M${x - 4} ${y + 0.5} L${x} ${y + 4.5} L${x + 4} ${y + 0.5}`,
+  abnormal: (x, y) => `M${x} ${y - 5} V${y + 1} M${x} ${y + 4.5} v0.01`,
+};
+
+let hatches = 0;
+
 /**
- * Where one value sits against the lab's range: a track, the range shaded on
- * it, a marker at the value, and the range's bounds below. The sentence
- * beside it carries the reading; the picture only shows it. A one-sided
- * range ("<130") runs from zero, or on to the end of the track.
+ * Where one value sits against the lab's range: the range as a calm band,
+ * the stretches outside it hatched in the attention colour, a dot at the
+ * value with a mark for how it reads (in range, above, below), and the
+ * range's bounds below. The sentence beside it carries the reading; the
+ * picture only shows it. A one-sided range ("<130") runs from zero, or on
+ * to the end of the track.
  */
-export function rangeBar(value: number, range: Range, outOfRange: boolean, label: string): SVGSVGElement {
+export function rangeBar(value: number, range: Range, level: FlagLevel | undefined, label: string): SVGSVGElement {
   const w = 320;
-  const h = 44;
+  const h = 48;
   const pad = 10;
   const { low, high } = range;
   let lo: number;
@@ -171,25 +183,37 @@ export function rangeBar(value: number, range: Range, outOfRange: boolean, label
     lo = Math.min(0, value);
     hi = Math.max(high * 1.6, value);
   } else {
-    lo = Math.min(0, value);
+    lo = Math.min(0, value, low ?? 0);
     hi = Math.max((low ?? 0) * 2, value) || 1;
   }
   // Room past the ends, so a marker at the edge is drawn whole.
   const margin = (hi - lo) * 0.04 || 1;
   lo -= value <= lo ? margin : 0;
   hi += value >= hi ? margin : 0;
-  const x = (v: number) => pad + ((v - lo) / (hi - lo || 1)) * (w - pad * 2);
-  const trackY = 12;
-  const bandFrom = x(low ?? lo);
-  const bandTo = x(high ?? hi);
-  const bound = (v: number | undefined, anchor: string) => (v === undefined ? null : s('text', { x: x(v), y: h - 4, 'text-anchor': anchor, class: 'chart-label' }, fmt(v)));
+  const x = (v: number) => Math.min(w - pad, Math.max(pad, pad + ((v - lo) / (hi - lo || 1)) * (w - pad * 2)));
+  const trackY = 14;
+  const round = (n: number) => Math.round(n * 10) / 10;
+  // The stretches of the track, with a 2px gap where they meet.
+  const from = low !== undefined ? x(low) : pad;
+  const to = high !== undefined ? x(high) : w - pad;
+  const seg = (a: number, b: number, cls: string, fill?: string) =>
+    b - a >= 1 ? s('rect', { x: round(a), y: trackY - 5, width: round(b - a), height: 10, rx: 2, class: cls, fill }) : null;
+  const id = `range-hatch-${++hatches}`;
+  const outside = (a: number, b: number) => [seg(a, b, 'range-zone'), seg(a, b, 'range-zone-hatch', `url(#${id})`)];
+  const bound = (v: number | undefined, anchor: string) => (v === undefined ? null : s('text', { x: round(x(v)), y: h - 4, 'text-anchor': anchor, class: 'chart-label' }, fmt(v)));
+  const narrow = low !== undefined && high !== undefined && x(high) - x(low) < 36;
+  const cx = round(x(value));
+  const marker = level === 'normal' ? 'range-marker range-marker-in' : level ? 'range-marker range-marker-out' : 'range-marker';
   return s(
     'svg',
     { viewBox: `0 0 ${w} ${h}`, class: 'range-bar', role: 'img', 'aria-label': label },
-    s('rect', { x: pad, y: trackY - 4, width: w - pad * 2, height: 8, rx: 4, class: 'range-track' }),
-    s('rect', { x: bandFrom, y: trackY - 4, width: Math.max(2, bandTo - bandFrom), height: 8, rx: 4, class: 'range-band' }),
-    bound(low, low !== undefined && high !== undefined && x(high) - x(low) < 36 ? 'end' : 'middle'),
-    bound(high, low !== undefined && high !== undefined && x(high) - x(low) < 36 ? 'start' : 'middle'),
-    s('circle', { cx: x(value), cy: trackY, r: 7, class: outOfRange ? 'range-marker range-marker-out' : 'range-marker' }, s('title', null, label)),
+    s('defs', null, s('pattern', { id, width: 6, height: 6, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, s('line', { x1: 1, y1: 0, x2: 1, y2: 6, class: 'range-hatch' }))),
+    low !== undefined ? outside(pad, from - 1) : null,
+    seg(from + (low !== undefined ? 1 : 0), Math.max(to - (high !== undefined ? 1 : 0), from + 2), 'range-band'),
+    high !== undefined ? outside(to + 1, w - pad) : null,
+    bound(low, narrow ? 'end' : 'middle'),
+    bound(high, narrow ? 'start' : 'middle'),
+    s('circle', { cx, cy: trackY, r: 9, class: marker }, s('title', null, label)),
+    level ? s('path', { d: GLYPH[level](cx, trackY), class: 'range-glyph' }) : null,
   );
 }

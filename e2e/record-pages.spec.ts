@@ -49,6 +49,8 @@ test('a result leads with its value, the lab’s range and what the test measure
   await expect(head.locator('.result-value')).toHaveText('104 mg/dL');
   await expect(head.locator('.verdict')).toHaveText('Within the lab’s range (under 130 mg/dL).');
   await expect(head.locator('svg.range-bar')).toHaveAttribute('aria-label', '104 mg/dL. Within the lab’s range (under 130 mg/dL).');
+  await expect(head.locator('.verdict.verdict-in')).toHaveCount(1);
+  await expect(head.locator('.range-marker-in')).toHaveCount(1);
   await expect(head.locator('.range-marker-out')).toHaveCount(0);
   await expect(head.locator('.about')).toContainText('LDL is the “bad” cholesterol');
   await expect(head.locator('.about')).toContainText('a question for your doctor');
@@ -77,8 +79,28 @@ test('a result out of the lab’s range says so in words and marks it on the bar
   await page.locator('table a').last().click();
   const head = page.locator('section.card').first();
   await expect(head.locator('h1')).toHaveText('Hemoglobin');
-  await expect(head.locator('.verdict.verdict-out')).toHaveText('Below the lab’s range of 12–15.5 g/dL.');
+  await expect(head.locator('.verdict.verdict-out.verdict-low')).toHaveText('Below the lab’s range of 12–15.5 g/dL.');
   await expect(head.locator('.range-marker-out')).toHaveCount(1);
+  // Not by colour alone: an arrow before the words and in the dot, the stretch outside the range hatched.
+  expect(await head.locator('.verdict').evaluate((el) => getComputedStyle(el, '::before').content)).toContain('↓');
+  await expect(head.locator('.range-glyph')).toHaveCount(1);
+  await expect(head.locator('.range-zone-hatch').first()).toHaveAttribute('fill', /^url\(#range-hatch-\d+\)$/);
+});
+
+test('a number the lab sent as text reads as one: its unit, the range bar and the chart', async ({ page }) => {
+  await openPerson(page, 'Robin Example');
+  await page.locator('.card', { hasText: 'Latest results' }).getByRole('link', { name: /Glucose/ }).first().click();
+  await page.locator('table a', { hasText: 'Mar 10, 2025' }).click();
+  const head = page.locator('section.card').first();
+  await expect(head.locator('h1')).toHaveText('Glucose');
+  await expect(head.locator('.result-value')).toHaveText('94 mg/dL');
+  await expect(head.locator('.verdict.verdict-in')).toHaveText('Within the lab’s range of 70–99 mg/dL.');
+  expect(await head.locator('.verdict').evaluate((el) => getComputedStyle(el, '::before').content)).toContain('✓');
+  await expect(head.locator('svg.range-bar')).toHaveAttribute('aria-label', '94 mg/dL. Within the lab’s range of 70–99 mg/dL.');
+  await expect(head.locator('.range-marker-in')).toHaveCount(1);
+  const history = page.locator('.card', { has: page.locator('h2', { hasText: /^Over time$/ }) });
+  await expect(history.locator('svg.chart circle')).toHaveCount(3);
+  await expect(history.locator('tbody tr[aria-current="true"]')).toContainText('94 mg/dL');
 });
 
 test('a medicine leads with how to take it and its last fill', async ({ page }) => {

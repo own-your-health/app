@@ -11,7 +11,7 @@ import { labTest } from '../../model/labtests';
 import { learnMore } from '../../model/learn';
 import { conditionList, CRITICALITY_TEXT, medicineList, statusText } from '../../model/lists';
 import { isObject } from '../../model/parse';
-import { AMOUNT_LABELS, asMoney, docTypeLabel, documentTitle, findItem, formatMoney, importFor, isDoseGiven, KIND_LABELS, numericValue, originNames, str, studyTitle, unitOf, valueText, type AmountName } from '../../model/records';
+import { AMOUNT_LABELS, asMoney, docTypeLabel, documentTitle, findItem, formatMoney, importFor, isDoseGiven, KIND_LABELS, originNames, resultPoint, resultReading, str, studyTitle, valueText, type AmountName } from '../../model/records';
 import { resultContext, unitText, verdict } from '../../model/result';
 import { recordTitle } from '../../model/titles';
 import type { ImagingStudy, Json, MedDocument, MedRecord, PersonIndex, Provenance } from '../../model/types';
@@ -228,11 +228,11 @@ const RESULT_STATUS: Record<string, [string, 'attention' | 'muted']> = {
 function resultView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   const person = idx.person;
   const c = resultContext(idx, ctx.store.household, person, localDay(ctx.now()), r);
-  const point = c.point ?? { id: r.id, value: numericValue(r.fields.value), unit: unitOf(r.fields.value), range: str(r.fields.reference_range), interpretation: str(r.fields.interpretation), text: valueText(r.fields.value) ?? '' };
+  const point = c.point ?? resultPoint(r);
   const v = verdict(point);
   const name = recordTitle(r);
   const test = labTest(r.code);
-  const value = valueText(r.fields.value);
+  const value = resultReading(r.fields).text;
   const shown = value ? (unitText(value) ?? value) : 'No value';
   const status = r.status && Object.hasOwn(RESULT_STATUS, r.status) ? RESULT_STATUS[r.status]! : undefined;
   const series = c.series;
@@ -245,8 +245,8 @@ function resultView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
       status ? chip(status[0], status[1]) : null,
       [c.panel, dateText(r.date), fromText(ctx, idx, r)],
       h('p', { class: 'result-value' }, shown),
-      h('p', { class: ['verdict', v.outOfRange ? 'verdict-out' : null] }, v.text),
-      point.value !== undefined && v.range ? rangeBar(point.value, v.range, v.outOfRange, `${shown}. ${v.text}`) : null,
+      h('p', { class: ['verdict', v.flag?.level === 'normal' ? 'verdict-in' : null, v.outOfRange ? ['verdict-out', `verdict-${v.flag!.level}`] : null].flat() }, v.text),
+      point.value !== undefined && v.range ? rangeBar(point.value, v.range, v.flag?.level, `${shown}. ${v.text}`) : null,
       test?.about
         ? h(
             'div',
@@ -293,8 +293,9 @@ function resultView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
           c.sameDraw.map((g) => [
             c.sameDraw.length > 1 ? h('h3', { class: 'group-head' }, g.panel) : null,
             g.records.map((x) => {
-              const f = resultFlag({ value: numericValue(x.fields.value), unit: unitOf(x.fields.value), range: str(x.fields.reference_range), interpretation: str(x.fields.interpretation) });
-              const xv = valueText(x.fields.value);
+              const xp = resultPoint(x);
+              const f = resultFlag(xp);
+              const xv = resultReading(x.fields).text;
               return row({ route: itemRoute(person, x.id), title: recordTitle(x), meta: xv ? (unitText(xv) ?? xv) : undefined, aside: flagChip(f) });
             }),
           ]),

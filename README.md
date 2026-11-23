@@ -91,6 +91,11 @@ A result is out of range when the source's interpretation says so (High,
 Low, Abnormal, Critical), or, when it gave none the app can read, when the
 value falls outside the reference range in the same unit; the app labels
 those **Above range** or **Below range**, so it is clear the app worked it out.
+A number the lab sent as text ("95", a FHIR valueString) reads as a number,
+in the unit its range names. A value sent as a bound ("<0.5", ">60") stays
+text and reads against the range only when every value it allows sits on one
+side of it: ">60" against "60 or more" is within, "<0.5" against 0–1 says
+nothing.
 
 Conditions, allergies, medicines and vaccines are listed once each, however
 many dates the records hold them on, by the newest record's status in words
@@ -204,7 +209,9 @@ Every record's page leads with the plain answer. A result shows:
 - its plain name, from a table of the common tests in
   `src/model/labtests.ts`, else the source's own name, else its LOINC name;
 - its value, and whether it is within the lab's range, in words and as a
-  marker on the range;
+  marker on the range: within it in a calm green with a check, outside it in
+  the attention colour with an arrow, the stretches outside the range
+  hatched, so none of it rests on colour alone;
 - a sentence or two on what the test measures and what a high or low result
   can go with, written from the MedlinePlus page it links and stopping at
   "a question for your doctor";
