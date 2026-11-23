@@ -121,10 +121,13 @@
         <section class="card">
           <h2>Removing access</h2>
           <p>
-            Sign out in the app's Settings to revoke the current sign-in. To remove the app's access to your Google
-            account altogether, open your Google Account, then <strong>Security</strong>, then
+            Sign out in the app's Settings to end the sign-in in this browser: the app forgets its token, which expires
+            within the hour anyway. Signing out does not sign medrec out on the Mac. To remove the app's access to your
+            Google account altogether, open your Google Account, then <strong>Security</strong>, then
             <strong>Third-party connections</strong> (Your connections to third-party apps and services), choose the app,
-            and remove its access. Your records folder stays in your Drive either way.
+            and remove its access. Google removes it for every client of the same Google Cloud project, so if medrec on
+            the Mac signs in to Drive through that project, it is signed out too, and the Mac loads no records until
+            someone signs medrec in again. Your records folder stays in your Drive either way.
           </p>
         </section>
 
