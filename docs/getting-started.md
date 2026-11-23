@@ -170,6 +170,18 @@ The Mac then loads each source on its schedule, and when someone taps
 **Refresh** in the app. When a sign-in needs a person, the app says so and
 shows the one command to run on the Mac: `medrec refresh sign-in <s_… id>`.
 
+## 8. Ask an assistant (optional)
+
+[connector](https://github.com/own-your-health/connector) lets Claude,
+ChatGPT, Gemini and other assistants that take remote MCP connectors answer
+questions from the same folder, on the web and on the phone, with the Mac
+asleep. You deploy it into your own Cloudflare account, on the free plan.
+To stay within that plan, it reads the small views medrec 0.8.0 and later
+writes beside each person's files. It signs in with a Web client in the
+project from step 2, and admits only the Google accounts you list. Connect
+it with the Google account medrec signs in with, which owns the folder. Its
+README has the steps.
+
 ## A folder made with rclone
 
 medrec before 0.6.0 reached Drive through rclone. medrec 0.6.0 and later
