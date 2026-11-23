@@ -4,8 +4,38 @@
 
 import { isOutOfRange, rangeFor, resultFlag, type FlagLevel, type Range } from '../model/flags';
 import type { ResultPoint } from '../model/records';
-import { s } from './dom';
+import { h, s } from './dom';
 import { dateText } from './format';
+
+/** The size of a chart's text (`.chart-label`), in CSS pixels. */
+export const LABEL_PX = 12;
+
+/**
+ * A label's width, a little over what any of the app's fonts draws, so space
+ * kept for it is never short: 0.62em a character, more when bold.
+ */
+export function textWidth(text: string, bold = false): number {
+  return Math.ceil(text.length * LABEL_PX * (bold ? 0.66 : 0.62));
+}
+
+/**
+ * A chart drawn at its box's width in CSS pixels, so its text keeps its size
+ * at any width and nothing is scaled past the edge; drawn again when the box
+ * changes width. `draw` gets the width; until the box is laid out, `initial`.
+ */
+export function fitted(draw: (width: number) => SVGSVGElement, initial: number): HTMLElement {
+  let drawn = initial;
+  const box = h('div', { class: 'chart-fit' }, draw(initial));
+  if (typeof ResizeObserver === 'undefined') return box;
+  new ResizeObserver((entries) => {
+    const w = Math.floor(entries[0]?.contentRect.width ?? 0);
+    if (w > 0 && w !== drawn) {
+      drawn = w;
+      box.replaceChildren(draw(w));
+    }
+  }).observe(box);
+  return box;
+}
 
 interface Box {
   w: number;
@@ -14,6 +44,12 @@ interface Box {
 }
 
 const CHART: Box = { w: 640, h: 220, pad: { top: 16, right: 16, bottom: 28, left: 48 } };
+
+/** The full chart's box at a width: its left side as wide as its longest tick. */
+function chartBox(width: number, ticks: number[]): Box {
+  const left = Math.max(28, ...ticks.map((t) => textWidth(fmt(t)) + 10));
+  return { w: width, h: width < 480 ? 200 : 220, pad: { ...CHART.pad, left } };
+}
 const SPARK: Box = { w: 96, h: 28, pad: { top: 3, right: 4, bottom: 3, left: 4 } };
 
 type Dated = ResultPoint & { value: number; date: string };
@@ -110,19 +146,24 @@ export function chartBands(points: ResultPoint[], unit: string | undefined): Rec
 
 const dotClass = (p: ResultPoint) => (isOutOfRange(resultFlag(p)) ? 'chart-dot chart-dot-flag' : 'chart-dot');
 
-/** Null when fewer than two dated numeric points. */
-export function resultChart(points: ResultPoint[], unit: string | undefined, name: string): SVGSVGElement | null {
+/** Null when fewer than two dated numeric points. Drawn at its box's width. */
+export function resultChart(points: ResultPoint[], unit: string | undefined, name: string): HTMLElement | null {
   const pts = plottable(points);
   if (pts.length < 2) return null;
-  const { ranges, ticks, x, y } = layout(pts, unit, CHART);
-  const { w, h, pad } = CHART;
+  return fitted((width) => resultSvg(pts, unit, name, width), CHART.w);
+}
+
+function resultSvg(pts: Dated[], unit: string | undefined, name: string, width: number): SVGSVGElement {
+  const box = chartBox(width, layout(pts, unit, CHART).ticks);
+  const { ranges, ticks, x, y } = layout(pts, unit, box);
+  const { w, h, pad } = box;
   const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
   const latestRange = pts[pts.length - 1]!.range;
   const label = `${name}${unit ? ` in ${unit}` : ''}, ${pts.length} results from ${dateText(pts[0]!.date)} to ${dateText(pts[pts.length - 1]!.date)}${ranges[ranges.length - 1] && latestRange ? `, against the range ${latestRange}` : ''}`;
   return s(
     'svg',
     { viewBox: `0 0 ${w} ${h}`, class: 'chart', role: 'img', 'aria-label': label },
-    bands(pts, ranges, x, y, CHART),
+    bands(pts, ranges, x, y, box),
     ticks.map((t) => [
       s('line', { x1: pad.left, x2: w - pad.right, y1: y(t), y2: y(t), class: 'chart-grid' }),
       s('text', { x: pad.left - 8, y: y(t) + 4, 'text-anchor': 'end', class: 'chart-label' }, fmt(t)),

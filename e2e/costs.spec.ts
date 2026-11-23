@@ -157,3 +157,29 @@ test('a plan year set in Settings applies to the plans whose claims do not give 
   await page.getByLabel('Plan year starts').selectOption({ label: 'Not set: the calendar year' });
   expect(await page.evaluate(() => localStorage.getItem('own-your-health-app.plan_year_start'))).toBeNull();
 });
+
+test('the month chart fills its card at 12px text, and no label crosses its edge, from 320px up', async ({ page }) => {
+  // Every text box of the chart within the chart's own box.
+  const outside = () =>
+    page.locator('svg.cost-chart').evaluate((svg) => {
+      const b = svg.getBoundingClientRect();
+      return [...svg.querySelectorAll('text')].filter((t) => {
+        const r = t.getBoundingClientRect();
+        return r.left < b.left - 0.5 || r.right > b.right + 0.5 || r.top < b.top - 0.5 || r.bottom > b.bottom + 0.5;
+      }).map((t) => t.textContent);
+    });
+  for (const width of [320, 390, 768, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('./?demo#/costs');
+    const chart = page.locator('svg.cost-chart');
+    await expect(chart).toBeVisible();
+    expect(await outside()).toEqual([]);
+    // Drawn at its box's width, so a label is the size the stylesheet gives it, at any width.
+    const [svgWidth, boxWidth, labelPx] = await chart.evaluate((svg) => [svg.getBoundingClientRect().width, svg.parentElement!.getBoundingClientRect().width, Number(getComputedStyle(svg.querySelector('text')!).fontSize.replace('px', '')) * (svg.getBoundingClientRect().width / (svg as SVGSVGElement).viewBox.baseVal.width)]);
+    expect(Math.abs(svgWidth - boxWidth)).toBeLessThan(1);
+    expect(labelPx).toBeCloseTo(12, 0);
+    // Short amounts on the axis, and the year with the first month named.
+    await expect(chart.locator('text', { hasText: /^\$\d[\d.]*[kM]?$/ }).first()).toBeVisible();
+    await expect(chart.locator('text', { hasText: '’26' })).toHaveCount(1);
+  }
+});
