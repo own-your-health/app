@@ -422,14 +422,15 @@ test('a refresh answer does not wipe what is being typed on the home screen', as
   await expect(page.getByText(/waiting for the Mac/).first()).toBeVisible();
   const field = page.getByRole('searchbox', { name: 'Search everyone’s records' });
   await field.fill('lisi');
-  // The sample Mac takes the request after 3 seconds; the page polls every 1.5.
-  await page.waitForTimeout(5000);
+  // The sample Mac takes the request after 3 seconds and answers 3 later; then nothing is pending and the poll stops.
+  await page.waitForTimeout(8000);
   await expect(field).toHaveValue('lisi');
   await expect(field).toBeFocused();
-  // Once the field is left empty, the page draws the Mac's answer again.
+  await expect(page.getByText(/Last refresh request just now/)).toHaveCount(0);
+  // Leaving the field empty draws the answer the page held back.
   await field.fill('');
   await field.blur();
-  await expect(page.getByText(/Last refresh request just now: needed a person/)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(/Last refresh request just now: needed a person/)).toBeVisible({ timeout: 3000 });
 });
 
 test('search finds a field, says which, and narrows to one person', async ({ page }) => {
