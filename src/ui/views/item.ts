@@ -7,7 +7,9 @@ import { isObject } from '../../model/parse';
 import type { ImagingStudy, Json, MedDocument, MedRecord, PersonIndex, Provenance } from '../../model/types';
 import { button, card, chip, command, driveLink, empty, jsonBlock, kv, link, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
-import { bytes, count, dateText, dateTime } from '../format';
+import { bytes, count, dateText, dateTime, localDay } from '../format';
+import { visitOf } from '../../model/visits';
+import { visitContents, visitWhen } from '../visit';
 
 const PROVENANCE_SHOWN = ['source', 'method', 'source_resource', 'fetched_at', 'filed_at', 'raw_path', 'classified_by', 'derived_from', 'filed_by'];
 
@@ -115,7 +117,10 @@ function provenanceCard(ctx: Ctx, idx: PersonIndex, p: Provenance, i: number, to
 
 function recordView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   const fields = Object.entries(r.fields).filter(([k]) => k !== 'when');
-  const docs = r.documents.map((id) => idx.documents.find((d) => d.id === id)).filter((d): d is MedDocument => !!d);
+  const visit = r.kind === 'encounter' ? visitOf(idx, ctx.store.household, idx.person, localDay(ctx.now()), r.id) : undefined;
+  const inVisit = visit ? visitContents(idx.person, visit) : [];
+  // A visit lists its documents with the rest of what belongs to it; any other record, its linked ones.
+  const docs = visit ? [] : r.documents.map((id) => idx.documents.find((d) => d.id === id)).filter((d): d is MedDocument => !!d);
   return [
     h(
       'section',
@@ -128,6 +133,13 @@ function recordView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
         ...fields.map(([k, v]): [string, Child] => [fieldLabel(k), fieldValue(v)]),
       ]),
     ),
+    visit
+      ? card(
+          { title: 'At this visit' },
+          inVisit.length ? inVisit : empty('Nothing else in these records is from this visit.'),
+          h('p', { class: 'small muted' }, `Documents medrec linked to the visit, and records and documents from ${visitWhen(visit)} at the same place.`),
+        )
+      : null,
     docs.length ? card({ title: 'Documents' }, docs.map((d) => h('p', null, link({ name: 'item', person: idx.person, id: d.id }, documentTitle(d))))) : null,
     ...r.provenance.map((p, i) => provenanceCard(ctx, idx, p, i, r.provenance.length)),
     card({ title: 'Identifiers' }, kv([['Record', h('code', null, r.id)], ['Merge key', h('code', null, r.key)]])),

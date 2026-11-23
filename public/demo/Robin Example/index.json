@@ -340,11 +340,11 @@
       }
     },
     {
-      "id": "d_dajjqxejgah7u2624gbd",
+      "id": "d_giwq36ury7q3rqb6d52e",
       "path": "Robin Example/Documents/2026/2026-11-18_lab_report_example_health_basic_metabolic_panel.pdf",
-      "sha256": "6860be418f0b101e3da40d9c77e9773f35af98018bf54864a65ed6af28314817",
-      "md5": "8ea0099ed2e43f6196936a4290cec44f",
-      "size": 172465,
+      "sha256": "773f35af98018bf54864a65ed6af283148178ea0099ed2e43f6196936a4290ce",
+      "md5": "c44f14bdfd8399d310aada4c898ad633",
+      "size": 53967,
       "media_type": "application/pdf",
       "pages": 1,
       "original_name": "basic_metabolic_panel.pdf",
@@ -375,12 +375,12 @@
         "method": "fhir-api",
         "source_resource": {
           "type": "Binary",
-          "id": "binary-7ccf19bb",
+          "id": "binary-0d9c77e9",
           "last_updated": "2026-11-22T08:00:00Z"
         },
         "fetched_at": "2026-11-22T17:00:00Z",
         "filed_at": "2026-11-22T17:00:00Z",
-        "raw_path": "Robin Example/Records/mychart-example-health/Binary/binary-7ccf19bb.json",
+        "raw_path": "Robin Example/Records/mychart-example-health/Binary/binary-0d9c77e9.json",
         "filed_by": "medrec 0.2.11"
       }
     }
@@ -3099,15 +3099,61 @@
           "filed_by": "medrec 0.2.11"
         }
       ]
+    },
+    {
+      "id": "r_gah7u2624gbdxmmpbj3l",
+      "kind": "encounter",
+      "key": "encounter|http://www.ama-assn.org/go/cpt|99213|2026-11-18",
+      "date": "2026-11-18",
+      "code": {
+        "system": "http://www.ama-assn.org/go/cpt",
+        "code": "99213",
+        "display": "Office visit"
+      },
+      "display": "Office visit",
+      "status": "finished",
+      "fields": {
+        "when": "2026-11-18",
+        "class": "ambulatory",
+        "practitioner": "Dr. Jordan Sample",
+        "location": "Example Health Main Clinic",
+        "reason": "Blood pressure follow-up",
+        "period": {
+          "start": "2026-11-18T15:00:00Z",
+          "end": "2026-11-18T15:20:00Z"
+        }
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Encounter",
+            "id": "encounter-30990749",
+            "last_updated": "2026-11-14T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T19:59:00Z",
+          "filed_at": "2026-11-14T19:59:00Z",
+          "raw_path": "Robin Example/Records/mychart-example-health/Encounter/encounter-30990749.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
     }
   ],
   "studies": [],
   "imports": [
     {
-      "id": "i_u3npnytzjntrq225kumy",
+      "id": "i_6z5ay44av3yq6cb3m4c3",
       "source_dir": "Robin Example/Records/mychart-example-health",
-      "stream_sha256": "98ad633fe9d08cc05b80e21bcc2be8fb0af57de1a672699bdd30e4703a5f4e79",
-      "stream_bytes": 374203,
+      "stream_sha256": "e8fb0af57de1a672699bdd30e4703a5f4e79b1f3165e5aa0f5bf57e97e9fa33e",
+      "stream_bytes": 777551,
       "cli": "mychart",
       "cli_version": "0.7.1",
       "organization": "example-health",
@@ -3127,10 +3173,10 @@
       "documents_added": 1
     },
     {
-      "id": "i_bptrgf6f2ka7fl7vxojh",
+      "id": "i_eoqmj7b35q6loluzixar",
       "source_dir": "Robin Example/Records/mychart-example-health",
-      "stream_sha256": "e9fa33ef4e0c9f1bd0ebeb498701a254edd707500c10de22c35e6f3806398a35",
-      "stream_bytes": 301403,
+      "stream_sha256": "a254edd707500c10de22c35e6f3806398a35b22d965ad5be357f50b1abd375a9",
+      "stream_bytes": 270833,
       "cli": "mychart",
       "cli_version": "0.7.1",
       "organization": "example-health",
@@ -3150,10 +3196,10 @@
       "documents_added": 0
     },
     {
-      "id": "i_scnjwvknvl6dvxpvqlrk",
+      "id": "i_yrqnvktysqhtx7oqqbwt",
       "source_dir": "Robin Example/Records/uhc-example-health-plan",
-      "stream_sha256": "bd375a91810d5a3820737fe001632be60bdd1be4e2f44e7b8f88169fd9e88dd1",
-      "stream_bytes": 714573,
+      "stream_sha256": "2be60bdd1be4e2f44e7b8f88169fd9e88dd1db66eca319495e3bf41e5c4aa3f8",
+      "stream_bytes": 913904,
       "cli": "uhc",
       "cli_version": "0.3.2",
       "organization": "example-health-plan",
@@ -3173,10 +3219,10 @@
       "documents_added": 0
     },
     {
-      "id": "i_lgwom2tbzuzvotl7er6f",
+      "id": "i_qeokjzfv3f6zoknzdcgv",
       "source_dir": "Robin Example/Records/oneblood-example-blood-center",
-      "stream_sha256": "c4aa3f8004ea9955b5e9ead932659d550979e07d6b7b918da6ce714f7f71e81f",
-      "stream_bytes": 208752,
+      "stream_sha256": "9d550979e07d6b7b918da6ce714f7f71e81f0a83e6f9e4d8e404121e7e51079d",
+      "stream_bytes": 137993,
       "cli": "oneblood",
       "cli_version": "0.1.1",
       "organization": "example-blood-center",

@@ -3,10 +3,10 @@ import {
   immunizationsGiven,
   latestResults,
   newInLatestLoads,
-  recentVisits,
   RECENT_LOAD_MS,
 } from '../src/model/overview';
 import { isOutOfRange, parseRange, resultFlag } from '../src/model/flags';
+import { recentVisits } from '../src/model/visits';
 import { organizationName, originNames } from '../src/model/records';
 import type { MedRecord, PersonIndex } from '../src/model/types';
 import { demo, personNamed } from './demo-data';

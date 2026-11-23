@@ -20,21 +20,21 @@
     "coding": [
       {
         "system": "http://loinc.org",
-        "code": "777-3",
-        "display": "Platelets"
+        "code": "6690-2",
+        "display": "White blood cells"
       }
     ],
-    "text": "Platelets"
+    "text": "White blood cells"
   },
   "valueQuantity": {
-    "value": 260,
+    "value": 5.8,
     "unit": "10*3/uL",
     "system": "http://unitsofmeasure.org",
     "code": "10*3/uL"
   },
   "referenceRange": [
     {
-      "text": "150-400 10*3/uL"
+      "text": "4.5-11.0 10*3/uL"
     }
   ],
   "interpretation": [

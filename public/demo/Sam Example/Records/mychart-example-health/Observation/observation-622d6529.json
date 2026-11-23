@@ -27,7 +27,7 @@
     "text": "Vitamin D, 25-hydroxy"
   },
   "valueQuantity": {
-    "value": 24,
+    "value": 18,
     "unit": "ng/mL",
     "system": "http://unitsofmeasure.org",
     "code": "ng/mL"
@@ -42,5 +42,5 @@
       "text": "Low"
     }
   ],
-  "effectiveDateTime": "2026-07-09"
+  "effectiveDateTime": "2026-04-02"
 }

@@ -68,6 +68,7 @@ export function parseRoute(hash: string): Route {
       const section = b as Section;
       const q = query.get('q') ?? undefined;
       if (c !== undefined && section === 'results' && parts.length === 4) return { name: 'person', person: a, section, sub: c };
+      if (c === 'all' && section === 'timeline' && parts.length === 4) return { name: 'person', person: a, section, sub: c };
       if (parts.length === 3) return { name: 'person', person: a, section, ...(q !== undefined ? { query: q } : {}) };
     }
   }

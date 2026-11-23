@@ -109,8 +109,9 @@ export function sortByDateDesc<T extends { date?: string }>(xs: T[]): T[] {
   });
 }
 
-function str(v: Json | undefined): string | undefined {
-  return typeof v === 'string' && v ? v : undefined;
+/** A field that is a string with something in it, else undefined. */
+export function str(v: Json | undefined): string | undefined {
+  return typeof v === 'string' && v.trim() ? v : undefined;
 }
 
 /** One line under a record's name. */

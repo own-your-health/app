@@ -5,7 +5,8 @@
 // balances (the deductible and out-of-pocket limit so far) come from the
 // newest claim that printed them. Money stays in whole cents, never floats.
 
-import { asMoney, claimTotals, isWithdrawn, sortByDateDesc, YOUR_SHARE, type Money } from './records';
+import { providerKey, sameProvider } from './providers';
+import { asMoney, claimTotals, isWithdrawn, sortByDateDesc, str, YOUR_SHARE, type Money } from './records';
 import type { Json, MedDocument, MedRecord, PersonIndex } from './types';
 
 // ---- Money ----
@@ -24,26 +25,6 @@ export function fromCents(cents: number, currency = 'USD'): Money {
   return { amount: `${cents < 0 ? '-' : ''}${Math.floor(a / 100)}.${String(a % 100).padStart(2, '0')}`, currency };
 }
 
-// ---- Providers ----
-
-/** A provider's name for comparing: lower case, words only, no "Inc", "LLC" or "The". */
-function providerKey(name: string | undefined): string {
-  return (name ?? '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .replace(/\b(the|inc|llc|pllc|pa|pc|md|corp|co)\b/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-/** The same provider: one name, or one inside the other ("Example Health" in "Example Health Main Clinic"). */
-export function sameProvider(a: string | undefined, b: string | undefined): boolean {
-  const ka = providerKey(a);
-  const kb = providerKey(b);
-  if (ka.length < 3 || kb.length < 3) return false;
-  return ka === kb || ` ${ka} `.includes(` ${kb} `) || ` ${kb} `.includes(` ${ka} `);
-}
-
 // ---- Bills ----
 
 export interface Bill {
@@ -58,7 +39,6 @@ export interface Bill {
   receipt?: MedDocument;
 }
 
-const str = (v: Json | undefined): string | undefined => (typeof v === 'string' && v.trim() ? v : undefined);
 
 /**
  * Every bill, newest first. A copy medrec found to be the same statement
