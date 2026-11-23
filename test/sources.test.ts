@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { headline, importsFor, isOverdue, macState, needsAttention, needsPerson, requestWait, sourceViews } from '../src/model/sources';
+import { headline, importsFor, isOverdue, macState, needsAttention, needsPerson, QUIET_FOR_MS, requestWait, sourceViews } from '../src/model/sources';
 import { buildRequest } from '../src/model/requests';
 import type { RefreshStatus } from '../src/model/types';
 import { demo, sourceOf } from './demo-data';
@@ -8,7 +8,7 @@ const NOW = new Date('2026-11-22T20:00:00Z');
 
 describe('source views over the sample', () => {
   const { household, indexes, status } = demo();
-  const views = sourceViews({ household, indexes, status, pending: [], done: [] });
+  const views = sourceViews({ household, indexes, status, pending: [], done: [], now: NOW });
   const view = (person: string, cli: string) => views.find((v) => v.source.id === sourceOf(household, person, cli).id)!;
 
   it('give each source its health', () => {
@@ -23,7 +23,7 @@ describe('source views over the sample', () => {
 
   it('read a sign-in nothing renews as waiting, not as needing a person, unless it waits on the Keychain', () => {
     const blood = sourceOf(household, 'Robin Example', 'oneblood');
-    const withSignIn = (signIn: object) => sourceViews({ household, indexes, status: { ...status, sources: status.sources.map((s) => (s.source === blood.id ? { ...s, sign_in: { ...s.sign_in!, ...signIn } } : s)) }, pending: [], done: [] }).find((v) => v.source.id === blood.id)!;
+    const withSignIn = (signIn: object) => sourceViews({ household, indexes, status: { ...status, sources: status.sources.map((s) => (s.source === blood.id ? { ...s, sign_in: { ...s.sign_in!, ...signIn } } : s)) }, pending: [], done: [], now: NOW }).find((v) => v.source.id === blood.id)!;
     expect(withSignIn({}).health).toBe('awaits_sign_in');
     expect(needsPerson([withSignIn({})])).toEqual([]);
     expect(needsAttention([withSignIn({})])).toEqual([]);
@@ -35,18 +35,36 @@ describe('source views over the sample', () => {
     expect(withSignIn({ state: 'ok', needs_person: null }).health).toBe('ok');
   });
 
+  it('bring a quiet source back as an alert once it has gone a week unloaded, or never loaded', () => {
+    const blood = sourceOf(household, 'Robin Example', 'oneblood');
+    const at = (now: Date) => sourceViews({ household, indexes, status, pending: [], done: [], now }).find((v) => v.source.id === blood.id)!;
+    const loaded = Date.parse(at(NOW).lastLoad!.at);
+    expect(at(new Date(loaded + QUIET_FOR_MS - 60_000)).health).toBe('awaits_sign_in');
+    expect(at(new Date(loaded + QUIET_FOR_MS)).health).toBe('needs_person');
+    const unloaded = { ...indexes.get(blood.person)!, imports: indexes.get(blood.person)!.imports.filter((i) => i.cli !== 'oneblood') };
+    const never = sourceViews({ household, indexes: new Map([...indexes, [blood.person, unloaded]]), status, pending: [], done: [], now: NOW }).find((v) => v.source.id === blood.id)!;
+    expect(never.lastLoad).toBeUndefined();
+    expect(never.health).toBe('needs_person');
+  });
+
+  it('show a failed load of a quiet source as failed', () => {
+    const blood = sourceOf(household, 'Robin Example', 'oneblood');
+    const failedStatus = { ...status, sources: status.sources.map((s) => (s.source === blood.id ? { ...s, sign_in: { ...s.sign_in!, needs_person: null }, last_attempt: { ...s.last_attempt!, outcome: 'failed' } } : s)) };
+    expect(sourceViews({ household, indexes, status: failedStatus, pending: [], done: [], now: NOW }).find((v) => v.source.id === blood.id)!.health).toBe('failed');
+  });
+
   it('take a sign-in made since the attempt that asked for one as made', () => {
     const plan = sourceOf(household, 'Robin Example', 'uhc');
     const signedIn: RefreshStatus = {
       ...status,
       sources: status.sources.map((s) => (s.source === plan.id ? { ...s, sign_in: { ...s.sign_in!, state: 'ok', needs_person: null } } : s)),
     };
-    const v = sourceViews({ household, indexes, status: signedIn, pending: [], done: [] }).find((x) => x.source.id === plan.id)!;
+    const v = sourceViews({ household, indexes, status: signedIn, pending: [], done: [], now: NOW }).find((x) => x.source.id === plan.id)!;
     expect(v.lastAttempt?.outcome).toBe('needs_person');
     expect(v.health).not.toBe('needs_person');
     // An older status.json without the field still reads the attempt.
     const older: RefreshStatus = { ...status, sources: status.sources.map((s) => (s.source === plan.id ? { ...s, sign_in: { state: 'ok' } } : s)) };
-    expect(sourceViews({ household, indexes, status: older, pending: [], done: [] }).find((x) => x.source.id === plan.id)!.health).toBe('needs_person');
+    expect(sourceViews({ household, indexes, status: older, pending: [], done: [], now: NOW }).find((x) => x.source.id === plan.id)!.health).toBe('needs_person');
   });
 
   it('fall back to the ImportRun for a source the Mac does not refresh', () => {
@@ -71,13 +89,13 @@ describe('source views over the sample', () => {
     const later: RefreshStatus = structuredClone(status);
     const st = later.sources.find((x) => x.source === s.id)!;
     st.last_success!.finished_at = '2020-01-01T00:00:00Z';
-    const v = sourceViews({ household, indexes, status: later, pending: [], done: [] }).find((x) => x.source.id === s.id)!;
+    const v = sourceViews({ household, indexes, status: later, pending: [], done: [], now: NOW }).find((x) => x.source.id === s.id)!;
     expect(v.lastLoad!.at > '2020-01-01T00:00:00Z').toBe(true);
   });
 
   it('show an everything request only on sources the Mac refreshes', () => {
     const req = buildRequest({ scope: { all: true }, now: NOW, by: {}, appVersion: '0' });
-    const vs = sourceViews({ household, indexes, status, pending: [req], done: [] });
+    const vs = sourceViews({ household, indexes, status, pending: [req], done: [], now: NOW });
     // The newborn's practice is not set up for refresh.
     const notRefreshed = [sourceOf(household, 'Jamie Example', 'athena').id];
     for (const v of vs) expect(v.pending.length).toBe(notRefreshed.includes(v.source.id) ? 0 : 1);
@@ -88,14 +106,19 @@ describe('headline', () => {
   const { household, indexes } = demo();
   it('counts a source waiting for a sign-in apart from the loaded ones', () => {
     const { status } = demo();
-    const vs = sourceViews({ household, indexes, status, pending: [], done: [] }).filter((v) => v.health === 'ok' || v.health === 'awaits_sign_in');
+    const vs = sourceViews({ household, indexes, status, pending: [], done: [], now: NOW }).filter((v) => v.health === 'ok' || v.health === 'awaits_sign_in');
     const ok = vs.filter((v) => v.health === 'ok').length;
     expect(headline(vs)).toEqual({ text: `${ok} sources loaded, 1 waits for a sign-in`, attention: false });
+    // No "0 sources loaded" when every source waits.
+    const waiting = vs.filter((v) => v.health === 'awaits_sign_in');
+    expect(headline(waiting)).toEqual({ text: 'The source waits for a sign-in', attention: false });
+    expect(headline([...waiting, ...waiting])).toEqual({ text: 'All 2 sources wait for a sign-in', attention: false });
+    expect(headline([...waiting, { ...waiting[0]!, health: 'never' }])).toEqual({ text: '1 not loaded yet, 1 waits for a sign-in', attention: false });
   });
 
   it('reads plainly when nothing is wrong', () => {
     // Without status.json, health comes from the ImportRuns alone.
-    const vs = sourceViews({ household, indexes, pending: [], done: [] });
+    const vs = sourceViews({ household, indexes, pending: [], done: [], now: NOW });
     expect(headline(vs)).toEqual({ text: '7 sources loaded, 1 not yet', attention: false });
     expect(headline(vs.filter((v) => v.health === 'ok'))).toEqual({ text: 'All 7 sources loaded', attention: false });
     expect(headline([])).toEqual({ text: 'No sources yet', attention: false });
@@ -131,7 +154,7 @@ describe('the Mac', () => {
       const s: RefreshStatus = structuredClone(status);
       const st = s.sources.find((x) => x.source === sourceOf(household, 'Robin Example', 'mychart').id)!;
       st.last_attempt = { started_at: '2026-11-22T19:55:00Z', finished_at: null, trigger: requests.length ? 'request' : 'schedule', outcome: 'running', requests } as unknown as typeof st.last_attempt;
-      return sourceViews({ household, indexes, status: s, pending: [req], done: [] });
+      return sourceViews({ household, indexes, status: s, pending: [req], done: [], now: NOW });
     };
 
     it('is being loaded when a running import names it', () => {
@@ -143,7 +166,7 @@ describe('the Mac', () => {
     });
 
     it('is late after a pass and a minute when nothing runs', () => {
-      const idle = sourceViews({ household, indexes, status, pending: [req], done: [] }).map((v) => (v.lastAttempt?.outcome === 'running' ? { ...v, lastAttempt: undefined } : v));
+      const idle = sourceViews({ household, indexes, status, pending: [req], done: [], now: NOW }).map((v) => (v.lastAttempt?.outcome === 'running' ? { ...v, lastAttempt: undefined } : v));
       expect(requestWait(req, idle, mac, NOW).kind).toBe('late');
       expect(requestWait(req, idle, mac, new Date('2026-11-22T19:55:00Z')).kind).toBe('waiting');
     });

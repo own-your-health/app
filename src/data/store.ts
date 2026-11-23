@@ -132,8 +132,9 @@ export class Store {
     return t;
   }
 
-  sources(): SourceView[] {
+  sources(now = new Date()): SourceView[] {
     return sourceViews({
+      now,
       household: this.household,
       indexes: this.indexes,
       status: this.status.kind === 'ok' ? this.status.status : undefined,

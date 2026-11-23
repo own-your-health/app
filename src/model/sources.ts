@@ -156,7 +156,14 @@ function fromImport(run: ImportRun): LastLoad {
   };
 }
 
-function health(status: SourceStatus | undefined, lastLoad: LastLoad | undefined): Health {
+/**
+ * How long a source whose sign-in nothing renews may go unloaded and stay
+ * quiet. After that, or when it never loaded, its sign-in is an alert again,
+ * so records that are getting old do not go unnoticed.
+ */
+export const QUIET_FOR_MS = 7 * 86_400_000;
+
+function health(status: SourceStatus | undefined, lastLoad: LastLoad | undefined, now: Date): Health {
   if (!status) return lastLoad ? 'ok' : 'never';
   const signIn = status.sign_in?.state;
   // medrec clears needs_person once someone signs in; the attempt that asked keeps its outcome until the next.
@@ -164,12 +171,13 @@ function health(status: SourceStatus | undefined, lastLoad: LastLoad | undefined
   const np = status.sign_in?.needs_person;
   // A sign-in nothing renews ends after every load: waiting for the next one is its normal state, not an alarm.
   // A Keychain approval nobody gave is still one.
-  const byHand = status.sign_in?.renews === false && np?.reason !== 'keychain';
+  const age = lastLoad ? now.getTime() - Date.parse(lastLoad.at) : Infinity;
+  const byHand = status.sign_in?.renews === false && np?.reason !== 'keychain' && age < QUIET_FOR_MS;
   if ((np || asked) && !byHand) return 'needs_person';
   if (status.last_attempt?.outcome === 'running') return 'running';
   if (status.paused) return 'paused';
-  if (byHand && (np || asked || signIn === 'expired' || signIn === 'signed_out')) return 'awaits_sign_in';
   if (status.last_attempt?.outcome === 'failed') return 'failed';
+  if (byHand && (np || asked || signIn === 'expired' || signIn === 'signed_out')) return 'awaits_sign_in';
   if (signIn === 'expired') return 'expired';
   if (signIn === 'signed_out') return 'signed_out';
   if (signIn === 'expiring') return 'expiring';
@@ -182,7 +190,10 @@ export function sourceViews(opts: {
   status?: RefreshStatus;
   pending: RefreshRequest[];
   done: RefreshRequest[];
+  /** For how long a quiet source has gone unloaded. */
+  now?: Date;
 }): SourceView[] {
+  const now = opts.now ?? new Date();
   const { household, indexes, status } = opts;
   const byId = new Map(status?.sources.map((s) => [s.source, s]) ?? []);
   const views = household.sources.map((source): SourceView => {
@@ -219,7 +230,7 @@ export function sourceViews(opts: {
       status: st,
       lastLoad,
       lastAttempt: st?.last_attempt ?? undefined,
-      health: health(st, lastLoad),
+      health: health(st, lastLoad, now),
       pending,
       lastHandled: latest(handled, (r) => r.handled?.finished_at ?? r.requested_at),
     };
@@ -290,6 +301,8 @@ export function headline(views: SourceView[]): Headline {
   const never = count('never');
   const waits = count('awaits_sign_in');
   if (never === views.length) return { text: 'Nothing loaded yet', attention: false };
+  if (waits === views.length) return { text: views.length === 1 ? 'The source waits for a sign-in' : `All ${views.length} sources wait for a sign-in`, attention: false };
+  if (never + waits === views.length) return { text: `${never} not loaded yet, ${waits} ${waits === 1 ? 'waits' : 'wait'} for a sign-in`, attention: false };
   if (never || waits) {
     const rest = [never ? `${never} not yet` : null, waits ? `${waits} ${waits === 1 ? 'waits' : 'wait'} for a sign-in` : null].filter(Boolean).join(', ');
     return { text: `${plural(views.length - never - waits, 'source', 'sources')} loaded, ${rest}`, attention: false };

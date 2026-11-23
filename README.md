@@ -191,7 +191,10 @@ the source loads only soon after someone signs in. medrec marks such a source
 in `_status/` (`sign_in.renews: false`). The app shows it quietly, as **Waits
 for a sign-in** with "Loads when someone signs in on the Mac", and not as an
 alert: it stays off home's sign-in line and the dot on Sources. Its page
-still gives the command. A Keychain approval nobody gave is still an alert.
+still gives the command. That holds for a week after its last load; after a
+week without one, or if it never loaded, its sign-in is an alert again. A
+Keychain approval nobody gave is always an alert, and a failed load shows as
+failed.
 
 ## Privacy and security
 

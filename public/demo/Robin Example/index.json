@@ -3227,8 +3227,8 @@
       "cli_version": "0.1.1",
       "organization": "example-blood-center",
       "patient_id": "pat-342add",
-      "pulled_at": "2026-11-10T20:00:00Z",
-      "imported_at": "2026-11-10T20:00:00Z",
+      "pulled_at": "2026-11-20T20:00:00Z",
+      "imported_at": "2026-11-20T20:00:00Z",
       "counts": {
         "Patient": 1,
         "Observation": 3

@@ -7,7 +7,7 @@ import { demo, sourceOf } from './demo-data';
 
 const NOW = new Date('2026-11-22T20:00:00Z');
 const { household, indexes, status } = demo();
-const views = sourceViews({ household, indexes, status, pending: [], done: [] });
+const views = sourceViews({ household, indexes, status, pending: [], done: [], now: NOW });
 const names = { sources: views, people: household.people };
 
 function answered(scope: RefreshRequest['scope'], outcomes: string[], message?: string, finishedAt = '2026-11-22T19:58:00Z'): AnsweredRequest {

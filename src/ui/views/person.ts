@@ -77,7 +77,7 @@ function sectionNav(person: Person, current: Section): HTMLElement {
 }
 
 function header(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
-  const views = ctx.store.sources().filter((v) => v.source.person === person.id);
+  const views = ctx.store.sources(ctx.now()).filter((v) => v.source.person === person.id);
   const latest = views.map((v) => v.lastLoad?.at).filter(Boolean).sort().pop();
   return h(
     'section',

@@ -519,7 +519,7 @@ R.document(src.robinChart, { date: '2026-11-18', doc_type: 'lab_report', title: 
 const rChart = R.importRun(src.robinChart, { importedAt: ROBIN_CHART_LOAD, added: 2, updated: 0, unchanged: 41, docs: 1 });
 R.importRun(src.robinChart, { importedAt: at(-60 * 24 * 8), added: 5, updated: 1, unchanged: 36 });
 R.importRun(src.robinPlan, { importedAt: at(-60 * 24 * 3), added: 1, updated: 0, unchanged: 3, cliVersion: '0.3.2' });
-R.importRun(src.robinBlood, { importedAt: at(-60 * 24 * 12), added: 0, updated: 0, unchanged: 3, cliVersion: '0.1.1' });
+R.importRun(src.robinBlood, { importedAt: at(-60 * 24 * 2), added: 0, updated: 0, unchanged: 3, cliVersion: '0.1.1' });
 R.write();
 
 // Sam: the same primary-care system, a lab, a billing site, an X-ray.

@@ -270,7 +270,7 @@ export function sourceRow(ctx: Ctx, v: SourceView, opts: { showPerson: boolean }
 /** The Sources screen: every source and sign-in, the Mac, and Refresh. */
 export function sourcesView(ctx: Ctx): HTMLElement {
   const store = ctx.store;
-  const views = store.sources();
+  const views = store.sources(ctx.now());
   const now = ctx.now();
   const head = headline(views);
   const mac = macLine(store.mac(now), now);
