@@ -51,7 +51,7 @@ function attemptRow(a: AttemptLine): HTMLElement {
 }
 
 export function sourceView(ctx: Ctx, sourceId: string): HTMLElement {
-  const v = ctx.store.sources().find((x) => x.source.id === sourceId);
+  const v = ctx.store.sources(ctx.now()).find((x) => x.source.id === sourceId);
   const back = h('p', null, link({ name: 'sources' }, icon('back', 16), ' All sources'));
   if (!v) return h('div', { class: 'stack' }, back, card({}, empty('This source is not in the records folder.')));
   const [label, tone] = HEALTH_TEXT[v.health];

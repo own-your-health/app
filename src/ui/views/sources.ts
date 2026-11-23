@@ -14,6 +14,7 @@ export const HEALTH_TEXT: Record<SourceView['health'], [string, Tone]> = {
   failed: ['Failed', 'error'],
   expired: ['Sign-in ended', 'attention'],
   signed_out: ['Signed out', 'attention'],
+  awaits_sign_in: ['Waits for a sign-in', 'muted'],
   paused: ['Paused', 'muted'],
   expiring: ['Sign-in ends soon', 'attention'],
   running: ['Loading now', 'running'],
@@ -54,7 +55,13 @@ const OUTCOME_TEXT: Record<string, string> = {
   skipped_interval: 'not loaded, too soon after its last try',
   skipped_paused: 'skipped: paused',
   running: 'running',
+  awaits_sign_in: 'waits for a sign-in on the Mac',
 };
+
+/** An outcome as the app tells it: a source that loads only after a sign-in did not need a person, it waits for one. */
+function shownOutcome(outcome: string, v: SourceView | undefined): string {
+  return outcome === 'needs_person' && v?.health === 'awaits_sign_in' ? 'awaits_sign_in' : outcome;
+}
 
 export function signInText(v: SourceView): string | undefined {
   const si = v.status?.sign_in;
@@ -128,6 +135,11 @@ export function sourceDetail(ctx: Ctx, v: SourceView, brief = false): Child[] {
         ),
       );
     }
+  } else if (v.health === 'awaits_sign_in') {
+    // A sign-in that nothing renews: loading after one is how this source works.
+    const lasts = st?.sign_in?.lasts_secs;
+    lines.push(h('div', null, `Loads when someone signs in on the Mac.${lasts ? ` A sign-in to ${v.name} lasts about ${duration(lasts)}.` : ''}`));
+    if (np && !brief) lines.push(h('div', { class: 'needs-person' }, h('div', null, 'To load it now, run this in a terminal on the Mac:'), command(np.command, ctx)));
   } else if (a && a.outcome !== 'ok') {
     const failed = a.outcome === 'failed';
     const retries = !!st?.auto && !st.paused;
@@ -137,10 +149,11 @@ export function sourceDetail(ctx: Ctx, v: SourceView, brief = false): Child[] {
     lines.push(h('div', { class: failed ? 'error-text' : undefined }, text));
     if ((st?.failures ?? 0) > 1) lines.push(h('div', { class: 'muted' }, `${st!.failures} failures in a row; the Mac waits longer before each new try`));
   }
-  if (!brief && a?.error && a.outcome !== 'ok') lines.push(errorDetails(a.error, { commandAbove: ended && !!np }));
+  const byHand = v.health === 'awaits_sign_in';
+  if (!brief && a?.error && a.outcome !== 'ok') lines.push(errorDetails(a.error, { commandAbove: (ended || byHand) && !!np }));
   const si = signInText(v);
   const fine = v.status?.sign_in?.state === 'ok' || v.status?.sign_in?.state === 'not_needed';
-  if (si && !ended && !(brief && fine)) lines.push(h('div', null, si));
+  if (si && !ended && !byHand && !(brief && fine)) lines.push(h('div', null, si));
   if (st?.paused) {
     lines.push(h('div', null, `Paused${st.paused.reason === 'consent' ? ': waiting on the household’s consent to the site’s terms' : ''}${st.paused.note ? `. ${st.paused.note}` : ''}`));
   } else if (st) {
@@ -154,7 +167,8 @@ export function sourceDetail(ctx: Ctx, v: SourceView, brief = false): Child[] {
   if (handled && !v.pending.length && v.lastHandled && (!brief || recent)) {
     const mine = handled.sources?.find((x) => x.source === v.source.id);
     const when = relative(handled.finished_at ?? v.lastHandled.requested_at, now);
-    const outcome = mine ? OUTCOME_TEXT[mine.outcome] ?? mine.outcome : handled.outcome;
+    const shown = mine ? shownOutcome(mine.outcome, v) : undefined;
+    const outcome = shown ? OUTCOME_TEXT[shown] ?? shown : handled.outcome;
     lines.push(h('div', { class: 'muted' }, `Last refresh request ${when}: ${outcome}${mine ? nextAllowed([mine], now) : ''}`));
   }
   return lines;
@@ -194,12 +208,14 @@ export function signInNotice(views: SourceView[]): HTMLElement | null {
 function counted(outcome: string, n: number): string {
   if (outcome === 'skipped_interval') return n === 1 ? 'too soon after its last try' : 'too soon after their last tries';
   if (outcome === 'skipped_paused') return 'paused';
+  if (outcome === 'awaits_sign_in') return n === 1 ? 'waits for a sign-in' : 'wait for a sign-in';
   return OUTCOME_TEXT[outcome] ?? outcome.replace(/_/g, ' ');
 }
 
 /** The words for every source of a request having had the same outcome. */
 function only([outcome, n]: [string, number]): string {
   if (outcome === 'skipped_interval' && n > 1) return 'none loaded, too soon after their last tries';
+  if (outcome === 'awaits_sign_in' && n > 1) return 'none loaded, each waits for a sign-in on the Mac';
   return OUTCOME_TEXT[outcome] ?? outcome;
 }
 
@@ -217,7 +233,10 @@ export function requestAnswer(r: AnsweredRequest, names: { sources: SourceView[]
         ? ` for ${names.people.find((p) => p.id === scope.person)?.name ?? 'a person'}`
         : '';
   const counts = new Map<string, number>();
-  for (const s of handled.sources ?? []) counts.set(s.outcome, (counts.get(s.outcome) ?? 0) + 1);
+  for (const s of handled.sources ?? []) {
+    const o = shownOutcome(s.outcome, names.sources.find((v) => v.source.id === s.source));
+    counts.set(o, (counts.get(o) ?? 0) + 1);
+  }
   const answer =
     counts.size === 1
       ? only([...counts][0]!)
@@ -229,7 +248,7 @@ export function requestAnswer(r: AnsweredRequest, names: { sources: SourceView[]
 
 /** A request would answer at once for a paused source or one that needs a person. */
 export function canRefresh(v: SourceView): boolean {
-  return !!v.status && !v.status.paused && v.health !== 'needs_person';
+  return !!v.status && !v.status.paused && v.health !== 'needs_person' && v.health !== 'awaits_sign_in';
 }
 
 export function sourceRow(ctx: Ctx, v: SourceView, opts: { showPerson: boolean }): HTMLElement {
@@ -251,7 +270,7 @@ export function sourceRow(ctx: Ctx, v: SourceView, opts: { showPerson: boolean }
 /** The Sources screen: every source and sign-in, the Mac, and Refresh. */
 export function sourcesView(ctx: Ctx): HTMLElement {
   const store = ctx.store;
-  const views = store.sources();
+  const views = store.sources(ctx.now());
   const now = ctx.now();
   const head = headline(views);
   const mac = macLine(store.mac(now), now);

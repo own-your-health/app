@@ -51,7 +51,7 @@ test('home leads with the people, and one line for the sign-in that needs a pers
   await expect(people).toBeInViewport();
   // The people come first, then the one line, which carries no command or provider error.
   const notice = page.locator('.signin-notice');
-  await expect(notice).toHaveText('Example Health Plan needs a sign-in on the Mac');
+  await expect(notice).toHaveText('Example Pediatrics needs a sign-in on the Mac');
   expect(await people.evaluate((el) => el.nextElementSibling?.classList.contains('signin-notice'))).toBe(true);
   await expect(page.locator('main .command')).toHaveCount(0);
   await expect(page.locator('main')).not.toContainText('auth login');
@@ -69,17 +69,17 @@ test('home leads with the people, and one line for the sign-in that needs a pers
   await notice.getByRole('link').click();
   await expect(page).toHaveURL(/#\/s\/s_[a-z2-7]{20}$/);
   const lines = page.locator('.card .source-lines').first();
-  await expect(lines).toContainText('The sign-in to Example Health Plan has ended.');
+  await expect(lines).toContainText('The sign-in to Example Pediatrics has ended.');
   await expect(lines.locator('.command code')).toHaveText(/^medrec refresh sign-in s_[a-z2-7]{20}$/);
   const details = lines.locator('details.error-details');
-  await expect(details.getByText(/uhc auth login --browser/)).toBeHidden();
+  await expect(details.getByText(/athena auth login --profile/)).toBeHidden();
   await details.getByText('Error details').click();
-  await expect(details.getByText(/uhc auth login --browser/)).toBeVisible();
+  await expect(details.getByText(/athena auth login --profile/)).toBeVisible();
   await expect(details).toContainText('To sign in, run the medrec command above, not the tool’s own.');
   // The Mac's history folds each attempt's error too.
   const attempts = page.locator('.card', { hasText: 'Attempts' });
   await expect(attempts.locator('.row').first()).toBeVisible();
-  await expect(attempts.getByText(/uhc auth login --browser/)).toBeHidden();
+  await expect(attempts.getByText(/athena auth login --profile/)).toBeHidden();
 });
 
 test('the Sources screen lists every source and sign-in, and opens one', async ({ page }) => {
@@ -91,12 +91,28 @@ test('the Sources screen lists every source and sign-in, and opens one', async (
   const attention = page.locator('.card-attention', { hasText: 'Needs attention' });
   await expect(attention.locator('.row')).toHaveCount(2);
   await expect(attention.locator('.row').first().locator('.command code')).toHaveText(/^medrec refresh sign-in s_[a-z2-7]{20}$/);
-  await expect(attention.locator('.row').first()).toContainText('The sign-in to Example Health Plan has ended.');
+  await expect(attention.locator('.row').first()).toContainText('The sign-in to Example Pediatrics has ended.');
   await expect(attention.locator('.row').nth(1)).toContainText(/The last try, 2 hours ago, failed\. The Mac tries again on its own\./);
   // The provider's own words are on the source's page, not in the list.
   await expect(attention).not.toContainText('503');
   await expect(attention).not.toContainText('auth login');
   const others = page.locator('.card', { hasText: 'Other sources' });
+  // A sign-in nothing renews waits quietly among the others, with its command on its own page.
+  const plan = others.locator('.row', { hasText: 'Example Health Plan' });
+  await expect(plan.locator('.chip')).toHaveText('Waits for a sign-in');
+  await expect(plan).toContainText('Loads when someone signs in on the Mac. A sign-in to Example Health Plan lasts about 30 minutes.');
+  await expect(plan.locator('.command')).toHaveCount(0);
+  // Where medrec has not measured how long a sign-in lasts, the row says only how the source loads.
+  const blood = others.locator('.row', { hasText: 'Example Blood Center' });
+  await expect(blood.locator('.chip')).toHaveText('Waits for a sign-in');
+  await expect(blood).toContainText('Loads when someone signs in on the Mac.');
+  await expect(blood).not.toContainText('lasts about');
+  await expect(blood.locator('.command')).toHaveCount(0);
+  await blood.locator('.row-main').click();
+  await expect(page.locator('.card .source-lines').first().locator('.needs-person')).toContainText('To load it now, run this in a terminal on the Mac:');
+  await expect(page.locator('.card .source-lines').first().locator('.command code')).toHaveText(/^medrec refresh sign-in s_[a-z2-7]{20}$/);
+  await expect(page.getByRole('button', { name: /^Refresh/ })).toHaveCount(0);
+  await page.goBack();
   const total = await others.locator('.row').count();
   expect(total).toBeGreaterThanOrEqual(3);
   await others.locator('.row-main').first().click();

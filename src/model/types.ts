@@ -267,6 +267,14 @@ export interface SourceStatus {
     state: SignInState | string;
     expires_at?: string | null;
     checked_at?: string;
+    /**
+     * `false`: a member-site session that ends within hours and nothing
+     * renews, so the source loads only soon after someone signs in.
+     * Missing: unknown, read as renewing.
+     */
+    renews?: boolean | null;
+    /** About how long a fresh sign-in lasts, where known. */
+    lasts_secs?: number | null;
     needs_person?: { reason: 'sign_in' | 'keychain' | string; since?: string; command: string } | null;
   };
   last_attempt?: Attempt | null;

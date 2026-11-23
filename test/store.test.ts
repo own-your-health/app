@@ -56,8 +56,8 @@ describe('the store over the sample folder', () => {
     mac(p.file);
     await vi.advanceTimersByTimeAsync(3000);
     await store.loadRefreshState();
-    const athena = sourceOf(h, 'Alex Example', 'athena');
-    expect(store.sources().find((v) => v.source.id === athena.id)?.health).toBe('running');
+    const plan = sourceOf(h, 'Sam Example', 'kp');
+    expect(store.sources(new Date(ANCHOR)).find((v) => v.source.id === plan.id)?.health).toBe('running');
     await vi.advanceTimersByTimeAsync(3000);
     await store.loadRefreshState();
     expect(changes).toBe(2);
@@ -68,9 +68,11 @@ describe('the store over the sample folder', () => {
     expect(outcome('Robin Example', 'uhc')).toBe('needs_person');
     expect(outcome('Sam Example', 'peryourhealth')).toBe('skipped_paused');
     expect(outcome('Sam Example', 'labcorp')).toBe('skipped_interval');
-    expect(outcome('Alex Example', 'athena')).toBe('ok');
-    expect(outcome('Robin Example', 'oneblood')).toBeUndefined();
-    expect(store.sources().find((v) => v.source.id === athena.id)?.lastLoad?.at).toBe('2026-11-22T20:00:06Z');
+    expect(outcome('Alex Example', 'athena')).toBe('needs_person');
+    expect(outcome('Sam Example', 'kp')).toBe('ok');
+    expect(outcome('Robin Example', 'oneblood')).toBe('needs_person');
+    expect(outcome('Jamie Example', 'athena')).toBeUndefined();
+    expect(store.sources(new Date(ANCHOR)).find((v) => v.source.id === plan.id)?.lastLoad?.at).toBe('2026-11-22T20:00:06Z');
   });
 
   it('treats a request with a done/ file as handled, and removes its own', async () => {

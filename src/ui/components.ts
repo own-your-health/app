@@ -128,7 +128,7 @@ export function refreshControl(ctx: Ctx, scope: RequestScope, what: string, opts
   const held = store.pendingFor(scope);
   if (held) {
     const now = ctx.now();
-    const wait = requestWait(held.request, store.sources(), store.mac(now), now);
+    const wait = requestWait(held.request, store.sources(now), store.mac(now), now);
     const asked = `Asked ${relative(held.request.requested_at, now)}`;
     const text =
       wait.kind === 'loading'

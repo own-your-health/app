@@ -11,7 +11,7 @@ import { macLine, requestAnswer, signInNotice } from './sources';
 
 export function homeView(ctx: Ctx): HTMLElement {
   const store = ctx.store;
-  const views = store.sources();
+  const views = store.sources(ctx.now());
   const now = ctx.now();
   const mac = macLine(store.mac(now), now);
   const latest = views.map((v) => v.lastLoad?.at).filter(Boolean).sort().pop();
