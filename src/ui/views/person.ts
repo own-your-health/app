@@ -16,6 +16,7 @@ import {
   type TimelineEntry,
 } from '../../model/records';
 import { visitKind, visitTimeline, type Visit } from '../../model/visits';
+import { claimTitle, recordTitle } from '../../model/claims';
 import { BILL_WINDOW_DAYS, claimsWithBills, owedByProvider, planBalances, toCents, type Bill, type Claim, type Owed } from '../../model/billing';
 import { isOutOfRange, rangeFor, resultFlag, type ResultFlag } from '../../model/flags';
 import { immunizationsGiven, latestResults, newInLatestLoads, type LatestResult } from '../../model/overview';
@@ -218,7 +219,7 @@ function overviewSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElemen
   const from = (prov: Provenance[]) => originNames(prov, household, person.id).join(', ');
   const all = (section: Section, text: string) => h('p', { class: 'card-more' }, link({ name: 'person', person: person.id, section }, text, ' ', icon('next', 14)));
   const recordRow = (r: MedRecord, meta: (string | undefined | null)[], aside?: Child) =>
-    row({ route: itemRoute(person.id, r.id), title: r.display || KIND_LABELS[r.kind] || r.kind, meta: meta.filter(Boolean).join(' · '), aside });
+    row({ route: itemRoute(person.id, r.id), title: recordTitle(r), meta: meta.filter(Boolean).join(' · '), aside });
 
   const loads = newInLatestLoads(idx, now);
   const newCard = loads.length
@@ -324,7 +325,7 @@ function timelineSection(ctx: Ctx, person: Person, idx: PersonIndex, sub?: strin
 }
 
 function everyRecord(person: Person, idx: PersonIndex): HTMLElement {
-  const all = timeline(idx);
+  const all = timeline(idx, recordTitle);
   const kinds = [...new Set(all.map((e) => e.kind))];
   const options: [string, string][] = [['all', 'All'], ...kinds.map((k): [string, string] => [k, KIND_LABELS[k] ?? k])];
   const list = h('div');
@@ -650,8 +651,8 @@ function claimsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement 
           (c) =>
             row({
               route: itemRoute(person.id, c.record.id),
-              title: c.provider ?? (c.record.display || 'Claim'),
-              meta: meta(dateText(c.service), c.provider ? c.record.display : null, c.insurer ? `by ${c.insurer}` : null, c.record.fields.outcome && c.record.fields.outcome !== 'complete' ? str(c.record.fields.outcome) : null),
+              title: claimTitle(c.record),
+              meta: meta(dateText(c.service), c.provider, c.insurer ? `by ${c.insurer}` : null, c.record.fields.outcome && c.record.fields.outcome !== 'complete' ? str(c.record.fields.outcome) : null),
               aside: c.yourShare ? money(c.yourShare) : null,
               extra: h(
                 'div',

@@ -2,13 +2,14 @@
 // that brought it in, its raw FHIR and its file in Drive.
 
 import { readJson } from '../../folder';
-import { asMoney, docTypeLabel, documentTitle, findItem, formatMoney, importFor, KIND_LABELS, studyTitle, valueText } from '../../model/records';
+import { AMOUNT_LABELS, asMoney, docTypeLabel, documentTitle, findItem, formatMoney, importFor, KIND_LABELS, studyTitle, valueText, type AmountName } from '../../model/records';
 import { isObject } from '../../model/parse';
 import type { ImagingStudy, Json, MedDocument, MedRecord, PersonIndex, Provenance } from '../../model/types';
-import { button, card, chip, command, driveLink, empty, jsonBlock, kv, link, type Ctx } from '../components';
+import { button, card, chip, command, driveLink, empty, jsonBlock, kv, link, row, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, dateTime, localDay } from '../format';
 import { visitOf } from '../../model/visits';
+import { CATEGORY_LABELS, claimLines, recordTitle, type ClaimLine } from '../../model/claims';
 import { visitContents, visitWhen } from '../visit';
 
 const PROVENANCE_SHOWN = ['source', 'method', 'source_resource', 'fetched_at', 'filed_at', 'raw_path', 'classified_by', 'derived_from', 'filed_by'];
@@ -115,8 +116,25 @@ function provenanceCard(ctx: Ctx, idx: PersonIndex, p: Provenance, i: number, to
   );
 }
 
+/** A claim's lines: what each paid for, its code, and the amounts. */
+function linesCard(lines: ClaimLine[]): HTMLElement {
+  return card(
+    { title: lines.length === 1 ? 'Line' : `${lines.length} lines` },
+    lines.map((l) => {
+      const amounts = (Object.keys(AMOUNT_LABELS) as AmountName[]).filter((k) => l.amounts[k]).map((k) => `${AMOUNT_LABELS[k]} ${formatMoney(l.amounts[k])}`);
+      return row({
+        title: l.label,
+        meta: [l.code, CATEGORY_LABELS[l.category].one, l.date ? dateText(l.date) : null].filter(Boolean).join(' · '),
+        extra: h('p', { class: ['small', 'claim-amounts', amounts.length ? null : 'muted'] }, amounts.length ? amounts.join(' · ') : 'The claim gives no amounts for this line.'),
+      });
+    }),
+  );
+}
+
 function recordView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
-  const fields = Object.entries(r.fields).filter(([k]) => k !== 'when');
+  const lines = r.kind === 'claim' ? claimLines(r) : [];
+  // A claim's lines have their own card.
+  const fields = Object.entries(r.fields).filter(([k]) => k !== 'when' && !(lines.length && k === 'items'));
   const visit = r.kind === 'encounter' ? visitOf(idx, ctx.store.household, idx.person, localDay(ctx.now()), r.id) : undefined;
   const inVisit = visit ? visitContents(idx.person, visit) : [];
   // A visit lists its documents with the rest of what belongs to it; any other record, its linked ones.
@@ -125,7 +143,7 @@ function recordView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
     h(
       'section',
       { class: 'card' },
-      h('div', { class: 'card-head' }, h('h1', null, r.display || KIND_LABELS[r.kind] || r.kind), r.status ? chip(r.status, 'muted') : null),
+      h('div', { class: 'card-head' }, h('h1', null, recordTitle(r)), r.status ? chip(r.status, 'muted') : null),
       h('p', { class: 'muted' }, [KIND_LABELS[r.kind] ?? r.kind, dateText(r.date)].join(' · ')),
       kv([
         ['Code', r.code ? [r.code.display, r.code.code].filter(Boolean).join(' · ') : undefined],
@@ -140,6 +158,7 @@ function recordView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
           h('p', { class: 'small muted' }, `Documents medrec linked to the visit, and records and documents from ${visitWhen(visit)} at the same place.`),
         )
       : null,
+    lines.length ? linesCard(lines) : null,
     docs.length ? card({ title: 'Documents' }, docs.map((d) => h('p', null, link({ name: 'item', person: idx.person, id: d.id }, documentTitle(d))))) : null,
     ...r.provenance.map((p, i) => provenanceCard(ctx, idx, p, i, r.provenance.length)),
     card({ title: 'Identifiers' }, kv([['Record', h('code', null, r.id)], ['Merge key', h('code', null, r.key)]])),

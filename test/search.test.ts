@@ -56,7 +56,7 @@ describe('search', () => {
     expect(brief(search(index, null, 'once a day')).map((x) => x[2])).toContain('Dosage');
     expect(brief(search(index, text, '53.68'))).toEqual(
       expect.arrayContaining([
-        ['Office visit claim', 'field', 'Total'],
+        ['Preventive visit, flu vaccine and 1 more', 'field', 'Total'],
         ['Statement from Example Health', 'field', 'Statement'],
         ['Explanation of Benefits', 'text', null],
       ]),

@@ -2344,7 +2344,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Office visit claim",
+      "display": "Professional",
       "status": "active",
       "fields": {
         "when": "2026-11-18",
@@ -2404,7 +2404,76 @@
           "currency": "USD"
         },
         "type": "Professional",
-        "use": "claim"
+        "use": "claim",
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99213",
+              "display": "Office visit"
+            },
+            "serviced": "2026-11-18",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "180.00",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "180.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "112.50",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "87.50",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "25.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "25.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ]
+          }
+        ]
       },
       "documents": [],
       "provenance": [
@@ -2438,7 +2507,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Lab work claim",
+      "display": "Professional",
       "status": "active",
       "fields": {
         "when": "2026-10-03",
@@ -2498,7 +2567,143 @@
           "currency": "USD"
         },
         "type": "Professional",
-        "use": "claim"
+        "use": "claim",
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "80061",
+              "display": "Lipid panel"
+            },
+            "serviced": "2026-10-03",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "180.00",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "180.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "78.40",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "62.72",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "15.68",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "15.68",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ]
+          },
+          {
+            "sequence": 2,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "36415",
+              "display": "Blood draw"
+            },
+            "serviced": "2026-10-03",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "40.00",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "40.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "18.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "14.40",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "3.60",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "3.60",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ]
+          }
+        ]
       },
       "documents": [],
       "provenance": [
@@ -2532,7 +2737,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Office visit claim",
+      "display": "Professional",
       "status": "active",
       "fields": {
         "when": "2026-10-01",
@@ -2593,6 +2798,209 @@
         },
         "type": "Professional",
         "use": "claim",
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99396",
+              "display": "Preventive visit"
+            },
+            "serviced": "2026-10-01",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "320.00",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "320.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "210.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "168.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "42.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "42.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ]
+          },
+          {
+            "sequence": 2,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "90686",
+              "display": "Flu vaccine"
+            },
+            "serviced": "2026-10-01",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "62.00",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "62.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "38.40",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "30.72",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "7.68",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "7.68",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ]
+          },
+          {
+            "sequence": 3,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "90471",
+              "display": "Vaccine given"
+            },
+            "serviced": "2026-10-01",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "30.00",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "30.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "20.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "16.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "4.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "4.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ]
+          }
+        ],
         "benefit_balance": [
           {
             "category": "1",
@@ -2660,7 +3068,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Office visit claim",
+      "display": "Professional",
       "status": "active",
       "fields": {
         "when": "2025-09-15",
@@ -2720,7 +3128,76 @@
           "currency": "USD"
         },
         "type": "Professional",
-        "use": "claim"
+        "use": "claim",
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99213",
+              "display": "Office visit"
+            },
+            "serviced": "2025-09-15",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "189.00",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "189.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "121.10",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "121.10",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ]
+          }
+        ]
       },
       "documents": [],
       "provenance": [
@@ -2754,7 +3231,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Office visit claim",
+      "display": "Professional",
       "status": "active",
       "fields": {
         "when": "2025-03-10",
@@ -2814,7 +3291,143 @@
           "currency": "USD"
         },
         "type": "Professional",
-        "use": "claim"
+        "use": "claim",
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99214",
+              "display": "Office visit"
+            },
+            "serviced": "2025-03-10",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "290.00",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "290.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "190.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "152.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "38.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "38.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ]
+          },
+          {
+            "sequence": 2,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "85025",
+              "display": "Blood count"
+            },
+            "serviced": "2025-03-10",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "108.00",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "108.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "65.90",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "52.72",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "13.18",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "13.18",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ]
+          }
+        ]
       },
       "documents": [],
       "provenance": [
