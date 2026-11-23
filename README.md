@@ -33,6 +33,10 @@ Refresh.
 
 ## What you need
 
+New to this? [docs/getting-started.md](docs/getting-started.md) goes from
+nothing to the records on a phone: medrec and its tools, the records folder,
+your documents and providers, the Google client, the app and Refresh.
+
 1. **A records folder in Google Drive, kept by medrec.** The app reads
    `household.json` at the top of the folder, each person's `index.json`, and
    the files they list. See medrec's
@@ -53,8 +57,9 @@ Refresh.
    setup link instead: Settings, **Setup link for another device**, which adds
    `?client=<your client id>` to the address and skips this step.
 2. Sign in with the Google account that holds the records folder, or one it is
-   shared with. Google warns that it has not verified the app: your client is
-   in Testing mode, which is expected. Allow both permissions.
+   shared with. Google warns that it has not verified the app, which is
+   expected for a household's own client, in Testing or published. Allow both
+   permissions.
 3. Choose the records folder. The app lists the folders with a
    `household.json` that the account can see; you can also paste a folder link.
 
