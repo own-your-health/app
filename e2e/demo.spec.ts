@@ -433,13 +433,13 @@ test('one search over everyone, from the home screen, with filters by kind and p
   await expect(results.first().locator('mark').first()).toHaveText(/lisinopril/i);
   const kinds = page.getByRole('group', { name: 'Filter by kind' });
   await expect(kinds.getByRole('button', { name: 'All 4' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('main [aria-live]')).toHaveText('4 matches.');
+  await expect(page.locator('main p[aria-live]')).toHaveText('4 matches.');
   // By keyboard: the chip pressed keeps focus, and the status counts what is shown.
   await kinds.getByRole('button', { name: 'Documents 1' }).focus();
   await page.keyboard.press('Enter');
   await expect(kinds.getByRole('button', { name: 'Documents 1' })).toBeFocused();
   await expect(kinds.getByRole('button', { name: 'Documents 1' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('main [aria-live]')).toHaveText('1 of 4 matches.');
+  await expect(page.locator('main p[aria-live]')).toHaveText('1 of 4 matches.');
   await expect(results).toHaveText([/After visit summary.*Robin Example.*in the document text.*continuing lisinopril/]);
   await expect(results.locator('.snippet mark')).toHaveText(['lisinopril']);
 });
@@ -580,8 +580,18 @@ test('“blood tests” finds lab results by panel, each test once, and can sear
 
   await page.getByRole('button', { name: 'Search for the words instead' }).click();
   await expect(page.locator('.search-concept')).toContainText('Showing every match for the words.');
+  // The keyboard stays on the toggle, and the address keeps the choice.
+  await expect(page.getByRole('button', { name: 'Show lab results instead' })).toBeFocused();
+  await expect(page).toHaveURL(/#\/search\?q=blood\+tests&words=1$/);
+  await page.reload();
+  await expect(page.locator('.search-concept')).toContainText('Showing every match for the words.');
   await page.getByRole('button', { name: 'Show lab results instead' }).click();
   await expect(page.locator('.search-concept')).toContainText('Showing lab results.');
+  await expect(page).toHaveURL(/#\/search\?q=blood\+tests$/);
+
+  await page.getByRole('searchbox', { name: 'Search' }).fill('lab statement');
+  await expect(page.locator('.search-concept')).toHaveText('No lab results with “statement”, so this is every match for the words.');
+  await expect(page.locator('main .row', { hasText: 'Statement from Example Lab' })).toHaveCount(1);
 });
 
 test('bills finds claims and statements, records before claims, and a claim names its matching line', async ({ page }) => {

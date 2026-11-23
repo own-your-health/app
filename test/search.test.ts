@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { conceptOf, find, matchRanges, search, searchAll, snippet, terms } from '../src/model/search';
+import { CONCEPTS, conceptOf, find, matchRanges, search, searchAll, snippet, terms } from '../src/model/search';
 import { entriesByKind } from '../src/ui/search';
 import { parseText } from '../src/model/parse';
 import type { PersonText } from '../src/model/types';
@@ -134,6 +134,20 @@ describe('concepts', () => {
     expect(conceptOf('meds')?.concept.id).toBe('meds');
   });
 
+  it('takes a phrase’s plural as the phrase, for every word', () => {
+    for (const [q, id] of <[string, string][]>[['statement', 'bills'], ['statements', 'bills'], ['charge', 'bills'], ['charges', 'bills'], ['prescription', 'meds'], ['prescriptions', 'meds'], ['med', 'meds'], ['lab', 'labs'], ['labs', 'labs'], ['blood test', 'labs'], ['blood tests', 'labs'], ['eobs', 'bills']])
+      expect(conceptOf(q)?.concept.id, q).toBe(id);
+    expect(conceptOf('testes')).toBeUndefined();
+  });
+
+  it('keeps every concept’s words in one table that agrees with itself', () => {
+    const ids = CONCEPTS.map((c) => c.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    const phrases = CONCEPTS.flatMap((c) => c.phrases);
+    expect(new Set(phrases).size).toBe(phrases.length);
+    for (const p of phrases) expect(p, p).toBe(p.toLowerCase().trim());
+  });
+
   it('never reads a quoted phrase or a word inside another as a concept', () => {
     expect(conceptOf('"blood tests"')).toBeUndefined();
     expect(conceptOf('billing')).toBeUndefined();
@@ -143,7 +157,7 @@ describe('concepts', () => {
 
   it('finds lab results and lab reports for “blood tests”, and nothing of another kind', () => {
     const f = find(everyone, 'blood tests');
-    expect(f.concept?.id).toBe('labs');
+    expect(f).toMatchObject({ how: 'concept', named: { id: 'labs' } });
     expect(new Set(f.hits.map((x) => x.kind))).toEqual(new Set(['result', 'document']));
     expect(f.hits.filter((x) => x.kind === 'document').every((x) => x.docType === 'Lab report')).toBe(true);
     // Vital signs are not lab results.
@@ -166,8 +180,16 @@ describe('concepts', () => {
 
   it('searches the words as written when asked', () => {
     const f = find(everyone, 'blood tests', { words: true });
-    expect(f.concept).toBeUndefined();
-    expect(f.terms).toEqual(['blood', 'tests']);
+    // The concept is still named, so the page can offer it back.
+    expect(f).toMatchObject({ how: 'words', named: { id: 'labs' }, terms: ['blood', 'tests'] });
+    expect(find(everyone, 'cholesterol')).toMatchObject({ how: 'words', named: undefined });
+  });
+
+  it('searches the words when nothing of the concept has the other words', () => {
+    // No lab result or lab report says "statement": the lab's statement is what was meant.
+    const f = find(everyone, 'lab statement');
+    expect(f).toMatchObject({ how: 'fallback', named: { id: 'labs' }, rest: ['statement'], terms: ['lab', 'statement'] });
+    expect(f.hits.map((x) => x.title)).toContain('Statement from Example Lab');
   });
 });
 
@@ -179,8 +201,8 @@ describe('what a hit carries', () => {
 
   it('a claim’s provider, what you owe, and the line that matched', () => {
     const hit = find(everyone, 'blood draw').hits.find((x) => x.kind === 'claim')!;
-    expect(hit).toMatchObject({ title: 'Lipid panel and blood draw', claim: { provider: 'Example Lab', amount: 'you owe $19.28' }, field: 'Line', snippet: 'Blood draw (36415) · you owe $3.60' });
-    expect(find(everyone, '80061').hits.find((x) => x.kind === 'claim')).toMatchObject({ where: 'field', field: 'Line', snippet: 'Lipid panel (80061) · you owe $15.68' });
+    expect(hit).toMatchObject({ title: 'Lipid panel and blood draw', claim: { provider: 'Example Lab', amount: 'you owe $19.28' }, line: 'Blood draw (36415) · you owe $3.60' });
+    expect(find(everyone, '80061').hits.find((x) => x.kind === 'claim')).toMatchObject({ where: 'field', line: 'Lipid panel (80061) · you owe $15.68' });
     expect(find(everyone, 'bills').hits.find((x) => x.claim?.amount === 'you owe nothing')).toBeDefined();
   });
 });

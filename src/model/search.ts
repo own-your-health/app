@@ -9,7 +9,8 @@
 // "blood tests" means lab results, "shots" vaccines, "bills" claims and
 // statements, "visits" visits and "meds" medicines (CONCEPTS). `find` takes
 // such a word out of the query and searches the other words within that kind;
-// `{ words: true }` searches every word as written instead.
+// `{ words: true }` searches every word as written instead, and so does a
+// concept with nothing that has the other words ("Example Lab").
 
 import { claimAmounts } from './billing';
 import { claimLines } from './claims';
@@ -39,40 +40,57 @@ export interface Hit {
   claim?: { provider?: string; amount?: string };
   /** A document's kind, in words. */
   docType?: string;
+  /** The claim line that holds the words: "Blood draw (36415) · you owe $3.60". */
+  line?: string;
 }
-
-export type ConceptId = 'labs' | 'shots' | 'bills' | 'visits' | 'meds';
 
 export interface Concept {
-  id: ConceptId;
+  id: string;
   /** What it finds, as a heading: "Lab results". */
   label: string;
-  /** The words that name it, folded. */
+  /**
+   * The words that name it, folded and singular; each word also matches with
+   * -s or -es after it, so "blood test" is "blood tests" too.
+   */
   phrases: string[];
+  /** The records it takes in. */
+  takes: (r: MedRecord) => boolean;
+  /** The documents it takes in, by medrec's doc_type. */
+  docTypes: string[];
 }
 
-export const CONCEPTS: Concept[] = [
+/** A lab result: a result in a lab panel or a lab category, not a vital sign or a survey. */
+function isLab(r: MedRecord): boolean {
+  if (r.kind === 'report') {
+    const category = str(r.fields.category);
+    return !category || /\blab/i.test(category);
+  }
+  if (r.kind !== 'result') return false;
+  const id = panelFor(seriesKey(r), str(r.fields.category)).id;
+  return id !== 'vitals' && !id.startsWith('category:');
+}
+
+const ofKind = (kind: string) => (r: MedRecord) => r.kind === kind;
+
+/** Everyday words that name a kind of thing: every concept, in one place. */
+export const CONCEPTS = [
   {
     id: 'labs',
     label: 'Lab results',
-    phrases: ['blood tests', 'blood test', 'bloodwork', 'blood work', 'labs', 'lab results', 'lab result', 'lab tests', 'lab test', 'lab work', 'test results'],
+    phrases: ['blood test', 'bloodwork', 'blood work', 'lab', 'lab result', 'lab test', 'lab work', 'test result'],
+    takes: isLab,
+    docTypes: ['lab_report'],
   },
-  { id: 'shots', label: 'Vaccines', phrases: ['shots', 'shot', 'vaccines', 'vaccine', 'vaccinations', 'vaccination', 'immunizations', 'immunization'] },
-  { id: 'bills', label: 'Claims and bills', phrases: ['bills', 'bill', 'costs', 'cost', 'claims', 'claim', 'charges', 'statements', 'eobs', 'eob'] },
-  { id: 'visits', label: 'Visits', phrases: ['visits', 'visit', 'appointments', 'appointment'] },
-  { id: 'meds', label: 'Medicines', phrases: ['meds', 'medications', 'medication', 'medicines', 'prescriptions'] },
-];
+  { id: 'shots', label: 'Vaccines', phrases: ['shot', 'vaccine', 'vaccination', 'immunization'], takes: ofKind('immunization'), docTypes: ['immunization_record'] },
+  { id: 'bills', label: 'Claims and bills', phrases: ['bill', 'cost', 'claim', 'charge', 'statement', 'eob'], takes: ofKind('claim'), docTypes: ['bill', 'receipt', 'eob'] },
+  { id: 'visits', label: 'Visits', phrases: ['visit', 'appointment'], takes: ofKind('encounter'), docTypes: ['visit_summary'] },
+  { id: 'meds', label: 'Medicines', phrases: ['med', 'medication', 'medicine', 'prescription'], takes: ofKind('medication'), docTypes: ['prescription'] },
+] as const satisfies readonly Concept[];
 
-/** The documents each concept takes in beside its records, by medrec's doc_type. */
-const CONCEPT_DOCS: Record<string, ConceptId> = {
-  lab_report: 'labs',
-  immunization_record: 'shots',
-  bill: 'bills',
-  receipt: 'bills',
-  eob: 'bills',
-  visit_summary: 'visits',
-  prescription: 'meds',
-};
+export type ConceptId = (typeof CONCEPTS)[number]['id'];
+
+const recordConcept = (r: MedRecord): ConceptId | undefined => CONCEPTS.find((c) => c.takes(r))?.id;
+const documentConcept = (docType: string | undefined): ConceptId | undefined => (docType ? CONCEPTS.find((c) => (c.docTypes as readonly string[]).includes(docType))?.id : undefined);
 
 /** Words that only frame a request ("show my blood tests"), dropped beside a concept. */
 const FRAME = new Set(['my', 'me', 'show', 'all', 'the', 'a', 'an', 'of', 'for', 'from', 'in', 'on', 'at', 'with', 'and', 'to', 'our', 'his', 'her', 'their', 'what', 'which', 'did', 'i', 'have', 'had', 'results', 'result', 'recent', 'latest', 'past', 'list', 'history', 'any']);
@@ -202,7 +220,8 @@ interface Candidate {
   extra: Pick<Hit, 'test' | 'claim' | 'docType'>;
   /** What the title tier searches, folded: the name and what kind of thing it is. */
   names: string;
-  fields: { label: string; value: string; folded: string }[];
+  /** `line` marks one of a claim's lines, so a hit can name the line that matched. */
+  fields: { label: string; value: string; folded: string; line?: true }[];
   /** names and every field, folded. */
   all: string;
 }
@@ -219,45 +238,21 @@ function candidate(
   title: string,
   date: string | undefined,
   names: string[],
-  fields: [string, string][],
+  fields: [string, string, true?][],
   concept?: ConceptId,
   extra: Candidate['extra'] = {},
 ): Candidate {
-  const f = fields.filter(([, v]) => v.trim() !== '').map(([label, value]) => ({ label, value, folded: normalize(value) }));
+  const f = fields.filter(([, v]) => v.trim() !== '').map(([label, value, line]) => ({ label, value, folded: normalize(value), ...(line ? { line } : {}) }));
   const n = normalize(names.filter(Boolean).join(JOIN));
   return { id, kind, title, date, concept, extra, names: n, fields: f, all: [n, ...f.map((x) => x.folded)].join(JOIN) };
 }
 
-/** The concept a record belongs to: a lab result (not a vital sign or a survey), a vaccine, a claim, a visit, a medicine. */
-function recordConcept(r: MedRecord): ConceptId | undefined {
-  switch (r.kind) {
-    case 'result': {
-      const id = panelFor(seriesKey(r), str(r.fields.category)).id;
-      return id === 'vitals' || id.startsWith('category:') ? undefined : 'labs';
-    }
-    case 'report': {
-      const category = str(r.fields.category);
-      return !category || /\blab/i.test(category) ? 'labs' : undefined;
-    }
-    case 'immunization':
-      return 'shots';
-    case 'claim':
-      return 'bills';
-    case 'encounter':
-      return 'visits';
-    case 'medication':
-      return 'meds';
-    default:
-      return undefined;
-  }
-}
-
 /** One field per claim line, "Lipid panel (80061) · billed $180.00", so a hit can say which line matched. */
-function lineFields(r: MedRecord): [string, string][] {
-  return claimLines(r).map((l): [string, string] => {
+function lineFields(r: MedRecord): [string, string, true][] {
+  return claimLines(r).map((l): [string, string, true] => {
     const amount = l.amounts.youOwe ?? l.amounts.billed;
     const said = amount ? `${l.amounts.youOwe ? 'you owe' : 'billed'} ${formatMoney(amount)}` : '';
-    return ['Line', [`${l.label}${l.code && l.code !== l.label ? ` (${l.code})` : ''}`, said].filter(Boolean).join(' · ')];
+    return ['Line', [`${l.label}${l.code && l.code !== l.label ? ` (${l.code})` : ''}`, said].filter(Boolean).join(' · '), true];
   });
 }
 
@@ -312,8 +307,7 @@ function candidates(index: PersonIndex): Candidate[] {
       ['Statement', d.statement ? [d.statement.account ? `account ${d.statement.account}` : '', d.statement.amount_due ? `amount due ${formatMoney(d.statement.amount_due)}` : '', d.statement.due_date ? `due ${d.statement.due_date}` : ''].filter(Boolean).join(' · ') : ''],
       ['Original name', d.original_name ?? ''],
     ];
-    const concept = d.doc_type && Object.hasOwn(CONCEPT_DOCS, d.doc_type) ? CONCEPT_DOCS[d.doc_type] : undefined;
-    out.push(candidate(d.id, 'document', documentTitle(d), d.date, [documentTitle(d), docTypeLabel(d.doc_type), d.organization ?? ''], fields, concept, { docType: docTypeLabel(d.doc_type) }));
+    out.push(candidate(d.id, 'document', documentTitle(d), d.date, [documentTitle(d), docTypeLabel(d.doc_type), d.organization ?? ''], fields, documentConcept(d.doc_type), { docType: docTypeLabel(d.doc_type) }));
   }
   for (const st of index.studies) {
     const fields: [string, string][] = [
@@ -331,14 +325,15 @@ function match(c: Candidate, ts: string[], text: PersonText | null, person: stri
   const base = { person, id: c.id, kind: c.kind, title: c.title, date: c.date, ...c.extra };
   if (allIn(c.names, ts)) {
     // A claim found by its services still says which line holds the words.
-    const line = c.kind === 'claim' ? c.fields.find((x) => x.label === 'Line' && ts.some((t) => x.folded.includes(t))) : undefined;
-    return line ? { ...base, where: 'title', field: 'Line', snippet: line.value } : { ...base, where: 'title' };
+    const line = c.fields.find((x) => x.line && ts.some((t) => x.folded.includes(t)));
+    return line ? { ...base, where: 'title', line: line.value } : { ...base, where: 'title' };
   }
   if (allIn(c.all, ts)) {
     // Every term is in the name or in one field (none spans two), so some field holds one the name lacks.
     const missing = ts.filter((t) => !c.names.includes(t));
     const f = c.fields.find((x) => missing.some((t) => x.folded.includes(t)));
     const t = f && missing.find((x) => f.folded.includes(x));
+    if (f?.line) return { ...base, where: 'field', line: f.value };
     if (f && t) return { ...base, where: 'field', field: f.label, snippet: f.value.length > 160 ? snippet(f.value, t, 60, f.folded) : f.value };
   }
   if (c.kind !== 'document') return undefined;
@@ -381,7 +376,10 @@ function tokens(q: string): Token[] {
   return out;
 }
 
-const PHRASES = CONCEPTS.flatMap((c) => c.phrases.map((p) => ({ concept: c, words: p.split(' ') }))).sort((a, b) => b.words.length - a.words.length);
+const PHRASES = CONCEPTS.flatMap((c) => c.phrases.map((p) => ({ concept: c as Concept, words: p.split(' ') }))).sort((a, b) => b.words.length - a.words.length);
+
+/** A query's word against a phrase's: the same, or with -s or -es after it. */
+const sameWord = (token: string, word: string) => token === word || token === `${word}s` || token === `${word}es`;
 
 /**
  * The concept a query names, outside quotes, and the words left to find
@@ -393,7 +391,7 @@ export function conceptOf(q: string): { concept: Concept; rest: string[] } | und
   for (let i = 0; i < ts.length; i += 1) {
     for (const p of PHRASES) {
       const span = ts.slice(i, i + p.words.length);
-      if (span.length !== p.words.length || span.some((t, k) => t.quoted || t.text !== p.words[k])) continue;
+      if (span.length !== p.words.length || span.some((t, k) => t.quoted || !sameWord(t.text, p.words[k]!))) continue;
       const rest = [...ts.slice(0, i), ...ts.slice(i + p.words.length)].filter((t) => t.quoted || !FRAME.has(t.text)).map((t) => t.text);
       return { concept: p.concept, rest: [...new Set(rest)].slice(0, MAX_TERMS) };
     }
@@ -403,20 +401,29 @@ export function conceptOf(q: string): { concept: Concept; rest: string[] } | und
 
 export interface Found {
   hits: Hit[];
-  /** The concept the query named, when the search was within it. */
-  concept?: Concept;
+  /** The concept the query names, whether or not the search was within it. */
+  named?: Concept;
+  /**
+   * How the search was made: within the concept; every word, because that
+   * was asked for or no concept was named; or every word because nothing of
+   * the concept had the other words ("Example Lab").
+   */
+  how: 'concept' | 'words' | 'fallback';
+  /** The other words, beside a concept. */
+  rest: string[];
   /** The words searched, to mark in the results. */
   terms: string[];
 }
 
 /**
  * The search a person means. A query that names a concept finds that kind,
- * newest first, narrowed by its other words; anything else, or `words`,
- * finds every word as written.
+ * newest first, narrowed by its other words. Anything else, `words`, or a
+ * concept with nothing that has the other words, finds every word as written.
  */
 export function find(people: Searchable[], query: string, opts: { words?: boolean } = {}): Found {
-  const named = opts.words ? undefined : conceptOf(query);
-  if (!named) return { hits: searchAll(people, query), terms: terms(query) };
+  const named = conceptOf(query);
+  const asWords = (how: Found['how']): Found => ({ hits: searchAll(people, query), named: named?.concept, how, rest: named?.rest ?? [], terms: terms(query) });
+  if (!named || opts.words) return asWords('words');
   const { concept, rest } = named;
   const hits: Hit[] = [];
   for (const p of people) {
@@ -426,8 +433,9 @@ export function find(people: Searchable[], query: string, opts: { words?: boolea
       if (hit) hits.push(hit);
     }
   }
+  if (hits.length === 0 && rest.length) return asWords('fallback');
   hits.sort((a, b) => RANK[a.where] - RANK[b.where] || (b.date ?? '').localeCompare(a.date ?? '') || a.title.localeCompare(b.title));
-  return { hits, concept, terms: rest };
+  return { hits, named: concept, how: 'concept', rest, terms: rest };
 }
 
 /** One person's hits. */

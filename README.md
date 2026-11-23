@@ -105,18 +105,23 @@ come first, then field matches, then matches only in a document's text,
 newest first in each, with the words marked and filters by kind and person.
 
 A few everyday words name a kind of thing instead. The other words in the
-query are searched within that kind:
+query are searched within that kind. Each word below also matches its
+plural. `CONCEPTS` in `src/model/search.ts` is the table:
 
 | Words | Finds |
 |---|---|
-| blood test(s), bloodwork, labs, lab results | lab results (not vital signs) and lab reports |
-| shots, vaccines, immunizations | vaccines and immunization records |
-| bills, costs, claims, statements | claims, statements, receipts and explanations of benefits |
-| visits, appointments | visits and visit summaries |
-| meds, medications, medicines | medicines and prescriptions |
+| blood test, bloodwork, blood work, lab, lab result, lab test, lab work, test result | lab results (not vital signs or other categories) and lab reports |
+| shot, vaccine, vaccination, immunization | vaccines and immunization records |
+| bill, cost, claim, charge, statement, EOB | claims, statements, receipts and explanations of benefits |
+| visit, appointment | visits and visit summaries |
+| med, medication, medicine, prescription | medicines and prescriptions |
 
-"Flu shot" finds flu vaccines. A query in quotes is always words, and the
-page offers to search the words as written instead.
+- "Flu shot" finds flu vaccines.
+- When nothing of the kind has the other words, the search is every word as
+  written: "lab statement" finds the lab's statement.
+- A phrase in quotes is always words.
+- The page offers to search the words as written instead. The address
+  keeps that choice as `&words=1`.
 
 Results come in groups by kind:
 - health records first, then imaging and documents, then coverage and

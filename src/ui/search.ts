@@ -2,7 +2,8 @@
 // (#/p/<id>/search). Everything is searched here in the browser: the
 // records, documents and imaging in each person's index, and the text medrec
 // extracted from documents (text.json), read from Drive on the first search.
-// Only the words are part of the address (?q=); the filters are not.
+// The words (?q=) and whether to search them as written (&words=1) are part
+// of the address; the filters are not.
 //
 // Results come in groups by kind, health records first, then imaging and
 // documents, then coverage and claims. A test found several times is one
@@ -100,7 +101,8 @@ export function marked(s: string, ts: string[]): Child[] {
 
 function where(hit: Hit): string | null {
   // A claim's matching line shows as itself, under the row.
-  if (hit.where === 'field') return hit.field === 'Line' ? null : `in ${hit.field?.toLowerCase() ?? 'a field'}`;
+  if (hit.line) return null;
+  if (hit.where === 'field') return `in ${hit.field?.toLowerCase() ?? 'a field'}`;
   if (hit.where === 'text') return 'in the document text';
   return null;
 }
@@ -120,8 +122,10 @@ function metaOf(e: Entry, person: string | null): string {
 export interface SearchOptions {
   people: Person[];
   query?: string;
+  /** Search the words as written, not the concept a word names. */
+  words?: true;
   /** The page's address for a query, kept current while typing. */
-  route: (query: string | undefined) => Route;
+  route: (query: string | undefined, words: boolean) => Route;
   title: string;
   intro: string;
 }
@@ -160,9 +164,10 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
   };
 
   /** Whether to search the words as written rather than the concept they name; a new query starts over. */
-  let words = false;
-  let lastQuery = '';
-  const notice = h('div');
+  let words = opts.words === true;
+  let lastQuery = opts.query?.trim() ?? '';
+  // Says how the words were read; announced when it changes.
+  const notice = h('div', { 'aria-live': 'polite' });
 
   const draw = (hits: Hit[], ts: string[], untexted: string[], keep?: 'who' | 'kind') => {
     const whos = [...new Set(hits.map((x) => x.person))];
@@ -226,7 +231,11 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
             route,
             title: marked(hit.title, ts),
             meta: metaOf(line.entry, many ? (names.get(hit.person) ?? null) : null),
-            extra: hit.snippet ? h('p', { class: 'snippet' }, hit.field ? [h('span', { class: 'muted' }, `${hit.field}: `), ...marked(hit.snippet, ts)] : marked(hit.snippet, ts)) : null,
+            extra: hit.line
+              ? h('p', { class: 'snippet' }, h('span', { class: 'muted' }, 'Line: '), ...marked(hit.line, ts))
+              : hit.snippet
+                ? h('p', { class: 'snippet' }, hit.field ? [h('span', { class: 'muted' }, `${hit.field}: `), ...marked(hit.snippet, ts)] : marked(hit.snippet, ts))
+                : null,
           }),
         );
       }
@@ -243,9 +252,8 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
       words = false;
       lastQuery = q;
     }
-    history.replaceState(null, '', href(opts.route(q || undefined)));
-    const named = conceptOf(q);
-    if (!named && terms(q).length === 0) {
+    history.replaceState(null, '', href(opts.route(q || undefined, words)));
+    if (!conceptOf(q) && terms(q).length === 0) {
       results.replaceChildren();
       whoRow.replaceChildren();
       kindRow.replaceChildren();
@@ -261,24 +269,24 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
     });
     const untexted = scope.filter((x) => !x.text).map((x) => names.get(x.person) ?? x.person);
     const found = find(scope, q, { words });
-    const switchTo = (w: boolean) => () => {
+    const switchTo = (w: boolean) => async () => {
       words = w;
       kind = 'all';
-      void search();
+      await search();
+      // The button pressed was replaced: keep the keyboard on its successor.
+      notice.querySelector<HTMLButtonElement>('.link-button')?.focus();
     };
-    notice.replaceChildren(
-      ...(named
-        ? [
-            h(
-              'p',
-              { class: 'search-concept' },
-              found.concept
-                ? [`Showing ${found.concept.label.toLowerCase()}${found.terms.length ? ` with “${found.terms.join(' ')}”` : ''}. `, h('button', { type: 'button', class: 'link-button', on: { click: switchTo(true) } }, 'Search for the words instead')]
-                : ['Showing every match for the words. ', h('button', { type: 'button', class: 'link-button', on: { click: switchTo(false) } }, `Show ${named.concept.label.toLowerCase()} instead`)],
-            ),
-          ]
-        : []),
-    );
+    const toggle = (label: string, w: boolean) => h('button', { type: 'button', class: 'link-button', on: { click: () => void switchTo(w)() } }, label);
+    const label = found.named?.label.toLowerCase();
+    const said: Child[] | null =
+      found.how === 'concept'
+        ? [`Showing ${label}${found.rest.length ? ` with “${found.rest.join(' ')}”` : ''}. `, toggle('Search for the words instead', true)]
+        : found.how === 'fallback'
+          ? [`No ${label} with “${found.rest.join(' ')}”, so this is every match for the words.`]
+          : found.named
+            ? ['Showing every match for the words. ', toggle(`Show ${label} instead`, false)]
+            : null;
+    notice.replaceChildren(...(said ? [h('p', { class: 'search-concept' }, said)] : []));
     draw(found.hits, found.terms, many ? untexted : untexted.length ? ['this person'] : []);
   };
 
@@ -292,7 +300,7 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
 }
 
 /** #/search: one search over everyone in the folder. */
-export function searchView(ctx: Ctx, query: string | undefined): HTMLElement {
+export function searchView(ctx: Ctx, query: string | undefined, words?: true): HTMLElement {
   const people = ctx.store.household.people;
   return h(
     'div',
@@ -301,7 +309,8 @@ export function searchView(ctx: Ctx, query: string | undefined): HTMLElement {
       ? searchPanel(ctx, {
           people,
           query,
-          route: (q) => ({ name: 'search', ...(q ? { query: q } : {}) }),
+          words,
+          route: (q, w) => ({ name: 'search', ...(q ? { query: q } : {}), ...(q && w ? { words: true as const } : {}) }),
           title: 'Search',
           intro: `Searches ${people.length === 1 ? 'the' : 'everyone’s'} records, documents and imaging, and the text medrec extracted from documents. The search runs here in the browser; nothing is sent anywhere.`,
         })
