@@ -1675,7 +1675,11 @@
               }
             ]
           }
-        ]
+        ],
+        "benefit_period": {
+          "start": "2025-07-01",
+          "end": "2026-06-30"
+        }
       },
       "documents": [],
       "provenance": [
@@ -1961,7 +1965,11 @@
               }
             ]
           }
-        ]
+        ],
+        "benefit_period": {
+          "start": "2026-07-01",
+          "end": "2027-06-30"
+        }
       },
       "documents": [],
       "provenance": [

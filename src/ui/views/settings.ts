@@ -6,7 +6,7 @@ import { button, card, kv, type Ctx } from '../components';
 import { h } from '../dom';
 import { dateTime } from '../format';
 import { PRIVACY_URL, REGISTRATION_URL, REPO_URL } from './setup';
-import { getTheme, setTheme, type Theme } from '../../settings';
+import { getPlanStart, getTheme, setPlanStart, setTheme, type Theme } from '../../settings';
 import { applyTheme } from '../../theme';
 
 export function settingsView(
@@ -43,11 +43,12 @@ export function settingsView(
         ),
     ctx.demo || !opts.setupLink ? null : setupLinkCard(ctx, opts.setupLink),
     themeCard(),
+    planYearCard(ctx),
     card(
       { title: 'What this app keeps and sends' },
       h('ul', { class: 'plain' },
         h('li', null, 'Your records stay in your Drive and in this page’s memory. Closing the page forgets them.'),
-        h('li', null, 'Browser storage holds only your Google client id, which folder to open, the email of the Google account that signed in (so the next sign-in needs no account chooser), and the theme you chose.'),
+        h('li', null, 'Browser storage holds only your Google client id, which folder to open, the email of the Google account that signed in (so the next sign-in needs no account chooser), the theme you chose, and the month your plan year starts, if you set it.'),
         h('li', null, 'The Google sign-in lives in memory and ends within an hour.'),
         h('li', null, 'The page talks only to Google: the sign-in and the Drive API. It loads no other scripts, fonts or trackers.'),
         h('li', null, 'The only files it writes are refresh requests in the folder’s _requests/ folder.'),
@@ -88,6 +89,43 @@ function themeCard(): HTMLElement {
       THEMES.map(([value, label]) => h('label', { class: 'choice' }, h('input', { type: 'radio', name: 'theme', value, checked: value === current, on: { change: pick } }), h('span', null, label))),
     ),
     h('p', { class: 'muted small' }, 'System follows this device’s light or dark setting.'),
+  );
+}
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+/**
+ * The month the household's plan year starts, for Costs, when the plan's own
+ * claims do not say. Not the day coverage started: that moves when coverage
+ * changes mid-year.
+ */
+function planYearCard(ctx: Ctx): HTMLElement {
+  const current = getPlanStart();
+  const select = h(
+    'select',
+    {
+      class: 'input',
+      id: 'plan-year-start',
+      on: {
+        change: (ev: Event) => {
+          const v = (ev.currentTarget as HTMLSelectElement).value;
+          setPlanStart(v || null);
+          ctx.toast(v ? `Plan year set to start ${MONTHS[Number(v.slice(0, 2)) - 1]} 1` : 'Plan year set to the calendar year');
+        },
+      },
+    },
+    h('option', { value: '', selected: !current }, 'Not set: the calendar year'),
+    MONTHS.map((m, i) => {
+      const v = `${String(i + 1).padStart(2, '0')}-01`;
+      return h('option', { value: v, selected: current === v }, `${m} 1`);
+    }),
+  );
+  return card(
+    { title: 'Plan year' },
+    h('p', null, 'Costs counts deductibles and out-of-pocket limits by plan year. When a plan’s claims give its year, Costs uses that. Otherwise it uses the month set here, or the calendar year.'),
+    h('label', { class: 'label', for: 'plan-year-start' }, 'Plan year starts'),
+    select,
+    h('p', { class: 'muted small' }, 'Your plan’s documents or benefits site say when its year starts. It is often January 1, or the month an employer’s benefits renew.'),
   );
 }
 

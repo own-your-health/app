@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { balances, breakdown, codeLines, comparableCodes, costLines, csvText, householdLines, inPeriod, monthsSpanned, periods, planYearOf, toCsv, totals, type CostLine } from '../src/model/costs';
+import { parseIndex } from '../src/model/parse';
 import type { MedRecord, PersonIndex } from '../src/model/types';
 import { demo, personNamed } from './demo-data';
+import { fixture } from './helpers';
 
 const { household, indexes } = demo();
 const names = new Map(household.people.map((p) => [p.id, p.name]));
@@ -20,12 +22,43 @@ describe('plan years', () => {
     expect(planYearOf('03-01', '2028-02-29')).toEqual({ anniversary: '03-01', start: '2027-03-01', end: '2028-02-29' });
   });
 
-  it('start when the coverage with that plan does; a plan with none takes the only coverage there is', () => {
-    const year = (name: string, date: string) => all.find((l) => l.person === id(name) && l.date === date)!.planYear.start;
-    // Sam's employer plan starts in July, so May and July fall in different plan years.
-    expect([year('Sam Example', '2026-05-20'), year('Sam Example', '2026-07-09')]).toEqual(['2025-07-01', '2026-07-01']);
-    // Robin's pharmacy benefit has no coverage record of its own.
-    expect(year('Robin Example', '2026-08-14')).toBe('2026-01-01');
+  it('start when the plan’s claims say; a plan whose claims do not, on January 1', () => {
+    const year = (name: string, date: string) => all.find((l) => l.person === id(name) && l.date === date)!;
+    // Sam's plan prints a July-to-June benefit period, so May and July fall in different plan years.
+    expect([year('Sam Example', '2026-05-20'), year('Sam Example', '2026-07-09')].map((l) => [l.planYear.start, l.planBasis])).toEqual([
+      ['2025-07-01', 'claims'],
+      ['2026-07-01', 'claims'],
+    ]);
+    // Robin's plans print none.
+    expect([year('Robin Example', '2026-08-14'), year('Robin Example', '2026-10-01')].map((l) => [l.planYear.start, l.planBasis])).toEqual([
+      ['2026-01-01', 'calendar'],
+      ['2026-01-01', 'calendar'],
+    ]);
+  });
+
+  // A coverage that took effect mid-year (a birth, a new job), claims under
+  // the same plan by another spelling, a plan that prints its benefit period
+  // on one claim only, and one whose "benefit period" is a single day.
+  const planYears = parseIndex(fixture('folder/index-plan-years.json'), 'p_aaaaaaaaaaaaaaaaaaaa');
+  const yearsOf = (opts?: { planStart?: string }) =>
+    Object.fromEntries(costLines('p_x', planYears, opts).map((l) => [`${l.insurer} ${l.date}`, `${l.planYear.start} to ${l.planYear.end}, ${l.planBasis}`]));
+
+  it('never start on the day a coverage took effect', () => {
+    expect(yearsOf()).toEqual({
+      'United Healthcare 2026-03-10': '2026-01-01 to 2026-12-31, calendar',
+      'United Healthcare 2026-11-20': '2026-01-01 to 2026-12-31, calendar',
+      'Example Care Plan 2026-05-01': '2025-07-01 to 2026-06-30, claims',
+      'Example Care Plan 2026-08-01': '2026-07-01 to 2027-06-30, claims',
+      'Example Dental 2026-09-15': '2026-01-01 to 2026-12-31, calendar',
+    });
+  });
+
+  it('take the start set in Settings for a plan whose claims do not say, and only for that', () => {
+    expect(yearsOf({ planStart: '04-01' })).toMatchObject({
+      'United Healthcare 2026-03-10': '2025-04-01 to 2026-03-31, setting',
+      'United Healthcare 2026-11-20': '2026-04-01 to 2027-03-31, setting',
+      'Example Care Plan 2026-08-01': '2026-07-01 to 2027-06-30, claims',
+    });
   });
 });
 

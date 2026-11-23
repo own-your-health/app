@@ -877,7 +877,13 @@ const cents = (x) => Math.round(Number(x) * 100);
 const dollars = (c) => usd((c / 100).toFixed(2));
 // A line: [code, what was done, billed, allowed, deductible, copay, coinsurance, plan paid].
 // Allowed is what the plan paid plus your share (deductible, copay, coinsurance).
-function claimOf(P, s, { date, provider, insurer, type = 'Professional', system = CPT, lines, balances }) {
+// The plan year a July plan's claim prints as its benefit period (FHIR ExplanationOfBenefit.benefitPeriod).
+function julyYear(date) {
+  const y = Number(date.slice(0, 4)) - (date.slice(5) < '07-01' ? 1 : 0);
+  return { start: `${y}-07-01`, end: `${y + 1}-06-30` };
+}
+
+function claimOf(P, s, { date, provider, insurer, type = 'Professional', system = CPT, lines, balances, benefitPeriod }) {
   for (const l of lines) if (cents(l[3]) !== cents(l[4]) + cents(l[5]) + cents(l[6]) + cents(l[7])) throw new Error(`allowed is not paid plus share: ${l}`);
   const share = (l) => cents(l[4]) + cents(l[5]) + cents(l[6]);
   const amounts = (l) => [
@@ -914,12 +920,14 @@ function claimOf(P, s, { date, provider, insurer, type = 'Professional', system 
         adjudication: amounts(l).map(([category, amount]) => ({ category, amount, reason: null })),
       })),
       ...(balances ? { benefit_balance: balances } : {}),
+      ...(benefitPeriod ? { benefit_period: benefitPeriod } : {}),
     },
     resource: {
       status: 'active',
       type: { coding: [{ code: type.toLowerCase() }] },
       use: 'claim',
       billablePeriod: { start: date, end: date },
+      ...(benefitPeriod ? { benefitPeriod } : {}),
       outcome: 'complete',
       item: lines.map(([code, display, b], i) => ({ sequence: i + 1, productOrService: { coding: [{ system, code, display }] }, servicedDate: date, net: { value: Number(b), currency: 'USD' } })),
     },
@@ -950,16 +958,16 @@ const coverage = (P, s, display, relationship) =>
 // Sam: a sports-medicine visit with an X-ray late in one plan year; then, in
 // the next, lab work that went to the deductible.
 coverage(S, src.samPlan, 'Example Care Plan HMO', 'self');
-claimOf(S, src.samPlan, { date: '2026-05-20', provider: 'Example Health', insurer: 'Example Care Plan', lines: [['99214', 'Office visit', '260.00', '168.00', '0.00', '40.00', '0.00', '128.00'], ['73610', 'X-ray of the ankle', '145.00', '82.00', '0.00', '0.00', '16.40', '65.60']] });
-claimOf(S, src.samPlan, { date: '2026-07-09', provider: 'Example Lab', insurer: 'Example Care Plan', lines: [['84443', 'Thyroid test (TSH)', '95.00', '41.20', '41.20', '0.00', '0.00', '0.00'], ['36415', 'Blood draw', '25.00', '9.50', '9.50', '0.00', '0.00', '0.00']] });
-claimOf(S, src.samPlan, { date: '2026-10-12', provider: 'Example Lab', insurer: 'Example Care Plan', lines: [['85025', 'Blood count', '98.00', '31.40', '31.40', '0.00', '0.00', '0.00'], ['82306', 'Vitamin D test', '150.00', '38.90', '38.90', '0.00', '0.00', '0.00']], balances: careBalance('121.00', '121.00') });
+claimOf(S, src.samPlan, { date: '2026-05-20', provider: 'Example Health', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-05-20'), lines: [['99214', 'Office visit', '260.00', '168.00', '0.00', '40.00', '0.00', '128.00'], ['73610', 'X-ray of the ankle', '145.00', '82.00', '0.00', '0.00', '16.40', '65.60']] });
+claimOf(S, src.samPlan, { date: '2026-07-09', provider: 'Example Lab', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-07-09'), lines: [['84443', 'Thyroid test (TSH)', '95.00', '41.20', '41.20', '0.00', '0.00', '0.00'], ['36415', 'Blood draw', '25.00', '9.50', '9.50', '0.00', '0.00', '0.00']] });
+claimOf(S, src.samPlan, { date: '2026-10-12', provider: 'Example Lab', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-10-12'), lines: [['85025', 'Blood count', '98.00', '31.40', '31.40', '0.00', '0.00', '0.00'], ['82306', 'Vitamin D test', '150.00', '38.90', '38.90', '0.00', '0.00', '0.00']], balances: careBalance('121.00', '121.00') });
 S.importRun(src.samPlan, { importedAt: PLANS_LOAD, added: 4, updated: 0, unchanged: 0, cliVersion: '0.4.0' });
 S.write();
 
 // Alex, on Sam's plan: a flu shot, and a sick visit at the pediatric practice.
 coverage(A, src.alexPlan, 'Example Care Plan HMO (dependent)', 'child');
-claimOf(A, src.alexPlan, { date: '2025-10-20', provider: 'Example Pediatrics', insurer: 'Example Care Plan', lines: [['90686', 'Flu vaccine', '55.00', '32.00', '0.00', '0.00', '0.00', '32.00'], ['90471', 'Vaccine given', '28.00', '18.00', '0.00', '0.00', '0.00', '18.00']] });
-claimOf(A, src.alexPlan, { date: '2026-11-20', provider: 'Example Pediatrics', insurer: 'Example Care Plan', lines: [['99213', 'Office visit', '165.00', '98.00', '0.00', '25.00', '0.00', '73.00'], ['87880', 'Strep test', '48.00', '21.30', '0.00', '0.00', '0.00', '21.30']], balances: careBalance('0.00', '25.00') });
+claimOf(A, src.alexPlan, { date: '2025-10-20', provider: 'Example Pediatrics', insurer: 'Example Care Plan', benefitPeriod: julyYear('2025-10-20'), lines: [['90686', 'Flu vaccine', '55.00', '32.00', '0.00', '0.00', '0.00', '32.00'], ['90471', 'Vaccine given', '28.00', '18.00', '0.00', '0.00', '0.00', '18.00']] });
+claimOf(A, src.alexPlan, { date: '2026-11-20', provider: 'Example Pediatrics', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-11-20'), lines: [['99213', 'Office visit', '165.00', '98.00', '0.00', '25.00', '0.00', '73.00'], ['87880', 'Strep test', '48.00', '21.30', '0.00', '0.00', '0.00', '21.30']], balances: careBalance('0.00', '25.00') });
 A.importRun(src.alexPlan, { importedAt: PLANS_LOAD, added: 3, updated: 0, unchanged: 0, cliVersion: '0.4.0' });
 A.write();
 
