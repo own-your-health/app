@@ -393,11 +393,43 @@ test('one search over everyone, from the home screen, with filters by kind and p
   const results = page.locator('main .row');
   await expect(results.first()).toContainText('Robin Example');
   await expect(results.first().locator('mark').first()).toHaveText(/lisinopril/i);
-  const kinds = page.locator('.search-filters .chips').last();
-  await expect(kinds.getByRole('button', { name: /^All \d+$/ })).toHaveAttribute('aria-pressed', 'true');
-  await kinds.getByRole('button', { name: /^Documents \d+$/ }).click();
+  const kinds = page.getByRole('group', { name: 'Filter by kind' });
+  await expect(kinds.getByRole('button', { name: 'All 4' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('main [aria-live]')).toHaveText('4 matches.');
+  // By keyboard: the chip pressed keeps focus, and the status counts what is shown.
+  await kinds.getByRole('button', { name: 'Documents 1' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(kinds.getByRole('button', { name: 'Documents 1' })).toBeFocused();
+  await expect(kinds.getByRole('button', { name: 'Documents 1' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('main [aria-live]')).toHaveText('1 of 4 matches.');
   await expect(results).toHaveText([/After visit summary.*Robin Example.*in the document text.*continuing lisinopril/]);
   await expect(results.locator('.snippet mark')).toHaveText(['lisinopril']);
+});
+
+test('a kind the chosen person has none of falls back to All', async ({ page }) => {
+  await page.goto('./?demo#/search?q=example');
+  const kinds = page.getByRole('group', { name: 'Filter by kind' });
+  await kinds.getByRole('button', { name: /^Claims \d+$/ }).click();
+  await page.getByRole('group', { name: 'Filter by person' }).getByRole('button', { name: 'Jamie Example' }).click();
+  await expect(kinds.getByRole('button', { name: /^All \d+$/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(kinds.getByRole('button', { name: /^Claims/ })).toHaveCount(0);
+  await expect(page.locator('main .row').first()).toContainText('Jamie Example');
+});
+
+test('a refresh answer does not wipe what is being typed on the home screen', async ({ page }) => {
+  await page.goto('./?demo');
+  await page.getByRole('button', { name: 'Refresh everything' }).click();
+  await expect(page.getByText(/waiting for the Mac/).first()).toBeVisible();
+  const field = page.getByRole('searchbox', { name: 'Search everyone’s records' });
+  await field.fill('lisi');
+  // The sample Mac takes the request after 3 seconds; the page polls every 1.5.
+  await page.waitForTimeout(5000);
+  await expect(field).toHaveValue('lisi');
+  await expect(field).toBeFocused();
+  // Once the field is left empty, the page draws the Mac's answer again.
+  await field.fill('');
+  await field.blur();
+  await expect(page.getByText(/Last refresh request just now: needed a person/)).toBeVisible({ timeout: 15_000 });
 });
 
 test('search finds a field, says which, and narrows to one person', async ({ page }) => {
@@ -410,7 +442,7 @@ test('search finds a field, says which, and narrows to one person', async ({ pag
   await expect(page).toHaveURL(/#\/search\?q=ear\+pain$/);
 
   await box.fill('weight');
-  const people = page.locator('.search-filters .chips').first();
+  const people = page.getByRole('group', { name: 'Filter by person' });
   await expect(people.getByRole('button', { name: 'Everyone' })).toHaveAttribute('aria-pressed', 'true');
   await people.getByRole('button', { name: 'Jamie Example' }).click();
   await expect(results.first()).toBeVisible();

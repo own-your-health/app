@@ -63,6 +63,17 @@ describe('search', () => {
     );
   });
 
+  it('never matches a phrase across two fields', () => {
+    // The sick visit's clinician (Dr. Morgan Placeholder) is followed by its place (Example Pediatrics).
+    const alex = indexes.get(personNamed(household, 'Alex Example').id)!;
+    expect(search(alex, null, '"placeholder example"')).toEqual([]);
+    expect(brief(search(alex, null, 'placeholder "example pediatrics" ear')).map((x) => x[0])).toContain('Sick visit');
+  });
+
+  it('gives the same hits when the same index is searched again', () => {
+    expect(search(index, text, 'ldl')).toEqual(search(index, text, 'ldl'));
+  });
+
   it('puts title matches first, then fields, then document text, newest first in each', () => {
     const hits = search(index, text, 'lisinopril');
     const ranks = hits.map((x) => ({ title: 0, field: 1, text: 2 })[x.where]);

@@ -54,8 +54,20 @@ function fold(s: string): Folded {
   return { text, at };
 }
 
+/** Lower case without accents, for matching. Whole strings at once: the per-character map is only for showing a match. */
 export function normalize(s: string): string {
-  return fold(s).text;
+  return s.normalize('NFKD').replace(MARKS, '').toLowerCase();
+}
+
+/** Where a folded term starts and ends in `text`, in its own characters; `folded` is normalize(text) when known. */
+function locate(text: string, term: string, folded = normalize(text)): [number, number] | undefined {
+  const i = folded.indexOf(term);
+  if (i < 0) return undefined;
+  // Folding usually keeps every character one character; then positions carry over as they are.
+  if (folded.length === text.length) return [i, i + term.length];
+  const f = fold(text);
+  const j = f.text.indexOf(term);
+  return j < 0 ? undefined : [f.at[j]!, f.at[j + term.length]!];
 }
 
 /** Words, and "quoted phrases" kept whole, folded. */
@@ -88,12 +100,10 @@ export function matchRanges(s: string, ts: string[]): [number, number][] {
 }
 
 /** About `around` characters each side of the first place a term appears, with cut ends marked. */
-export function snippet(text: string, term: string, around = 60): string {
-  const f = fold(text);
-  const i = f.text.indexOf(normalize(term));
-  if (i < 0) return '';
-  const from = f.at[i]!;
-  const to = f.at[i + normalize(term).length]!;
+export function snippet(text: string, term: string, around = 60, folded?: string): string {
+  const at = locate(text, normalize(term), folded);
+  if (!at) return '';
+  const [from, to] = at;
   const start = Math.max(0, from - around);
   const end = Math.min(text.length, to + around);
   const piece = text.slice(start, end).replace(/\s+/g, ' ').trim();
@@ -135,13 +145,27 @@ interface Candidate {
   kind: string;
   title: string;
   date?: string;
-  /** What the title tier searches: the name and what kind of thing it is. */
-  names: string[];
-  fields: [string, string][];
-  body?: string;
+  /** What the title tier searches, folded: the name and what kind of thing it is. */
+  names: string;
+  fields: { label: string; value: string; folded: string }[];
+  /** names and every field, folded. */
+  all: string;
 }
 
 const allIn = (hay: string, ts: string[]) => ts.every((t) => hay.includes(t));
+
+// Parts are joined with a newline, which no term holds (terms collapse
+// whitespace to single spaces), so a phrase never matches across two fields.
+const JOIN = '\n';
+
+function candidate(id: string, kind: string, title: string, date: string | undefined, names: string[], fields: [string, string][]): Candidate {
+  const f = fields.filter(([, v]) => v.trim() !== '').map(([label, value]) => ({ label, value, folded: normalize(value) }));
+  const n = normalize(names.filter(Boolean).join(JOIN));
+  return { id, kind, title, date, names: n, fields: f, all: [n, ...f.map((x) => x.folded)].join(JOIN) };
+}
+
+/** Each index's candidates, folded once: typing searches them again without folding. */
+const prepared = new WeakMap<PersonIndex, Candidate[]>();
 
 /** Folded document texts, kept per loaded text.json so typing does not fold them again. */
 const foldedTexts = new WeakMap<PersonText, Map<string, string>>();
@@ -160,19 +184,20 @@ function foldedBody(text: PersonText | null, id: string): string | undefined {
   return f;
 }
 
-function candidates(s: Searchable): Candidate[] {
-  const { index } = s;
+function candidates(index: PersonIndex): Candidate[] {
+  const cached = prepared.get(index);
+  if (cached) return cached;
   const out: Candidate[] = [];
   for (const r of index.records) {
     const title = r.display || r.code?.display || KIND_LABELS[r.kind] || r.kind;
-    out.push({ id: r.id, kind: r.kind, title, date: r.date, names: [title, r.code?.display ?? '', r.code?.code ?? '', KIND_LABELS[r.kind] ?? r.kind, statusText(r.status) ?? ''], fields: fieldsOf(r.fields) });
+    out.push(candidate(r.id, r.kind, title, r.date, [title, r.code?.display ?? '', r.code?.code ?? '', KIND_LABELS[r.kind] ?? r.kind, statusText(r.status) ?? ''], fieldsOf(r.fields)));
   }
   for (const d of index.documents) {
     const fields: [string, string][] = [
       ['Statement', d.statement ? [d.statement.account ? `account ${d.statement.account}` : '', d.statement.amount_due ? `amount due ${formatMoney(d.statement.amount_due)}` : '', d.statement.due_date ? `due ${d.statement.due_date}` : ''].filter(Boolean).join(' · ') : ''],
       ['Original name', d.original_name ?? ''],
     ];
-    out.push({ id: d.id, kind: 'document', title: documentTitle(d), date: d.date, names: [documentTitle(d), docTypeLabel(d.doc_type), d.organization ?? ''], fields: fields.filter(([, v]) => v) });
+    out.push(candidate(d.id, 'document', documentTitle(d), d.date, [documentTitle(d), docTypeLabel(d.doc_type), d.organization ?? ''], fields));
   }
   for (const st of index.studies) {
     const fields: [string, string][] = [
@@ -180,28 +205,27 @@ function candidates(s: Searchable): Candidate[] {
       ['Series', st.series.map((x) => x.description).filter(Boolean).join(' · ')],
       ['Accession', st.accession ?? ''],
     ];
-    out.push({ id: st.id, kind: 'study', title: studyTitle(st), date: st.date, names: [studyTitle(st), st.body_part ?? '', st.modalities.join(' '), KIND_LABELS.study ?? 'Imaging'], fields: fields.filter(([, v]) => v) });
+    out.push(candidate(st.id, 'study', studyTitle(st), st.date, [studyTitle(st), st.body_part ?? '', st.modalities.join(' '), KIND_LABELS.study ?? 'Imaging'], fields));
   }
+  prepared.set(index, out);
   return out;
 }
 
 function match(c: Candidate, ts: string[], text: PersonText | null, person: string): Hit | undefined {
-  const names = normalize(c.names.join(' '));
   const base = { person, id: c.id, kind: c.kind, title: c.title, date: c.date };
-  if (allIn(names, ts)) return { ...base, where: 'title' };
-  const fields = c.fields.map(([label, value]) => ({ label, value, folded: normalize(value) }));
-  const withFields = `${names} ${fields.map((f) => f.folded).join(' ')}`;
-  const missing = ts.filter((t) => !names.includes(t));
-  if (allIn(withFields, ts)) {
-    const f = fields.find((x) => missing.some((t) => x.folded.includes(t)))!;
-    const t = missing.find((x) => f.folded.includes(x))!;
-    return { ...base, where: 'field', field: f.label, snippet: f.value.length > 160 ? snippet(f.value, t) : f.value };
+  if (allIn(c.names, ts)) return { ...base, where: 'title' };
+  if (allIn(c.all, ts)) {
+    // Every term is in the name or in one field (none spans two), so some field holds one the name lacks.
+    const missing = ts.filter((t) => !c.names.includes(t));
+    const f = c.fields.find((x) => missing.some((t) => x.folded.includes(t)));
+    const t = f && missing.find((x) => f.folded.includes(x));
+    if (f && t) return { ...base, where: 'field', field: f.label, snippet: f.value.length > 160 ? snippet(f.value, t, 60, f.folded) : f.value };
   }
   if (c.kind !== 'document') return undefined;
   const body = foldedBody(text, c.id);
-  if (body === undefined || !allIn(`${withFields} ${body}`, ts)) return undefined;
-  const t = ts.find((x) => !withFields.includes(x)) ?? ts[0]!;
-  return { ...base, where: 'text', snippet: snippet(text!.texts[c.id]!, t) };
+  if (body === undefined || !allIn(`${c.all}${JOIN}${body}`, ts)) return undefined;
+  const t = ts.find((x) => !c.all.includes(x)) ?? ts[0]!;
+  return { ...base, where: 'text', snippet: snippet(text!.texts[c.id]!, t, 60, body) };
 }
 
 const RANK: Record<Where, number> = { title: 0, field: 1, text: 2 };
@@ -212,7 +236,7 @@ export function searchAll(people: Searchable[], query: string): Hit[] {
   if (ts.length === 0) return [];
   const hits: Hit[] = [];
   for (const p of people) {
-    for (const c of candidates(p)) {
+    for (const c of candidates(p.index)) {
       const hit = match(c, ts, p.text, p.person);
       if (hit) hits.push(hit);
     }

@@ -297,10 +297,22 @@ export class App {
     const sig = this.stateSignature();
     if (sig !== this.signature) {
       this.signature = sig;
-      const r = parseRoute(location.hash);
-      // Re-drawing a search would drop what is being typed.
-      if (!(r.name === 'search' || (r.name === 'person' && r.section === 'search'))) this.renderKeepingScroll();
+      if (!this.holdsInput()) this.renderKeepingScroll();
     }
+  }
+
+  /**
+   * Whether drawing the page again would lose what someone is doing: a search
+   * page (its words, filters and results), or any text field on the page that
+   * has focus or has been typed in (the home screen's search field).
+   */
+  private holdsInput(): boolean {
+    const r = parseRoute(location.hash);
+    if (r.name === 'search' || (r.name === 'person' && r.section === 'search')) return true;
+    return [...this.main.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea')].some((el) => {
+      if (el instanceof HTMLInputElement && !['text', 'search', 'email', 'url'].includes(el.type)) return false;
+      return el === document.activeElement || el.value !== el.defaultValue;
+    });
   }
 
   private stateSignature(): string {

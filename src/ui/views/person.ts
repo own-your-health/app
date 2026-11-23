@@ -329,14 +329,13 @@ function everyRecord(person: Person, idx: PersonIndex): HTMLElement {
   const options: [string, string][] = [['all', 'All'], ...kinds.map((k): [string, string] => [k, KIND_LABELS[k] ?? k])];
   const list = h('div');
   let current = 'all';
-  const chipsBox = h('div');
   const draw = () => {
     const items = current === 'all' ? all : all.filter((e) => e.kind === current);
-    chipsBox.replaceChildren(filterChips(options, current, (v) => ((current = v), draw())));
     list.replaceChildren(items.length ? yearList(items, (e) => entryRow(person.id, e)) : empty('Nothing here yet.'));
   };
+  const chips = filterChips(options, current, (v) => ((current = v), draw()), 'Filter by kind');
   draw();
-  return card({ title: 'Timeline' }, timelineSwitch(person, true), all.length ? chipsBox : null, all.length ? list : empty('No records yet. They appear once medrec imports or files something for this person.'));
+  return card({ title: 'Timeline' }, timelineSwitch(person, true), all.length ? chips : null, all.length ? list : empty('No records yet. They appear once medrec imports or files something for this person.'));
 }
 
 function visitsTimeline(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
@@ -703,11 +702,9 @@ function documentsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLEleme
   const types = [...new Set(docs.map((d) => d.doc_type ?? 'other'))];
   const options: [string, string][] = [['all', 'All'], ...types.map((t): [string, string] => [t, docTypeLabel(t)])];
   let current = 'all';
-  const chipsBox = h('div');
   const list = h('div');
   const draw = () => {
     const items = current === 'all' ? docs : docs.filter((d) => (d.doc_type ?? 'other') === current);
-    chipsBox.replaceChildren(filterChips(options, current, (v) => ((current = v), draw())));
     list.replaceChildren(
       yearList(items, (d) =>
         row({
@@ -720,8 +717,9 @@ function documentsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLEleme
     );
   };
   if (!docs.length) return card({ title: 'Documents' }, empty('No documents yet.'));
+  const chips = filterChips(options, current, (v) => ((current = v), draw()), 'Filter by type');
   draw();
-  return card({ title: 'Documents' }, chipsBox, list);
+  return card({ title: 'Documents' }, chips, list);
 }
 
 function imagingSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
