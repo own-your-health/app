@@ -88,7 +88,7 @@ describe('claim lines', () => {
     const totals = claimAmounts(r);
     expect(totals.planPaid?.amount).toBe('5.00');
     expect(totals.yourShare?.amount).toBe('5.00');
-    expect(totals.parts).toEqual([{ label: 'Copay', amount: { amount: '5.00', currency: 'USD' } }]);
+    expect(totals.parts).toEqual([{ name: 'copay', label: 'Copay', amount: { amount: '5.00', currency: 'USD' } }]);
   });
 
   it('fall back to the line’s net as what was billed', () => {

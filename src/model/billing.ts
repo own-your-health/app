@@ -113,7 +113,7 @@ export interface Claim extends ClaimAmounts {
   provider?: string;
   insurer?: string;
   /** Where your share comes from, when the claim says: deductible, copay, coinsurance, not covered. */
-  parts: { label: string; amount: Money }[];
+  parts: { name: AmountName; label: string; amount: Money }[];
   /** The bill for this claim, when your share is more than nothing. */
   bill?: BillMatch;
 }
@@ -133,8 +133,8 @@ export function claimAmounts(r: MedRecord): ClaimAmounts & { parts: Claim['parts
   const named = namedAmounts(r.fields.amounts);
   const worded: Partial<Record<AmountName, Money>> = {};
   for (const t of claimTotals(r)) {
-    const { total, part } = amountNames(t.label);
-    for (const name of [total, part]) if (name && !worded[name]) worded[name] = t.amount;
+    const { total, share, other } = amountNames(t.label);
+    for (const name of [total, share, other]) if (name && !worded[name]) worded[name] = t.amount;
   }
   const amount = (name: AmountName): Money | undefined => named[name] ?? worded[name];
   const out: ClaimAmounts & { parts: Claim['parts'] } = { parts: [] };
@@ -146,7 +146,7 @@ export function claimAmounts(r: MedRecord): ClaimAmounts & { parts: Claim['parts
   out.discount = amount('discount');
   for (const part of SHARE_PARTS) {
     const m = amount(part);
-    if (m && (toCents(m) ?? 0) > 0) out.parts.push({ label: AMOUNT_LABELS[part], amount: m });
+    if (m && (toCents(m) ?? 0) > 0) out.parts.push({ name: part, label: AMOUNT_LABELS[part], amount: m });
   }
   return out;
 }

@@ -13,13 +13,13 @@
 import { claimAmounts, toCents } from './billing';
 import { CATEGORY_LABELS, categoryOf, claimCategory, claimLines, claimTitle, type Category } from './claims';
 import { providerKey, sameProvider } from './providers';
-import { asMoney, isWithdrawn, str, type AmountName } from './records';
+import { asMoney, isWithdrawn, SHARE_PARTS, str, type AmountName } from './records';
 import type { Json, MedRecord, PersonIndex } from './types';
 
 export type Amount = AmountName;
 
 /** Every amount, in the order a statement lists them. */
-export const AMOUNTS: Amount[] = ['billed', 'allowed', 'planPaid', 'deductible', 'copay', 'coinsurance', 'notCovered', 'youOwe'];
+export const AMOUNTS: Amount[] = ['billed', 'allowed', 'planPaid', ...SHARE_PARTS, 'youOwe'];
 
 export type Cents = Partial<Record<Amount, number>>;
 
@@ -120,9 +120,8 @@ function lineCents(amounts: Partial<Record<Amount, { amount: string; currency: s
     if (c !== undefined) out[k] = c;
   }
   // Your share is its parts when the payer gave only the parts.
-  if (out.youOwe === undefined && (out.deductible !== undefined || out.copay !== undefined || out.coinsurance !== undefined || out.notCovered !== undefined)) {
-    out.youOwe = (out.deductible ?? 0) + (out.copay ?? 0) + (out.coinsurance ?? 0) + (out.notCovered ?? 0);
-  }
+  const given = SHARE_PARTS.filter((k) => out[k] !== undefined);
+  if (out.youOwe === undefined && given.length) out.youOwe = given.reduce((t, k) => t + out[k]!, 0);
   return out;
 }
 
@@ -131,9 +130,8 @@ function claimCents(r: MedRecord): Cents {
   const a = claimAmounts(r);
   const parts: Cents = {};
   for (const p of a.parts) {
-    const name = (Object.entries({ deductible: 'Deductible', copay: 'Copay', coinsurance: 'Coinsurance', notCovered: 'Not covered' }) as [Amount, string][]).find(([, l]) => l === p.label)?.[0];
     const c = toCents(p.amount);
-    if (name && c !== undefined) parts[name] = (parts[name] ?? 0) + c;
+    if (c !== undefined) parts[p.name] = (parts[p.name] ?? 0) + c;
   }
   const out: Cents = { ...parts };
   for (const [k, m] of [['billed', a.billed], ['allowed', a.allowed], ['planPaid', a.planPaid], ['youOwe', a.yourShare]] as const) {

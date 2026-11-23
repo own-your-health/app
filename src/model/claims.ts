@@ -107,8 +107,8 @@ function adjudicated(list: Json | undefined): LineAmounts {
     if (!isObject(a) || typeof a.category !== 'string') continue;
     const m = asMoney(a.amount);
     if (!m) continue;
-    const { total, part } = amountNames(a.category);
-    for (const name of [total, part]) if (name && !out[name]) out[name] = m;
+    const { total, share, other } = amountNames(a.category);
+    for (const name of [total, share, other]) if (name && !out[name]) out[name] = m;
   }
   return out;
 }

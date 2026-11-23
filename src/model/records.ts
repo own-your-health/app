@@ -350,7 +350,9 @@ const AMOUNT_WORDS: [AmountName, RegExp][] = [
 /** The amounts that make up your share, in the order a claim reads them. */
 export const SHARE_PARTS: AmountName[] = ['deductible', 'copay', 'coinsurance', 'notCovered'];
 
-/** Each amount's name, in the order a claim's line lists them. */
+/** A claim line's amounts as its page lists them: billed, taken off, allowed, paid, then your share and its parts. */
+export const LINE_AMOUNT_ORDER: AmountName[] = ['billed', 'discount', 'allowed', 'planPaid', ...SHARE_PARTS, 'youOwe'];
+
 export const AMOUNT_LABELS: Record<AmountName, string> = {
   billed: 'Billed',
   discount: 'Discount',
@@ -364,14 +366,17 @@ export const AMOUNT_LABELS: Record<AmountName, string> = {
 };
 
 /**
- * What a payer's amount label names: at most one of the totals and one
- * other amount, a part of your share or a discount ("Member liability",
- * "Coinsurance").
+ * What a payer's amount label names: at most one of the totals, one part of
+ * your share, and one other amount, a discount ("Member liability",
+ * "Coinsurance", "Discount").
  */
-export function amountNames(label: string): { total?: AmountName; part?: AmountName } {
-  const total = AMOUNT_WORDS.find(([k, re]) => TOTALS.includes(k) && re.test(label))?.[0];
-  const part = AMOUNT_WORDS.find(([k, re]) => !TOTALS.includes(k) && re.test(label))?.[0];
-  return { total, part };
+export function amountNames(label: string): { total?: AmountName; share?: AmountName; other?: AmountName } {
+  const named = (keep: (k: AmountName) => boolean) => AMOUNT_WORDS.find(([k, re]) => keep(k) && re.test(label))?.[0];
+  return {
+    total: named((k) => TOTALS.includes(k)),
+    share: named((k) => SHARE_PARTS.includes(k)),
+    other: named((k) => !TOTALS.includes(k) && !SHARE_PARTS.includes(k)),
+  };
 }
 
 export function claimYourShare(r: MedRecord): string | undefined {

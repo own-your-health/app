@@ -29,9 +29,9 @@ describe('a claim’s amounts', () => {
   it('come from medrec’s names when the claim has no words for them', () => {
     const a = claimAmounts(linked);
     expect([a.billed, a.allowed, a.planPaid, a.yourShare].map(dollars)).toEqual(['230.00', '130.00', '99.00', '31.00']);
-    expect(a.parts.map((p) => [p.label, p.amount.amount])).toEqual([
-      ['Copay', '25.00'],
-      ['Coinsurance', '6.00'],
+    expect(a.parts.map((p) => [p.name, p.label, p.amount.amount])).toEqual([
+      ['copay', 'Copay', '25.00'],
+      ['coinsurance', 'Coinsurance', '6.00'],
     ]);
   });
 
@@ -115,6 +115,15 @@ describe('what a claim paid for', () => {
 
   it('is matched by day and provider without a link, or with one to a visit not in these records', () => {
     expect(visit('r_visitbbbbbbbbbbbbbbb').claims).toEqual([worded, lostLink]);
+  });
+
+  it('is matched the same way when the link is to a visit that has not happened', () => {
+    const planned: MedRecord = { ...record('r_visitbbbbbbbbbbbbbbb'), id: 'r_plannedaaaaaaaaaaaaa', date: '2026-04-01', status: 'planned' };
+    const relinked: MedRecord = { ...lostLink, fields: { ...lostLink.fields, visit: planned.id } };
+    const idx = { ...index, records: [...index.records.filter((r) => r !== lostLink), planned, relinked] };
+    const v = visitTimeline(idx, household, PERSON, TODAY).visits;
+    expect(v.map((x) => x.record.id)).not.toContain(planned.id);
+    expect(v.find((x) => x.record.id === 'r_visitbbbbbbbbbbbbbbb')!.claims).toEqual([worded, relinked]);
   });
 
   it('lists the results medrec linked and each line’s records, leaving out ids these records lack', () => {

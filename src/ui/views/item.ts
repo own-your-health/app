@@ -11,7 +11,7 @@ import { labTest } from '../../model/labtests';
 import { learnMore } from '../../model/learn';
 import { conditionList, CRITICALITY_TEXT, medicineList, statusText } from '../../model/lists';
 import { isObject } from '../../model/parse';
-import { AMOUNT_LABELS, asMoney, docTypeLabel, documentTitle, findItem, formatMoney, importFor, isDoseGiven, KIND_LABELS, originNames, resultPoint, resultReading, str, studyTitle, valueText, type AmountName } from '../../model/records';
+import { AMOUNT_LABELS, asMoney, docTypeLabel, documentTitle, findItem, formatMoney, importFor, isDoseGiven, KIND_LABELS, LINE_AMOUNT_ORDER, originNames, resultPoint, resultReading, str, studyTitle, valueText } from '../../model/records';
 import { resultContext, unitText, verdict } from '../../model/result';
 import { recordTitle } from '../../model/titles';
 import type { ImagingStudy, Json, MedDocument, MedRecord, PersonIndex, Provenance } from '../../model/types';
@@ -139,7 +139,7 @@ function linesCard(person: string, lines: ClaimLine[], lineRecords: MedRecord[][
   return card(
     { title: lines.length === 1 ? 'Line' : `${lines.length} lines` },
     lines.map((l, i) => {
-      const amounts = (Object.keys(AMOUNT_LABELS) as AmountName[]).filter((k) => l.amounts[k]).map((k) => `${AMOUNT_LABELS[k]} ${formatMoney(l.amounts[k])}`);
+      const amounts = LINE_AMOUNT_ORDER.filter((k) => l.amounts[k]).map((k) => `${AMOUNT_LABELS[k]} ${formatMoney(l.amounts[k])}`);
       const paidFor = lineRecords[i] ?? [];
       return row({
         title: l.label,

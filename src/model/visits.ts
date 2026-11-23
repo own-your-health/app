@@ -105,11 +105,13 @@ export function visitTimeline(index: PersonIndex, household: Household, person: 
     }
   }
 
-  // A claim medrec linked to a visit in this index goes there and nowhere else.
-  const encounterIds = new Set(index.records.filter((r) => r.kind === 'encounter').map((r) => r.id));
+  // A claim medrec linked to one of these visits goes there and nowhere else.
+  // A link to anything else (a withdrawn or planned visit, a record not in
+  // the index) counts as none.
+  const visitIds = new Set(visits.map((v) => v.record.id));
   const linkedVisit = (r: MedRecord) => {
     const id = claimVisitId(r);
-    return id && encounterIds.has(id) ? id : undefined;
+    return id && visitIds.has(id) ? id : undefined;
   };
   const claims = index.records.filter((r) => r.kind === 'claim' && !isWithdrawn(r));
   for (const v of visits) {
