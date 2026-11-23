@@ -130,7 +130,7 @@
       "kind": "claim",
       "key": "claim|r_claimlinkedaaaaaaaa",
       "date": "2026-03-06",
-      "display": "Office visit and strep test",
+      "display": "Office visit and Strep test · Example Physicians Group",
       "fields": {
         "when": "2026-03-06",
         "provider": "Example Physicians Group",
@@ -387,7 +387,7 @@
       "kind": "claim",
       "key": "claim|r_claimlostlinkaaaaaa",
       "date": "2026-03-11",
-      "display": "Strep test",
+      "display": "Strep test · Example Clinic",
       "fields": {
         "when": "2026-03-11",
         "provider": "Example Clinic",
@@ -444,7 +444,7 @@
       "kind": "claim",
       "key": "claim|r_claimpharmacyaaaaaa",
       "date": "2026-03-05",
-      "display": "Amoxicillin 500 mg capsule, 10 days",
+      "display": "Amoxicillin 500 mg capsule, 10 days · Example Pharmacy",
       "fields": {
         "when": "2026-03-05",
         "provider": "Example Pharmacy",
@@ -588,7 +588,7 @@
       "kind": "claim",
       "key": "claim|r_claimnolinesaaaaaaa",
       "date": "2026-01-20",
-      "display": "Professional",
+      "display": "Imaging · Example Imaging",
       "fields": {
         "when": "2026-01-20",
         "provider": "Example Imaging",

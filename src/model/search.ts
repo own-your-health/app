@@ -12,7 +12,7 @@
 // `{ words: true }` searches every word as written instead, and so does a
 // concept with nothing that has the other words ("Example Lab").
 
-import { claimAmounts } from './billing';
+import { claimAmounts, toCents } from './billing';
 import { claimDiagnoses, claimLines, diagnosisText } from './claims';
 import { panelFor } from './panels';
 import { KIND_LABELS, asMoney, docTypeLabel, documentTitle, formatMoney, resultReading, seriesKey, str, studyTitle, valueText } from './records';
@@ -268,7 +268,7 @@ function recordExtra(r: MedRecord): Candidate['extra'] {
   }
   if (r.kind === 'claim') {
     const a = claimAmounts(r);
-    const owed = a.yourShare ? (Number(a.yourShare.amount) === 0 ? 'you owe nothing' : `you owe ${formatMoney(a.yourShare)}`) : undefined;
+    const owed = a.yourShare ? (toCents(a.yourShare) === 0 ? 'you owe nothing' : `${a.shareAdded ? 'your share' : 'you owe'} ${formatMoney(a.yourShare)}`) : undefined;
     const amount = owed ?? (a.billed ? `billed ${formatMoney(a.billed)}` : undefined);
     return { claim: { provider: str(r.fields.provider), amount } };
   }

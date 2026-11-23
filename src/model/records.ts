@@ -296,15 +296,30 @@ export function asMoney(v: Json | undefined): Money | undefined {
   return undefined;
 }
 
+/**
+ * A decimal string's whole cents, rounded half away from zero ("12.345" is
+ * 1235): medrec writes a sum to four places when several entries give it.
+ * Undefined for anything but a plain decimal.
+ */
+export function decimalCents(amount: string): number | undefined {
+  const t = amount.trim();
+  if (!/^[-+]?\d+(\.\d+)?$/.test(t)) return undefined;
+  const [whole = '0', frac = ''] = t.replace(/^[-+]/, '').split('.');
+  const c = Number(whole) * 100 + Number((frac + '00').slice(0, 2)) + (Number(frac[2] ?? '0') >= 5 ? 1 : 0);
+  return t.startsWith('-') && c !== 0 ? -c : c;
+}
+
 /** "$1,234.56"; money stays a decimal string, never a float sum. */
 export function formatMoney(m: Money | undefined): string | undefined {
   if (!m) return undefined;
-  const neg = m.amount.trim().startsWith('-');
-  const [whole = '0', frac = ''] = m.amount.trim().replace(/^[-+]/, '').split('.');
-  const grouped = whole.replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  const cents = (frac + '00').slice(0, 2);
   const symbol = m.currency === 'USD' ? '$' : `${m.currency} `;
-  return `${neg ? '−' : ''}${symbol}${grouped}.${cents}`;
+  const c = decimalCents(m.amount);
+  if (c !== undefined) {
+    const a = Math.abs(c);
+    const grouped = String(Math.floor(a / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return `${c < 0 ? '−' : ''}${symbol}${grouped}.${String(a % 100).padStart(2, '0')}`;
+  }
+  return `${symbol}${m.amount.trim()}`;
 }
 
 export interface ClaimTotal {

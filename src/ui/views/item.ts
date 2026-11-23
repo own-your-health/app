@@ -136,11 +136,15 @@ function recordLinks(person: string, rs: MedRecord[]): Child[] {
 
 /** A claim's lines: what each paid for, its code, the amounts, and the records medrec linked to it. */
 function linesCard(person: string, lines: ClaimLine[], lineRecords: MedRecord[][]): HTMLElement {
+  // medrec links every lab line to all of its day's results, so lines that
+  // all link the same records say nothing the Paid for card does not.
+  const linked = lineRecords.filter((rs) => rs.length).map((rs) => rs.map((r) => r.id).join(' '));
+  const telling = linked.length < 2 || new Set(linked).size > 1;
   return card(
     { title: lines.length === 1 ? 'Line' : `${lines.length} lines` },
     lines.map((l, i) => {
       const amounts = LINE_AMOUNT_ORDER.filter((k) => l.amounts[k]).map((k) => `${AMOUNT_LABELS[k]} ${formatMoney(l.amounts[k])}`);
-      const paidFor = lineRecords[i] ?? [];
+      const paidFor = telling ? (lineRecords[i] ?? []) : [];
       return row({
         title: l.label,
         meta: [l.code, CATEGORY_LABELS[l.category].one, l.date ? dateText(l.date) : null].filter(Boolean).join(' · '),
@@ -459,7 +463,8 @@ function claimView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
       recordTitle(r),
       null,
       ['Claim', dateText(start ?? r.date), str(r.fields.provider), str(r.fields.insurer) ? `by ${str(r.fields.insurer)}` : null],
-      a.yourShare ? h('p', { class: 'result-value' }, toCents(a.yourShare) === 0 ? 'Nothing for you to pay' : `You owe ${formatMoney(a.yourShare)}`) : null,
+      // The payer's figure is what you owe; the parts added up are your share.
+      a.yourShare ? h('p', { class: 'result-value' }, toCents(a.yourShare) === 0 ? 'Nothing for you to pay' : `${a.shareAdded ? 'Your share' : 'You owe'} ${formatMoney(a.yourShare)}`) : null,
       kv([
         ['Billed', formatMoney(a.billed)],
         ['Discount', toCents(a.discount) ? formatMoney(a.discount) : undefined],

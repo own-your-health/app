@@ -102,22 +102,28 @@ describe('claim lines', () => {
   });
 });
 
+// The rows of the category table in medrec's data contract.
 describe('a line’s category', () => {
   it.each([
     ['99213', 'visit'],
     ['99396', 'visit'],
     ['80061', 'lab'],
     ['36415', 'lab'],
+    ['0001U', 'lab'],
+    ['0002M', 'lab'],
     ['71046', 'imaging'],
     ['90686', 'vaccine'],
     ['90471', 'vaccine'],
     ['93000', 'medicine'],
+    ['99509', 'medicine'],
     ['45378', 'procedure'],
     ['00810', 'anesthesia'],
     ['J1100', 'drug'],
     ['E0607', 'supply'],
-    ['G0439', 'medicine'],
-    ['0001U', 'other'],
+    ['D0120', 'dental'],
+    ['G0439', 'other'],
+    ['3074F', 'other'],
+    ['0042T', 'other'],
     [undefined, 'other'],
   ] as const)('%s is %s', (code, category) => {
     expect(categoryOf(code)).toBe(category);

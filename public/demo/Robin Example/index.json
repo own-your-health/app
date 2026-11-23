@@ -3766,7 +3766,7 @@
         "code": "pharmacy",
         "display": "Pharmacy"
       },
-      "display": "Lisinopril 10 mg tablet, 90 days",
+      "display": "Lisinopril 10 mg tablet, 90 days · Example Pharmacy",
       "status": "active",
       "fields": {
         "when": "2026-08-14",
@@ -3959,9 +3959,7 @@
                 "currency": "USD"
               }
             },
-            "records": [
-              "r_7lgfazbb7fjkz6vrv2cp"
-            ]
+            "records": []
           }
         ],
         "category": "pharmacy",
@@ -4043,7 +4041,7 @@
         "code": "pharmacy",
         "display": "Pharmacy"
       },
-      "display": "Lisinopril 10 mg tablet, 90 days",
+      "display": "Lisinopril 10 mg tablet, 90 days · Example Pharmacy",
       "status": "active",
       "fields": {
         "when": "2026-11-12",
@@ -4236,9 +4234,7 @@
                 "currency": "USD"
               }
             },
-            "records": [
-              "r_37l5dnabfwsdyfqhd5ue"
-            ]
+            "records": []
           }
         ],
         "category": "pharmacy",

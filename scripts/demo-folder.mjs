@@ -886,28 +886,16 @@ function julyYear(date) {
   return { start: `${y}-07-01`, end: `${y + 1}-06-30` };
 }
 
-// What a medrec that writes the claim fields of its data contract adds to a
-// claim: a name from its lines, each line's category and the claim's,
-// amounts under fixed names, the diagnoses, and links to the visit, the
-// results and what each line paid for, matched by day and provider. The
-// plans' and the pharmacy benefit's claims carry them; Robin's member-site
-// plan keeps the older shape, so the sample shows both.
+// What medrec 0.5.0 and later adds to a claim, by the rules of its data
+// contract (docs/data-contract.md, "index.json", claims): a name from its
+// lines and provider, each line's category and the claim's, amounts under
+// fixed names (you_owe only when the payer gives it), the diagnoses, and
+// links guessed by date and name. The plans' and the pharmacy benefit's
+// claims carry them; Robin's member-site plan keeps the earlier shape, so the
+// sample shows both.
 const LINE_CATEGORY = { 99213: 'visit', 99214: 'visit', 73610: 'imaging', 84443: 'lab', 36415: 'lab', 85025: 'lab', 82306: 'lab', 87880: 'lab', 90686: 'vaccine', 90471: 'vaccine' };
-// The results each lab line paid for, by their LOINC codes.
-const PAID_FOR = { 84443: ['3016-3'], 85025: ['718-7', '6690-2', '777-3'], 82306: ['62292-8'] };
-const lowerFirst = (s) => (/^[A-Z][a-z]+(?![\w])/.test(s) ? s[0].toLowerCase() + s.slice(1) : s);
-function nameFrom(labels) {
-  const [first, ...rest] = [...new Map(labels.map((l) => [l.toLowerCase(), l])).values()];
-  const later = rest.map(lowerFirst);
-  if (later.length === 0) return first;
-  if (later.length === 1) return `${first} and ${later[0]}`;
-  return `${first}, ${later[0]} and ${later.length - 1} more`;
-}
-function claimFields(P, { date, provider, type, lines, diagnoses }) {
-  const orgName = (r) => Object.values(src).find((s) => s.organization === r.provenance[0].source.organization_id)?.organization_name;
-  const sameDay = P.records.filter((r) => r.date?.slice(0, 10) === date);
-  const visit = sameDay.find((r) => r.kind === 'encounter' && orgName(r) === provider);
-  const results = sameDay.filter((r) => (r.kind === 'result' || r.kind === 'report') && orgName(r) === provider);
+const words = (...texts) => new Set(texts.filter(Boolean).join(' ').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 4));
+function claimFields(P, { date, provider, type, lines, diagnoses, liability }) {
   const pharmacy = type === 'Pharmacy';
   const categoryOf = (code) => {
     if (pharmacy) return 'pharmacy';
@@ -915,15 +903,17 @@ function claimFields(P, { date, provider, type, lines, diagnoses }) {
     if (!c) throw new Error(`no category for ${code}`);
     return c;
   };
-  const paidFor = (code) => {
-    const c = categoryOf(code);
-    if (c === 'visit') return visit ? [visit.id] : [];
-    if (c === 'lab') return results.filter((r) => (PAID_FOR[code] ?? []).includes(r.code?.code)).map((r) => r.id);
-    if (c === 'vaccine') return sameDay.filter((r) => r.kind === 'immunization' && orgName(r) === provider).map((r) => r.id);
-    if (c === 'pharmacy') return sameDay.filter((r) => r.kind === 'medication' && r.fields.pharmacy === provider).map((r) => r.id);
-    return [];
-  };
-  const named = (l) => ({
+  const on = (r, day) => r.date?.slice(0, 10) === day;
+  // The one encounter on a date of service, not planned, cancelled or entered
+  // in error; of several, the one sharing a word of four or more letters with
+  // the claim's provider; else none.
+  const encounters = P.records.filter((r) => r.kind === 'encounter' && on(r, date) && !['planned', 'cancelled', 'entered-in-error'].includes(r.status));
+  const named = encounters.filter((r) => [...words(r.fields.service_provider, r.fields.location, r.fields.practitioner)].some((w) => words(provider).has(w)));
+  const visit = encounters.length === 1 ? encounters[0] : named.length === 1 ? named[0] : undefined;
+  // The results and reports dated on a lab line's date of service.
+  const labResults = P.records.filter((r) => (r.kind === 'result' || r.kind === 'report') && on(r, date) && !['cancelled', 'entered-in-error'].includes(r.status)).map((r) => r.id);
+  const lineRecords = (c) => (c === 'visit' ? (visit ? [visit.id] : []) : c === 'lab' ? labResults : []);
+  const amountsOf = (l) => ({
     billed: usd(l[2]),
     ...(pharmacy ? { discount: dollars(cents(l[2]) - cents(l[3])) } : {}),
     allowed: usd(l[3]),
@@ -931,22 +921,25 @@ function claimFields(P, { date, provider, type, lines, diagnoses }) {
     deductible: usd(l[4]),
     copay: usd(l[5]),
     coinsurance: usd(l[6]),
-    you_owe: dollars(cents(l[4]) + cents(l[5]) + cents(l[6])),
+    ...(liability ? { you_owe: dollars(cents(l[4]) + cents(l[5]) + cents(l[6])) } : {}),
   });
   const kinds = [...new Set(lines.map((l) => categoryOf(l[0])))];
   const total = (i) => (lines.reduce((t, l) => t + cents(l[i]), 0) / 100).toFixed(2);
+  const services = [...new Set(lines.map((l) => l[1]))];
+  const served = services.length <= 2 ? services.join(' and ') : `${services[0]}, ${services[1]} and ${services.length - 2} more`;
   return {
-    display: pharmacy ? lines[0][1] : nameFrom(lines.map((l) => l[1])),
-    category: kinds.length === 1 ? kinds[0] : 'mixed',
-    amounts: named(['', '', total(2), total(3), total(4), total(5), total(6), total(7)]),
+    display: `${pharmacy ? lines[0][1] : served} · ${provider}`,
+    category: pharmacy ? 'pharmacy' : kinds.length === 1 ? kinds[0] : 'mixed',
+    amounts: amountsOf(['', '', total(2), total(3), total(4), total(5), total(6), total(7)]),
     diagnoses: diagnoses.map(([code, display], i) => ({ sequence: i + 1, code: { system: ICD10, code, display } })),
     ...(visit ? { visit: visit.id } : {}),
-    results: results.map((r) => r.id),
-    items: lines.map((l) => ({ category: categoryOf(l[0]), amounts: named(l), records: paidFor(l[0]) })),
+    results: kinds.includes('lab') ? labResults : [],
+    items: lines.map((l) => ({ category: categoryOf(l[0]), amounts: amountsOf(l), records: lineRecords(categoryOf(l[0])) })),
   };
 }
 
-function claimOf(P, s, { date, provider, insurer, type = 'Professional', system = CPT, lines, balances, benefitPeriod, diagnoses = [] }) {
+// `liability: false`: the payer gives no figure for what the member owes, only its parts.
+function claimOf(P, s, { date, provider, insurer, type = 'Professional', system = CPT, lines, balances, benefitPeriod, diagnoses = [], liability = true }) {
   for (const l of lines) if (cents(l[3]) !== cents(l[4]) + cents(l[5]) + cents(l[6]) + cents(l[7])) throw new Error(`allowed is not paid plus share: ${l}`);
   const share = (l) => cents(l[4]) + cents(l[5]) + cents(l[6]);
   const amounts = (l) => [
@@ -956,12 +949,12 @@ function claimOf(P, s, { date, provider, insurer, type = 'Professional', system 
     ['Deductible', usd(l[4])],
     ['Copay', usd(l[5])],
     ['Coinsurance', usd(l[6])],
-    ['Member liability', dollars(share(l))],
+    ...(liability ? [['Member liability', dollars(share(l))]] : []),
     ...(type === 'Pharmacy' ? [['Discount', dollars(cents(l[2]) - cents(l[3]))]] : []),
   ];
   const sumAt = (i) => (lines.reduce((t, l) => t + cents(l[i]), 0) / 100).toFixed(2);
   const totals = amounts(['', '', sumAt(2), sumAt(3), sumAt(4), sumAt(5), sumAt(6), sumAt(7)]);
-  const medrec = claimFields(P, { date, provider, type, lines, diagnoses });
+  const medrec = claimFields(P, { date, provider, type, lines, diagnoses, liability });
   P.record(s, 'ExplanationOfBenefit', 'claim', {
     date,
     code: { system: 'http://terminology.hl7.org/CodeSystem/claim-type', code: type.toLowerCase(), display: type },
@@ -1030,7 +1023,7 @@ const coverage = (P, s, display, relationship) =>
 // the next, lab work that went to the deductible.
 coverage(S, src.samPlan, 'Example Care Plan HMO', 'self');
 claimOf(S, src.samPlan, { date: '2026-05-20', provider: 'Example Health', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-05-20'), diagnoses: [['S93.401A', 'Sprain of unspecified ligament of right ankle, initial encounter']], lines: [['99214', 'Office visit', '260.00', '168.00', '0.00', '40.00', '0.00', '128.00'], ['73610', 'X-ray of the ankle', '145.00', '82.00', '0.00', '0.00', '16.40', '65.60']] });
-claimOf(S, src.samPlan, { date: '2026-07-09', provider: 'Example Lab', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-07-09'), diagnoses: [['Z13.29', 'Encounter for screening for other suspected endocrine disorder']], lines: [['84443', 'Thyroid test (TSH)', '95.00', '41.20', '41.20', '0.00', '0.00', '0.00'], ['36415', 'Blood draw', '25.00', '9.50', '9.50', '0.00', '0.00', '0.00']] });
+claimOf(S, src.samPlan, { date: '2026-07-09', provider: 'Example Lab', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-07-09'), liability: false, diagnoses: [['Z13.29', 'Encounter for screening for other suspected endocrine disorder']], lines: [['84443', 'Thyroid test (TSH)', '95.00', '41.20', '41.20', '0.00', '0.00', '0.00'], ['36415', 'Blood draw', '25.00', '9.50', '9.50', '0.00', '0.00', '0.00']] });
 claimOf(S, src.samPlan, { date: '2026-10-12', provider: 'Example Lab', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-10-12'), diagnoses: [['E55.9', 'Vitamin D deficiency, unspecified']], lines: [['85025', 'Blood count', '98.00', '31.40', '31.40', '0.00', '0.00', '0.00'], ['82306', 'Vitamin D test', '150.00', '38.90', '38.90', '0.00', '0.00', '0.00']], balances: careBalance('121.00', '121.00') });
 S.importRun(src.samPlan, { importedAt: PLANS_LOAD, added: 4, updated: 0, unchanged: 0, cliVersion: '0.4.0' });
 S.write();

@@ -7,18 +7,14 @@
 
 import { isPharmacyClaim, namedAmounts } from './claims';
 import { providerKey, sameProvider } from './providers';
-import { AMOUNT_LABELS, amountNames, asMoney, claimTotals, isWithdrawn, SHARE_PARTS, sortByDateDesc, str, type AmountName, type Money } from './records';
+import { AMOUNT_LABELS, amountNames, asMoney, claimTotals, decimalCents, isWithdrawn, SHARE_PARTS, sortByDateDesc, str, type AmountName, type Money } from './records';
 import type { Json, MedDocument, MedRecord, PersonIndex } from './types';
 
 // ---- Money ----
 
 /** Whole cents from a decimal string; undefined when it is not one. */
 export function toCents(m: Money | undefined): number | undefined {
-  const t = m?.amount.trim();
-  if (!t || !/^[-+]?\d+(\.\d+)?$/.test(t)) return undefined;
-  const [whole = '0', frac = ''] = t.replace(/^[-+]/, '').split('.');
-  const c = Number(whole) * 100 + Number((frac + '00').slice(0, 2));
-  return t.startsWith('-') ? -c : c;
+  return m ? decimalCents(m.amount) : undefined;
 }
 
 export function fromCents(cents: number, currency = 'USD'): Money {
@@ -89,13 +85,16 @@ export function owedByProvider(index: PersonIndex): { due: Owed[]; paid: Owed[];
 // ---- Claims ----
 
 /** A claim's totals by their names in records.ts's amount words. */
-const TOTAL_FIELD: Partial<Record<AmountName, keyof ClaimAmounts>> = { billed: 'billed', allowed: 'allowed', planPaid: 'planPaid', youOwe: 'yourShare' };
+const TOTAL_FIELD: Partial<Record<AmountName, 'billed' | 'allowed' | 'planPaid' | 'yourShare'>> = { billed: 'billed', allowed: 'allowed', planPaid: 'planPaid', youOwe: 'yourShare' };
 
 export interface ClaimAmounts {
   billed?: Money;
   allowed?: Money;
   planPaid?: Money;
+  /** What you owe: the payer's own figure, else the parts it gives added up (`shareAdded`). */
   yourShare?: Money;
+  /** Your share is the parts added up, as the payer gave no figure for it: "your share", not "you owe". */
+  shareAdded?: boolean;
   /** What the provider took off the bill, when the payer says. */
   discount?: Money;
 }
@@ -127,7 +126,9 @@ function addDays(day: string, n: number): string {
 
 /**
  * A claim's totals: medrec's fixed names (`amounts`) where it gives them,
- * else the payer's words for each, else the payment.
+ * else the payer's words for each, else the payment. Without the payer's
+ * figure for what you owe, your share is the parts it gives (deductible,
+ * copay, coinsurance, not covered) added up, never a discount.
  */
 export function claimAmounts(r: MedRecord): ClaimAmounts & { parts: Claim['parts'] } {
   const named = namedAmounts(r.fields.amounts);
@@ -138,7 +139,7 @@ export function claimAmounts(r: MedRecord): ClaimAmounts & { parts: Claim['parts
   }
   const amount = (name: AmountName): Money | undefined => named[name] ?? worded[name];
   const out: ClaimAmounts & { parts: Claim['parts'] } = { parts: [] };
-  for (const [name, field] of Object.entries(TOTAL_FIELD) as [AmountName, keyof ClaimAmounts][]) {
+  for (const [name, field] of Object.entries(TOTAL_FIELD) as [AmountName, 'billed' | 'allowed' | 'planPaid' | 'yourShare'][]) {
     const m = amount(name);
     if (m) out[field] = m;
   }
@@ -147,6 +148,14 @@ export function claimAmounts(r: MedRecord): ClaimAmounts & { parts: Claim['parts
   for (const part of SHARE_PARTS) {
     const m = amount(part);
     if (m && (toCents(m) ?? 0) > 0) out.parts.push({ name: part, label: AMOUNT_LABELS[part], amount: m });
+  }
+  if (!out.yourShare) {
+    const given = SHARE_PARTS.map(amount).filter((m): m is Money => !!m && toCents(m) !== undefined);
+    const currencies = new Set(given.map((m) => m.currency));
+    if (given.length && currencies.size === 1) {
+      out.yourShare = fromCents(given.reduce((t, m) => t + toCents(m)!, 0), given[0]!.currency);
+      out.shareAdded = true;
+    }
   }
   return out;
 }

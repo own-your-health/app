@@ -3,8 +3,9 @@
 // reading of the payer's words where it does not.
 import { describe, expect, it } from 'vitest';
 import { claimAmounts } from '../src/model/billing';
-import { claimCategory, claimDiagnoses, claimLines, claimResultIds, claimVisitId, diagnosisText } from '../src/model/claims';
+import { claimCategory, claimDiagnoses, claimLines, claimResultIds, claimTitle, claimVisitId, diagnosisText, isContractClaim } from '../src/model/claims';
 import { costLines } from '../src/model/costs';
+import { formatMoney } from '../src/model/records';
 import { parseIndex } from '../src/model/parse';
 import { search } from '../src/model/search';
 import type { MedRecord } from '../src/model/types';
@@ -49,6 +50,23 @@ describe('a claim’s amounts', () => {
     expect(dollars(a.billed)).toBe('120.00');
   });
 
+  it('add up your share from its parts when the payer gives no figure for it, and say so', () => {
+    expect(claimAmounts(linked).shareAdded).toBeUndefined();
+    const amounts = Object.fromEntries(Object.entries(linked.fields.amounts as Record<string, unknown>).filter(([k]) => k !== 'you_owe'));
+    const added = claimAmounts({ ...linked, fields: { ...linked.fields, amounts } } as MedRecord);
+    expect([dollars(added.yourShare), added.shareAdded]).toEqual(['31.00', true]);
+    // A discount is never part of it.
+    const fill = Object.fromEntries(Object.entries(pharmacy.fields.amounts as Record<string, unknown>).filter(([k]) => k !== 'you_owe'));
+    expect(dollars(claimAmounts({ ...pharmacy, fields: { ...pharmacy.fields, amounts: fill } } as MedRecord).yourShare)).toBe('10.00');
+  });
+
+  it('read medrec’s decimal strings to the nearest cent', () => {
+    const usd = (amount: string) => ({ amount, currency: 'USD' });
+    expect(['150.0', '30.50', '12.3450', '12.345', '0.995', '-2.005', '7'].map((a) => formatMoney(usd(a)))).toEqual(['$150.00', '$30.50', '$12.35', '$12.35', '$1.00', '−$2.01', '$7.00']);
+    const share = claimAmounts({ ...worded, fields: { ...worded.fields, total: [], amounts: { copay: usd('10.0'), coinsurance: usd('2.1250') } } } as MedRecord);
+    expect(dollars(share.yourShare)).toBe('12.13');
+  });
+
   it('carry a discount, which is no part of your share', () => {
     const a = claimAmounts(pharmacy);
     expect(dollars(a.discount)).toBe('20.10');
@@ -57,6 +75,14 @@ describe('a claim’s amounts', () => {
     const words: MedRecord = { ...worded, fields: { ...worded.fields, total: [{ category: 'Discount', amount: { amount: '5.00', currency: 'USD' } }] } };
     expect(dollars(claimAmounts(words).discount)).toBe('5.00');
     expect(claimAmounts(words).parts).toEqual([]);
+  });
+});
+
+describe('a claim’s name', () => {
+  it('is its lines’ services, and without lines medrec’s name less the provider the page shows apart', () => {
+    expect(claimTitle(linked)).toBe('Office visit and strep test');
+    expect(claimTitle(noLines)).toBe('Imaging');
+    expect(claimTitle({ ...noLines, display: 'Professional' })).toBe('Claim from Example Imaging');
   });
 });
 
@@ -102,6 +128,13 @@ describe('a claim’s diagnoses', () => {
     // medrec's links and amounts are not words to search.
     expect(search(index, null, 'r_visitaaaaaaaaaaaaaaa')).toEqual([]);
   });
+
+  it('show in search what you owe, or your share when the payer gives only its parts', () => {
+    expect(search(index, null, 'strep throat').find((h) => h.id === linked.id)?.claim?.amount).toBe('you owe $31.00');
+    const amounts = Object.fromEntries(Object.entries(linked.fields.amounts as Record<string, unknown>).filter(([k]) => k !== 'you_owe'));
+    const idx = { ...index, records: index.records.map((r) => (r === linked ? ({ ...linked, fields: { ...linked.fields, amounts } } as MedRecord) : r)) };
+    expect(search(idx, null, 'strep throat').find((h) => h.id === linked.id)?.claim?.amount).toBe('your share $31.00');
+  });
 });
 
 describe('what a claim paid for', () => {
@@ -113,17 +146,27 @@ describe('what a claim paid for', () => {
     expect(visit('r_visitaaaaaaaaaaaaaaa').claims).toEqual([linked]);
   });
 
-  it('is matched by day and provider without a link, or with one to a visit not in these records', () => {
-    expect(visit('r_visitbbbbbbbbbbbbbbb').claims).toEqual([worded, lostLink]);
+  it('is matched by day and provider for a claim from an earlier medrec', () => {
+    expect(isContractClaim(worded)).toBe(false);
+    expect(visit('r_visitbbbbbbbbbbbbbbb').claims).toEqual([worded]);
   });
 
-  it('is matched the same way when the link is to a visit that has not happened', () => {
+  it('is none for medrec’s claim without a link, or with one to a visit not in these records, though a visit matches by day and provider', () => {
+    expect(isContractClaim(lostLink)).toBe(true);
+    expect(visits.some((v) => v.claims.includes(lostLink))).toBe(false);
+    expect(claimContext(index, household, PERSON, TODAY, lostLink).visit).toBeUndefined();
+    const unlinked: MedRecord = { ...lostLink, fields: Object.fromEntries(Object.entries(lostLink.fields).filter(([k]) => k !== 'visit')) };
+    const idx = { ...index, records: [...index.records.filter((r) => r !== lostLink), unlinked] };
+    expect(visitTimeline(idx, household, PERSON, TODAY).visits.some((v) => v.claims.includes(unlinked))).toBe(false);
+  });
+
+  it('is none when medrec’s link is to a visit that has not happened', () => {
     const planned: MedRecord = { ...record('r_visitbbbbbbbbbbbbbbb'), id: 'r_plannedaaaaaaaaaaaaa', date: '2026-04-01', status: 'planned' };
     const relinked: MedRecord = { ...lostLink, fields: { ...lostLink.fields, visit: planned.id } };
     const idx = { ...index, records: [...index.records.filter((r) => r !== lostLink), planned, relinked] };
     const v = visitTimeline(idx, household, PERSON, TODAY).visits;
     expect(v.map((x) => x.record.id)).not.toContain(planned.id);
-    expect(v.find((x) => x.record.id === 'r_visitbbbbbbbbbbbbbbb')!.claims).toEqual([worded, relinked]);
+    expect(v.some((x) => x.claims.includes(relinked))).toBe(false);
   });
 
   it('lists the results medrec linked and each line’s records, leaving out ids these records lack', () => {

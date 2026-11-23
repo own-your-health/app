@@ -25,7 +25,7 @@ const AMOUNT_NAMES: Record<string, AmountName> = {
   you_owe: 'youOwe',
 };
 
-export type Category = 'visit' | 'lab' | 'imaging' | 'vaccine' | 'medicine' | 'procedure' | 'anesthesia' | 'drug' | 'supply' | 'facility' | 'pharmacy' | 'other';
+export type Category = 'visit' | 'lab' | 'imaging' | 'vaccine' | 'medicine' | 'procedure' | 'anesthesia' | 'drug' | 'supply' | 'dental' | 'facility' | 'pharmacy' | 'other';
 
 /** Each category's name for one line, and for a group of them. */
 export const CATEGORY_LABELS: Record<Category, { one: string; many: string }> = {
@@ -38,14 +38,17 @@ export const CATEGORY_LABELS: Record<Category, { one: string; many: string }> = 
   anesthesia: { one: 'Anesthesia', many: 'Anesthesia' },
   drug: { one: 'Drug given', many: 'Drugs given' },
   supply: { one: 'Supply or equipment', many: 'Supplies and equipment' },
+  dental: { one: 'Dental', many: 'Dental care' },
   facility: { one: 'Facility charge', many: 'Facility charges' },
   pharmacy: { one: 'Pharmacy', many: 'Pharmacy' },
   other: { one: 'Other', many: 'Other' },
 };
 
 /**
- * A line's category from its code: CPT ranges (AMA), HCPCS level II's first
- * letter, a hospital's revenue codes, and a pharmacy claim's drug codes. A
+ * A line's category from its code, by the table in medrec's data contract,
+ * so a claim from an earlier medrec reads as medrec now files one: CPT
+ * ranges (AMA), CPT's lab codes (PLA, MAAA), HCPCS level II's first letter,
+ * CDT, a hospital's revenue codes, and a pharmacy claim's drug codes. A
  * medrec `category` wins.
  */
 export function categoryOf(code: string | undefined, system?: string, claimType?: string): Category {
@@ -59,15 +62,25 @@ export function categoryOf(code: string | undefined, system?: string, claimType?
     if ((n >= 80047 && n <= 89398) || n === 36415 || n === 36416) return 'lab';
     if (n >= 70010 && n <= 79999) return 'imaging';
     if (n >= 90460 && n <= 90756) return 'vaccine';
-    if (n >= 90281 && n <= 99199) return 'medicine';
+    if ((n >= 90281 && n <= 99199) || (n >= 99500 && n <= 99607)) return 'medicine';
     if (n >= 10004 && n <= 69990) return 'procedure';
     if (n >= 100 && n <= 1999) return 'anesthesia';
     return 'other';
   }
+  if (/^\d{4}[UM]$/.test(c)) return 'lab';
   if (/^J\d{4}$/.test(c)) return 'drug';
   if (/^[AEL]\d{4}$/.test(c)) return 'supply';
-  if (/^G\d{4}$/.test(c)) return 'medicine';
+  if (/^D\d{4}$/.test(c)) return 'dental';
   return 'other';
+}
+
+/**
+ * A claim medrec filed in the shape of its data contract (0.5.0 and later):
+ * it has `amounts` or a `category`. Its links are medrec's, recomputed on
+ * every write of the index, so a link it leaves out means none.
+ */
+export function isContractClaim(r: MedRecord): boolean {
+  return r.fields.amounts !== undefined || r.fields.category !== undefined;
 }
 
 export interface ClaimLine {
@@ -178,7 +191,8 @@ function midSentence(label: string): string {
 /**
  * A claim's title: its services ("Lipid panel", "Office visit and lipid
  * panel", "Office visit, lipid panel and 2 more"). Without lines, the name
- * medrec gave unless it is only the claim's type, then the provider.
+ * medrec gave unless it is only the claim's type, then the provider. medrec
+ * ends its name with " · " and the provider, which the page shows apart.
  */
 export function claimTitle(r: MedRecord): string {
   const [first, ...rest] = claimServices(r);
@@ -189,9 +203,10 @@ export function claimTitle(r: MedRecord): string {
     return `${first}, ${later[0]} and ${later.length - 1} more`;
   }
   const type = str(r.fields.type) ?? r.code?.display;
-  const display = str(r.display);
-  if (display && display.toLowerCase() !== type?.toLowerCase()) return display;
   const provider = str(r.fields.provider);
+  let display = str(r.display);
+  if (display && provider && display.endsWith(` · ${provider}`)) display = display.slice(0, -` · ${provider}`.length).trim() || undefined;
+  if (display && display.toLowerCase() !== type?.toLowerCase()) return display;
   return provider ? `Claim from ${provider}` : 'Claim';
 }
 
