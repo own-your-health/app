@@ -78,10 +78,11 @@ export function signInText(v: SourceView): string | undefined {
 
 /** The earliest a source the Mac skipped may load again: "; next load allowed at 9:40 PM". */
 function nextAllowed(sources: Handled['sources'], now: Date): string {
+  // By the moment, not the text: an offset other than Z sorts wrong as a string.
   const next = (sources ?? [])
-    .filter((x) => x.outcome === 'skipped_interval' && x.next_allowed_at)
+    .filter((x) => x.outcome === 'skipped_interval' && x.next_allowed_at && !Number.isNaN(Date.parse(x.next_allowed_at)))
     .map((x) => x.next_allowed_at!)
-    .sort()[0];
+    .sort((a, b) => Date.parse(a) - Date.parse(b))[0];
   return next ? `; next load allowed ${clock(next, now)}` : '';
 }
 

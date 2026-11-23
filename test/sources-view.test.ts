@@ -47,6 +47,12 @@ describe('the answer to a refresh request', () => {
     all.handled.sources![0]!.next_allowed_at = '2026-11-23T05:00:00Z';
     all.handled.sources![1]!.next_allowed_at = '2026-11-23T02:00:00Z';
     expect(requestAnswer(all, names, NOW)).toBe(`Last refresh request 2 minutes ago: none loaded, too soon after their last tries; next load allowed ${clock('2026-11-23T02:00:00Z', NOW)}`);
+    // 21:00-05:00 is 02:00Z, after 01:30Z, though it sorts first as text.
+    const offsets = answered({ all: true }, ['skipped_interval', 'skipped_interval', 'skipped_interval']);
+    offsets.handled.sources![0]!.next_allowed_at = '2026-11-22T21:00:00-05:00';
+    offsets.handled.sources![1]!.next_allowed_at = '2026-11-23T01:30:00Z';
+    offsets.handled.sources![2]!.next_allowed_at = 'not a time';
+    expect(requestAnswer(offsets, names, NOW).endsWith(`; next load allowed ${clock('2026-11-23T01:30:00Z', NOW)}`)).toBe(true);
     const mixed = answered({ all: true }, ['ok', 'skipped_interval', 'skipped_interval']);
     expect(requestAnswer(mixed, names, NOW)).toBe('Last refresh request 2 minutes ago: 1 loaded, 2 too soon after their last tries');
   });
