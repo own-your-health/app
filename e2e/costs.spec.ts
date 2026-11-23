@@ -33,7 +33,7 @@ test('costs this plan year across everyone, broken down, and down to one month a
   await expect(summary.locator('.totals')).toHaveText('Billed $1,458.00; Plan allowed $742.40; Plan paid $478.44; Your share $263.96');
   await expect(summary).toContainText('8 claims, 14 lines. Your share is deductible $121.00, copay $45.00, coinsurance $97.96.');
   await expect(summary.locator('.plan-note')).toHaveText(
-    'Plan years: Example Care Plan, Jul 1, 2026 to Jun 30, 2027; Example Health Plan and Example Pharmacy Benefits, 2026. Example Care Plan: as the plan’s claims give it. Example Health Plan and Example Pharmacy Benefits: plan year assumed to be the calendar year; the plan’s records don’t say. Set when your plan year starts',
+    'Plan years: Example Care Plan, Jul 1, 2026 to Jun 30, 2027; Example Health Plan and Example Pharmacy Benefits, 2026. Example Care Plan: plan year from your plan’s claims. Example Health Plan and Example Pharmacy Benefits: plan year assumed to be the calendar year; your plans’ records don’t say. Set when your plan year starts',
   );
   await expect(page.getByRole('group', { name: 'Period' }).getByRole('button', { name: 'This plan year' })).toHaveAttribute('aria-pressed', 'true');
 
@@ -150,7 +150,7 @@ test('a plan year set in Settings applies to the plans whose claims do not give 
   expect(await page.evaluate(() => localStorage.getItem('own-your-health-app.plan_year_start'))).toBe('04-01');
   await page.goto('./?demo#/costs');
   await expect(page.locator('.plan-note')).toHaveText(
-    'Plan years: Example Care Plan, Jul 1, 2026 to Jun 30, 2027; Example Health Plan and Example Pharmacy Benefits, Apr 1, 2026 to Mar 31, 2027. Example Care Plan: as the plan’s claims give it. Example Health Plan and Example Pharmacy Benefits: as set in Settings.',
+    'Plan years: Example Care Plan, Jul 1, 2026 to Jun 30, 2027; Example Health Plan and Example Pharmacy Benefits, Apr 1, 2026 to Mar 31, 2027. Example Care Plan: plan year from your plan’s claims. Example Health Plan and Example Pharmacy Benefits: plan year as set in Settings; your plans’ records don’t say.',
   );
   // Back to the calendar year.
   await page.goto('./?demo#/settings');

@@ -83,18 +83,26 @@ function shareParts(c: Cents): string | null {
   return parts.length ? `Your share is ${parts.join(', ')}.` : null;
 }
 
-/** Where each plan's year came from, in one or two sentences. */
-function planBasisText(years: { insurer?: string; basis: PlanBasis }[]): string {
-  const of = (basis: PlanBasis) => [...new Set(years.filter((y) => y.basis === basis).map((y) => y.insurer ?? 'A plan'))];
-  const all = new Set(years.map((y) => y.insurer ?? 'A plan')).size;
-  const said: string[] = [];
-  const claims = of('claims');
-  if (claims.length) said.push(claims.length === all ? 'As the plan’s claims give it.' : `${andList(claims)}: as the plan’s claims give it.`);
-  const setting = of('setting');
-  if (setting.length) said.push(setting.length === all ? 'As set in Settings; the plan’s records don’t say.' : `${andList(setting)}: as set in Settings.`);
-  const calendar = of('calendar');
-  if (calendar.length) said.push(calendar.length === all ? 'Plan year assumed to be the calendar year; your plan’s records don’t say.' : `${andList(calendar)}: plan year assumed to be the calendar year; the plan’s records don’t say.`);
-  return said.join(' ');
+// One sentence for each place a plan year can come from. "your plan’s" or
+// "your plans’" is the only part that changes.
+const BASIS_SAYS: Record<PlanBasis, (whose: string) => string> = {
+  claims: (whose) => `plan year from ${whose} claims.`,
+  setting: (whose) => `plan year as set in Settings; ${whose} records don’t say.`,
+  calendar: (whose) => `plan year assumed to be the calendar year; ${whose} records don’t say.`,
+};
+
+/** Where each plan's year came from: the sentence alone when every plan shares it, else after the plans it is for. */
+export function planBasisText(years: { insurer?: string; basis: PlanBasis }[]): string {
+  const plans = (basis?: PlanBasis) => [...new Set(years.filter((y) => !basis || y.basis === basis).map((y) => y.insurer ?? 'A plan'))];
+  const all = plans().length;
+  return (['claims', 'setting', 'calendar'] as const)
+    .flatMap((basis) => {
+      const named = plans(basis);
+      if (!named.length) return [];
+      const says = BASIS_SAYS[basis](named.length > 1 ? 'your plans’' : 'your plan’s');
+      return [named.length === all ? `${says[0]!.toUpperCase()}${says.slice(1)}` : `${andList(named)}: ${says}`];
+    })
+    .join(' ');
 }
 
 /** A plan year in words: "2026" when it is a calendar year, else "Jul 1, 2026 to Jun 30, 2027". */
