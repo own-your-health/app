@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { asMoney, bills, claimTotals, claimYourShare, findItem, formatMoney, importFor, medicines, resultSeries, timeline, valueText } from '../src/model/records';
+import { asMoney, claimTotals, claimYourShare, findItem, formatMoney, importFor, medicines, resultSeries, timeline, valueText } from '../src/model/records';
 import type { ImportRun, Provenance } from '../src/model/types';
 import { demo, personNamed } from './demo-data';
 
@@ -46,12 +46,6 @@ describe('money', () => {
     const claim = robin.records.find((r) => r.kind === 'claim' && claimTotals(r).length > 0)!;
     expect(claimTotals(claim).length).toBeGreaterThan(1);
     expect(claimYourShare(claim)).toMatch(/^Your share \$\d/);
-  });
-
-  it('dates a bill by its statement', () => {
-    const all = [...indexes.values()].flatMap((i) => bills(i));
-    expect(all.length).toBeGreaterThan(0);
-    for (const b of all) if (b.statement?.statement_date) expect(b.date).toBe(b.statement.statement_date);
   });
 });
 

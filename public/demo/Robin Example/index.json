@@ -4,11 +4,55 @@
   "rev": 9,
   "documents": [
     {
-      "id": "d_jzj6jeudtporkmvaajfc",
+      "id": "d_yxneikjpr2ku6f473zde",
+      "path": "Robin Example/Claims/2026/2026-10-20_eob_example_health_plan_eob_2026-10.pdf",
+      "sha256": "e6603c9c8db6a584a0e5f80d13bc259b685ca25cd497b5bbd93f49d0b81e1417",
+      "md5": "e7b1b3aef2fb9c6e70326a7881d542ee",
+      "size": 155589,
+      "media_type": "application/pdf",
+      "pages": 2,
+      "original_name": "eob_2026-10.pdf",
+      "title": "Explanation of Benefits",
+      "doc_type": "eob",
+      "date": "2026-10-20",
+      "organization": "Example Health Plan",
+      "filed_at": "2026-11-02T20:00:00Z",
+      "origin": {
+        "kind": "fhir",
+        "name": "eob_2026-10.pdf",
+        "action": "copied"
+      },
+      "text": {
+        "chars": 140,
+        "engines": [
+          "pdftotext 26.10.0"
+        ]
+      },
+      "provenance": {
+        "source": {
+          "kind": "portal",
+          "cli": "uhc",
+          "cli_version": "0.7.1",
+          "organization_id": "example-health-plan"
+        },
+        "method": "portal",
+        "source_resource": {
+          "type": "Binary",
+          "id": "binary-4f3d86a6",
+          "last_updated": "2026-11-02T08:00:00Z"
+        },
+        "fetched_at": "2026-11-02T20:00:00Z",
+        "filed_at": "2026-11-02T20:00:00Z",
+        "raw_path": "Robin Example/Records/uhc-example-health-plan/Binary/binary-4f3d86a6.json",
+        "filed_by": "medrec 0.2.11"
+      }
+    },
+    {
+      "id": "d_76ujctibnfxzik6dlxdr",
       "path": "Robin Example/Documents/2026/2026-10-01_visit_summary_example_health_after_visit_summary.pdf",
-      "sha256": "87d48a9f1aa4e5cfb9344f3d86a6e6603c9c8db6a584a0e5f80d13bc259b685c",
-      "md5": "a25cd497b5bbd93f49d0b81e1417e7b1",
-      "size": 191019,
+      "sha256": "ced7ae8ac06c310034d9c03fe1eeaa1a00de11b39696402b1b6a452e1f158014",
+      "md5": "51c58499f6717678e70c40da1ba71176",
+      "size": 71856,
       "media_type": "application/pdf",
       "pages": 3,
       "original_name": "after_visit_summary.pdf",
@@ -39,21 +83,21 @@
         "method": "fhir-api",
         "source_resource": {
           "type": "Binary",
-          "id": "binary-e56b7f12",
+          "id": "binary-1e93d0a5",
           "last_updated": "2026-11-14T08:00:00Z"
         },
         "fetched_at": "2026-11-14T20:00:00Z",
         "filed_at": "2026-11-14T20:00:00Z",
-        "raw_path": "Robin Example/Records/mychart-example-health/Binary/binary-e56b7f12.json",
+        "raw_path": "Robin Example/Records/mychart-example-health/Binary/binary-1e93d0a5.json",
         "filed_by": "medrec 0.2.11"
       }
     },
     {
-      "id": "d_tko7sp3j4wohadswkxii",
+      "id": "d_yln4rknhb7kdpgotfnme",
       "path": "Robin Example/Documents/2026/2026-10-01_lab_report_example_health_lipid_panel.pdf",
-      "sha256": "b5551394af76b202b49aca0d7ee7fe492381d5798ae3b7311e93d0a5ced7ae8a",
-      "md5": "c06c310034d9c03fe1eeaa1a00de11b3",
-      "size": 152169,
+      "sha256": "f9d9e4a54c754476982d72c2a17f66710c8cbf436ed6a04fb0743570e71a5df9",
+      "md5": "d2323f14d1201432589c2c6263238aed",
+      "size": 101260,
       "media_type": "application/pdf",
       "pages": 2,
       "original_name": "lipid_panel.pdf",
@@ -84,21 +128,21 @@
         "method": "fhir-api",
         "source_resource": {
           "type": "Binary",
-          "id": "binary-1d542ee5",
+          "id": "binary-a447500e",
           "last_updated": "2026-11-14T08:00:00Z"
         },
         "fetched_at": "2026-11-14T20:00:00Z",
         "filed_at": "2026-11-14T20:00:00Z",
-        "raw_path": "Robin Example/Records/mychart-example-health/Binary/binary-1d542ee5.json",
+        "raw_path": "Robin Example/Records/mychart-example-health/Binary/binary-a447500e.json",
         "filed_by": "medrec 0.2.11"
       }
     },
     {
-      "id": "d_gjweac3blwkufs6r7bvy",
+      "id": "d_pv57tjsi5ot4237rjcdf",
       "path": "Robin Example/Claims/2026/2026-10-01_bill_example_health_statement_oct.pdf",
-      "sha256": "499f6717678e70c40da1ba7117608bdc1ad71fa3f6e35dc4a447500ef9d9e4a5",
-      "md5": "4c754476982d72c2a17f66710c8cbf43",
-      "size": 123798,
+      "sha256": "213dedfd86d0d82840a350baa5da4d80d2973d5fc29e0449144eacfa72b2d65f",
+      "md5": "ef452b1311332f54ea7e048a31ac7175",
+      "size": 218060,
       "media_type": "application/pdf",
       "pages": 1,
       "original_name": "statement_oct.pdf",
@@ -138,11 +182,134 @@
       }
     },
     {
-      "id": "d_6nw2aup3qhutfhqohrkv",
+      "id": "d_hzeiaz4ooaflblkav63m",
+      "path": "Robin Example/Claims/2025/2025-04-02_bill_example_health_statement_apr_2025.pdf",
+      "sha256": "8ee267f0124c852328e38b1e0d0fe67ad701aabbc8c38adb091b4f936167ca39",
+      "md5": "9ed694cd95254588e09ee1fa9409b9a5",
+      "size": 69783,
+      "media_type": "application/pdf",
+      "pages": 1,
+      "original_name": "statement_apr_2025.pdf",
+      "title": "Statement from Example Health",
+      "doc_type": "bill",
+      "date": "2025-04-02",
+      "organization": "Example Health",
+      "filed_at": "2026-11-02T20:00:00Z",
+      "origin": {
+        "kind": "inbox",
+        "name": "statement_apr_2025.pdf",
+        "action": "moved"
+      },
+      "text": {
+        "chars": 96,
+        "engines": [
+          "pdftotext 26.10.0"
+        ]
+      },
+      "statement": {
+        "statement_date": "2025-04-02",
+        "amount_due": {
+          "amount": "51.18",
+          "currency": "USD"
+        },
+        "due_date": "2025-05-02",
+        "account": "****0000"
+      },
+      "provenance": {
+        "source": {
+          "kind": "scan"
+        },
+        "method": "scan",
+        "filed_at": "2026-11-02T20:00:00Z",
+        "classified_by": "medrec intake",
+        "filed_by": "medrec 0.2.11"
+      }
+    },
+    {
+      "id": "d_zzo4v2idv4mi6fkh7s2b",
+      "path": "Robin Example/Documents/2025/2025-04-20_receipt_example_health_receipt_apr_2025.pdf",
+      "sha256": "33d2d26e67dda49fde0ebb5187969598136b323417544ff1562c248f6cd363df",
+      "md5": "548a9d8a8de9b57da4a0daf3c14e6ea5",
+      "size": 142445,
+      "media_type": "application/pdf",
+      "pages": 1,
+      "original_name": "receipt_apr_2025.pdf",
+      "title": "Payment receipt from Example Health",
+      "doc_type": "receipt",
+      "date": "2025-04-20",
+      "organization": "Example Health",
+      "filed_at": "2026-11-02T20:00:00Z",
+      "origin": {
+        "kind": "inbox",
+        "name": "receipt_apr_2025.pdf",
+        "action": "moved"
+      },
+      "text": {
+        "chars": 77,
+        "engines": [
+          "pdftotext 26.10.0"
+        ]
+      },
+      "provenance": {
+        "source": {
+          "kind": "scan"
+        },
+        "method": "scan",
+        "filed_at": "2026-11-02T20:00:00Z",
+        "classified_by": "medrec intake",
+        "filed_by": "medrec 0.2.11"
+      }
+    },
+    {
+      "id": "d_kbw3kvi6dmg664qsv4aa",
+      "path": "Robin Example/Claims/2026/2026-10-28_bill_example_lab_lab_statement.pdf",
+      "sha256": "f53b674e768a3a5dd619db1652837e76931a96f6f59a2d422099ae32e901c0f9",
+      "md5": "c1b48aefa115ceb5a41fa727c7824a33",
+      "size": 99474,
+      "media_type": "application/pdf",
+      "pages": 1,
+      "original_name": "lab_statement.pdf",
+      "title": "Statement from Example Lab",
+      "doc_type": "bill",
+      "date": "2026-10-28",
+      "organization": "Example Lab",
+      "filed_at": "2026-11-02T20:00:00Z",
+      "origin": {
+        "kind": "inbox",
+        "name": "lab_statement.pdf",
+        "action": "moved"
+      },
+      "text": {
+        "chars": 87,
+        "engines": [
+          "pdftotext 26.10.0"
+        ]
+      },
+      "statement": {
+        "statement_date": "2026-10-28",
+        "amount_due": {
+          "amount": "19.28",
+          "currency": "USD"
+        },
+        "due_date": "2026-11-27",
+        "account": "****1111"
+      },
+      "provenance": {
+        "source": {
+          "kind": "scan"
+        },
+        "method": "scan",
+        "filed_at": "2026-11-02T20:00:00Z",
+        "classified_by": "medrec intake",
+        "filed_by": "medrec 0.2.11"
+      }
+    },
+    {
+      "id": "d_t35vywrysx5zuezwtnki",
       "path": "Robin Example/Documents/2024/2024-02-11_immunization_record_example_health_scan_0007.pdf",
-      "sha256": "f14d1201432589c2c6263238aedcf5df3928de3cabf19235972c7bed213dedfd",
-      "md5": "86d0d82840a350baa5da4d80d2973d5f",
-      "size": 144252,
+      "sha256": "1e37044098608270130a17c37c006036dd3fabd988a6c925e31d35ba2f5b78bd",
+      "md5": "65e4937643f3df44eb2d62ff0551ac42",
+      "size": 227766,
       "media_type": "application/pdf",
       "pages": 1,
       "original_name": "scan_0007.pdf",
@@ -173,11 +340,11 @@
       }
     },
     {
-      "id": "d_wbgx4kdjzonwju45jvsf",
+      "id": "d_dajjqxejgah7u2624gbd",
       "path": "Robin Example/Documents/2026/2026-11-18_lab_report_example_health_basic_metabolic_panel.pdf",
-      "sha256": "e1fa9409b9a5799ec5a835cc8e5a7f2a11e47f2af33d2d26e67dda49fde0ebb5",
-      "md5": "187969598136b323417544ff1562c248",
-      "size": 143999,
+      "sha256": "6860be418f0b101e3da40d9c77e9773f35af98018bf54864a65ed6af28314817",
+      "md5": "8ea0099ed2e43f6196936a4290cec44f",
+      "size": 172465,
       "media_type": "application/pdf",
       "pages": 1,
       "original_name": "basic_metabolic_panel.pdf",
@@ -208,12 +375,12 @@
         "method": "fhir-api",
         "source_resource": {
           "type": "Binary",
-          "id": "binary-4588e09e",
+          "id": "binary-7ccf19bb",
           "last_updated": "2026-11-22T08:00:00Z"
         },
         "fetched_at": "2026-11-22T17:00:00Z",
         "filed_at": "2026-11-22T17:00:00Z",
-        "raw_path": "Robin Example/Records/mychart-example-health/Binary/binary-4588e09e.json",
+        "raw_path": "Robin Example/Records/mychart-example-health/Binary/binary-7ccf19bb.json",
         "filed_by": "medrec 0.2.11"
       }
     }
@@ -1648,7 +1815,7 @@
         }
       },
       "documents": [
-        "d_jzj6jeudtporkmvaajfc"
+        "d_76ujctibnfxzik6dlxdr"
       ],
       "provenance": [
         {
@@ -2170,6 +2337,194 @@
     {
       "id": "r_sfdta43ydnr77zowo3ks",
       "kind": "claim",
+      "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|professional|2026-11-18",
+      "date": "2026-11-18",
+      "code": {
+        "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+        "code": "professional",
+        "display": "Professional"
+      },
+      "display": "Office visit claim",
+      "status": "active",
+      "fields": {
+        "when": "2026-11-18",
+        "provider": "Example Health",
+        "insurer": "Example Health Plan",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-11-18",
+          "end": "2026-11-18"
+        },
+        "total": [
+          {
+            "category": "Submitted Amount",
+            "amount": {
+              "amount": "180.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Eligible Amount",
+            "amount": {
+              "amount": "112.50",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Benefit Amount",
+            "amount": {
+              "amount": "87.50",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Deductible",
+            "amount": {
+              "amount": "0.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Coinsurance",
+            "amount": {
+              "amount": "25.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Member liability",
+            "amount": {
+              "amount": "25.00",
+              "currency": "USD"
+            }
+          }
+        ],
+        "payment": {
+          "amount": "87.50",
+          "currency": "USD"
+        },
+        "type": "Professional",
+        "use": "claim"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "uhc",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "ExplanationOfBenefit",
+            "id": "explanationofbenefit-8ee439a8",
+            "last_updated": "2026-11-19T08:00:00Z"
+          },
+          "fetched_at": "2026-11-19T19:59:00Z",
+          "filed_at": "2026-11-19T19:59:00Z",
+          "raw_path": "Robin Example/Records/uhc-example-health-plan/ExplanationOfBenefit/explanationofbenefit-8ee439a8.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_rx2v5tnmayyxpfaelcgm",
+      "kind": "claim",
+      "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|professional|2026-10-03",
+      "date": "2026-10-03",
+      "code": {
+        "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+        "code": "professional",
+        "display": "Professional"
+      },
+      "display": "Lab work claim",
+      "status": "active",
+      "fields": {
+        "when": "2026-10-03",
+        "provider": "Example Lab",
+        "insurer": "Example Health Plan",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-10-03",
+          "end": "2026-10-03"
+        },
+        "total": [
+          {
+            "category": "Submitted Amount",
+            "amount": {
+              "amount": "220.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Eligible Amount",
+            "amount": {
+              "amount": "96.40",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Benefit Amount",
+            "amount": {
+              "amount": "77.12",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Deductible",
+            "amount": {
+              "amount": "0.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Coinsurance",
+            "amount": {
+              "amount": "19.28",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Member liability",
+            "amount": {
+              "amount": "19.28",
+              "currency": "USD"
+            }
+          }
+        ],
+        "payment": {
+          "amount": "77.12",
+          "currency": "USD"
+        },
+        "type": "Professional",
+        "use": "claim"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "uhc",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "ExplanationOfBenefit",
+            "id": "explanationofbenefit-92cc443b",
+            "last_updated": "2026-11-19T08:00:00Z"
+          },
+          "fetched_at": "2026-11-19T19:59:00Z",
+          "filed_at": "2026-11-19T19:59:00Z",
+          "raw_path": "Robin Example/Records/uhc-example-health-plan/ExplanationOfBenefit/explanationofbenefit-92cc443b.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_5h7uopdwecf27wv7jdq5",
+      "kind": "claim",
       "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|professional|2026-10-01",
       "date": "2026-10-01",
       "code": {
@@ -2211,6 +2566,20 @@
             }
           },
           {
+            "category": "Deductible",
+            "amount": {
+              "amount": "0.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Coinsurance",
+            "amount": {
+              "amount": "53.68",
+              "currency": "USD"
+            }
+          },
+          {
             "category": "Member liability",
             "amount": {
               "amount": "53.68",
@@ -2223,9 +2592,43 @@
           "currency": "USD"
         },
         "type": "Professional",
-        "use": "claim"
+        "use": "claim",
+        "benefit_balance": [
+          {
+            "category": "1",
+            "network": "in",
+            "unit": "individual",
+            "term": "annual",
+            "financial": [
+              {
+                "type": "Deductible",
+                "allowed": {
+                  "amount": "1500.00",
+                  "currency": "USD"
+                },
+                "used": {
+                  "amount": "1120.40",
+                  "currency": "USD"
+                }
+              },
+              {
+                "type": "Out-of-pocket limit",
+                "allowed": {
+                  "amount": "4000.00",
+                  "currency": "USD"
+                },
+                "used": {
+                  "amount": "1356.10",
+                  "currency": "USD"
+                }
+              }
+            ]
+          }
+        ]
       },
-      "documents": [],
+      "documents": [
+        "d_yxneikjpr2ku6f473zde"
+      ],
       "provenance": [
         {
           "source": {
@@ -2237,18 +2640,18 @@
           "method": "portal",
           "source_resource": {
             "type": "ExplanationOfBenefit",
-            "id": "explanationofbenefit-8ee439a8",
+            "id": "explanationofbenefit-b60d6bd5",
             "last_updated": "2026-11-19T08:00:00Z"
           },
           "fetched_at": "2026-11-19T19:59:00Z",
           "filed_at": "2026-11-19T19:59:00Z",
-          "raw_path": "Robin Example/Records/uhc-example-health-plan/ExplanationOfBenefit/explanationofbenefit-8ee439a8.json",
+          "raw_path": "Robin Example/Records/uhc-example-health-plan/ExplanationOfBenefit/explanationofbenefit-b60d6bd5.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_rx2v5tnmayyxpfaelcgm",
+      "id": "r_xzhhkr3inpg3vht4xfuj",
       "kind": "claim",
       "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|professional|2025-09-15",
       "date": "2025-09-15",
@@ -2291,6 +2694,20 @@
             }
           },
           {
+            "category": "Deductible",
+            "amount": {
+              "amount": "0.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Coinsurance",
+            "amount": {
+              "amount": "0.00",
+              "currency": "USD"
+            }
+          },
+          {
             "category": "Member liability",
             "amount": {
               "amount": "0.00",
@@ -2317,18 +2734,18 @@
           "method": "portal",
           "source_resource": {
             "type": "ExplanationOfBenefit",
-            "id": "explanationofbenefit-92cc443b",
+            "id": "explanationofbenefit-7185e57e",
             "last_updated": "2026-11-19T08:00:00Z"
           },
           "fetched_at": "2026-11-19T19:59:00Z",
           "filed_at": "2026-11-19T19:59:00Z",
-          "raw_path": "Robin Example/Records/uhc-example-health-plan/ExplanationOfBenefit/explanationofbenefit-92cc443b.json",
+          "raw_path": "Robin Example/Records/uhc-example-health-plan/ExplanationOfBenefit/explanationofbenefit-7185e57e.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_5h7uopdwecf27wv7jdq5",
+      "id": "r_tporkmvaajfc6fw3xpbc",
       "kind": "claim",
       "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|professional|2025-03-10",
       "date": "2025-03-10",
@@ -2371,6 +2788,20 @@
             }
           },
           {
+            "category": "Deductible",
+            "amount": {
+              "amount": "0.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Coinsurance",
+            "amount": {
+              "amount": "51.18",
+              "currency": "USD"
+            }
+          },
+          {
             "category": "Member liability",
             "amount": {
               "amount": "51.18",
@@ -2397,18 +2828,18 @@
           "method": "portal",
           "source_resource": {
             "type": "ExplanationOfBenefit",
-            "id": "explanationofbenefit-b60d6bd5",
+            "id": "explanationofbenefit-999e9443",
             "last_updated": "2026-11-19T08:00:00Z"
           },
           "fetched_at": "2026-11-19T19:59:00Z",
           "filed_at": "2026-11-19T19:59:00Z",
-          "raw_path": "Robin Example/Records/uhc-example-health-plan/ExplanationOfBenefit/explanationofbenefit-b60d6bd5.json",
+          "raw_path": "Robin Example/Records/uhc-example-health-plan/ExplanationOfBenefit/explanationofbenefit-999e9443.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_xzhhkr3inpg3vht4xfuj",
+      "id": "r_27hwlsasluzk4kq5hooh",
       "kind": "coverage",
       "key": "coverage|http://terminology.hl7.org/CodeSystem/v3-ActCode|HIP|2026-01-01",
       "date": "2026-01-01",
@@ -2441,18 +2872,18 @@
           "method": "portal",
           "source_resource": {
             "type": "Coverage",
-            "id": "coverage-7185e57e",
+            "id": "coverage-b5551394",
             "last_updated": "2026-11-19T08:00:00Z"
           },
           "fetched_at": "2026-11-19T19:59:00Z",
           "filed_at": "2026-11-19T19:59:00Z",
-          "raw_path": "Robin Example/Records/uhc-example-health-plan/Coverage/coverage-7185e57e.json",
+          "raw_path": "Robin Example/Records/uhc-example-health-plan/Coverage/coverage-b5551394.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_uu6k4p2xs3s5wv767efc",
+      "id": "r_l2tse2sd2msiix2kzx62",
       "kind": "result",
       "key": "result|http://loinc.org|718-7|2025-06-01",
       "date": "2025-06-01",
@@ -2483,18 +2914,18 @@
           "method": "portal",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-29e04491",
+            "id": "observation-68bd1066",
             "last_updated": "2026-11-10T08:00:00Z"
           },
           "fetched_at": "2026-11-10T19:59:00Z",
           "filed_at": "2026-11-10T19:59:00Z",
-          "raw_path": "Robin Example/Records/oneblood-example-blood-center/Observation/observation-29e04491.json",
+          "raw_path": "Robin Example/Records/oneblood-example-blood-center/Observation/observation-68bd1066.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_7ve62h6aeiktbkmxbxfm",
+      "id": "r_jnhsovhf4esnoempvov2",
       "kind": "result",
       "key": "result|http://loinc.org|718-7|2025-12-02",
       "date": "2025-12-02",
@@ -2525,18 +2956,18 @@
           "method": "portal",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-b1311332",
+            "id": "observation-fe6ca6e4",
             "last_updated": "2026-11-10T08:00:00Z"
           },
           "fetched_at": "2026-11-10T19:59:00Z",
           "filed_at": "2026-11-10T19:59:00Z",
-          "raw_path": "Robin Example/Records/oneblood-example-blood-center/Observation/observation-b1311332.json",
+          "raw_path": "Robin Example/Records/oneblood-example-blood-center/Observation/observation-fe6ca6e4.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_oaflblkav63m4u3dqaqu",
+      "id": "r_bd2pbun6yr2qetkdjgp4",
       "kind": "result",
       "key": "result|http://loinc.org|718-7|2026-06-05",
       "date": "2026-06-05",
@@ -2567,18 +2998,18 @@
           "method": "portal",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-794809ce",
+            "id": "observation-dbb9e1c8",
             "last_updated": "2026-11-10T08:00:00Z"
           },
           "fetched_at": "2026-11-10T19:59:00Z",
           "filed_at": "2026-11-10T19:59:00Z",
-          "raw_path": "Robin Example/Records/oneblood-example-blood-center/Observation/observation-794809ce.json",
+          "raw_path": "Robin Example/Records/oneblood-example-blood-center/Observation/observation-dbb9e1c8.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_rse4ifctsi6dy3roa5ap",
+      "id": "r_epil5r55bnskgio225qk",
       "kind": "result",
       "key": "result|http://loinc.org|2823-3|2026-11-18",
       "date": "2026-11-18",
@@ -2613,18 +3044,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-8ee267f0",
+            "id": "observation-2d85820b",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T17:00:00Z",
           "filed_at": "2026-11-22T17:00:00Z",
-          "raw_path": "Robin Example/Records/mychart-example-health/Observation/observation-8ee267f0.json",
+          "raw_path": "Robin Example/Records/mychart-example-health/Observation/observation-2d85820b.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_2kllmymdy25lajrlepzd",
+      "id": "r_gdbfi4hfyshulxlnomh2",
       "kind": "result",
       "key": "result|http://loinc.org|2160-0|2026-11-18",
       "date": "2026-11-18",
@@ -2659,12 +3090,12 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-e67ad701",
+            "id": "observation-a06f6c78",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T17:00:00Z",
           "filed_at": "2026-11-22T17:00:00Z",
-          "raw_path": "Robin Example/Records/mychart-example-health/Observation/observation-e67ad701.json",
+          "raw_path": "Robin Example/Records/mychart-example-health/Observation/observation-a06f6c78.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
@@ -2673,10 +3104,10 @@
   "studies": [],
   "imports": [
     {
-      "id": "i_w45twdn7fuy2znyki56j",
+      "id": "i_u3npnytzjntrq225kumy",
       "source_dir": "Robin Example/Records/mychart-example-health",
-      "stream_sha256": "b57da4a0daf3c14e6ea5da16ba58e3c6eec025c00764d51e4f53b674e768a3a5",
-      "stream_bytes": 763549,
+      "stream_sha256": "98ad633fe9d08cc05b80e21bcc2be8fb0af57de1a672699bdd30e4703a5f4e79",
+      "stream_bytes": 374203,
       "cli": "mychart",
       "cli_version": "0.7.1",
       "organization": "example-health",
@@ -2696,10 +3127,10 @@
       "documents_added": 1
     },
     {
-      "id": "i_ngbz5lrgvsithohwztbk",
+      "id": "i_bptrgf6f2ka7fl7vxojh",
       "source_dir": "Robin Example/Records/mychart-example-health",
-      "stream_sha256": "96f6f59a2d422099ae32e901c0f9c1b48aefa115ceb5a41fa727c7824a3323bd",
-      "stream_bytes": 433781,
+      "stream_sha256": "e9fa33ef4e0c9f1bd0ebeb498701a254edd707500c10de22c35e6f3806398a35",
+      "stream_bytes": 301403,
       "cli": "mychart",
       "cli_version": "0.7.1",
       "organization": "example-health",
@@ -2719,10 +3150,10 @@
       "documents_added": 0
     },
     {
-      "id": "i_ywrysx5zuezwtnkihy37",
+      "id": "i_scnjwvknvl6dvxpvqlrk",
       "source_dir": "Robin Example/Records/uhc-example-health-plan",
-      "stream_sha256": "77091e37044098608270130a17c37c006036dd3fabd988a6c925e31d35ba2f5b",
-      "stream_bytes": 463415,
+      "stream_sha256": "bd375a91810d5a3820737fe001632be60bdd1be4e2f44e7b8f88169fd9e88dd1",
+      "stream_bytes": 714573,
       "cli": "uhc",
       "cli_version": "0.3.2",
       "organization": "example-health-plan",
@@ -2742,10 +3173,10 @@
       "documents_added": 0
     },
     {
-      "id": "i_yl5wfoujthwud7t5peeo",
+      "id": "i_lgwom2tbzuzvotl7er6f",
       "source_dir": "Robin Example/Records/oneblood-example-blood-center",
-      "stream_sha256": "b2d62ff0551ac42668bd1066ba324a23ac2887aa97eafe6ca6e49d72e575c42d",
-      "stream_bytes": 246734,
+      "stream_sha256": "c4aa3f8004ea9955b5e9ead932659d550979e07d6b7b918da6ce714f7f71e81f",
+      "stream_bytes": 208752,
       "cli": "oneblood",
       "cli_version": "0.1.1",
       "organization": "example-blood-center",

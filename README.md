@@ -83,6 +83,15 @@ fills: who prescribed it and the last fill and pharmacy. One only reported
 says so. A vaccine lists every dose, and a dose recorded as not given stands
 apart. The rules are `src/model/lists.ts`, which the overview's cards use too.
 
+Claims and bills show what each provider's newest statement says is due
+(per provider and account, with a receipt filed after it counted as paid),
+the plan's deductible and out-of-pocket limit so far from the newest claim
+that printed them, and each insurer claim beside its bill: a statement from
+the same provider within 120 days after the visit, preferring one whose
+amount is the claim's share. A claim with nothing to pay says so, and one
+with a share but no bill yet says that. Money is added in whole cents. The
+rules are `src/model/billing.ts`.
+
 Results are grouped by panel (metabolic, lipid, A1c, liver, blood count,
 thyroid, vitamins and iron, urine, vital signs) by each test's LOINC code,
 from a table in `src/model/panels.ts`; a test outside the table goes by the

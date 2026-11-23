@@ -252,10 +252,6 @@ export function medicines(index: PersonIndex): MedicineGroup[] {
   return out.sort((a, b) => Number(b.active) - Number(a.active) || (b.latest.date ?? '').localeCompare(a.latest.date ?? ''));
 }
 
-export function recordsOf(index: PersonIndex, kind: string): MedRecord[] {
-  return sortByDateDesc(index.records.filter((r) => r.kind === kind));
-}
-
 // ---- Money ----
 
 export interface Money {
@@ -299,21 +295,12 @@ export function claimTotals(r: MedRecord): ClaimTotal[] {
   return out;
 }
 
-const YOUR_SHARE = /member ?liability|patient ?pay|paid ?by ?patient|your share|patient responsibility/i;
+/** A claim total that is the member's share, by its category's words. */
+export const YOUR_SHARE = /member ?liability|patient ?pay|paid ?by ?patient|your share|patient responsibility|you owe/i;
 
 export function claimYourShare(r: MedRecord): string | undefined {
   const t = claimTotals(r).find((x) => YOUR_SHARE.test(x.label));
   return t ? `Your share ${formatMoney(t.amount)}` : undefined;
-}
-
-export const BILL_TYPES = new Set(['bill', 'eob', 'receipt']);
-
-export function bills(index: PersonIndex): MedDocument[] {
-  return sortByDateDesc(
-    index.documents
-      .filter((d) => d.doc_type && BILL_TYPES.has(d.doc_type))
-      .map((d) => ({ ...d, date: d.statement?.statement_date ?? d.date })),
-  );
 }
 
 // ---- Provenance ----
