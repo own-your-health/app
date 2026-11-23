@@ -7,7 +7,6 @@ import {
   documentTitle,
   formatMoney,
   KIND_LABELS,
-  medicines,
   organizationName,
   originNames,
   recordDetail,
@@ -18,7 +17,8 @@ import {
   type TimelineEntry,
 } from '../../model/records';
 import { isOutOfRange, rangeFor, resultFlag, type ResultFlag } from '../../model/flags';
-import { activeConditions, currentAllergies, currentMedicines, immunizationsGiven, latestResults, newInLatestLoads, recentVisits, type LatestResult } from '../../model/overview';
+import { immunizationsGiven, latestResults, newInLatestLoads, recentVisits, type LatestResult } from '../../model/overview';
+import { allergyList, conditionList, CRITICALITY_TEXT, medicineList, statusText, vaccineList, type AllergyItem, type ConditionItem, type MedicineItem } from '../../model/lists';
 import { resultGroups } from '../../model/panels';
 import { COMING_UP_DAYS, FLU, fluSeason, SCHEDULE_SOURCE, scheduleDigest, scheduleFor, type DoseState, type FluSeason, type ScheduleRow } from '../../model/schedule';
 import { search } from '../../model/search';
@@ -142,10 +142,6 @@ function yearList<T extends { date?: string }>(items: T[], render: (x: T) => HTM
 /** The person's local calendar day, for "has this visit happened". */
 function localDay(now: Date): string {
   return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
-}
-
-function reactions(r: MedRecord): string | undefined {
-  return Array.isArray(r.fields.reaction) ? r.fields.reaction.filter((x): x is string => typeof x === 'string').join(', ') || undefined : undefined;
 }
 
 type Chip = [string, 'attention' | 'muted' | 'ok'];
@@ -280,24 +276,27 @@ function overviewSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElemen
     results.length ? all('results', results.length > shownResults.length ? `All ${count(results.length, 'test')}` : 'Results over time') : null,
   );
 
-  const conditions = activeConditions(idx);
+  const conditions = conditionList(idx);
+  const notActive = conditions.ended.length + conditions.other.length;
   const conditionsCard = card(
     { title: 'Active conditions' },
-    conditions.active.length ? conditions.active.map((r) => recordRow(r, [r.date ? `since ${dateText(r.date)}` : null, from(r.provenance)])) : empty('No active conditions recorded.'),
-    conditions.active.length || conditions.other ? all('conditions', conditions.other ? `All conditions, ${conditions.other} past or inactive` : 'All conditions') : null,
+    conditions.active.length ? conditions.active.map((i) => recordRow(i.latest, [i.first ? `since ${dateText(i.first)}` : null, from(i.provenance)])) : empty('No active conditions recorded.'),
+    conditions.active.length || notActive ? all('conditions', notActive ? `All conditions, ${notActive} past or inactive` : 'All conditions') : null,
   );
 
-  const meds = currentMedicines(idx);
+  const meds = medicineList(idx).active;
   const medsCard = card(
     { title: 'Current medicines' },
-    meds.length ? meds.map((g) => recordRow(g.latest, [str(g.latest.fields.dosage), from(g.records.flatMap((r) => r.provenance))])) : empty('No current medicines recorded.'),
+    meds.length ? meds.map((m) => recordRow(m.latest, [str(m.latest.fields.dosage), from(m.provenance)])) : empty('No current medicines recorded.'),
     all('medicines', 'All medicines'),
   );
 
-  const allergies = currentAllergies(idx);
+  const allergies = allergyList(idx).current;
   const allergiesCard = card(
     { title: 'Allergies' },
-    allergies.length ? allergies.map((r) => recordRow(r, [reactions(r), str(r.fields.criticality) ? `criticality ${str(r.fields.criticality)}` : null, from(r.provenance)])) : empty('No allergies recorded in these records.'),
+    allergies.length
+      ? allergies.map((i) => recordRow(i.latest, [i.reactions.join(', '), i.criticality ? CRITICALITY_TEXT[i.criticality] ?? i.criticality : null, from(i.provenance)], i.criticality === 'high' ? chip('High risk', 'attention') : undefined))
+      : empty('No allergies recorded in these records.'),
     all('allergies', 'All allergies'),
   );
 
@@ -410,45 +409,125 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
   );
 }
 
-const MED_SOURCE: Record<string, string> = { request: 'prescribed', statement: 'reported', dispense: 'filled' };
-
-function medicinesSection(person: Person, idx: PersonIndex): HTMLElement {
-  const groups = medicines(idx);
-  const render = (title: string, gs: typeof groups) =>
-    gs.length
-      ? card(
-          { title },
-          gs.map((g) => {
-            const kinds = [...new Set(g.records.map((r) => MED_SOURCE[str(r.fields.source) ?? ''] ?? null).filter(Boolean))].join(', ');
-            return row({
-              route: itemRoute(person.id, g.latest.id),
-              title: g.name,
-              meta: [str(g.latest.fields.dosage), dateText(g.latest.date), kinds, g.records.length > 1 ? count(g.records.length, 'entry', 'entries') : null].filter(Boolean).join(' · '),
-              aside: g.latest.status ? chip(g.latest.status, g.active ? 'ok' : 'muted') : null,
-            });
-          }),
-        )
-      : null;
-  const active = groups.filter((g) => g.active);
-  const past = groups.filter((g) => !g.active);
-  if (!groups.length) return card({ title: 'Medicines' }, empty('No medicines yet.'));
-  return h('div', { class: 'stack' }, render('Active', active), render(active.length ? 'Past and other' : 'Medicines', past));
+/** "since Mar 10, 2025", or "on" when it was recorded once. */
+function sinceText(item: { first?: string; records: unknown[] }): string | null {
+  if (!item.first) return null;
+  return item.records.length > 1 ? `since ${dateText(item.first)}` : `recorded ${dateText(item.first)}`;
 }
 
-function listSection(person: Person, idx: PersonIndex, kind: string, title: string, meta: (r: MedRecord) => string | undefined): HTMLElement {
-  const rs = recordsOf(idx, kind);
-  return card(
-    { title },
-    rs.length
-      ? rs.map((r) =>
-          row({
-            route: itemRoute(person.id, r.id),
-            title: r.display || KIND_LABELS[r.kind] || r.kind,
-            meta: [dateText(r.date), meta(r)].filter(Boolean).join(' · '),
-            aside: r.status ? chip(r.status, r.status === 'active' ? 'attention' : 'muted') : null,
-          }),
+function sourcesText(ctx: Ctx, person: Person, provenance: Provenance[]): string | null {
+  const names = originNames(provenance, ctx.store.household, person.id);
+  return names.length ? `from ${names.join(' and ')}` : null;
+}
+
+const meta = (...parts: (string | null | undefined | false)[]) => parts.filter(Boolean).join(' · ');
+
+function conditionsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
+  const { active, ended, other } = conditionList(idx);
+  const render = (i: ConditionItem) => {
+    const status = i.latest.status;
+    const unusual = status && status !== 'active' && status !== 'resolved' && status !== 'inactive' ? statusText(status) : undefined;
+    return row({
+      route: itemRoute(person.id, i.latest.id),
+      title: i.name,
+      meta: meta(i.ended ? `${i.first ? `${dateText(i.first)} to ` : 'ended '}${dateText(i.ended)}` : sinceText(i), sourcesText(ctx, person, i.provenance)),
+      aside: i.unconfirmed ? chip('Unconfirmed', 'muted') : unusual ? chip(unusual, ACTIVE_STATUS.has(status!) ? 'attention' : 'muted') : null,
+    });
+  };
+  if (!active.length && !ended.length && !other.length) return card({ title: 'Conditions' }, empty('No conditions recorded.'));
+  return h(
+    'div',
+    { class: 'stack' },
+    card({ title: 'Active' }, active.length ? active.map(render) : empty('No active conditions recorded.')),
+    ended.length ? card({ title: 'Resolved or inactive' }, ended.map(render)) : null,
+    other.length ? card({ title: 'Status not given' }, other.map(render)) : null,
+  );
+}
+
+const ACTIVE_STATUS = new Set(['active', 'recurrence', 'relapse']);
+
+function allergiesSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
+  const { current, ended } = allergyList(idx);
+  const render = (i: AllergyItem, past: boolean) =>
+    row({
+      route: itemRoute(person.id, i.latest.id),
+      title: i.name,
+      meta: meta(i.reactions.length ? i.reactions.join(', ') : null, i.criticality ? CRITICALITY_TEXT[i.criticality] ?? i.criticality : null, sinceText(i), sourcesText(ctx, person, i.provenance)),
+      aside: past ? chip(statusText(i.latest.status) ?? 'Ended', 'muted') : i.criticality === 'high' ? chip('High risk', 'attention') : null,
+    });
+  return h(
+    'div',
+    { class: 'stack' },
+    card({ title: 'Allergies' }, current.length ? current.map((i) => render(i, false)) : empty('No allergies recorded in these records.')),
+    ended.length ? card({ title: 'No longer active' }, ended.map((i) => render(i, true))) : null,
+  );
+}
+
+/** An active medicine "since" its first record; a past one by the dates it was recorded. */
+function medicineWhen(m: MedicineItem, past: boolean): string | null {
+  if (!m.first) return null;
+  if (!past) return `since ${dateText(m.first)}`;
+  return m.latest.date && m.latest.date !== m.first ? `${dateText(m.first)} to ${dateText(m.latest.date)}` : `recorded ${dateText(m.first)}`;
+}
+
+function medicinesSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
+  const { active, past } = medicineList(idx);
+  const render = (m: MedicineItem, isPast: boolean) => {
+    const fill = m.lastFill;
+    return row({
+      route: itemRoute(person.id, m.latest.id),
+      title: m.name,
+      meta: meta(
+        str(m.latest.fields.dosage),
+        m.prescriber ? `prescribed by ${m.prescriber}` : null,
+        medicineWhen(m, isPast),
+        fill ? `last filled ${dateText(fill.date)}${fill.pharmacy ? ` at ${fill.pharmacy}` : ''}${fill.daysSupply ? `, ${fill.daysSupply} days` : ''}` : null,
+        m.known.length === 1 && m.known[0] === 'reported' ? 'reported, not prescribed in these records' : null,
+        sourcesText(ctx, person, m.provenance),
+      ),
+      aside: isPast ? chip(statusText(m.latest.status) ?? 'Past', 'muted') : null,
+    });
+  };
+  if (!active.length && !past.length) return card({ title: 'Medicines' }, empty('No medicines yet.'));
+  return h(
+    'div',
+    { class: 'stack' },
+    card({ title: 'Active' }, active.length ? active.map((m) => render(m, false)) : empty('No active medicines recorded.')),
+    past.length ? card({ title: 'Past and other' }, past.map((m) => render(m, true))) : null,
+  );
+}
+
+function immunizationList(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
+  const { given, notGiven } = vaccineList(idx);
+  return h(
+    'div',
+    { class: 'stack' },
+    card(
+      { title: 'Doses given' },
+      given.length
+        ? given.map((v) =>
+            row({
+              route: itemRoute(person.id, v.latest.id),
+              title: v.name,
+              meta: meta(v.doses.length > 1 ? `${count(v.doses.length, 'dose')}, the last ${dateText(v.latest.date)}` : dateText(v.latest.date), sourcesText(ctx, person, v.provenance)),
+              extra:
+                v.doses.length > 1
+                  ? h(
+                      'p',
+                      { class: 'dose-dates small' },
+                      v.doses.map((d, i) => [i ? ' · ' : null, link(itemRoute(person.id, d.id), dateText(d.date))]),
+                    )
+                  : null,
+            }),
+          )
+        : empty('No immunizations recorded.'),
+    ),
+    notGiven.length
+      ? card(
+          { title: 'Recorded as not given' },
+          notGiven.map((r) => row({ route: itemRoute(person.id, r.id), title: r.display || 'Vaccine', meta: meta(dateText(r.date), sourcesText(ctx, person, r.provenance)) })),
         )
-      : empty(`No ${title.toLowerCase()} recorded.`),
+      : null,
   );
 }
 
@@ -592,19 +671,16 @@ export function personView(ctx: Ctx, personId: string, section: Section, sub?: s
       body = resultsSection(person, idx, sub);
       break;
     case 'medicines':
-      body = medicinesSection(person, idx);
+      body = medicinesSection(ctx, person, idx);
       break;
     case 'conditions':
-      body = listSection(person, idx, 'condition', 'Conditions', (r) => [str(r.fields.verification_status), str(r.fields.abatement) ? `ended ${dateText(str(r.fields.abatement))}` : null].filter(Boolean).join(' · ') || undefined);
+      body = conditionsSection(ctx, person, idx);
       break;
     case 'allergies':
-      body = listSection(person, idx, 'allergy', 'Allergies', (r) => {
-        const reactions = Array.isArray(r.fields.reaction) ? r.fields.reaction.filter((x): x is string => typeof x === 'string').join(', ') : undefined;
-        return [reactions, str(r.fields.criticality) ? `criticality ${str(r.fields.criticality)}` : null].filter(Boolean).join(' · ') || undefined;
-      });
+      body = allergiesSection(ctx, person, idx);
       break;
     case 'immunizations':
-      body = h('div', { class: 'stack' }, scheduleBlock(person, idx, localDay(ctx.now()), false), listSection(person, idx, 'immunization', 'Immunizations', (r) => recordDetail(r)));
+      body = h('div', { class: 'stack' }, scheduleBlock(person, idx, localDay(ctx.now()), false), immunizationList(ctx, person, idx));
       break;
     case 'claims':
       body = claimsSection(ctx, person, idx);

@@ -9,10 +9,10 @@
     "coding": [
       {
         "system": "http://hl7.org/fhir/sid/cvx",
-        "code": "48"
+        "code": "110"
       }
     ],
-    "text": "Hib (PRP-T)"
+    "text": "DTaP-hepatitis B and poliovirus vaccine"
   },
-  "occurrenceDateTime": "2019-04-08"
+  "occurrenceDateTime": "2018-07-09"
 }

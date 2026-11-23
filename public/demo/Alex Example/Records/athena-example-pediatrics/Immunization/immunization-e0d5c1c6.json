@@ -9,10 +9,10 @@
     "coding": [
       {
         "system": "http://hl7.org/fhir/sid/cvx",
-        "code": "83"
+        "code": "120"
       }
     ],
-    "text": "Hep A, ped/adol, 2 dose"
+    "text": "DTaP-Hib-IPV"
   },
-  "occurrenceDateTime": "2019-01-07"
+  "occurrenceDateTime": "2018-05-07"
 }

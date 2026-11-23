@@ -9,10 +9,10 @@
     "coding": [
       {
         "system": "http://hl7.org/fhir/sid/cvx",
-        "code": "03"
+        "code": "21"
       }
     ],
-    "text": "MMR"
+    "text": "Varicella"
   },
-  "occurrenceDateTime": "2022-01-10"
+  "occurrenceDateTime": "2019-01-07"
 }

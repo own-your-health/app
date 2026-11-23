@@ -345,6 +345,33 @@ R.record(src.robinChart, 'MedicationRequest', 'medication', {
   fields: { dosage: 'Take 1 tablet daily as needed', source: 'request' },
   resource: { status: 'stopped', intent: 'order', medicationCodeableConcept: { text: 'Cetirizine 10 mg tablet' }, authoredOn: '2023-04-02' },
 });
+// The pharmacy's fills of the lisinopril prescription.
+for (const date of ['2026-08-14', '2026-11-12']) {
+  R.record(src.robinChart, 'MedicationDispense', 'medication', {
+    date,
+    code: { system: RXNORM, code: '314076', display: 'lisinopril 10 MG Oral Tablet' },
+    display: 'Lisinopril 10 mg tablet',
+    status: 'completed',
+    fields: { dosage: 'Take 1 tablet by mouth once a day', quantity: '90 tablet', days_supply: 90, pharmacy: 'Example Pharmacy', prescriber: 'Dr. Jordan Sample', source: 'dispense' },
+    resource: { status: 'completed', medicationCodeableConcept: { coding: [{ system: RXNORM, code: '314076' }], text: 'Lisinopril 10 mg tablet' }, whenHandedOver: date, quantity: { value: 90, unit: 'tablet' }, daysSupply: { value: 90, unit: 'days' } },
+  });
+}
+R.record(src.robinChart, 'AllergyIntolerance', 'allergy', {
+  date: '2016-08-01',
+  code: { system: SNOMED, code: '300916003', display: 'Latex allergy' },
+  display: 'Latex',
+  status: 'inactive',
+  fields: { criticality: 'low', reaction: ['Itching'] },
+  resource: { clinicalStatus: { coding: [{ code: 'inactive' }] }, code: { text: 'Latex' }, criticality: 'low', reaction: [{ manifestation: [{ text: 'Itching' }] }] },
+});
+R.record(src.robinChart, 'Immunization', 'immunization', {
+  date: '2025-10-04',
+  code: { system: CVX, code: '309', display: 'COVID-19, mRNA, 2024-2025 formula' },
+  display: 'COVID-19 vaccine',
+  status: 'not-done',
+  fields: {},
+  resource: { status: 'not-done', statusReason: { text: 'Patient declined' }, vaccineCode: { coding: [{ system: CVX, code: '309' }], text: 'COVID-19 vaccine' }, occurrenceDateTime: '2025-10-04' },
+});
 R.record(src.robinChart, 'AllergyIntolerance', 'allergy', {
   date: '2012-01-01',
   code: { system: SNOMED, code: '91939003', display: 'Allergy to sulfonamide' },
@@ -471,6 +498,37 @@ for (const [date, hgb, wbc, plt] of [['2026-07-09', 11.2, 6.1, 245], ['2026-10-1
   lab(S, src.samLab, date, ['6690-2', 'Leukocytes [#/volume] in Blood by Automated count', 'White blood cells', wbc, '10*3/uL', '4.5-11.0 10*3/uL', 'Normal']);
   lab(S, src.samLab, date, ['777-3', 'Platelets [#/volume] in Blood by Automated count', 'Platelets', plt, '10*3/uL', '150-400 10*3/uL', 'Normal']);
 }
+S.record(src.samChart, 'Condition', 'condition', {
+  date: '2026-04-02',
+  code: { system: ICD10, code: 'E55.9', display: 'Vitamin D deficiency, unspecified' },
+  display: 'Vitamin D deficiency',
+  status: 'active',
+  fields: { verification_status: 'confirmed', category: 'Problem list item' },
+  resource: { clinicalStatus: { coding: [{ code: 'active' }] }, code: { coding: [{ system: ICD10, code: 'E55.9' }], text: 'Vitamin D deficiency' }, onsetDateTime: '2026-04-02' },
+});
+S.record(src.samChart, 'Condition', 'condition', {
+  date: '2026-05-20',
+  code: { system: ICD10, code: 'S93.401A', display: 'Sprain of unspecified ligament of right ankle, initial encounter' },
+  display: 'Right ankle sprain',
+  status: 'resolved',
+  fields: { verification_status: 'confirmed', category: 'Encounter diagnosis', abatement: '2026-07-01' },
+  resource: { clinicalStatus: { coding: [{ code: 'resolved' }] }, code: { coding: [{ system: ICD10, code: 'S93.401A' }], text: 'Right ankle sprain' }, onsetDateTime: '2026-05-20', abatementDateTime: '2026-07-01' },
+});
+S.record(src.samChart, 'AllergyIntolerance', 'allergy', {
+  date: '2001-03-01',
+  code: { system: SNOMED, code: '91935009', display: 'Allergy to peanut' },
+  display: 'Peanuts',
+  status: 'active',
+  fields: { criticality: 'high', reaction: ['Hives', 'Swelling of the lips'] },
+  resource: { clinicalStatus: { coding: [{ code: 'active' }] }, code: { text: 'Peanuts' }, criticality: 'high', reaction: [{ manifestation: [{ text: 'Hives' }, { text: 'Swelling of the lips' }] }] },
+});
+S.record(src.samChart, 'MedicationStatement', 'medication', {
+  date: '2026-05-20',
+  display: 'Ibuprofen 200 mg tablet',
+  status: 'completed',
+  fields: { dosage: '2 tablets by mouth every 6 hours as needed for pain', source: 'statement' },
+  resource: { status: 'completed', medicationCodeableConcept: { text: 'Ibuprofen 200 mg tablet' }, effectiveDateTime: '2026-05-20', dosage: [{ text: '2 tablets by mouth every 6 hours as needed for pain' }] },
+});
 S.record(src.samChart, 'MedicationRequest', 'medication', {
   date: '2026-04-03',
   display: 'Vitamin D3 2,000 unit capsule',

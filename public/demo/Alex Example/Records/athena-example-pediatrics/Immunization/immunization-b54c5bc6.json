@@ -9,10 +9,10 @@
     "coding": [
       {
         "system": "http://hl7.org/fhir/sid/cvx",
-        "code": "83"
+        "code": "48"
       }
     ],
-    "text": "Hep A, ped/adol, 2 dose"
+    "text": "Hib (PRP-T)"
   },
-  "occurrenceDateTime": "2019-07-08"
+  "occurrenceDateTime": "2018-07-09"
 }

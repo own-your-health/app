@@ -9,10 +9,10 @@
     "coding": [
       {
         "system": "http://hl7.org/fhir/sid/cvx",
-        "code": "21"
+        "code": "119"
       }
     ],
-    "text": "Varicella"
+    "text": "Rotavirus, monovalent"
   },
-  "occurrenceDateTime": "2019-01-07"
+  "occurrenceDateTime": "2018-03-05"
 }

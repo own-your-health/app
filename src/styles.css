@@ -1317,3 +1317,9 @@ body:has(.bottom-nav) {
   margin-top: 8px;
 }
 
+
+/* A vaccine's dose dates under its row, each a link to that dose. */
+.dose-dates {
+  margin: 4px 0 0;
+  color: var(--muted);
+}

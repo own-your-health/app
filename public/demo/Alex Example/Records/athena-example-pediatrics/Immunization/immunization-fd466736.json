@@ -9,10 +9,10 @@
     "coding": [
       {
         "system": "http://hl7.org/fhir/sid/cvx",
-        "code": "10"
+        "code": "03"
       }
     ],
-    "text": "IPV"
+    "text": "MMR"
   },
-  "occurrenceDateTime": "2022-01-10"
+  "occurrenceDateTime": "2019-01-07"
 }

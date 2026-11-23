@@ -9,10 +9,10 @@
     "coding": [
       {
         "system": "http://hl7.org/fhir/sid/cvx",
-        "code": "141"
+        "code": "20"
       }
     ],
-    "text": "Influenza, seasonal, injectable"
+    "text": "DTaP"
   },
-  "occurrenceDateTime": "2025-10-20"
+  "occurrenceDateTime": "2019-04-08"
 }

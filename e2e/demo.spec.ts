@@ -216,6 +216,60 @@ test('a low result read from its range is flagged in its panel', async ({ page }
   await expect(cbc.locator('.row').first().locator('.chip')).toHaveText('Low');
 });
 
+test('conditions, allergies and medicines read as lists naming their source', async ({ page }) => {
+  await page.goto('./?demo');
+  await page.getByRole('link', { name: /^Sam Example/ }).first().click();
+  await expect(page.locator('.card', { hasText: 'Allergies' }).locator('.row')).toContainText('Peanuts');
+  await expect(page.locator('.card', { hasText: 'Allergies' }).locator('.row .chip')).toHaveText('High risk');
+
+  await openSection(page, 'Conditions');
+  const active = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Active$/ }) });
+  await expect(active.locator('.row')).toHaveText([/Vitamin D deficiency.*recorded Apr 2, 2026 · from Example Health/]);
+  const ended = page.locator('.card', { hasText: 'Resolved or inactive' });
+  await expect(ended.locator('.row')).toHaveText([/Right ankle sprain.*May 20, 2026 to Jul 1, 2026 · from Example Health/]);
+
+  await openSection(page, 'Allergies');
+  await expect(page.locator('main .card').first().locator('.row')).toHaveText([/Peanuts.*Hives, Swelling of the lips · high risk of a severe reaction · recorded Mar 1, 2001 · from Example Health/]);
+
+  await openSection(page, 'Medicines');
+  const past = page.locator('.card', { hasText: 'Past and other' });
+  await expect(past.locator('.row')).toContainText('Ibuprofen 200 mg tablet');
+  await expect(past.locator('.row')).toContainText('reported, not prescribed in these records');
+  await expect(past.locator('.row .chip')).toHaveText('Completed');
+});
+
+test('a medicine shows its prescriber and last fill, and an inactive allergy and a declined dose stand apart', async ({ page }) => {
+  await page.goto('./?demo');
+  await page.getByRole('link', { name: /^Robin Example/ }).first().click();
+  await openSection(page, 'Medicines');
+  const active = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Active$/ }) });
+  await expect(active.locator('.row')).toHaveText([
+    /Lisinopril 10 mg tablet.*Take 1 tablet by mouth once a day · prescribed by Dr\. Jordan Sample · since Mar 12, 2025 · last filled Nov 12, 2026 at Example Pharmacy, 90 days · from Example Health/,
+  ]);
+  await expect(active.locator('.chip')).toHaveCount(0);
+  await expect(page.locator('.card', { hasText: 'Past and other' }).locator('.row')).toHaveText([/Cetirizine 10 mg tablet.*Take 1 tablet daily as needed · recorded Apr 2, 2023 · from Example Health.*Stopped/]);
+
+  await openSection(page, 'Allergies');
+  await expect(page.locator('.card', { hasText: 'No longer active' }).locator('.row')).toHaveText([/Latex.*Inactive/]);
+
+  await openSection(page, 'Immunizations');
+  await expect(page.locator('.card', { hasText: 'Recorded as not given' }).locator('.row')).toHaveText([/COVID-19 vaccine.*Oct 4, 2025 · from Example Health/]);
+  await expect(page.locator('.card', { has: page.locator('.card-head h2', { hasText: 'Doses given' }) }).locator('.row', { hasText: 'COVID-19' })).toHaveCount(0);
+});
+
+test('each vaccine is listed once, with a link to every dose', async ({ page }) => {
+  await page.goto('./?demo');
+  await page.getByRole('link', { name: /^Alex Example/ }).first().click();
+  await openSection(page, 'Immunizations');
+  const doses = page.locator('.card', { has: page.locator('.card-head h2', { hasText: 'Doses given' }) });
+  const pcv = doses.locator('.row', { hasText: 'Pneumococcal conjugate PCV 13' });
+  await expect(pcv).toContainText('4 doses, the last Jan 7, 2019 · from Example Pediatrics');
+  await expect(pcv.locator('.dose-dates a')).toHaveText(['Mar 5, 2018', 'May 7, 2018', 'Jul 9, 2018', 'Jan 7, 2019']);
+  await pcv.locator('.dose-dates a').first().click();
+  await expect(page).toHaveURL(/#\/p\/p_[a-z2-7]{20}\/r\/r_[a-z2-7]{20}$/);
+  await expect(page.locator('main')).toContainText('Mar 5, 2018');
+});
+
 test('a result over time, down to its raw FHIR', async ({ page }) => {
   await page.goto('./?demo');
   await page.getByRole('link', { name: /^Robin Example/ }).first().click();

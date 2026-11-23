@@ -9,10 +9,10 @@
     "coding": [
       {
         "system": "http://hl7.org/fhir/sid/cvx",
-        "code": "141"
+        "code": "133"
       }
     ],
-    "text": "Influenza, seasonal, injectable"
+    "text": "Pneumococcal conjugate PCV 13"
   },
-  "occurrenceDateTime": "2024-10-14"
+  "occurrenceDateTime": "2019-01-07"
 }

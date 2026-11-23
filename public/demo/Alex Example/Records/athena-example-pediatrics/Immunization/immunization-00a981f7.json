@@ -9,10 +9,10 @@
     "coding": [
       {
         "system": "http://hl7.org/fhir/sid/cvx",
-        "code": "48"
+        "code": "08"
       }
     ],
-    "text": "Hib (PRP-T)"
+    "text": "Hep B, adolescent or pediatric"
   },
-  "occurrenceDateTime": "2018-07-09"
+  "occurrenceDateTime": "2018-02-05"
 }
