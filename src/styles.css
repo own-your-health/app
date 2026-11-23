@@ -972,7 +972,11 @@ pre.text {
 
 .chart-box {
   margin-top: 8px;
-  max-width: 760px;
+}
+
+/* A chart is drawn at this box's width in CSS pixels (fitted in chart.ts), so its text keeps its size. */
+.chart-fit {
+  width: 100%;
 }
 
 .chart {
@@ -1808,10 +1812,6 @@ mark {
   background: var(--surface);
 }
 
-.cost-chart {
-  max-width: 520px;
-}
-
 .cost-plan {
   fill: var(--series-plan);
 }
@@ -1838,6 +1838,11 @@ mark {
 .chart-value {
   fill: var(--ink);
   font-weight: 600;
+  /* A halo of the card's colour, so a gridline behind the value never runs through it. */
+  stroke: var(--surface);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  paint-order: stroke;
 }
 
 .cost-strip {
@@ -1898,6 +1903,11 @@ mark {
   .swatch-share {
     fill: Highlight;
     background: Highlight;
+  }
+
+  .chart-value {
+    fill: CanvasText;
+    stroke: Canvas;
   }
 }
 
