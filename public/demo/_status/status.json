@@ -245,6 +245,144 @@
         },
         "withheld_types": []
       }
+    },
+    {
+      "source": "s_mmy3oa5lpz7usgbyyteu",
+      "person": "p_wwezzed7kml67hnp6s7n",
+      "cli": "kp",
+      "organization": "example-care-plan",
+      "auto": true,
+      "paused": null,
+      "failures": 0,
+      "min_interval_secs": 86400,
+      "next_run_at": "2026-11-23T19:30:00Z",
+      "sign_in": {
+        "state": "ok",
+        "expires_at": "2027-01-21T20:00:00Z",
+        "checked_at": "2026-11-21T13:59:00Z",
+        "needs_person": null
+      },
+      "last_attempt": {
+        "attempt": "t_cbcw6wxm2ya4fmeyk3su",
+        "started_at": "2026-11-21T13:59:00Z",
+        "finished_at": "2026-11-21T14:00:00Z",
+        "trigger": "schedule",
+        "requests": [],
+        "outcome": "ok",
+        "exit_code": 0,
+        "error": null,
+        "import": "i_svk5mgyh6ukqqgy3fyxi"
+      },
+      "last_success": {
+        "attempt": "t_cbcw6wxm2ya4fmeyk3su",
+        "finished_at": "2026-11-21T14:00:00Z",
+        "import": "i_svk5mgyh6ukqqgy3fyxi",
+        "counts": {
+          "records_added": 4,
+          "records_updated": 0,
+          "records_unchanged": 0,
+          "records_older": 0,
+          "resources_written": 4,
+          "resources_unchanged": 0,
+          "documents_added": 0,
+          "documents_duplicate": 0,
+          "documents_unchanged": 0,
+          "documents_same_statement": 0
+        },
+        "withheld_types": []
+      }
+    },
+    {
+      "source": "s_u7hhk3jzor4zlqdhamle",
+      "person": "p_bjpnvyvnmxv74q335tk4",
+      "cli": "kp",
+      "organization": "example-care-plan",
+      "auto": true,
+      "paused": null,
+      "failures": 0,
+      "min_interval_secs": 86400,
+      "next_run_at": "2026-11-23T19:30:00Z",
+      "sign_in": {
+        "state": "ok",
+        "expires_at": "2027-01-21T20:00:00Z",
+        "checked_at": "2026-11-21T13:59:00Z",
+        "needs_person": null
+      },
+      "last_attempt": {
+        "attempt": "t_urriufquzhy2k3mxdwwy",
+        "started_at": "2026-11-21T13:59:00Z",
+        "finished_at": "2026-11-21T14:00:00Z",
+        "trigger": "schedule",
+        "requests": [],
+        "outcome": "ok",
+        "exit_code": 0,
+        "error": null,
+        "import": "i_ydixr4c2peancug2yblt"
+      },
+      "last_success": {
+        "attempt": "t_urriufquzhy2k3mxdwwy",
+        "finished_at": "2026-11-21T14:00:00Z",
+        "import": "i_ydixr4c2peancug2yblt",
+        "counts": {
+          "records_added": 3,
+          "records_updated": 0,
+          "records_unchanged": 0,
+          "records_older": 0,
+          "resources_written": 3,
+          "resources_unchanged": 0,
+          "documents_added": 0,
+          "documents_duplicate": 0,
+          "documents_unchanged": 0,
+          "documents_same_statement": 0
+        },
+        "withheld_types": []
+      }
+    },
+    {
+      "source": "s_mt4teyfk7s6vbyxogm7c",
+      "person": "p_xo4em46i7yj3hphlpajo",
+      "cli": "caremark",
+      "organization": "example-pharmacy-benefits",
+      "auto": true,
+      "paused": null,
+      "failures": 0,
+      "min_interval_secs": 86400,
+      "next_run_at": "2026-11-23T19:30:00Z",
+      "sign_in": {
+        "state": "ok",
+        "expires_at": "2027-01-21T20:00:00Z",
+        "checked_at": "2026-11-21T13:59:00Z",
+        "needs_person": null
+      },
+      "last_attempt": {
+        "attempt": "t_flko3gucto5fkxq3cqd4",
+        "started_at": "2026-11-21T13:59:00Z",
+        "finished_at": "2026-11-21T14:00:00Z",
+        "trigger": "schedule",
+        "requests": [],
+        "outcome": "ok",
+        "exit_code": 0,
+        "error": null,
+        "import": "i_ebpdh2ci2vapyqdmsh7g"
+      },
+      "last_success": {
+        "attempt": "t_flko3gucto5fkxq3cqd4",
+        "finished_at": "2026-11-21T14:00:00Z",
+        "import": "i_ebpdh2ci2vapyqdmsh7g",
+        "counts": {
+          "records_added": 2,
+          "records_updated": 0,
+          "records_unchanged": 0,
+          "records_older": 0,
+          "resources_written": 2,
+          "resources_unchanged": 0,
+          "documents_added": 0,
+          "documents_duplicate": 0,
+          "documents_unchanged": 0,
+          "documents_same_statement": 0
+        },
+        "withheld_types": []
+      }
     }
   ]
 }

@@ -316,20 +316,23 @@ test('bills say what is owed to each provider, and each claim sits beside its bi
 
   const claims = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Claims$/ }) });
   const rows = claims.locator('.row');
-  await expect(rows).toHaveCount(5);
+  await expect(rows).toHaveCount(7);
   // Named for what was done, not "Professional".
-  await expect(rows.locator('.row-title')).toHaveText(['Office visit', 'Lipid panel and blood draw', 'Preventive visit, flu vaccine and 1 more', 'Office visit', 'Office visit and blood count']);
-  await expect(rows.nth(1).locator('.row-meta').first()).toHaveText('Oct 3, 2026 · Example Lab · by Example Health Plan');
+  const fill = 'Lisinopril 10 mg tablet, 90 days';
+  await expect(rows.locator('.row-title')).toHaveText(['Office visit', fill, 'Lipid panel and blood draw', 'Preventive visit, flu vaccine and 1 more', fill, 'Office visit', 'Office visit and blood count']);
+  await expect(rows.nth(2).locator('.row-meta').first()).toHaveText('Oct 3, 2026 · Example Lab · by Example Health Plan');
   await expect(rows.nth(0)).toContainText('No bill from Example Health in these records within 120 days of the visit.');
-  await expect(rows.nth(1)).toContainText('Billed on the statement of Oct 28, 2026: $19.28, your share.');
-  await expect(rows.nth(2).locator('.totals')).toHaveText('Billed $412.00; Plan allowed $268.40; Plan paid $214.72; Your share $53.68');
-  await expect(rows.nth(2)).toContainText('Your share is coinsurance $53.68.');
-  await expect(rows.nth(2).getByRole('link', { name: 'Explanation of Benefits' })).toBeVisible();
-  await expect(rows.nth(3)).toContainText('Nothing for you to pay on this claim.');
-  await expect(rows.nth(4)).toContainText('Billed on the statement of Apr 2, 2025: $51.18, your share. A receipt was filed Apr 20, 2025.');
+  // A fill's share goes to the pharmacy, so no statement is looked for.
+  await expect(rows.nth(1)).toContainText('Your share of a fill is paid to the pharmacy, usually when it is picked up or shipped, so no statement follows.');
+  await expect(rows.nth(2)).toContainText('Billed on the statement of Oct 28, 2026: $19.28, your share.');
+  await expect(rows.nth(3).locator('.totals')).toHaveText('Billed $412.00; Plan allowed $268.40; Plan paid $214.72; Your share $53.68');
+  await expect(rows.nth(3)).toContainText('Your share is coinsurance $53.68.');
+  await expect(rows.nth(3).getByRole('link', { name: 'Explanation of Benefits' })).toBeVisible();
+  await expect(rows.nth(5)).toContainText('Nothing for you to pay on this claim.');
+  await expect(rows.nth(6)).toContainText('Billed on the statement of Apr 2, 2025: $51.18, your share. A receipt was filed Apr 20, 2025.');
 
   // A claim's page lists its lines, each with its code, what kind of service it is, and its amounts.
-  await rows.nth(1).locator('a.row-main').click();
+  await rows.nth(2).locator('a.row-main').click();
   await expect(page.locator('main h1')).toHaveText('Lipid panel and blood draw');
   const lines = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^2 lines$/ }) });
   await expect(lines.locator('.row-title')).toHaveText(['Lipid panel', 'Blood draw']);
@@ -337,7 +340,7 @@ test('bills say what is owed to each provider, and each claim sits beside its bi
   await expect(lines.locator('.claim-amounts').first()).toHaveText('Billed $180.00 · Allowed $78.40 · Plan paid $62.72 · Deductible $0.00 · Coinsurance $15.68 · You owe $15.68');
   await page.goBack();
 
-  await rows.nth(2).getByRole('link', { name: 'statement of Oct 20, 2026' }).click();
+  await rows.nth(3).getByRole('link', { name: 'statement of Oct 20, 2026' }).click();
   await expect(page).toHaveURL(/#\/p\/p_[a-z2-7]{20}\/r\/d_[a-z2-7]{20}$/);
   await expect(page.locator('main')).toContainText('Statement from Example Health');
 });
@@ -420,7 +423,7 @@ test('a visit’s page shows what belongs to it, a hand-filed note among them', 
   await expect(page.locator('.card-head h1').first()).toHaveText('Sick visit');
   const at = page.locator('.card', { hasText: 'At this visit' });
   await expect(at.locator('.visit-docs li')).toHaveText(['School note Letter']);
-  await expect(at.locator('.visit-line')).toHaveText(['Diagnosis: Ear infection', 'Medicine: Amoxicillin 400 mg/5 mL suspension']);
+  await expect(at.locator('.visit-line')).toHaveText(['Diagnosis: Ear infection', 'Medicine: Amoxicillin 400 mg/5 mL suspension', 'Claim: your share $25.00 from Example Care Plan']);
 });
 
 test('one search over everyone, from the home screen, with filters by kind and person', async ({ page }) => {
@@ -432,14 +435,16 @@ test('one search over everyone, from the home screen, with filters by kind and p
   await expect(results.first()).toContainText('Robin Example');
   await expect(results.first().locator('mark').first()).toHaveText(/lisinopril/i);
   const kinds = page.getByRole('group', { name: 'Filter by kind' });
-  await expect(kinds.getByRole('button', { name: 'All 4' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('main p[aria-live]')).toHaveText('4 matches.');
+  // The two fills' claims name lisinopril on their lines.
+  await expect(kinds.getByRole('button', { name: 'All 6' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(kinds.getByRole('button', { name: 'Claims 2' })).toBeVisible();
+  await expect(page.locator('main p[aria-live]')).toHaveText('6 matches.');
   // By keyboard: the chip pressed keeps focus, and the status counts what is shown.
   await kinds.getByRole('button', { name: 'Documents 1' }).focus();
   await page.keyboard.press('Enter');
   await expect(kinds.getByRole('button', { name: 'Documents 1' })).toBeFocused();
   await expect(kinds.getByRole('button', { name: 'Documents 1' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('main p[aria-live]')).toHaveText('1 of 4 matches.');
+  await expect(page.locator('main p[aria-live]')).toHaveText('1 of 6 matches.');
   await expect(results).toHaveText([/After visit summary.*Robin Example.*in the document text.*continuing lisinopril/]);
   await expect(results.locator('.snippet mark')).toHaveText(['lisinopril']);
 });

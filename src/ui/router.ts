@@ -32,8 +32,21 @@ export const SECTION_LABELS: Record<Section, string> = {
   search: 'Search',
 };
 
+/** What the costs screen can be narrowed to, and what it can break costs down by (all but code). */
+export const COST_FILTERS = ['person', 'provider', 'category', 'month', 'code'] as const;
+export type CostFilterBy = (typeof COST_FILTERS)[number];
+export type CostBy = Exclude<CostFilterBy, 'code'>;
+export interface CostFilter {
+  by: CostFilterBy;
+  key: string;
+}
+
+const COST_PERIOD = /^(plan|plan-1|\d{4}|all)$/;
+
 export type Route =
   | { name: 'home' }
+  // `period`: plan (this plan year), plan-1, a calendar year, or all; `only`: the drill-down, one key per kind.
+  | { name: 'costs'; period?: string; by?: CostBy; only?: CostFilter[] }
   | { name: 'settings' }
   | { name: 'sources' }
   // `words`: search every word as written, not the concept a word names (?words=1).
@@ -61,6 +74,7 @@ export function parseRoute(hash: string): Route {
   const [head, a, b, c] = parts;
   if (head === 'settings' && parts.length === 1) return { name: 'settings' };
   if (head === 'sources' && parts.length === 1) return { name: 'sources' };
+  if (head === 'costs' && parts.length === 1) return costsRoute(query);
   if (head === 'search' && parts.length === 1) {
     const q = query.get('q') ?? undefined;
     return { name: 'search', ...(q ? { query: q } : {}), ...(q && query.get('words') === '1' ? { words: true as const } : {}) };
@@ -81,6 +95,33 @@ export function parseRoute(hash: string): Route {
   return { name: 'not_found' };
 }
 
+function costsRoute(query: URLSearchParams): Route {
+  const period = query.get('period') ?? '';
+  const by = query.get('by') ?? '';
+  const only = new Map<CostFilterBy, string>();
+  for (const f of query.getAll('only')) {
+    const at = f.indexOf(':');
+    const kind = f.slice(0, at) as CostFilterBy;
+    const key = f.slice(at + 1);
+    if (at > 0 && COST_FILTERS.includes(kind) && key.length > 0 && key.length <= 120) only.set(kind, key);
+  }
+  return {
+    name: 'costs',
+    ...(COST_PERIOD.test(period) ? { period } : {}),
+    ...(COST_FILTERS.includes(by as CostFilterBy) && by !== 'code' ? { by: by as CostBy } : {}),
+    ...(only.size ? { only: [...only].map(([k, key]) => ({ by: k, key })) } : {}),
+  };
+}
+
+function costsQuery(r: Extract<Route, { name: 'costs' }>): string {
+  const q = new URLSearchParams();
+  if (r.period) q.set('period', r.period);
+  if (r.by) q.set('by', r.by);
+  for (const f of r.only ?? []) q.append('only', `${f.by}:${f.key}`);
+  const t = q.toString();
+  return t ? `?${t}` : '';
+}
+
 function searchQuery(q: string, words: true | undefined): string {
   return new URLSearchParams({ q, ...(words ? { words: '1' } : {}) }).toString();
 }
@@ -93,6 +134,8 @@ export function href(route: Route): string {
       return '#/settings';
     case 'sources':
       return '#/sources';
+    case 'costs':
+      return `#/costs${costsQuery(route)}`;
     case 'search':
       return route.query ? `#/search?${searchQuery(route.query, route.words)}` : '#/search';
     case 'source':

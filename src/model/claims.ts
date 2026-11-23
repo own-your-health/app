@@ -135,6 +135,13 @@ export function claimLines(r: MedRecord): ClaimLine[] {
   return out;
 }
 
+/** A pharmacy claim: its type says so, or every line is a drug the pharmacy filled. */
+export function isPharmacyClaim(r: MedRecord): boolean {
+  if (/pharmacy/i.test(str(r.fields.type) ?? r.code?.code ?? '')) return true;
+  const lines = claimLines(r);
+  return lines.length > 0 && lines.every((l) => l.category === 'pharmacy');
+}
+
 /** What a claim paid for, each service once, in line order. */
 export function claimServices(r: MedRecord): string[] {
   const seen = new Set<string>();

@@ -16,7 +16,7 @@ import {
   type TimelineEntry,
 } from '../../model/records';
 import { visitKind, visitTimeline, type Visit } from '../../model/visits';
-import { claimTitle } from '../../model/claims';
+import { claimTitle, isPharmacyClaim } from '../../model/claims';
 import { recordTitle } from '../../model/titles';
 import { BILL_WINDOW_DAYS, claimsWithBills, owedByProvider, planBalances, toCents, type Bill, type Claim, type Owed } from '../../model/billing';
 import { isOutOfRange, rangeFor, resultFlag } from '../../model/flags';
@@ -31,6 +31,7 @@ import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, localDay, relative, yearOf } from '../format';
 import { searchPanel } from '../search';
 import { visitContents, visitWhen } from '../visit';
+import { personCosts } from './costs';
 import { signInNotice } from './sources';
 import { SECTION_LABELS, href, type Route, type Section } from '../router';
 
@@ -583,6 +584,7 @@ function billLine(person: Person, c: Claim): HTMLElement | null {
   const share = toCents(c.yourShare);
   if (share === undefined) return null;
   if (share <= 0) return h('p', { class: 'small muted claim-bill' }, 'Nothing for you to pay on this claim.');
+  if (isPharmacyClaim(c.record)) return h('p', { class: 'small muted claim-bill' }, 'Your share of a fill is paid to the pharmacy, usually when it is picked up or shipped, so no statement follows.');
   const m = c.bill;
   if (!m) return h('p', { class: 'small muted claim-bill' }, `No bill${c.provider ? ` from ${c.provider}` : ''} in these records within ${BILL_WINDOW_DAYS} days of the visit.`);
   const b = m.bill;
@@ -641,7 +643,7 @@ function claimsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement 
     : null;
 
   const claimsCard = card(
-    { title: 'Claims' },
+    { title: 'Claims', actions: claims.length ? link(personCosts(person.id), 'Costs over time') : null },
     claims.length
       ? yearList(
           claims.map((c) => ({ ...c, date: c.service })),

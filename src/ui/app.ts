@@ -13,6 +13,7 @@ import { readSetupLink, setupLinkFor, withoutClient } from '../setup-link';
 import { button, type Ctx } from './components';
 import { clear, h, icon, s } from './dom';
 import { href, parseRoute, type Route } from './router';
+import { costsView } from './views/costs';
 import { homeView } from './views/home';
 import { itemView } from './views/item';
 import { personView } from './views/person';
@@ -524,6 +525,8 @@ export class App {
         });
       case 'sources':
         return sourcesView(ctx);
+      case 'costs':
+        return costsView(ctx, r);
       case 'search':
         return searchView(ctx, r.query, r.words);
       case 'source':
