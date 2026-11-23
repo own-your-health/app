@@ -19,6 +19,16 @@ function attemptId(): string {
   return `t_${Array.from(crypto.getRandomValues(new Uint8Array(20)), (b) => a[b & 31]).join('')}`;
 }
 
+
+/** medrec 0.7.0 and later: a person's request loads a source at most once per 15 minutes. */
+const REQUEST_GUARD_MS = 15 * 60 * 1000;
+
+/** When the guard counts from: the latest of the source's last import and its last attempt, whatever its outcome. */
+function requestGuardFrom(s: SourceStatus): number {
+  const times = [s.last_success?.finished_at, s.last_attempt?.finished_at ?? s.last_attempt?.started_at].map((t) => (t ? Date.parse(t) : 0));
+  return Math.max(0, ...times.filter((t) => !Number.isNaN(t)));
+}
+
 export function startDemoMac(folder: DemoFolder, onChange: () => void): (file: string) => void {
   return (file: string) => {
     setTimeout(() => void handle(folder, file, onChange), PICKUP_MS);
@@ -39,15 +49,11 @@ async function handle(folder: DemoFolder, file: string, onChange: () => void): P
   const results: NonNullable<RefreshRequest['handled']>['sources'] = [];
   const toRun: SourceStatus[] = [];
   for (const s of covered) {
-    const intervalMs = (s.min_interval_secs ?? 0) * 1000;
-    const lastOk = s.last_success ? Date.parse(s.last_success.finished_at) : 0;
+    const latest = requestGuardFrom(s);
     if (s.paused) results.push({ source: s.source, outcome: 'skipped_paused' });
     else if (s.sign_in?.needs_person) results.push({ source: s.source, outcome: 'needs_person' });
-    else if (lastOk && pickedUp.getTime() - lastOk < intervalMs) {
-      results.push({ source: s.source, outcome: 'skipped_interval', next_allowed_at: iso(new Date(lastOk + intervalMs)) });
-    } else if ((s.failures ?? 0) > 0 && s.next_run_at && pickedUp.getTime() < Date.parse(s.next_run_at)) {
-      // After a failure medrec waits longer before each new try.
-      results.push({ source: s.source, outcome: 'skipped_interval', next_allowed_at: s.next_run_at });
+    else if (latest && pickedUp.getTime() - latest < REQUEST_GUARD_MS) {
+      results.push({ source: s.source, outcome: 'skipped_interval', next_allowed_at: iso(new Date(latest + REQUEST_GUARD_MS)) });
     } else toRun.push(s);
   }
   for (const s of toRun) {
@@ -75,7 +81,7 @@ async function handle(folder: DemoFolder, file: string, onChange: () => void): P
       withheld_types: s.last_success?.withheld_types ?? [],
     };
     if (s.auto && s.min_interval_secs) s.next_run_at = iso(new Date(finished.getTime() + s.min_interval_secs * 1000));
-    results.push({ source: s.source, outcome: 'ok', attempt: a.attempt, next_allowed_at: iso(new Date(finished.getTime() + (s.min_interval_secs ?? 0) * 1000)) });
+    results.push({ source: s.source, outcome: 'ok', attempt: a.attempt, next_allowed_at: iso(new Date(finished.getTime() + REQUEST_GUARD_MS)) });
   }
   status.updated_at = iso(finished);
   status.refresher.last_pass_at = iso(finished);
