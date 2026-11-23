@@ -76,8 +76,8 @@ export function day(d: string | undefined): string | undefined {
   return d && /^\d{4}(-\d{2}(-\d{2})?)?/.test(d) ? d.slice(0, 10) : undefined;
 }
 
-/** Every record, document and study by date; `title` names a record (claims.ts's recordTitle names a claim by its services). */
-export function timeline(index: PersonIndex, title: (r: MedRecord) => string = (r) => r.display || KIND_LABELS[r.kind] || r.kind): TimelineEntry[] {
+/** Every record, document and study by date. `title` names a record: claims.ts's recordTitle, which names a claim by its services. */
+export function timeline(index: PersonIndex, title: (r: MedRecord) => string): TimelineEntry[] {
   const out: TimelineEntry[] = [];
   for (const r of index.records) {
     out.push({ id: r.id, kind: r.kind, date: day(r.date), title: title(r), detail: recordDetail(r) });
@@ -299,6 +299,45 @@ export function claimTotals(r: MedRecord): ClaimTotal[] {
 
 /** A claim total that is the member's share, by its category's words. */
 export const YOUR_SHARE = /member ?liability|patient ?pay|paid ?by ?patient|your share|patient responsibility|you owe/i;
+
+/** The amounts a claim or a claim line can carry. */
+export type AmountName = 'billed' | 'allowed' | 'planPaid' | 'deductible' | 'copay' | 'coinsurance' | 'notCovered' | 'youOwe';
+
+/** The four a claim totals: what was billed, allowed, paid by the plan, and left to you. */
+const TOTALS: AmountName[] = ['billed', 'allowed', 'planPaid', 'youOwe'];
+
+/** A payer's words for each amount, in the order they are tried. */
+const AMOUNT_WORDS: [AmountName, RegExp][] = [
+  ['billed', /submitted|billed|charge/i],
+  ['allowed', /eligible|allowed/i],
+  ['planPaid', /^benefit|plan ?paid|paid ?to ?provider|paid ?by ?plan/i],
+  ['youOwe', YOUR_SHARE],
+  ['deductible', /^deductible/i],
+  ['copay', /co-?pay/i],
+  ['coinsurance', /co-?insurance/i],
+  ['notCovered', /non-?covered|not covered/i],
+];
+
+export const AMOUNT_LABELS: Record<AmountName, string> = {
+  billed: 'Billed',
+  allowed: 'Allowed',
+  planPaid: 'Plan paid',
+  deductible: 'Deductible',
+  copay: 'Copay',
+  coinsurance: 'Coinsurance',
+  notCovered: 'Not covered',
+  youOwe: 'You owe',
+};
+
+/**
+ * What a payer's amount label names: at most one of the totals and one of
+ * the parts of your share ("Member liability", "Coinsurance").
+ */
+export function amountNames(label: string): { total?: AmountName; part?: AmountName } {
+  const total = AMOUNT_WORDS.find(([k, re]) => TOTALS.includes(k) && re.test(label))?.[0];
+  const part = AMOUNT_WORDS.find(([k, re]) => !TOTALS.includes(k) && re.test(label))?.[0];
+  return { total, part };
+}
 
 export function claimYourShare(r: MedRecord): string | undefined {
   const t = claimTotals(r).find((x) => YOUR_SHARE.test(x.label));

@@ -2,14 +2,14 @@
 // that brought it in, its raw FHIR and its file in Drive.
 
 import { readJson } from '../../folder';
-import { asMoney, docTypeLabel, documentTitle, findItem, formatMoney, importFor, KIND_LABELS, studyTitle, valueText } from '../../model/records';
+import { AMOUNT_LABELS, asMoney, docTypeLabel, documentTitle, findItem, formatMoney, importFor, KIND_LABELS, studyTitle, valueText, type AmountName } from '../../model/records';
 import { isObject } from '../../model/parse';
 import type { ImagingStudy, Json, MedDocument, MedRecord, PersonIndex, Provenance } from '../../model/types';
 import { button, card, chip, command, driveLink, empty, jsonBlock, kv, link, row, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, dateTime, localDay } from '../format';
 import { visitOf } from '../../model/visits';
-import { CATEGORY_LABELS, claimLines, recordTitle, type ClaimLine, type LineAmounts } from '../../model/claims';
+import { CATEGORY_LABELS, claimLines, recordTitle, type ClaimLine } from '../../model/claims';
 import { visitContents, visitWhen } from '../visit';
 
 const PROVENANCE_SHOWN = ['source', 'method', 'source_resource', 'fetched_at', 'filed_at', 'raw_path', 'classified_by', 'derived_from', 'filed_by'];
@@ -116,28 +116,18 @@ function provenanceCard(ctx: Ctx, idx: PersonIndex, p: Provenance, i: number, to
   );
 }
 
-const AMOUNT_TEXT: [keyof LineAmounts, string][] = [
-  ['billed', 'Billed'],
-  ['allowed', 'Allowed'],
-  ['planPaid', 'Plan paid'],
-  ['deductible', 'Deductible'],
-  ['copay', 'Copay'],
-  ['coinsurance', 'Coinsurance'],
-  ['notCovered', 'Not covered'],
-  ['youOwe', 'You owe'],
-];
-
 /** A claim's lines: what each paid for, its code, and the amounts. */
 function linesCard(lines: ClaimLine[]): HTMLElement {
   return card(
     { title: lines.length === 1 ? 'Line' : `${lines.length} lines` },
-    lines.map((l) =>
-      row({
+    lines.map((l) => {
+      const amounts = (Object.keys(AMOUNT_LABELS) as AmountName[]).filter((k) => l.amounts[k]).map((k) => `${AMOUNT_LABELS[k]} ${formatMoney(l.amounts[k])}`);
+      return row({
         title: l.label,
-        meta: [l.code, CATEGORY_LABELS[l.category], l.date ? dateText(l.date) : null].filter(Boolean).join(' · '),
-        extra: h('p', { class: 'small claim-amounts' }, AMOUNT_TEXT.filter(([k]) => l.amounts[k]).map(([k, label]) => `${label} ${formatMoney(l.amounts[k])}`).join(' · ')),
-      }),
-    ),
+        meta: [l.code, CATEGORY_LABELS[l.category].one, l.date ? dateText(l.date) : null].filter(Boolean).join(' · '),
+        extra: h('p', { class: ['small', 'claim-amounts', amounts.length ? null : 'muted'] }, amounts.length ? amounts.join(' · ') : 'The claim gives no amounts for this line.'),
+      });
+    }),
   );
 }
 
@@ -153,7 +143,7 @@ function recordView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
     h(
       'section',
       { class: 'card' },
-      h('div', { class: 'card-head' }, h('h1', null, recordTitle(r, KIND_LABELS[r.kind] || r.kind)), r.status ? chip(r.status, 'muted') : null),
+      h('div', { class: 'card-head' }, h('h1', null, recordTitle(r)), r.status ? chip(r.status, 'muted') : null),
       h('p', { class: 'muted' }, [KIND_LABELS[r.kind] ?? r.kind, dateText(r.date)].join(' · ')),
       kv([
         ['Code', r.code ? [r.code.display, r.code.code].filter(Boolean).join(' · ') : undefined],

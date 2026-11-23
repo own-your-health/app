@@ -126,6 +126,12 @@ amount is the claim's share. A claim with nothing to pay says so, and one
 with a share but no bill yet says that. Money is added in whole cents. The
 rules are `src/model/billing.ts`.
 
+A claim is named for what it paid for, from its lines ("Lipid panel and
+blood draw"), not for its type. Its page lists each line with its code, a
+category from the code (visit, lab test, imaging, vaccine and so on), its
+date and its amounts: billed, allowed, plan paid, deductible, copay,
+coinsurance, not covered and you owe. The rules are `src/model/claims.ts`.
+
 Results are grouped by panel (metabolic, lipid, A1c, liver, blood count,
 thyroid, vitamins and iron, urine, vital signs) by each test's LOINC code,
 from a table in `src/model/panels.ts`; a test outside the table goes by the

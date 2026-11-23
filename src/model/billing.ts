@@ -6,7 +6,7 @@
 // newest claim that printed them. Money stays in whole cents, never floats.
 
 import { providerKey, sameProvider } from './providers';
-import { asMoney, claimTotals, isWithdrawn, sortByDateDesc, str, YOUR_SHARE, type Money } from './records';
+import { AMOUNT_LABELS, amountNames, asMoney, claimTotals, isWithdrawn, sortByDateDesc, str, type AmountName, type Money } from './records';
 import type { Json, MedDocument, MedRecord, PersonIndex } from './types';
 
 // ---- Money ----
@@ -87,19 +87,8 @@ export function owedByProvider(index: PersonIndex): { due: Owed[]; paid: Owed[];
 
 // ---- Claims ----
 
-const CATEGORIES: [keyof ClaimAmounts, RegExp][] = [
-  ['billed', /submitted|billed|charge/i],
-  ['allowed', /eligible|allowed/i],
-  ['planPaid', /^benefit|plan ?paid|paid ?to ?provider/i],
-  ['yourShare', YOUR_SHARE],
-];
-
-const PARTS: [string, RegExp][] = [
-  ['Deductible', /^deductible/i],
-  ['Copay', /co-?pay/i],
-  ['Coinsurance', /co-?insurance/i],
-  ['Not covered', /non-?covered|not covered/i],
-];
+/** A claim's totals by their names in records.ts's amount words. */
+const TOTAL_FIELD: Partial<Record<AmountName, keyof ClaimAmounts>> = { billed: 'billed', allowed: 'allowed', planPaid: 'planPaid', youOwe: 'yourShare' };
 
 export interface ClaimAmounts {
   billed?: Money;
@@ -136,10 +125,10 @@ function addDays(day: string, n: number): string {
 export function claimAmounts(r: MedRecord): ClaimAmounts & { parts: Claim['parts'] } {
   const out: ClaimAmounts & { parts: Claim['parts'] } = { parts: [] };
   for (const t of claimTotals(r)) {
-    const hit = CATEGORIES.find(([, re]) => re.test(t.label));
-    if (hit && !out[hit[0]]) out[hit[0]] = t.amount;
-    const part = PARTS.find(([, re]) => re.test(t.label));
-    if (part && (toCents(t.amount) ?? 0) > 0) out.parts.push({ label: part[0], amount: t.amount });
+    const { total, part } = amountNames(t.label);
+    const field = total && TOTAL_FIELD[total];
+    if (field && !out[field]) out[field] = t.amount;
+    if (part && (toCents(t.amount) ?? 0) > 0) out.parts.push({ label: AMOUNT_LABELS[part], amount: t.amount });
   }
   out.planPaid ??= asMoney(r.fields.payment);
   return out;

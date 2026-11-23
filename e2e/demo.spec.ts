@@ -333,7 +333,7 @@ test('bills say what is owed to each provider, and each claim sits beside its bi
   await expect(page.locator('main h1')).toHaveText('Lipid panel and blood draw');
   const lines = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^2 lines$/ }) });
   await expect(lines.locator('.row-title')).toHaveText(['Lipid panel', 'Blood draw']);
-  await expect(lines.locator('.row-meta')).toHaveText(['80061 · Lab tests · Oct 3, 2026', '36415 · Lab tests · Oct 3, 2026']);
+  await expect(lines.locator('.row-meta')).toHaveText(['80061 · Lab test · Oct 3, 2026', '36415 · Lab test · Oct 3, 2026']);
   await expect(lines.locator('.claim-amounts').first()).toHaveText('Billed $180.00 · Allowed $78.40 · Plan paid $62.72 · Deductible $0.00 · Coinsurance $15.68 · You owe $15.68');
   await page.goBack();
 

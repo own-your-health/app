@@ -1,38 +1,17 @@
 // An insurer claim's lines: what was done, its code, and what each party
 // paid; and the claim's title from its services, not its FHIR type
 // ("Professional"). medrec keeps each line's adjudication in the payer's own
-// words; the amounts are named here by those words, as the claim's totals
+// words; they are named by records.ts's amount words, as the claim's totals
 // are in billing.ts.
 
-import { asMoney, str, YOUR_SHARE, type Money } from './records';
+import { amountNames, asMoney, KIND_LABELS, str, type AmountName, type Money } from './records';
 import { isObject } from './parse';
 import type { Json, MedRecord } from './types';
 
-export interface LineAmounts {
-  billed?: Money;
-  allowed?: Money;
-  planPaid?: Money;
-  deductible?: Money;
-  copay?: Money;
-  coinsurance?: Money;
-  notCovered?: Money;
-  youOwe?: Money;
-}
-
-/** Payer words for each amount. The first that matches a line's adjudication wins. */
-const AMOUNT_WORDS: [keyof LineAmounts, RegExp][] = [
-  ['billed', /submitted|billed|charge/i],
-  ['allowed', /eligible|allowed/i],
-  ['planPaid', /^benefit|plan ?paid|paid ?to ?provider|paid ?by ?plan/i],
-  ['deductible', /^deductible/i],
-  ['copay', /co-?pay/i],
-  ['coinsurance', /co-?insurance/i],
-  ['notCovered', /non-?covered|not covered/i],
-  ['youOwe', YOUR_SHARE],
-];
+export type LineAmounts = Partial<Record<AmountName, Money>>;
 
 /** medrec's fixed amount names, once it writes them (`amounts`), mapped to these. */
-const AMOUNT_NAMES: Record<string, keyof LineAmounts> = {
+const AMOUNT_NAMES: Record<string, AmountName> = {
   billed: 'billed',
   allowed: 'allowed',
   plan_paid: 'planPaid',
@@ -45,18 +24,19 @@ const AMOUNT_NAMES: Record<string, keyof LineAmounts> = {
 
 export type Category = 'visit' | 'lab' | 'imaging' | 'vaccine' | 'medicine' | 'procedure' | 'anesthesia' | 'drug' | 'supply' | 'pharmacy' | 'other';
 
-export const CATEGORY_LABELS: Record<Category, string> = {
-  visit: 'Visits',
-  lab: 'Lab tests',
-  imaging: 'Imaging',
-  vaccine: 'Vaccines',
-  medicine: 'Other medical services',
-  procedure: 'Procedures',
-  anesthesia: 'Anesthesia',
-  drug: 'Drugs given',
-  supply: 'Supplies and equipment',
-  pharmacy: 'Pharmacy',
-  other: 'Other',
+/** Each category's name for one line, and for a group of them. */
+export const CATEGORY_LABELS: Record<Category, { one: string; many: string }> = {
+  visit: { one: 'Visit', many: 'Visits' },
+  lab: { one: 'Lab test', many: 'Lab tests' },
+  imaging: { one: 'Imaging', many: 'Imaging' },
+  vaccine: { one: 'Vaccine', many: 'Vaccines' },
+  medicine: { one: 'Medical service', many: 'Other medical services' },
+  procedure: { one: 'Procedure', many: 'Procedures' },
+  anesthesia: { one: 'Anesthesia', many: 'Anesthesia' },
+  drug: { one: 'Drug given', many: 'Drugs given' },
+  supply: { one: 'Supply or equipment', many: 'Supplies and equipment' },
+  pharmacy: { one: 'Pharmacy', many: 'Pharmacy' },
+  other: { one: 'Other', many: 'Other' },
 };
 
 /**
@@ -100,7 +80,7 @@ function amountsFrom(o: Json | undefined): LineAmounts {
   const out: LineAmounts = {};
   if (!isObject(o)) return out;
   for (const [k, v] of Object.entries(o)) {
-    const name = AMOUNT_NAMES[k];
+    const name = Object.hasOwn(AMOUNT_NAMES, k) ? AMOUNT_NAMES[k] : undefined;
     const m = asMoney(v);
     if (name && m) out[name] = m;
   }
@@ -113,8 +93,9 @@ function adjudicated(list: Json | undefined): LineAmounts {
   for (const a of list) {
     if (!isObject(a) || typeof a.category !== 'string') continue;
     const m = asMoney(a.amount);
-    const hit = AMOUNT_WORDS.find(([, re]) => re.test(a.category as string));
-    if (m && hit && !out[hit[0]]) out[hit[0]] = m;
+    if (!m) continue;
+    const { total, part } = amountNames(a.category);
+    for (const name of [total, part]) if (name && !out[name]) out[name] = m;
   }
   return out;
 }
@@ -147,7 +128,7 @@ export function claimLines(r: MedRecord): ClaimLine[] {
       code,
       system,
       date: dayOf(it.serviced),
-      category: given && given in CATEGORY_LABELS ? (given as Category) : categoryOf(code, system, type),
+      category: given && Object.hasOwn(CATEGORY_LABELS, given) ? (given as Category) : categoryOf(code, system, type),
       amounts,
     });
   }
@@ -193,8 +174,8 @@ export function claimTitle(r: MedRecord): string {
   return provider ? `Claim from ${provider}` : 'Claim';
 }
 
-/** A record's title as the lists show it: a claim by its services, the rest by their names. */
-export function recordTitle(r: MedRecord, fallback = 'Record'): string {
+/** A record's title as every list shows it: a claim by its services, the rest by their names, else their kind. */
+export function recordTitle(r: MedRecord): string {
   if (r.kind === 'claim') return claimTitle(r);
-  return r.display || r.code?.display || fallback;
+  return r.display || r.code?.display || KIND_LABELS[r.kind] || r.kind;
 }

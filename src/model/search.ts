@@ -190,7 +190,7 @@ function candidates(index: PersonIndex): Candidate[] {
   if (cached) return cached;
   const out: Candidate[] = [];
   for (const r of index.records) {
-    const title = recordTitle(r, r.code?.display || KIND_LABELS[r.kind] || r.kind);
+    const title = recordTitle(r);
     out.push(candidate(r.id, r.kind, title, r.date, [title, r.code?.display ?? '', r.code?.code ?? '', KIND_LABELS[r.kind] ?? r.kind, statusText(r.status) ?? ''], fieldsOf(r.fields)));
   }
   for (const d of index.documents) {

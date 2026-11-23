@@ -71,6 +71,25 @@ describe('claim lines', () => {
     expect(l!.amounts.youOwe?.amount).toBe('2.00');
   });
 
+  it('trust no inherited name from medrec: a category or amount called "constructor" is not one', () => {
+    const [l] = claimLines(claim([item('99213', 'Office visit', { category: 'constructor', amounts: { constructor: { amount: '1.00', currency: 'USD' }, toString: { amount: '1.00', currency: 'USD' } } })]));
+    expect(l!.category).toBe('visit');
+    expect(l!.amounts).toEqual({});
+  });
+
+  it('read a payer’s words the way the claim’s totals do', () => {
+    const words = (category: string) => ({ category, amount: { amount: '5.00', currency: 'USD' } });
+    const r = claim([item('99213', 'Office visit', { adjudication: [words('Paid by plan'), words('Patient pay amount'), words('Copay')] })], {
+      fields: { type: 'Professional', items: [item('99213', 'Office visit', { adjudication: [words('Paid by plan'), words('Patient pay amount'), words('Copay')] })], total: [words('Paid by plan'), words('Patient pay amount'), words('Copay')] },
+    } as Partial<MedRecord>);
+    const [l] = claimLines(r);
+    expect(l!.amounts).toMatchObject({ planPaid: { amount: '5.00' }, youOwe: { amount: '5.00' }, copay: { amount: '5.00' } });
+    const totals = claimAmounts(r);
+    expect(totals.planPaid?.amount).toBe('5.00');
+    expect(totals.yourShare?.amount).toBe('5.00');
+    expect(totals.parts).toEqual([{ label: 'Copay', amount: { amount: '5.00', currency: 'USD' } }]);
+  });
+
   it('fall back to the line’s net as what was billed', () => {
     const [l] = claimLines(claim([item('99213', 'Office visit', { net: { amount: '50.00', currency: 'USD' } })]));
     expect(l!.amounts.billed?.amount).toBe('50.00');
