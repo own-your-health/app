@@ -3,6 +3,7 @@
 import { claimAmounts, toCents } from '../model/billing';
 import { docTypeLabel, documentTitle, formatMoney, KIND_LABELS, str, studyTitle } from '../model/records';
 import type { Visit } from '../model/visits';
+import { claimTitle } from '../model/claims';
 import { link } from './components';
 import { h, icon, type Child } from './dom';
 import { dateText } from './format';
@@ -46,7 +47,7 @@ export function visitContents(person: string, v: Visit): HTMLElement[] {
   for (const c of v.claims) {
     const share = claimAmounts(c).yourShare;
     const cents = toCents(share);
-    const what = cents === 0 ? 'nothing for you to pay' : share ? `your share ${formatMoney(share)}` : c.display || 'Claim';
+    const what = cents === 0 ? 'nothing for you to pay' : share ? `your share ${formatMoney(share)}` : claimTitle(c);
     out.push(line('Claim', [link(itemRoute(person, c.id), what), str(c.fields.insurer) ? ` from ${str(c.fields.insurer)}` : null]));
   }
   if (v.studies.length) out.push(line('Imaging', linkList(person, v.studies.map((x) => ({ id: x.id, title: studyTitle(x) })))));

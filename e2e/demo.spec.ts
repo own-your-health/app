@@ -317,6 +317,9 @@ test('bills say what is owed to each provider, and each claim sits beside its bi
   const claims = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Claims$/ }) });
   const rows = claims.locator('.row');
   await expect(rows).toHaveCount(5);
+  // Named for what was done, not "Professional".
+  await expect(rows.locator('.row-title')).toHaveText(['Office visit', 'Lipid panel and blood draw', 'Preventive visit, flu vaccine and 1 more', 'Office visit', 'Office visit and blood count']);
+  await expect(rows.nth(1).locator('.row-meta').first()).toHaveText('Oct 3, 2026 · Example Lab · by Example Health Plan');
   await expect(rows.nth(0)).toContainText('No bill from Example Health in these records within 120 days of the visit.');
   await expect(rows.nth(1)).toContainText('Billed on the statement of Oct 28, 2026: $19.28, your share.');
   await expect(rows.nth(2).locator('.totals')).toHaveText('Billed $412.00; Plan allowed $268.40; Plan paid $214.72; Your share $53.68');
@@ -324,6 +327,15 @@ test('bills say what is owed to each provider, and each claim sits beside its bi
   await expect(rows.nth(2).getByRole('link', { name: 'Explanation of Benefits' })).toBeVisible();
   await expect(rows.nth(3)).toContainText('Nothing for you to pay on this claim.');
   await expect(rows.nth(4)).toContainText('Billed on the statement of Apr 2, 2025: $51.18, your share. A receipt was filed Apr 20, 2025.');
+
+  // A claim's page lists its lines, each with its code, what kind of service it is, and its amounts.
+  await rows.nth(1).locator('a.row-main').click();
+  await expect(page.locator('main h1')).toHaveText('Lipid panel and blood draw');
+  const lines = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^2 lines$/ }) });
+  await expect(lines.locator('.row-title')).toHaveText(['Lipid panel', 'Blood draw']);
+  await expect(lines.locator('.row-meta')).toHaveText(['80061 · Lab tests · Oct 3, 2026', '36415 · Lab tests · Oct 3, 2026']);
+  await expect(lines.locator('.claim-amounts').first()).toHaveText('Billed $180.00 · Allowed $78.40 · Plan paid $62.72 · Deductible $0.00 · Coinsurance $15.68 · You owe $15.68');
+  await page.goBack();
 
   await rows.nth(2).getByRole('link', { name: 'statement of Oct 20, 2026' }).click();
   await expect(page).toHaveURL(/#\/p\/p_[a-z2-7]{20}\/r\/d_[a-z2-7]{20}$/);

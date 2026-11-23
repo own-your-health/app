@@ -76,10 +76,11 @@ export function day(d: string | undefined): string | undefined {
   return d && /^\d{4}(-\d{2}(-\d{2})?)?/.test(d) ? d.slice(0, 10) : undefined;
 }
 
-export function timeline(index: PersonIndex): TimelineEntry[] {
+/** Every record, document and study by date; `title` names a record (claims.ts's recordTitle names a claim by its services). */
+export function timeline(index: PersonIndex, title: (r: MedRecord) => string = (r) => r.display || KIND_LABELS[r.kind] || r.kind): TimelineEntry[] {
   const out: TimelineEntry[] = [];
   for (const r of index.records) {
-    out.push({ id: r.id, kind: r.kind, date: day(r.date), title: r.display || KIND_LABELS[r.kind] || r.kind, detail: recordDetail(r) });
+    out.push({ id: r.id, kind: r.kind, date: day(r.date), title: title(r), detail: recordDetail(r) });
   }
   for (const d of index.documents) {
     out.push({ id: d.id, kind: 'document', date: day(d.date), title: documentTitle(d), detail: [docTypeLabel(d.doc_type), d.organization].filter(Boolean).join(' · ') });

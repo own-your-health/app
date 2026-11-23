@@ -404,37 +404,61 @@ const planBalance = [
     ],
   },
 ];
-for (const [date, provider, display, billed, allowed, paid, share, coinsurance, balances] of [
-  ['2026-11-18', 'Example Health', 'Office visit claim', '180.00', '112.50', '87.50', '25.00', '25.00'],
-  ['2026-10-03', 'Example Lab', 'Lab work claim', '220.00', '96.40', '77.12', '19.28', '19.28'],
-  ['2026-10-01', 'Example Health', 'Office visit claim', '412.00', '268.40', '214.72', '53.68', '53.68', planBalance],
-  ['2025-09-15', 'Example Health', 'Office visit claim', '189.00', '121.10', '121.10', '0.00', '0.00'],
-  ['2025-03-10', 'Example Health', 'Office visit claim', '398.00', '255.90', '204.72', '51.18', '51.18'],
-]) {
+// A claim's lines: [code, what was done, billed, allowed, plan paid, coinsurance].
+// Each claim's totals are its lines' sums. medrec names a claim for its type
+// today ("Professional"); the app names it for its lines.
+const CPT = 'http://www.ama-assn.org/go/cpt';
+const claims = [
+  ['2026-11-18', 'Example Health', [['99213', 'Office visit', '180.00', '112.50', '87.50', '25.00']]],
+  ['2026-10-03', 'Example Lab', [['80061', 'Lipid panel', '180.00', '78.40', '62.72', '15.68'], ['36415', 'Blood draw', '40.00', '18.00', '14.40', '3.60']]],
+  ['2026-10-01', 'Example Health', [['99396', 'Preventive visit', '320.00', '210.00', '168.00', '42.00'], ['90686', 'Flu vaccine', '62.00', '38.40', '30.72', '7.68'], ['90471', 'Vaccine given', '30.00', '20.00', '16.00', '4.00']], planBalance],
+  ['2025-09-15', 'Example Health', [['99213', 'Office visit', '189.00', '121.10', '121.10', '0.00']]],
+  ['2025-03-10', 'Example Health', [['99214', 'Office visit', '290.00', '190.00', '152.00', '38.00'], ['85025', 'Blood count', '108.00', '65.90', '52.72', '13.18']]],
+];
+const sum = (xs) => (xs.reduce((a, x) => a + Math.round(Number(x) * 100), 0) / 100).toFixed(2);
+const adjudication = (billed, allowed, paid, coinsurance) => [
+  { category: 'Submitted Amount', amount: usd(billed), reason: null },
+  { category: 'Eligible Amount', amount: usd(allowed), reason: null },
+  { category: 'Benefit Amount', amount: usd(paid), reason: null },
+  { category: 'Deductible', amount: usd('0.00'), reason: null },
+  { category: 'Coinsurance', amount: usd(coinsurance), reason: null },
+  { category: 'Member liability', amount: usd(coinsurance), reason: null },
+];
+for (const [date, provider, lines, balances] of claims) {
+  const [billed, allowed, paid, share] = [2, 3, 4, 5].map((i) => sum(lines.map((l) => l[i])));
+  const items = lines.map(([code, display, b, a, p, c], i) => ({
+    sequence: i + 1,
+    service: { system: CPT, code, display },
+    serviced: date,
+    quantity: { value: 1, unit: null },
+    net: usd(b),
+    adjudication: adjudication(b, a, p, c),
+  }));
   R.record(src.robinPlan, 'ExplanationOfBenefit', 'claim', {
     date,
     code: { system: 'http://terminology.hl7.org/CodeSystem/claim-type', code: 'professional', display: 'Professional' },
-    display,
+    display: 'Professional',
     status: 'active',
     fields: {
       provider,
       insurer: 'Example Health Plan',
       outcome: 'complete',
       billable_period: { start: date, end: date },
-      total: [
-        { category: 'Submitted Amount', amount: usd(billed) },
-        { category: 'Eligible Amount', amount: usd(allowed) },
-        { category: 'Benefit Amount', amount: usd(paid) },
-        { category: 'Deductible', amount: usd('0.00') },
-        { category: 'Coinsurance', amount: usd(coinsurance) },
-        { category: 'Member liability', amount: usd(share) },
-      ],
+      total: adjudication(billed, allowed, paid, share).map(({ category, amount }) => ({ category, amount })),
       payment: usd(paid),
       type: 'Professional',
       use: 'claim',
+      items,
       ...(balances ? { benefit_balance: balances } : {}),
     },
-    resource: { status: 'active', type: { coding: [{ code: 'professional' }] }, use: 'claim', billablePeriod: { start: date, end: date }, outcome: 'complete' },
+    resource: {
+      status: 'active',
+      type: { coding: [{ code: 'professional' }] },
+      use: 'claim',
+      billablePeriod: { start: date, end: date },
+      outcome: 'complete',
+      item: lines.map(([code, display, b], i) => ({ sequence: i + 1, productOrService: { coding: [{ system: CPT, code, display }] }, servicedDate: date, net: { value: Number(b), currency: 'USD' } })),
+    },
   });
 }
 // The insurer's statement for the October visit, linked to its claim.

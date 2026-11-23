@@ -7,6 +7,7 @@
 
 import { KIND_LABELS, asMoney, docTypeLabel, documentTitle, formatMoney, studyTitle, valueText } from './records';
 import { statusText } from './lists';
+import { recordTitle } from './claims';
 import type { Json, PersonIndex, PersonText } from './types';
 
 export type Where = 'title' | 'field' | 'text';
@@ -189,7 +190,7 @@ function candidates(index: PersonIndex): Candidate[] {
   if (cached) return cached;
   const out: Candidate[] = [];
   for (const r of index.records) {
-    const title = r.display || r.code?.display || KIND_LABELS[r.kind] || r.kind;
+    const title = recordTitle(r, r.code?.display || KIND_LABELS[r.kind] || r.kind);
     out.push(candidate(r.id, r.kind, title, r.date, [title, r.code?.display ?? '', r.code?.code ?? '', KIND_LABELS[r.kind] ?? r.kind, statusText(r.status) ?? ''], fieldsOf(r.fields)));
   }
   for (const d of index.documents) {
