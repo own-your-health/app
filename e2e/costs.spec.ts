@@ -56,6 +56,8 @@ test('costs this plan year across everyone, broken down, and down to one month a
   await expect(went.getByRole('button', { name: 'Kind of care' })).toHaveAttribute('aria-pressed', 'true');
   await expect(went.locator('.row-title')).toHaveText(['Lab tests', 'Visits', 'Pharmacy', 'Vaccines']);
   await expect(page).toHaveURL(/#\/costs\?by=category$/);
+  // A screen reader hears what the page now shows.
+  await expect(page.getByRole('status')).toHaveText('This plan year, everyone: $263.96 your share, 8 claims, by kind of care.');
 
   await october.click();
   await expect(page).toHaveURL(/#\/costs\?by=category&only=month%3A2026-10$/);
@@ -72,6 +74,7 @@ test('costs this plan year across everyone, broken down, and down to one month a
   await expect(page).toHaveURL(/period=2025/);
   const y2025 = page.locator('.card', { has: page.locator('.card-head h2', { hasText: '2025, everyone' }) });
   await expect(y2025.locator('.glance-answer')).toHaveText('$51.18 your share');
+  await expect(page.getByRole('status')).toHaveText('2025, everyone: $51.18 your share, 3 claims, by kind of care.');
   await expect(y2025).toContainText('A tax return counts what was paid in the year');
   await expect(page.getByRole('group', { name: 'Plan paid and your share by month' }).getByRole('link')).toHaveCount(12);
 });
@@ -106,6 +109,7 @@ test('the lines download as CSV, without leaving the page', async ({ page }) => 
   await expect(page.locator('.card-head h2', { hasText: 'This plan year, Robin Example' })).toBeVisible();
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download CSV' }).click()]);
   expect(download.suggestedFilename()).toBe('costs-plan.csv');
+  await expect(page.getByRole('status')).toHaveText('Saved costs-plan.csv.');
   const text = (await readFile((await download.path())!, 'utf8')).replace(/^\uFEFF/, '');
   const rows = text.trimEnd().split('\r\n');
   expect(rows[0]).toBe('Date,Person,Provider,Insurer,Plan year,Service,Code,Code system,Kind of care,Billed,Allowed,Plan paid,Deductible,Copay,Coinsurance,Not covered,You owe,Claim');

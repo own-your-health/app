@@ -131,7 +131,9 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
   let by: CostBy | undefined = route.by;
   const only = route.only ?? [];
   const body = h('div', { class: 'stack' });
-  page.append(head, body);
+  // A choice redraws the page below it; this says what the page now shows. It is never redrawn itself.
+  const said = h('p', { class: 'sr-only', role: 'status', 'aria-live': 'polite' });
+  page.append(head, said, body);
 
   const routeWith = (changes: Partial<CostsRoute>): CostsRoute => {
     const r: CostsRoute = { name: 'costs', period, by, only, ...changes };
@@ -158,6 +160,7 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
       if ('by' in next) by = next.by;
       history.replaceState(null, '', href(routeWith({})));
       draw(id);
+      said.textContent = body.querySelector('[data-said]')?.getAttribute('data-said') ?? '';
     };
     const chips = (label: string, items: { id: string; text: string; on: boolean; go: () => void }[]) =>
       h(
@@ -194,11 +197,15 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
     const controls = h('div', { class: 'cost-controls' }, personChips, periodChips, drillChips);
 
     if (!chosen || !lines.length) {
-      body.replaceChildren(controls, card({}, empty('No claim lines match these choices.', link(routeWith({ only: personFilter ? [personFilter] : [] }), 'Show every line'))));
+      const none = card({}, empty('No claim lines match these choices.', link(routeWith({ only: personFilter ? [personFilter] : [] }), 'Show every line')));
+      none.setAttribute('data-said', 'No claim lines match these choices.');
+      body.replaceChildren(controls, none);
       refocus(focus);
       return;
     }
 
+    const dims = (['person', 'provider', 'category'] as const).filter((d) => !only.some((f) => f.by === d) && !(d === 'person' && withClaims.length < 2));
+    const dim: CostBy | undefined = by && (dims as readonly string[]).includes(by) ? by : dims.includes('provider') ? 'provider' : dims[0];
     const t = totals(lines);
     const whose = personFilter ? (names.get(personFilter.key) ?? 'Someone') : 'Everyone';
     const years = planYearsIn(lines);
@@ -216,16 +223,29 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
         : null;
     const taxNote = calendar ? h('p', { class: 'small muted' }, 'A calendar year counts care by the day it was given. A tax return counts what was paid in the year, so a bill paid the next January belongs to that year.') : null;
     const fileName = `costs-${chosen.id}${drilled.length ? '-filtered' : ''}.csv`;
+    const title = `${chosen.label}, ${whose.toLowerCase() === 'everyone' ? 'everyone' : whose}`;
     const summary = card(
-      { title: `${chosen.label}, ${whose.toLowerCase() === 'everyone' ? 'everyone' : whose}` },
+      { title, class: 'cost-summary' },
       h('p', { class: 'glance-answer' }, `${money(t.cents.youOwe ?? 0)} your share`),
       totalsLine(t.cents),
       h('p', { class: 'small muted' }, `${count(t.claims, 'claim')}, ${count(t.lines, 'line')}.`, shareParts(t.cents) ? ` ${shareParts(t.cents)}` : null),
       planNote,
       taxNote,
       h('p', { class: 'small muted' }, 'Bills and receipts no claim covers are not counted; they are under each person’s Claims and bills.'),
-      h('div', { class: 'cost-actions' }, button('Download CSV', () => download(fileName, toCsv(lines, names)), { small: true })),
+      h(
+        'div',
+        { class: 'cost-actions' },
+        button(
+          'Download CSV',
+          () => {
+            download(fileName, toCsv(lines, names));
+            said.textContent = `Saved ${fileName}.`;
+          },
+          { small: true },
+        ),
+      ),
     );
+    summary.setAttribute('data-said', `${title}: ${money(t.cents.youOwe ?? 0)} your share, ${count(t.claims, 'claim')}${dim ? `, by ${DIMENSION_LABELS[dim].toLowerCase()}` : ''}.`);
 
     // Deductible and out-of-pocket, as each plan printed them, while nothing but a person narrows the lines.
     const bal = drilled.length ? [] : balances(lines, records);
@@ -293,10 +313,8 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
       : null;
 
     // The breakdown: by whatever is not already narrowed to one.
-    const dims = (['person', 'provider', 'category'] as const).filter((d) => !only.some((f) => f.by === d) && !(d === 'person' && withClaims.length < 2));
-    const dim: CostBy | undefined = by && (dims as readonly string[]).includes(by) ? by : dims.includes('provider') ? 'provider' : dims[0];
     let breakdownCard: HTMLElement | null = null;
-    if (dim && dim !== 'month') {
+    if (dim) {
       const groups = breakdown(lines, dim, names);
       const max = Math.max(...groups.map((g) => Math.max(0, g.cents.planPaid ?? 0) + Math.max(0, g.cents.youOwe ?? 0)));
       breakdownCard = card(

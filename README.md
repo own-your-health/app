@@ -153,7 +153,8 @@ the plan's deductible and out-of-pocket limit so far from the newest claim
 that printed them, and each insurer claim beside its bill: a statement from
 the same provider within 120 days after the visit, preferring one whose
 amount is the claim's share. A claim with nothing to pay says so, and one
-with a share but no bill yet says that. Money is added in whole cents. The
+with a share but no bill yet says that. A pharmacy fill is not matched to a
+statement: its share is paid to the pharmacy, and the claim says so. Money is added in whole cents. The
 rules are `src/model/billing.ts`.
 
 A claim is named for what it paid for, from its lines ("Lipid panel and
@@ -173,8 +174,13 @@ so a period's totals are always its claims'. It narrows to:
   none (a pharmacy benefit), else on January 1. A calendar year counts care
   by the day it was given, not the day it was paid;
 - a person, a provider, a kind of care, a month, or one billing code. Each
-  is a link from the chart or the breakdown, and the address keeps them
-  (`?period=`, `?by=`, `?only=provider:<name>`), so back undoes one.
+  is a link from the chart or the breakdown, so back undoes one.
+
+The address keeps every choice: `period=` is `plan`, `plan-1`, a year
+(`2025`) or `all`; `by=` (the breakdown) is `person`, `provider` or
+`category`; and each `only=` is one narrowing, `person:<id>`,
+`provider:<name>`, `category:<kind>`, `month:<YYYY-MM>` or
+`code:<system>:<code>` (`code:CPT:99213`).
 
 The screen shows the plan balances each plan printed with its newest claim
 in the period, plan paid and your share month by month, where it went by

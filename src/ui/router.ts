@@ -32,10 +32,11 @@ export const SECTION_LABELS: Record<Section, string> = {
   search: 'Search',
 };
 
-/** What the costs screen can be narrowed to, and what it can break costs down by (all but code). */
+/** What the costs screen can be narrowed to, and what it can break costs down by. */
 export const COST_FILTERS = ['person', 'provider', 'category', 'month', 'code'] as const;
 export type CostFilterBy = (typeof COST_FILTERS)[number];
-export type CostBy = Exclude<CostFilterBy, 'code'>;
+export const COST_BY = ['person', 'provider', 'category'] as const;
+export type CostBy = (typeof COST_BY)[number];
 export interface CostFilter {
   by: CostFilterBy;
   key: string;
@@ -108,7 +109,7 @@ function costsRoute(query: URLSearchParams): Route {
   return {
     name: 'costs',
     ...(COST_PERIOD.test(period) ? { period } : {}),
-    ...(COST_FILTERS.includes(by as CostFilterBy) && by !== 'code' ? { by: by as CostBy } : {}),
+    ...(COST_BY.includes(by as CostBy) ? { by: by as CostBy } : {}),
     ...(only.size ? { only: [...only].map(([k, key]) => ({ by: k, key })) } : {}),
   };
 }

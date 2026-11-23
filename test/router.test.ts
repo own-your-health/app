@@ -43,6 +43,8 @@ describe('routes', () => {
   it('keep only the costs choices they know', () => {
     expect(href({ name: 'costs', period: '2025', only: [{ by: 'code', key: 'CPT:99213' }] })).toBe('#/costs?period=2025&only=code%3ACPT%3A99213');
     expect(parseRoute('#/costs?period=lifetime&by=code&only=nope:x&only=person:&only=month:2026-10')).toEqual({ name: 'costs', only: [{ by: 'month', key: '2026-10' }] });
+    // Months are a chart and a filter, never the breakdown.
+    expect(parseRoute('#/costs?by=month')).toEqual({ name: 'costs' });
     // One key for each kind: the last one wins.
     expect(parseRoute('#/costs?only=person:a&only=person:b')).toEqual({ name: 'costs', only: [{ by: 'person', key: 'b' }] });
     expect(parseRoute('#/costs/x')).toEqual({ name: 'not_found' });
