@@ -8,8 +8,9 @@ a command-line tool, does that on a computer at home:
 - this app reads that folder;
 - nothing goes through a server of ours, because there is none.
 
-This guide goes from nothing to the records on a phone, in order. The first
-pass takes about an hour, most of it in steps 5 and 6.
+This guide goes from nothing to the records on a phone, in order. It is for
+medrec 0.6.0 and later. The first pass takes about an hour, most of it in
+steps 2 and 5.
 
 ## What you need
 
@@ -19,6 +20,8 @@ pass takes about an hour, most of it in steps 5 and 6.
   `medrec refresh` loads when you run it.
 - **A Google account with room in its Drive** for the records folder: scans,
   PDFs and the records themselves.
+- **A Google account that can create a Google Cloud project.** It can be the
+  same account.
 - **Your sign-ins** at the providers, insurers and pharmacies you want records
   from.
 
@@ -30,35 +33,65 @@ steps are in medrec's README,
 with [Homebrew](https://brew.sh), the tools it runs are:
 
 ```sh
-brew install rclone poppler tesseract
+brew install poppler tesseract
 ```
 
-- rclone reaches Google Drive.
-- poppler and tesseract read the text of PDFs and scans, on your computer.
+They read the text of PDFs and scans, on your computer. On Linux, your package
+manager has `poppler-utils` and `tesseract-ocr`. medrec reaches Google Drive
+itself.
 
-On Linux, your package manager has `rclone`, `poppler-utils` and
-`tesseract-ocr`.
+## 2. Create your household's Google Cloud project
 
-## 2. Connect rclone to your Google Drive
+medrec and the app each sign in to Google through an OAuth client. Both
+clients belong to one Google Cloud project that your household creates and
+owns, so no one else's app holds access to your Drive. It is free and takes
+about fifteen minutes.
+
+1. Create the project, turn on the Google Drive API and set up the consent
+   screen: [registration.md](registration.md), steps 1 to 3.
+2. On **Audience**, click **Publish app**, so the project is **In
+   production**. In **Testing**, Google ends every sign-in after 7 days: the
+   app asks for consent again, and medrec stops loading until someone signs it
+   in again.
+3. Create medrec's client: **Clients**, **Create client**, application type
+   **Desktop app**, then download its JSON.
+   [cli-common's Drive guide](https://github.com/piekstra/cli-common/blob/main/crates/pk-cli-drive/docs/google-drive.md#registering-the-oauth-client)
+   has the details.
+4. Create the app's client, a **Web application**:
+   [registration.md](registration.md#4-create-the-web-client), step 4. Keep
+   its client id for step 6.
+
+Both clients must be in the same project. medrec asks Google for `drive.file`,
+which reaches only the files a client of its own project made, so it sees the
+app's refresh requests only when the app's client is in that project.
+
+Google keeps one grant per account for the whole project, so a revoke ends
+both sign-ins on every device. `medrec drive logout --revoke` signs the app out
+too, and removing the app from a Google Account's connections signs medrec out
+too. **Sign out** in the app revokes nothing.
+
+## 3. Sign medrec in and create the records folder
 
 ```sh
-rclone config
+medrec drive login --drive-profile home-drive --client-file ~/Downloads/client_secret.json
+medrec drive folder create "Medical Records" --drive-profile home-drive
+# prints the folder's spec: gdrive:home-drive/<folder id>
 ```
 
-Add a new remote, name it `gdrive`, and choose **Google Drive**. When it asks
-for a scope, choose full access (`drive`): medrec creates the folder and
-writes in it. rclone opens a browser for Google's sign-in, then keeps and
-renews its token itself.
+`home-drive` names the Google account on this computer; choose any name. The
+login opens a browser for Google's consent: sign in with the account that will
+hold the records. medrec keeps the client and its tokens in its vault, sealed
+with one key in the Keychain, so the downloaded JSON can be deleted.
 
-## 3. Create the records folder and its people
+Then the records folder's profile and its people:
 
 ```sh
 medrec profiles add home                        # one profile per records folder
 export MEDREC_PROFILE=home                      # or --profile home on each command
-medrec init "gdrive:Medical Records"            # the folder and its layout
+medrec init gdrive:home-drive/<folder id>       # the folder's layout
 medrec people add "<Name>" --birth-date <YYYY-MM-DD> --adult
 medrec people add "<Child's name>" --birth-date <YYYY-MM-DD> --guardian "<Name>"
-medrec doctor                                   # checks this computer and the folder
+medrec doctor                                   # checks this computer, the Drive sign-in and the folder
 ```
 
 The folder now holds `household.json`, which is what the app looks for.
@@ -70,13 +103,19 @@ Lab reports, visit summaries, bills and statements as PDFs or photos all work:
 
 ```sh
 medrec intake ~/Downloads/lab-report.pdf        # one file
-medrec intake --inbox                           # everything dropped in the folder's inbox/
+medrec intake --inbox                           # everything in the inbox medrec can see
 medrec review list                              # what medrec could not place on its own
 ```
 
 medrec reads each document on your computer, decides whose it is and what kind
 it is, and files it. What it cannot decide waits in `medrec review list` for
 you to file with `medrec review file`.
+
+medrec does not see a file that another app put in Drive: one uploaded in the
+Drive web app, or copied in through Drive for desktop. Give such files to
+`medrec intake` from your computer, or point the inbox at a local directory, as
+medrec's README says under
+[Google Drive](https://github.com/own-your-health/medrec-cli#google-drive).
 
 ## 5. Add your providers
 
@@ -104,16 +143,10 @@ Importing again later files only what changed. Each tool's README says how
 long its sign-in lasts. A member site's sign-in can end within the hour, and
 nothing renews it: such a source loads only soon after someone signs in.
 
-## 6. Create your household's Google client
+## 6. Open the app
 
-The app signs in to Google through an OAuth client that your household
-creates and owns, so no one else's app holds access to your Drive. It takes
-about ten minutes in Google Cloud and is free:
-[registration.md](registration.md).
-
-## 7. Open the app
-
-1. Open https://own-your-health.github.io/app/ and paste the client id.
+1. Open https://own-your-health.github.io/app/ and paste the web client's id
+   from step 2.
 2. Sign in with the Google account that holds the records folder, or one it
    is shared with, and allow both permissions.
 3. Choose the records folder.
@@ -123,7 +156,7 @@ For the household's other phones and computers, use **Settings**, then
 types it. Send it only to your household: see
 [registration.md](registration.md#6-set-up-your-other-devices-with-a-link).
 
-## 8. Keep the records current
+## 7. Keep the records current
 
 On the Mac, set each source up for refresh, then install the schedule:
 
@@ -136,6 +169,18 @@ medrec refresh --install                        # a pass every 5 minutes
 The Mac then loads each source on its schedule, and when someone taps
 **Refresh** in the app. When a sign-in needs a person, the app says so and
 shows the one command to run on the Mac: `medrec refresh sign-in <s_… id>`.
+
+## A folder made with rclone
+
+medrec before 0.6.0 reached Drive through rclone. medrec 0.6.0 and later
+stop on an rclone remote with exit 2 and name the move: medrec's README, under
+[Google Drive](https://github.com/own-your-health/medrec-cli#google-drive),
+"Moving a folder off rclone", copies the records once into a folder medrec
+makes.
+
+The new folder has a new id. On each phone and computer, open **Settings**,
+**Choose another folder**, and choose the new one. A device left on the old
+folder keeps showing the records as they were at the move.
 
 ## Try it first
 
