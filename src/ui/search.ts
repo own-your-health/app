@@ -2,10 +2,17 @@
 // (#/p/<id>/search). Everything is searched here in the browser: the
 // records, documents and imaging in each person's index, and the text medrec
 // extracted from documents (text.json), read from Drive on the first search.
-// Only the words are part of the address (?q=); the filters are not.
+// The words (?q=) and whether to search them as written (&words=1) are part
+// of the address; the filters are not.
+//
+// Results come in groups by kind, health records first, then imaging and
+// documents, then coverage and claims. A test found several times is one
+// row, under its panel, opening its history. A query that names a concept
+// ("blood tests", "bills") shows that kind, with a way to search the words
+// as written instead.
 
 import { KIND_LABELS } from '../model/records';
-import { matchRanges, searchAll, terms, type Hit, type Searchable } from '../model/search';
+import { conceptOf, find, matchRanges, terms, type Hit, type Searchable } from '../model/search';
 import type { Person, PersonText } from '../model/types';
 import { button, card, empty, filterChips, row, type Ctx } from './components';
 import { h, type Child } from './dom';
@@ -30,6 +37,55 @@ const KIND_PLURAL: Record<string, string> = {
   study: 'Imaging',
 };
 
+/** The order of the groups: records first, claims last. */
+const KIND_ORDER = ['result', 'report', 'condition', 'medication', 'allergy', 'immunization', 'procedure', 'encounter', 'study', 'document', 'coverage', 'claim'];
+const kindRank = (k: string) => (KIND_ORDER.includes(k) ? KIND_ORDER.indexOf(k) : KIND_ORDER.length);
+
+/** One row of results: a test (every hit for it), or any other hit. */
+export interface Entry {
+  hit: Hit;
+  /** How many results the test has among the hits. */
+  count: number;
+}
+
+/**
+ * The hits as rows by kind, in KIND_ORDER. Within results, each test once
+ * (its best hit, which the sort makes its newest), by panel: panels in the
+ * order their best test came, tests in the order a lab report lists them.
+ */
+export function entriesByKind(hits: Hit[]): { kind: string; entries: Entry[] }[] {
+  const byKind = new Map<string, Entry[]>();
+  const tests = new Map<string, Entry>();
+  const add = (kind: string, e: Entry) => {
+    const list = byKind.get(kind);
+    if (list) list.push(e);
+    else byKind.set(kind, [e]);
+  };
+  for (const hit of hits) {
+    if (hit.kind === 'result' && hit.test) {
+      const k = `${hit.person}|${hit.test.key}`;
+      const seen = tests.get(k);
+      if (seen) seen.count += 1;
+      else {
+        const e = { hit, count: 1 };
+        tests.set(k, e);
+        add('result', e);
+      }
+    } else add(hit.kind, { hit, count: 1 });
+  }
+  const results = byKind.get('result');
+  if (results) {
+    const panelAt = new Map<string, number>();
+    results.forEach((e, i) => {
+      const p = e.hit.test?.panel ?? '';
+      if (!panelAt.has(p)) panelAt.set(p, i);
+    });
+    const panelOf = (e: Entry) => panelAt.get(e.hit.test?.panel ?? '') ?? 0;
+    results.sort((a, b) => panelOf(a) - panelOf(b) || (a.hit.test?.panelOrder ?? 0) - (b.hit.test?.panelOrder ?? 0) || a.hit.title.localeCompare(b.hit.title));
+  }
+  return [...byKind.entries()].sort(([a], [b]) => kindRank(a) - kindRank(b)).map(([kind, entries]) => ({ kind, entries }));
+}
+
 /** The words of `s`, with each match in a mark. */
 export function marked(s: string, ts: string[]): Child[] {
   const out: Child[] = [];
@@ -44,16 +100,32 @@ export function marked(s: string, ts: string[]): Child[] {
 }
 
 function where(hit: Hit): string | null {
+  // A claim's matching line shows as itself, under the row.
+  if (hit.line) return null;
   if (hit.where === 'field') return `in ${hit.field?.toLowerCase() ?? 'a field'}`;
   if (hit.where === 'text') return 'in the document text';
   return null;
 }
 
+/** What a row says under its title: a test's value and how many results; a claim's provider and amount; a document's kind. */
+function metaOf(e: Entry, person: string | null): string {
+  const { hit } = e;
+  const parts: (string | null | undefined)[] = [person];
+  if (hit.test) parts.push(hit.test.value ? `${hit.test.value} on ${dateText(hit.date)}` : dateText(hit.date), e.count > 1 ? `${e.count} results` : null);
+  else parts.push(dateText(hit.date));
+  if (hit.claim) parts.push(hit.claim.provider, hit.claim.amount);
+  if (hit.docType) parts.push(hit.docType);
+  parts.push(where(hit));
+  return parts.filter(Boolean).join(' · ');
+}
+
 export interface SearchOptions {
   people: Person[];
   query?: string;
+  /** Search the words as written, not the concept a word names. */
+  words?: true;
   /** The page's address for a query, kept current while typing. */
-  route: (query: string | undefined) => Route;
+  route: (query: string | undefined, words: boolean) => Route;
   title: string;
   intro: string;
 }
@@ -91,60 +163,101 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
     return texts;
   };
 
+  /** Whether to search the words as written rather than the concept they name; a new query starts over. */
+  let words = opts.words === true;
+  let lastQuery = opts.query?.trim() ?? '';
+  // Says how the words were read; announced when it changes.
+  const notice = h('div', { 'aria-live': 'polite' });
+
   const draw = (hits: Hit[], ts: string[], untexted: string[], keep?: 'who' | 'kind') => {
     const whos = [...new Set(hits.map((x) => x.person))];
     if (!whos.includes(who)) who = 'all';
-    const byKind = hits.filter((x) => who === 'all' || x.person === who);
+    const groups = entriesByKind(hits.filter((x) => who === 'all' || x.person === who));
     // Kinds come from the chosen person's hits, so a kind they have none of falls back to All.
-    const kinds = [...new Set(byKind.map((x) => x.kind))];
-    if (!kinds.includes(kind)) kind = 'all';
-    const shown = byKind.filter((x) => kind === 'all' || x.kind === kind);
-    const n = (k: string) => byKind.filter((x) => x.kind === k).length;
+    if (!groups.some((g) => g.kind === kind)) kind = 'all';
+    const shownGroups = groups.filter((g) => kind === 'all' || g.kind === kind);
+    const plural = (k: string) => KIND_PLURAL[k] ?? KIND_LABELS[k] ?? k;
+    const all = groups.reduce((n, g) => n + g.entries.length, 0);
 
     if (keep !== 'who') {
       const options: [string, string][] = [['all', 'Everyone'], ...people.filter((p) => whos.includes(p.id)).map((p): [string, string] => [p.id, p.name])];
       whoRow.replaceChildren(...(many && whos.length > 1 ? [filterChips<string>(options, who, (v) => ((who = v), draw(hits, ts, untexted, 'who')), 'Filter by person')] : []));
     }
     if (keep !== 'kind') {
-      const options: [string, string][] = [['all', `All ${byKind.length}`], ...kinds.map((k): [string, string] => [k, `${KIND_PLURAL[k] ?? KIND_LABELS[k] ?? k} ${n(k)}`])];
-      kindRow.replaceChildren(...(kinds.length > 1 ? [filterChips<string>(options, kind, (v) => ((kind = v), draw(hits, ts, untexted, 'kind')), 'Filter by kind')] : []));
+      const options: [string, string][] = [['all', `All ${all}`], ...groups.map((g): [string, string] => [g.kind, `${plural(g.kind)} ${g.entries.length}`])];
+      kindRow.replaceChildren(...(groups.length > 1 ? [filterChips<string>(options, kind, (v) => ((kind = v), draw(hits, ts, untexted, 'kind')), 'Filter by kind')] : []));
     }
 
     const missing = untexted.length ? ` Document text is not searched for ${untexted.join(' and ')}: there is no text.json in ${untexted.length === 1 ? 'their folder' : 'their folders'}.` : '';
-    const total = count(hits.length, 'match', 'matches');
-    status.textContent = `${shown.length === hits.length ? total : `${shown.length} of ${total}`}.${missing}`;
+    const shown = shownGroups.reduce((n, g) => n + g.entries.length, 0);
+    const total = count(all, 'match', 'matches');
+    status.textContent = `${shown === all ? total : `${shown} of ${total}`}.${missing}`;
+
+    // Headings and rows in order; a page is PAGE rows, with the headings above them.
+    type Line = { head: string; level: 'kind' | 'panel' } | { entry: Entry };
+    const lines: Line[] = [];
+    for (const g of shownGroups) {
+      // Every group is headed while all are shown, a lone one too: the heading is where a row's kind is said.
+      if (kind === 'all') lines.push({ head: `${plural(g.kind)} (${g.entries.length})`, level: 'kind' });
+      const panels = new Set(g.entries.map((e) => e.hit.test?.panel).filter(Boolean));
+      let panel: string | undefined;
+      for (const entry of g.entries) {
+        const p = entry.hit.test?.panel;
+        if (panels.size > 1 && p && p !== panel) lines.push({ head: p, level: 'panel' });
+        panel = p;
+        lines.push({ entry });
+      }
+    }
 
     const list = h('div');
     let at = 0;
     const more = button('Show more', () => page(), { ghost: true });
     const page = () => {
       more.remove();
-      for (const hit of shown.slice(at, at + PAGE)) {
+      let n = 0;
+      while (at < lines.length && n < PAGE) {
+        const line = lines[at]!;
+        at += 1;
+        if ('head' in line) {
+          list.appendChild(line.level === 'kind' ? h('h3', { class: 'search-group' }, line.head) : h('h4', { class: 'group-head' }, line.head));
+          continue;
+        }
+        n += 1;
+        const { hit } = line.entry;
+        // A test found more than once opens its history; anything else, its own page.
+        const route: Route = hit.test && line.entry.count > 1 ? { name: 'person', person: hit.person, section: 'results', sub: hit.test.key } : { name: 'item', person: hit.person, id: hit.id };
         list.appendChild(
           row({
-            route: { name: 'item', person: hit.person, id: hit.id },
+            route,
             title: marked(hit.title, ts),
-            meta: [many ? names.get(hit.person) : null, dateText(hit.date), KIND_LABELS[hit.kind] ?? hit.kind, where(hit)].filter(Boolean).join(' · '),
-            extra: hit.snippet ? h('p', { class: 'snippet' }, hit.where === 'field' && hit.field ? [h('span', { class: 'muted' }, `${hit.field}: `), ...marked(hit.snippet, ts)] : marked(hit.snippet, ts)) : null,
+            meta: metaOf(line.entry, many ? (names.get(hit.person) ?? null) : null),
+            extra: hit.line
+              ? h('p', { class: 'snippet' }, h('span', { class: 'muted' }, 'Line: '), ...marked(hit.line, ts))
+              : hit.snippet
+                ? h('p', { class: 'snippet' }, hit.field ? [h('span', { class: 'muted' }, `${hit.field}: `), ...marked(hit.snippet, ts)] : marked(hit.snippet, ts))
+                : null,
           }),
         );
       }
-      at = Math.min(shown.length, at + PAGE);
-      if (at < shown.length) list.appendChild(more);
+      if (at < lines.length) list.appendChild(more);
     };
     page();
-    results.replaceChildren(shown.length ? list : empty('Nothing matches every word.'));
+    results.replaceChildren(shown ? list : empty(ts.length ? 'Nothing matches every word.' : 'Nothing of this kind in these records.'));
   };
 
   const search = async () => {
     const mine = (run += 1);
     const q = input.value.trim();
-    history.replaceState(null, '', href(opts.route(q || undefined)));
-    const ts = terms(q);
-    if (ts.length === 0) {
+    if (q !== lastQuery) {
+      words = false;
+      lastQuery = q;
+    }
+    history.replaceState(null, '', href(opts.route(q || undefined, words)));
+    if (!conceptOf(q) && terms(q).length === 0) {
       results.replaceChildren();
       whoRow.replaceChildren();
       kindRow.replaceChildren();
+      notice.replaceChildren();
       status.textContent = '';
       return;
     }
@@ -155,7 +268,26 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
       return index ? [{ person: p.id, index, text: loaded.get(p.id) ?? null }] : [];
     });
     const untexted = scope.filter((x) => !x.text).map((x) => names.get(x.person) ?? x.person);
-    draw(searchAll(scope, q), ts, many ? untexted : untexted.length ? ['this person'] : []);
+    const found = find(scope, q, { words });
+    const switchTo = (w: boolean) => async () => {
+      words = w;
+      kind = 'all';
+      await search();
+      // The button pressed was replaced: keep the keyboard on its successor.
+      notice.querySelector<HTMLButtonElement>('.link-button')?.focus();
+    };
+    const toggle = (label: string, w: boolean) => h('button', { type: 'button', class: 'link-button', on: { click: () => void switchTo(w)() } }, label);
+    const label = found.named?.label.toLowerCase();
+    const said: Child[] | null =
+      found.how === 'concept'
+        ? [`Showing ${label}${found.rest.length ? ` with “${found.rest.join(' ')}”` : ''}. `, toggle('Search for the words instead', true)]
+        : found.how === 'fallback'
+          ? [`No ${label} with “${found.rest.join(' ')}”, so this is every match for the words.`]
+          : found.named
+            ? ['Showing every match for the words. ', toggle(`Show ${label} instead`, false)]
+            : null;
+    notice.replaceChildren(...(said ? [h('p', { class: 'search-concept' }, said)] : []));
+    draw(found.hits, found.terms, many ? untexted : untexted.length ? ['this person'] : []);
   };
 
   input.addEventListener('input', () => {
@@ -164,11 +296,11 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
   });
   if (opts.query) void search();
   else requestAnimationFrame(() => input.focus());
-  return card({ title: opts.title }, h('p', { class: 'muted small' }, opts.intro), input, status, filters, results);
+  return card({ title: opts.title }, h('p', { class: 'muted small' }, opts.intro), input, notice, status, filters, results);
 }
 
 /** #/search: one search over everyone in the folder. */
-export function searchView(ctx: Ctx, query: string | undefined): HTMLElement {
+export function searchView(ctx: Ctx, query: string | undefined, words?: true): HTMLElement {
   const people = ctx.store.household.people;
   return h(
     'div',
@@ -177,7 +309,8 @@ export function searchView(ctx: Ctx, query: string | undefined): HTMLElement {
       ? searchPanel(ctx, {
           people,
           query,
-          route: (q) => ({ name: 'search', ...(q ? { query: q } : {}) }),
+          words,
+          route: (q, w) => ({ name: 'search', ...(q ? { query: q } : {}), ...(q && w ? { words: true as const } : {}) }),
           title: 'Search',
           intro: `Searches ${people.length === 1 ? 'the' : 'everyone’s'} records, documents and imaging, and the text medrec extracted from documents. The search runs here in the browser; nothing is sent anywhere.`,
         })

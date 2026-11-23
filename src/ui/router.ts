@@ -36,9 +36,10 @@ export type Route =
   | { name: 'home' }
   | { name: 'settings' }
   | { name: 'sources' }
-  | { name: 'search'; query?: string }
+  // `words`: search every word as written, not the concept a word names (?words=1).
+  | { name: 'search'; query?: string; words?: true }
   | { name: 'source'; source: string }
-  | { name: 'person'; person: string; section: Section; sub?: string; query?: string }
+  | { name: 'person'; person: string; section: Section; sub?: string; query?: string; words?: true }
   | { name: 'item'; person: string; id: string }
   | { name: 'huishouden'; hh: string }
   | { name: 'not_found' };
@@ -62,7 +63,7 @@ export function parseRoute(hash: string): Route {
   if (head === 'sources' && parts.length === 1) return { name: 'sources' };
   if (head === 'search' && parts.length === 1) {
     const q = query.get('q') ?? undefined;
-    return { name: 'search', ...(q ? { query: q } : {}) };
+    return { name: 'search', ...(q ? { query: q } : {}), ...(q && query.get('words') === '1' ? { words: true as const } : {}) };
   }
   if (head === 's' && a && ID.test(a) && parts.length === 2) return { name: 'source', source: a };
   if (head === 'hh' && a && ID.test(a) && parts.length === 2) return { name: 'huishouden', hh: a };
@@ -74,10 +75,14 @@ export function parseRoute(hash: string): Route {
       const q = query.get('q') ?? undefined;
       if (c !== undefined && section === 'results' && parts.length === 4) return { name: 'person', person: a, section, sub: c };
       if (c === 'all' && section === 'timeline' && parts.length === 4) return { name: 'person', person: a, section, sub: c };
-      if (parts.length === 3) return { name: 'person', person: a, section, ...(q !== undefined ? { query: q } : {}) };
+      if (parts.length === 3) return { name: 'person', person: a, section, ...(q !== undefined ? { query: q } : {}), ...(q && section === 'search' && query.get('words') === '1' ? { words: true as const } : {}) };
     }
   }
   return { name: 'not_found' };
+}
+
+function searchQuery(q: string, words: true | undefined): string {
+  return new URLSearchParams({ q, ...(words ? { words: '1' } : {}) }).toString();
 }
 
 export function href(route: Route): string {
@@ -89,7 +94,7 @@ export function href(route: Route): string {
     case 'sources':
       return '#/sources';
     case 'search':
-      return route.query ? `#/search?${new URLSearchParams({ q: route.query }).toString()}` : '#/search';
+      return route.query ? `#/search?${searchQuery(route.query, route.words)}` : '#/search';
     case 'source':
       return `#/s/${encodeURIComponent(route.source)}`;
     case 'huishouden':
@@ -100,7 +105,7 @@ export function href(route: Route): string {
       let h = `#/p/${encodeURIComponent(route.person)}`;
       if (route.section !== 'overview' || route.sub || route.query) h += `/${route.section}`;
       if (route.sub) h += `/${encodeURIComponent(route.sub)}`;
-      if (route.query) h += `?${new URLSearchParams({ q: route.query }).toString()}`;
+      if (route.query) h += `?${searchQuery(route.query, route.words)}`;
       return h;
     }
     case 'not_found':

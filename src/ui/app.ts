@@ -525,11 +525,11 @@ export class App {
       case 'sources':
         return sourcesView(ctx);
       case 'search':
-        return searchView(ctx, r.query);
+        return searchView(ctx, r.query, r.words);
       case 'source':
         return sourceView(ctx, r.source);
       case 'person':
-        return personView(ctx, r.person, r.section, r.sub, r.query);
+        return personView(ctx, r.person, r.section, r.sub, r.query, r.words);
       case 'item':
         return itemView(ctx, r.person, r.id);
       case 'huishouden': {

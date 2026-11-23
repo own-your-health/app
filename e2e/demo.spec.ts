@@ -433,13 +433,13 @@ test('one search over everyone, from the home screen, with filters by kind and p
   await expect(results.first().locator('mark').first()).toHaveText(/lisinopril/i);
   const kinds = page.getByRole('group', { name: 'Filter by kind' });
   await expect(kinds.getByRole('button', { name: 'All 4' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('main [aria-live]')).toHaveText('4 matches.');
+  await expect(page.locator('main p[aria-live]')).toHaveText('4 matches.');
   // By keyboard: the chip pressed keeps focus, and the status counts what is shown.
   await kinds.getByRole('button', { name: 'Documents 1' }).focus();
   await page.keyboard.press('Enter');
   await expect(kinds.getByRole('button', { name: 'Documents 1' })).toBeFocused();
   await expect(kinds.getByRole('button', { name: 'Documents 1' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('main [aria-live]')).toHaveText('1 of 4 matches.');
+  await expect(page.locator('main p[aria-live]')).toHaveText('1 of 4 matches.');
   await expect(results).toHaveText([/After visit summary.*Robin Example.*in the document text.*continuing lisinopril/]);
   await expect(results.locator('.snippet mark')).toHaveText(['lisinopril']);
 });
@@ -477,7 +477,8 @@ test('search finds a field, says which, and narrows to one person', async ({ pag
   await expect(box).toBeFocused();
   await box.fill('ear pain');
   const results = page.locator('main .row');
-  await expect(results).toHaveText([/Sick visit.*Alex Example · Nov 20, 2026 · Visit · in reason.*Reason: Ear pain/]);
+  await expect(page.locator('main h3.search-group')).toHaveText(['Visits (1)']);
+  await expect(results).toHaveText([/Sick visit.*Alex Example · Nov 20, 2026 · in reason.*Reason: Ear pain/]);
   await expect(page).toHaveURL(/#\/search\?q=ear\+pain$/);
 
   await box.fill('weight');
@@ -561,4 +562,46 @@ test('without a client id, the app asks for one and offers the sample', async ({
   await expect(page.getByRole('link', { name: /sample/i }).first()).toBeVisible();
   const stored = await page.evaluate(() => Object.keys(localStorage));
   expect(stored).toEqual([]);
+});
+
+test('“blood tests” finds lab results by panel, each test once, and can search the words instead', async ({ page }) => {
+  await page.goto('./?demo#/search?q=blood+tests');
+  await expect(page.locator('.search-concept')).toContainText('Showing lab results.');
+  await expect(page.locator('main h3.search-group').first()).toHaveText(/^Results \(\d+\)$/);
+  await expect(page.locator('main h3.search-group')).not.toContainText(['Claims']);
+  const ldl = page.locator('main .row', { hasText: 'LDL cholesterol' });
+  await expect(ldl).toHaveCount(1);
+  await expect(ldl.locator('.row-meta')).toHaveText('Robin Example · 104 mg/dL on Oct 1, 2026 · 4 results');
+  await expect(page.locator('main h4.group-head', { hasText: 'Cholesterol (lipid panel)' })).toHaveCount(1);
+  // A test found more than once opens its history.
+  await ldl.locator('a.row-main').click();
+  await expect(page).toHaveURL(/#\/p\/p_[a-z2-7]{20}\/results\//);
+  await page.goBack();
+
+  await page.getByRole('button', { name: 'Search for the words instead' }).click();
+  await expect(page.locator('.search-concept')).toContainText('Showing every match for the words.');
+  // The keyboard stays on the toggle, and the address keeps the choice.
+  await expect(page.getByRole('button', { name: 'Show lab results instead' })).toBeFocused();
+  await expect(page).toHaveURL(/#\/search\?q=blood\+tests&words=1$/);
+  await page.reload();
+  await expect(page.locator('.search-concept')).toContainText('Showing every match for the words.');
+  await page.getByRole('button', { name: 'Show lab results instead' }).click();
+  await expect(page.locator('.search-concept')).toContainText('Showing lab results.');
+  await expect(page).toHaveURL(/#\/search\?q=blood\+tests$/);
+
+  await page.getByRole('searchbox', { name: 'Search' }).fill('lab statement');
+  await expect(page.locator('.search-concept')).toHaveText('No lab results with “statement”, so this is every match for the words.');
+  await expect(page.locator('main .row', { hasText: 'Statement from Example Lab' })).toHaveCount(1);
+});
+
+test('bills finds claims and statements, records before claims, and a claim names its matching line', async ({ page }) => {
+  await page.goto('./?demo#/search?q=bills');
+  await expect(page.locator('.search-concept')).toContainText('Showing claims and bills.');
+  await expect(page.locator('main h3.search-group')).toHaveText([/^Documents/, /^Claims/]);
+  await expect(page.locator('main .row', { hasText: 'Lipid panel and blood draw' }).locator('.row-meta')).toHaveText('Robin Example · Oct 3, 2026 · Example Lab · you owe $19.28');
+
+  await page.getByRole('searchbox', { name: 'Search' }).fill('blood draw');
+  const claim = page.locator('main .row', { hasText: 'Lipid panel and blood draw' });
+  await expect(claim.locator('.snippet')).toHaveText('Line: Blood draw (36415) · you owe $3.60');
+  await expect(page.locator('.search-concept')).toHaveCount(0);
 });

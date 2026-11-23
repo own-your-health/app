@@ -98,14 +98,41 @@ says so. A vaccine lists every dose, and a dose recorded as not given stands
 apart. The rules are `src/model/lists.ts`, which the overview's cards use too.
 
 Search needs every word, or "a quoted phrase", somewhere in an item's name,
-its fields (a visit's reason, a medicine's dosage or prescriber, a claim's
-amounts, a statement's account and amount) or, for a document, the text in
-the person's `text.json`, ignoring case and accents. Name matches come
-first, then field matches, then matches only in a document's text, newest
-first in each, with the words marked and filters by kind and person. Each
-person's `text.json` is read from Drive on the first search, and nothing
-leaves the browser. `#/search?q=<words>` is the search page's address. The
-rules are `src/model/search.ts`.
+its fields (a visit's reason, a medicine's dosage or prescriber, each of a
+claim's lines, a statement's account and amount) or, for a document, the
+text in the person's `text.json`, ignoring case and accents. Name matches
+come first, then field matches, then matches only in a document's text,
+newest first in each, with the words marked and filters by kind and person.
+
+A few everyday words name a kind of thing instead. The other words in the
+query are searched within that kind. Each word below also matches its
+plural. `CONCEPTS` in `src/model/search.ts` is the table:
+
+| Words | Finds |
+|---|---|
+| blood test, bloodwork, blood work, lab, lab result, lab test, lab work, test result | lab results (not vital signs or other categories) and lab reports |
+| shot, vaccine, vaccination, immunization | vaccines and immunization records |
+| bill, cost, claim, charge, statement, EOB | claims, statements, receipts and explanations of benefits |
+| visit, appointment | visits and visit summaries |
+| med, medication, medicine, prescription | medicines and prescriptions |
+
+- "Flu shot" finds flu vaccines.
+- When nothing of the kind has the other words, the search is every word as
+  written: "lab statement" finds the lab's statement.
+- A phrase in quotes is always words.
+- The page offers to search the words as written instead.
+
+Results come in groups by kind:
+- health records first, then imaging and documents, then coverage and
+  claims;
+- a test found more than once is one row under its panel, with its newest
+  value and how many results it has, and opens its history;
+- a claim shows its provider and what you owe, and the line that matched.
+
+Each person's `text.json` is read from Drive on the first search, and
+nothing leaves the browser. `#/search?q=<words>` is the search page's
+address, with `&words=1` when the words are searched as written. The rules
+are `src/model/search.ts`.
 
 The timeline lists visits, each with its documents, what was recorded at it
 (diagnoses, results, procedures, medicines, vaccines, allergies and

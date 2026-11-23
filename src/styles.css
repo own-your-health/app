@@ -1545,6 +1545,30 @@ mark {
   margin-top: 0;
 }
 
+.search-group {
+  margin: 22px 0 2px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.search-concept {
+  margin: 10px 0 0;
+}
+
+/* A button that reads as a link inside a sentence. */
+.link-button {
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  color: var(--link);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .group-head {
   margin: 14px 0 2px;
   font-size: 15px;

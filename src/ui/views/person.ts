@@ -738,17 +738,18 @@ function imagingSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement
   );
 }
 
-function searchSection(ctx: Ctx, person: Person, query: string | undefined): HTMLElement {
+function searchSection(ctx: Ctx, person: Person, query: string | undefined, words: true | undefined): HTMLElement {
   return searchPanel(ctx, {
     people: [person],
     query,
-    route: (q) => ({ name: 'person', person: person.id, section: 'search', ...(q ? { query: q } : {}) }),
+    words,
+    route: (q, w) => ({ name: 'person', person: person.id, section: 'search', ...(q ? { query: q } : {}), ...(q && w ? { words: true as const } : {}) }),
     title: 'Search',
     intro: 'Searches this person’s records, documents and imaging, and the text medrec extracted from their documents, here in the browser.',
   });
 }
 
-export function personView(ctx: Ctx, personId: string, section: Section, sub?: string, query?: string): HTMLElement {
+export function personView(ctx: Ctx, personId: string, section: Section, sub?: string, query?: string, words?: true): HTMLElement {
   const person = ctx.store.person(personId);
   if (!person) return card({}, empty('This person is not in the records folder.', link({ name: 'home' }, 'Back to everyone')));
   const err = ctx.store.indexErrors.get(person.id);
@@ -787,7 +788,7 @@ export function personView(ctx: Ctx, personId: string, section: Section, sub?: s
       body = imagingSection(ctx, person, idx);
       break;
     case 'search':
-      body = searchSection(ctx, person, query);
+      body = searchSection(ctx, person, query, words);
       break;
   }
   return h('div', { class: 'stack person' }, header(ctx, person, idx), sectionNav(person, section), body);

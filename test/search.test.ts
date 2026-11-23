@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { matchRanges, search, searchAll, snippet, terms } from '../src/model/search';
+import { CONCEPTS, conceptOf, find, matchRanges, search, searchAll, snippet, terms } from '../src/model/search';
+import { entriesByKind } from '../src/ui/search';
 import { parseText } from '../src/model/parse';
 import type { PersonText } from '../src/model/types';
 import { demoJson } from './helpers';
@@ -118,5 +119,106 @@ describe('snippet', () => {
     expect(snippet('short needle', 'needle')).toBe('short needle');
     expect(snippet('nothing', 'needle')).toBe('');
     expect(snippet('Le café est fermé', 'cafe', 3)).toBe('Le café es…');
+  });
+});
+
+describe('concepts', () => {
+  it('reads an everyday word as the kind it names, with the other words left to find', () => {
+    expect(conceptOf('blood tests')).toMatchObject({ concept: { id: 'labs' }, rest: [] });
+    expect(conceptOf('Show my BLOODWORK?')).toMatchObject({ concept: { id: 'labs' }, rest: [] });
+    expect(conceptOf('blood test results')).toMatchObject({ concept: { id: 'labs' }, rest: [] });
+    expect(conceptOf('flu shot')).toMatchObject({ concept: { id: 'shots' }, rest: ['flu'] });
+    expect(conceptOf('vaccines')?.concept.id).toBe('shots');
+    expect(conceptOf('costs for the lab')).toMatchObject({ concept: { id: 'bills' }, rest: ['lab'] });
+    expect(conceptOf('appointments')?.concept.id).toBe('visits');
+    expect(conceptOf('meds')?.concept.id).toBe('meds');
+  });
+
+  it('takes a phrase’s plural as the phrase, for every word', () => {
+    for (const [q, id] of <[string, string][]>[['statement', 'bills'], ['statements', 'bills'], ['charge', 'bills'], ['charges', 'bills'], ['prescription', 'meds'], ['prescriptions', 'meds'], ['med', 'meds'], ['lab', 'labs'], ['labs', 'labs'], ['blood test', 'labs'], ['blood tests', 'labs'], ['eobs', 'bills']])
+      expect(conceptOf(q)?.concept.id, q).toBe(id);
+    expect(conceptOf('testes')).toBeUndefined();
+  });
+
+  it('keeps every concept’s words in one table that agrees with itself', () => {
+    const ids = CONCEPTS.map((c) => c.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    const phrases = CONCEPTS.flatMap((c) => c.phrases);
+    expect(new Set(phrases).size).toBe(phrases.length);
+    for (const p of phrases) expect(p, p).toBe(p.toLowerCase().trim());
+  });
+
+  it('never reads a quoted phrase or a word inside another as a concept', () => {
+    expect(conceptOf('"blood tests"')).toBeUndefined();
+    expect(conceptOf('billing')).toBeUndefined();
+    expect(conceptOf('cholesterol')).toBeUndefined();
+    expect(conceptOf('blood')).toBeUndefined();
+  });
+
+  it('finds lab results and lab reports for “blood tests”, and nothing of another kind', () => {
+    const f = find(everyone, 'blood tests');
+    expect(f).toMatchObject({ how: 'concept', named: { id: 'labs' } });
+    expect(new Set(f.hits.map((x) => x.kind))).toEqual(new Set(['result', 'document']));
+    expect(f.hits.filter((x) => x.kind === 'document').every((x) => x.docType === 'Lab report')).toBe(true);
+    // Vital signs are not lab results.
+    expect(f.hits.some((x) => x.test?.panel === 'Vital signs')).toBe(false);
+    expect(f.hits.filter((x) => x.kind === 'claim')).toEqual([]);
+  });
+
+  it('finds vaccines with the other words, claims and statements for bills, visits, medicines', () => {
+    // The four flu shots, then the immunization record whose text names influenza.
+    expect(find(everyone, 'flu shot').hits.map((x) => [x.kind, x.title, x.where])).toEqual([
+      ...Array(4).fill(['immunization', 'Influenza, seasonal, injectable', 'title']),
+      ['document', 'Immunization history', 'text'],
+    ]);
+    const bills = find(everyone, 'bills').hits;
+    expect(new Set(bills.map((x) => x.kind))).toEqual(new Set(['claim', 'document']));
+    expect(new Set(bills.filter((x) => x.kind === 'document').map((x) => x.docType))).toEqual(new Set(['Bill', 'Explanation of benefits', 'Receipt']));
+    expect(find(everyone, 'office visit').hits.every((x) => x.kind === 'encounter' && x.title === 'Office visit')).toBe(true);
+    expect(find(everyone, 'meds').hits.every((x) => x.kind === 'medication')).toBe(true);
+  });
+
+  it('searches the words as written when asked', () => {
+    const f = find(everyone, 'blood tests', { words: true });
+    // The concept is still named, so the page can offer it back.
+    expect(f).toMatchObject({ how: 'words', named: { id: 'labs' }, terms: ['blood', 'tests'] });
+    expect(find(everyone, 'cholesterol')).toMatchObject({ how: 'words', named: undefined });
+  });
+
+  it('searches the words when nothing of the concept has the other words', () => {
+    // No lab result or lab report says "statement": the lab's statement is what was meant.
+    const f = find(everyone, 'lab statement');
+    expect(f).toMatchObject({ how: 'fallback', named: { id: 'labs' }, rest: ['statement'], terms: ['lab', 'statement'] });
+    expect(f.hits.map((x) => x.title)).toContain('Statement from Example Lab');
+  });
+});
+
+describe('what a hit carries', () => {
+  it('a result’s test, panel and value', () => {
+    const ldl = find(everyone, 'ldl').hits.find((x) => x.kind === 'result')!;
+    expect(ldl.test).toMatchObject({ key: 'http://loinc.org|13457-7', panel: 'Cholesterol (lipid panel)', value: '104 mg/dL' });
+  });
+
+  it('a claim’s provider, what you owe, and the line that matched', () => {
+    const hit = find(everyone, 'blood draw').hits.find((x) => x.kind === 'claim')!;
+    expect(hit).toMatchObject({ title: 'Lipid panel and blood draw', claim: { provider: 'Example Lab', amount: 'you owe $19.28' }, line: 'Blood draw (36415) · you owe $3.60' });
+    expect(find(everyone, '80061').hits.find((x) => x.kind === 'claim')).toMatchObject({ where: 'field', line: 'Lipid panel (80061) · you owe $15.68' });
+    expect(find(everyone, 'bills').hits.find((x) => x.claim?.amount === 'you owe nothing')).toBeDefined();
+  });
+});
+
+describe('results by kind', () => {
+  it('lists records first and claims last, each test once under its panel', () => {
+    const groups = entriesByKind(find(everyone, 'blood tests').hits.filter((x) => x.person === robin.id));
+    expect(groups.map((g) => g.kind)).toEqual(['result', 'document']);
+    const tests = groups[0]!.entries;
+    expect(new Set(tests.map((e) => e.hit.test!.key)).size).toBe(tests.length);
+    const ldl = tests.find((e) => e.hit.title === 'LDL cholesterol')!;
+    expect(ldl.count).toBe(4);
+    expect(ldl.hit.date).toBe('2026-10-01');
+    // Each panel's tests sit together.
+    const panels = tests.map((e) => e.hit.test!.panel);
+    expect(panels.filter((p, i) => p !== panels[i - 1])).toEqual([...new Set(panels)]);
+    expect(entriesByKind(find(everyone, 'example').hits).map((g) => g.kind).at(-1)).toBe('claim');
   });
 });
