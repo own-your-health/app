@@ -1441,6 +1441,7 @@ mark {
 .error-details p {
   margin-top: 4px;
   overflow-wrap: anywhere;
+}
 
 /* The welcome screen's links to medrec and the guide. */
 .link-list {
