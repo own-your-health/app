@@ -327,8 +327,12 @@ The privacy policy is at https://own-your-health.github.io/app/privacy.html
 - **Google sign-in by redirect.** The app uses Google's OAuth 2.0 flow for
   client-side apps: a full-page redirect to Google, which returns an access
   token. It loads no Google script and uses no client secret.
-- **The token stays in memory.** It is gone when the tab closes. Signing out
-  revokes it with Google.
+- **The token stays in memory.** It is gone when the tab closes, and Google
+  expires it within the hour. Signing out forgets it without revoking it:
+  Google's revoke ends every sign-in to the Cloud project, so it would also
+  sign out a medrec that signs in to Drive through the household's project.
+  Removing the app's access in the Google Account does the same, and the
+  privacy policy says so.
 - **Browser storage holds five settings, nothing else:** your client id
   (`own-your-health-app.client_id`), the chosen folder's id and name
   (`own-your-health-app.folder`), the email of the Google account that last

@@ -1,6 +1,6 @@
 // The app: sign-in, the folder, and the views, in one page.
 
-import { completeSignIn, revokeToken, SCOPE_READ, SCOPE_WRITE, signInErrorText, startSignIn, verifyToken, type Token, type Unsent } from '../auth';
+import { completeSignIn, SCOPE_READ, SCOPE_WRITE, signInErrorText, startSignIn, verifyToken, type Token, type Unsent } from '../auth';
 import { startDemoMac } from '../data/demo-mac';
 import { Store } from '../data/store';
 import { Drive, DriveError } from '../drive';
@@ -363,7 +363,7 @@ export class App {
         }
         this.renderKeepingScroll();
       },
-      signOut: () => void this.signOut(),
+      signOut: () => this.signOut(),
     };
   }
 
@@ -392,14 +392,16 @@ export class App {
     this.renderKeepingScroll();
   }
 
-  private async signOut(): Promise<void> {
-    const t = this.token;
+  // Signing out forgets the token and does not revoke it. Google's revoke ends
+  // every sign-in to the Cloud project, medrec's on the Mac too when it signs
+  // in through the household's project; the token lasts an hour at most, and
+  // only this page held it.
+  private signOut(): void {
     this.token = null;
     this.store = null;
     this.drive = null;
     window.clearInterval(this.pollTimer);
     setAccount(null);
-    if (t) await revokeToken((...a) => fetch(...a), t.accessToken);
     this.banner.replaceChildren();
     this.show({ name: 'signin' });
   }
@@ -525,7 +527,8 @@ export class App {
           },
           onChangeClient: () => {
             setClientId(null);
-            void this.signOut().then(() => this.show({ name: 'welcome' }));
+            this.signOut();
+            this.show({ name: 'welcome' });
           },
         });
       case 'sources':
