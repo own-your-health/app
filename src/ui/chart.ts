@@ -31,7 +31,11 @@ export function fitted(draw: (width: number) => SVGSVGElement, initial: number):
     const w = Math.floor(entries[0]?.contentRect.width ?? 0);
     if (w > 0 && w !== drawn) {
       drawn = w;
+      // A link in the chart that held focus has it again once redrawn, so a keyboard keeps its place.
+      const focused = document.activeElement;
+      const at = focused && box.contains(focused) ? focused.getAttribute('href') : null;
       box.replaceChildren(draw(w));
+      if (at !== null) [...box.querySelectorAll<SVGAElement | HTMLAnchorElement>('a')].find((a) => a.getAttribute('href') === at)?.focus();
     }
   }).observe(box);
   return box;

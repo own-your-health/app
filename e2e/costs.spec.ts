@@ -183,3 +183,14 @@ test('the month chart fills its card at 12px text, and no label crosses its edge
     await expect(chart.locator('text', { hasText: '’26' })).toHaveCount(1);
   }
 });
+
+test('a month column keeps keyboard focus when the chart is redrawn for a new width', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('./?demo#/costs');
+  const column = page.locator('svg.cost-chart a.cost-col').last();
+  const target = await column.getAttribute('href');
+  await column.focus();
+  await page.setViewportSize({ width: 390, height: 900 });
+  await expect(page.locator('svg.cost-chart')).toHaveAttribute('viewBox', /^0 0 3\d\d 200$/);
+  await expect(page.locator(`svg.cost-chart a.cost-col[href="${target}"]`)).toBeFocused();
+});
