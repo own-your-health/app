@@ -37,8 +37,9 @@ Refresh.
 ## What you need
 
 New to this? [docs/getting-started.md](docs/getting-started.md) goes from
-nothing to the records on a phone: medrec and its tools, the records folder,
-your documents and providers, the Google client, the app and Refresh.
+nothing to the records on a phone: medrec and its tools, the Google Cloud
+project and its two clients, the records folder, your documents and providers,
+the app and Refresh.
 
 1. **A records folder in Google Drive, kept by medrec.** The app reads
    `household.json` at the top of the folder, each person's `index.json`, and
@@ -47,7 +48,9 @@ your documents and providers, the Google client, the app and Refresh.
 2. **Your own Google OAuth client.** Each household signs in through a client
    it creates in its own Google Cloud project, so no one else's app holds
    access to its Drive. It takes about ten minutes and costs nothing:
-   [docs/registration.md](docs/registration.md).
+   [docs/registration.md](docs/registration.md). medrec 0.6.0 and later
+   signs in through a Desktop app client in the same project; in another
+   project, medrec cannot see the app's refresh requests.
 3. **For Refresh: `medrec refresh` on the household's Mac.** Run
    `medrec refresh --install` there once. Without it, the app still shows
    everything medrec has loaded, built from medrec's import history, and says

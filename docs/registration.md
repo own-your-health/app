@@ -8,6 +8,10 @@ You need a Google account that can create a Google Cloud project. It does not
 have to be the account that holds the records: the client only identifies the
 app, and each person still signs in with their own account.
 
+medrec 0.6.0 and later signs in to Drive through a client of its own, a
+Desktop app client in the same project. [getting-started.md](getting-started.md#2-create-your-households-google-cloud-project)
+has the order, and why the two share a project.
+
 ## 1. Create a project
 
 1. Open https://console.cloud.google.com/projectcreate.
@@ -34,7 +38,9 @@ and click **Get started** if it asks.
      in, up to 100. Add the Google account of everyone who will sign in: the
      account that holds the records folder, and anyone it is shared with.
      Google ends each person's grant after 7 days, and the app then asks for
-     consent again.
+     consent again. medrec's sign-in ends the same way, and its scheduled
+     loads stop until someone signs it in again, so a household that loads
+     from a computer publishes the app.
    - **In production**, after **Publish app**: grants no longer end after 7
      days, and the test users list no longer limits who signs in. Any Google
      account can sign in, after Google's warning that it has not verified the
@@ -131,7 +137,7 @@ The app asks for two Drive scopes, and no others:
 | `drive.file` | To create its own refresh requests in `_requests/`, and to delete them when you cancel. |
 
 These were settled by testing, with a client in Testing mode against an
-invented records folder that rclone created, as medrec does:
+invented records folder that rclone created, as medrec did before 0.6.0:
 
 | Signed in with | Read the folder | Create a file in `_requests/` | Delete that file |
 |---|---|---|---|
@@ -140,7 +146,14 @@ invented records folder that rclone created, as medrec does:
 
 `drive.file` can add a file to a folder the app did not create, but it cannot
 read that folder or its records, so it needs `drive.readonly` beside it. Full
-`drive` is never needed. Google's sign-in script and its file Picker were not
+`drive` is never needed.
+
+medrec 0.6.0 and later makes the folder with its own client. When that client
+is in the app's project, `drive.file` reaches the folder from either client:
+[cli-common's test](https://github.com/piekstra/cli-common/blob/main/crates/pk-cli-drive/docs/google-drive.md#scope-drivefile-or-full-drive)
+read a Desktop client's folder and files from the project's Web client. The
+app still asks for `drive.readonly`, which reads a folder whichever client
+made it. Google's sign-in script and its file Picker were not
 used: the page loads no third-party script.
 
 You can repeat the test with your own client from a local checkout: run
@@ -151,8 +164,9 @@ empty `_requests` folder inside it, and open
 ## Turning it off
 
 - To remove one account's access, open https://myaccount.google.com/connections
-  as that account and remove "Own Your Health".
-- To turn the app off for everyone, delete the client in Google Cloud.
+  as that account and remove "Own Your Health". Google keeps one grant for the
+  whole project, so this signs medrec out of that account as well.
+- To turn the app off for everyone, delete its web client in Google Cloud.
 
 ## When something goes wrong
 
