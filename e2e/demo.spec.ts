@@ -385,6 +385,46 @@ test('a visit’s page shows what belongs to it, a hand-filed note among them', 
   await expect(at.locator('.visit-line')).toHaveText(['Diagnosis: Ear infection', 'Medicine: Amoxicillin 400 mg/5 mL suspension']);
 });
 
+test('one search over everyone, from the home screen, with filters by kind and person', async ({ page }) => {
+  await page.goto('./?demo');
+  await page.getByRole('searchbox', { name: 'Search everyone’s records' }).fill('lisinopril');
+  await page.getByRole('searchbox', { name: 'Search everyone’s records' }).press('Enter');
+  await expect(page).toHaveURL(/#\/search\?q=lisinopril$/);
+  const results = page.locator('main .row');
+  await expect(results.first()).toContainText('Robin Example');
+  await expect(results.first().locator('mark').first()).toHaveText(/lisinopril/i);
+  const kinds = page.locator('.search-filters .chips').last();
+  await expect(kinds.getByRole('button', { name: /^All \d+$/ })).toHaveAttribute('aria-pressed', 'true');
+  await kinds.getByRole('button', { name: /^Documents \d+$/ }).click();
+  await expect(results).toHaveText([/After visit summary.*Robin Example.*in the document text.*continuing lisinopril/]);
+  await expect(results.locator('.snippet mark')).toHaveText(['lisinopril']);
+});
+
+test('search finds a field, says which, and narrows to one person', async ({ page }) => {
+  await page.goto('./?demo#/search');
+  const box = page.getByRole('searchbox', { name: 'Search' });
+  await expect(box).toBeFocused();
+  await box.fill('ear pain');
+  const results = page.locator('main .row');
+  await expect(results).toHaveText([/Sick visit.*Alex Example · Nov 20, 2026 · Visit · in reason.*Reason: Ear pain/]);
+  await expect(page).toHaveURL(/#\/search\?q=ear\+pain$/);
+
+  await box.fill('weight');
+  const people = page.locator('.search-filters .chips').first();
+  await expect(people.getByRole('button', { name: 'Everyone' })).toHaveAttribute('aria-pressed', 'true');
+  await people.getByRole('button', { name: 'Jamie Example' }).click();
+  await expect(results.first()).toBeVisible();
+  for (const meta of await results.locator('.row-meta').allTextContents()) expect(meta).toContain('Jamie Example');
+});
+
+test('the app bar opens search from anywhere', async ({ page }) => {
+  await page.goto('./?demo#/sources');
+  await page.getByRole('link', { name: 'Search', exact: true }).click();
+  await expect(page).toHaveURL(/#\/search$/);
+  await expect(page.getByRole('heading', { name: 'Search', exact: true })).toBeVisible();
+  await expect(page.getByRole('searchbox', { name: 'Search', exact: true })).toBeFocused();
+});
+
 test('every section of every person opens', async ({ page }) => {
   // 27 sections, several through the phone's More sheet.
   test.setTimeout(120_000);

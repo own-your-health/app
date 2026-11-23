@@ -195,3 +195,12 @@ export function sheet(title: string, body: Child, onClose: () => void): HTMLElem
   document.addEventListener('keydown', onKey);
   return scrim;
 }
+
+/** One choice among a few, as a row of toggle buttons. */
+export function filterChips<T extends string>(options: [T, string][], current: T, onPick: (v: T) => void): HTMLElement {
+  return h(
+    'div',
+    { class: 'chips', role: 'group', 'aria-label': 'Filter' },
+    options.map(([v, label]) => h('button', { type: 'button', class: ['filter', v === current ? 'filter-on' : null], 'aria-pressed': v === current ? 'true' : 'false', on: { click: () => onPick(v) } }, label)),
+  );
+}

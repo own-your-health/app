@@ -36,6 +36,7 @@ export type Route =
   | { name: 'home' }
   | { name: 'settings' }
   | { name: 'sources' }
+  | { name: 'search'; query?: string }
   | { name: 'source'; source: string }
   | { name: 'person'; person: string; section: Section; sub?: string; query?: string }
   | { name: 'item'; person: string; id: string }
@@ -59,6 +60,10 @@ export function parseRoute(hash: string): Route {
   const [head, a, b, c] = parts;
   if (head === 'settings' && parts.length === 1) return { name: 'settings' };
   if (head === 'sources' && parts.length === 1) return { name: 'sources' };
+  if (head === 'search' && parts.length === 1) {
+    const q = query.get('q') ?? undefined;
+    return { name: 'search', ...(q ? { query: q } : {}) };
+  }
   if (head === 's' && a && ID.test(a) && parts.length === 2) return { name: 'source', source: a };
   if (head === 'hh' && a && ID.test(a) && parts.length === 2) return { name: 'huishouden', hh: a };
   if (head === 'p' && a && ID.test(a)) {
@@ -83,6 +88,8 @@ export function href(route: Route): string {
       return '#/settings';
     case 'sources':
       return '#/sources';
+    case 'search':
+      return route.query ? `#/search?${new URLSearchParams({ q: route.query }).toString()}` : '#/search';
     case 'source':
       return `#/s/${encodeURIComponent(route.source)}`;
     case 'huishouden':

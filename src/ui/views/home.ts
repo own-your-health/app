@@ -2,7 +2,7 @@
 // person at the Mac. Every source's own state is on the Sources screen.
 
 import { headline, latestAnswered, needsPerson } from '../../model/sources';
-import { h } from '../dom';
+import { h, icon } from '../dom';
 import { card, empty, link, refreshControl, row, type Ctx } from '../components';
 import { count, relative } from '../format';
 import { macLine, requestAnswer, sourceRow } from './sources';
@@ -62,5 +62,26 @@ export function homeView(ctx: Ctx): HTMLElement {
         }),
   );
 
-  return h('div', { class: 'stack' }, h('h1', { class: 'sr-only' }, 'Own Your Health'), alert, freshness, peopleCard);
+  // A search field that opens the search page with what was typed.
+  const field = h('input', { type: 'search', class: 'input', name: 'q', placeholder: 'Search records', 'aria-label': 'Search everyone’s records', autocomplete: 'off', enterkeyhint: 'search' });
+  const searchForm = people.length
+    ? h(
+        'form',
+        {
+          class: 'card home-search',
+          role: 'search',
+          on: {
+            submit: (e: Event) => {
+              e.preventDefault();
+              const q = field.value.trim();
+              ctx.go({ name: 'search', ...(q ? { query: q } : {}) });
+            },
+          },
+        },
+        field,
+        h('button', { type: 'submit', class: 'button button-outline' }, icon('search', 18), h('span', null, 'Search')),
+      )
+    : null;
+
+  return h('div', { class: 'stack' }, h('h1', { class: 'sr-only' }, 'Own Your Health'), alert, searchForm, freshness, peopleCard);
 }

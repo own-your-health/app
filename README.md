@@ -11,7 +11,10 @@ Google Drive. It reads the records folder that
 - each person's records: a timeline, results by panel and over time against
   their reference range, medicines,
   conditions, allergies, immunizations, claims and bills, documents and
-  imaging studies, with search over titles and the text of documents;
+  imaging studies;
+- one search over everyone's records, documents and imaging, and the text
+  medrec extracted from documents, from the home screen or the search
+  button in the bar, or within one person;
 - for any record, the raw FHIR the source served, where it came from, and the
   import that brought it in;
 - each source's last load (when, and how many records were new, changed and
@@ -82,6 +85,16 @@ every source that recorded it. A medicine joins its prescription to its
 fills: who prescribed it and the last fill and pharmacy. One only reported
 says so. A vaccine lists every dose, and a dose recorded as not given stands
 apart. The rules are `src/model/lists.ts`, which the overview's cards use too.
+
+Search needs every word, or "a quoted phrase", somewhere in an item's name,
+its fields (a visit's reason, a medicine's dosage or prescriber, a claim's
+amounts, a statement's account and amount) or, for a document, the text in
+the person's `text.json`, ignoring case and accents. Name matches come
+first, then field matches, then matches only in a document's text, newest
+first in each, with the words marked and filters by kind and person. Each
+person's `text.json` is read from Drive on the first search, and nothing
+leaves the browser. `#/search?q=<words>` is the search page's address. The
+rules are `src/model/search.ts`.
 
 The timeline lists visits, each with its documents, what was recorded at it
 (diagnoses, results, procedures, medicines, vaccines, allergies and

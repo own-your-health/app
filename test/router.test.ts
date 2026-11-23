@@ -15,6 +15,9 @@ describe('routes', () => {
     ...SECTIONS.filter((s) => s !== 'overview').map((section): Route => ({ name: 'person', person: P, section })),
     { name: 'person', person: P, section: 'results', sub: 'http://loinc.org|13457-7' },
     { name: 'person', person: P, section: 'search', query: 'ldl & a1c' },
+    { name: 'person', person: P, section: 'timeline', sub: 'all' },
+    { name: 'search' },
+    { name: 'search', query: '"fasting 12 hours" ldl' },
   ];
 
   it.each(routes.map((r) => [href(r), r]))('%s round-trips', (h, r) => {
@@ -27,6 +30,9 @@ describe('routes', () => {
     expect(parseRoute(`#/p/${P}/overview`)).toEqual({ name: 'person', person: P, section: 'overview' });
     expect(href({ name: 'item', person: P, id: 'd_aaaaaaaaaaaaaaaaaaaa' })).toBe(`#/p/${P}/r/d_aaaaaaaaaaaaaaaaaaaa`);
     expect(href({ name: 'huishouden', hh: 'abc' })).toBe('#/hh/abc');
+    expect(href({ name: 'search', query: 'ear pain' })).toBe('#/search?q=ear+pain');
+    expect(parseRoute('#/search?q=')).toEqual({ name: 'search' });
+    expect(parseRoute(`#/p/${P}/timeline/other`)).toEqual({ name: 'not_found' });
     expect(href({ name: 'sources' })).toBe('#/sources');
   });
 

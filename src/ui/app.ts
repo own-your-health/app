@@ -20,6 +20,7 @@ import { folderView, messageView, signInView, welcomeView } from './views/setup'
 import { settingsView } from './views/settings';
 import { sourceView } from './views/source';
 import { sourcesView } from './views/sources';
+import { searchView } from './search';
 
 /** What the app says when a renewal interrupted a write the person asked for. */
 const UNSENT_TEXT: Record<Unsent, string> = {
@@ -298,7 +299,7 @@ export class App {
       this.signature = sig;
       const r = parseRoute(location.hash);
       // Re-drawing a search would drop what is being typed.
-      if (!(r.name === 'person' && r.section === 'search')) this.renderKeepingScroll();
+      if (!(r.name === 'search' || (r.name === 'person' && r.section === 'search'))) this.renderKeepingScroll();
     }
   }
 
@@ -406,7 +407,15 @@ export class App {
         'div',
         { class: 'bar-inner' },
         h('a', { class: 'brand', href: ready ? '#/' : './' }, logo(), h('span', { class: 'brand-text' }, h('span', { class: 'brand-name' }, 'Own Your Health'), h('span', { class: 'brand-sub' }, 'Records'))),
-        ready ? h('nav', { class: 'bar-actions', 'aria-label': 'App' }, this.sourcesButton(), h('a', { class: 'icon-button', href: '#/settings', 'aria-label': 'Settings' }, icon('settings'))) : null,
+        ready
+          ? h(
+              'nav',
+              { class: 'bar-actions', 'aria-label': 'App' },
+              h('a', { class: 'icon-button', href: '#/search', 'aria-label': 'Search' }, icon('search')),
+              this.sourcesButton(),
+              h('a', { class: 'icon-button', href: '#/settings', 'aria-label': 'Settings' }, icon('settings')),
+            )
+          : null,
       ),
     );
     if (this.demo && ready) {
@@ -486,6 +495,8 @@ export class App {
         });
       case 'sources':
         return sourcesView(ctx);
+      case 'search':
+        return searchView(ctx, r.query);
       case 'source':
         return sourceView(ctx, r.source);
       case 'person':

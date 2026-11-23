@@ -1368,3 +1368,35 @@ a.filter {
 .visit-line {
   margin: 4px 0 0;
 }
+
+/* Search: the words found, the filters, and the field on the home screen. */
+mark {
+  background: var(--attention-tint);
+  color: var(--ink);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.search-filters {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.search-filters:empty {
+  display: none;
+}
+
+.home-search {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.home-search .input {
+  margin-top: 0;
+}
+
+.home-search .button {
+  flex: none;
+}
