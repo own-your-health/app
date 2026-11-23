@@ -1,0 +1,11 @@
+{
+  "resourceType": "Coverage",
+  "id": "coverage-7185e57e",
+  "meta": {
+    "lastUpdated": "2026-11-19T08:00:00Z"
+  },
+  "status": "active",
+  "period": {
+    "start": "2026-01-01"
+  }
+}

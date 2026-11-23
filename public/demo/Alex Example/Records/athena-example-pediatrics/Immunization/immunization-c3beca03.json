@@ -9,10 +9,10 @@
     "coding": [
       {
         "system": "http://hl7.org/fhir/sid/cvx",
-        "code": "20"
+        "code": "133"
       }
     ],
-    "text": "DTaP"
+    "text": "Pneumococcal conjugate PCV 13"
   },
-  "occurrenceDateTime": "2022-01-10"
+  "occurrenceDateTime": "2018-07-09"
 }

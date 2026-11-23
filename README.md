@@ -75,6 +75,14 @@ Low, Abnormal, Critical), or, when it gave none the app can read, when the
 value falls outside the reference range in the same unit; the app labels
 those **Above range** or **Below range**, so it is clear the app worked it out.
 
+Conditions, allergies, medicines and vaccines are listed once each, however
+many dates the records hold them on, by the newest record's status in words
+(active, resolved, inactive, stopped), with when each was first recorded and
+every source that recorded it. A medicine joins its prescription to its
+fills: who prescribed it and the last fill and pharmacy. One only reported
+says so. A vaccine lists every dose, and a dose recorded as not given stands
+apart. The rules are `src/model/lists.ts`, which the overview's cards use too.
+
 Results are grouped by panel (metabolic, lipid, A1c, liver, blood count,
 thyroid, vitamins and iron, urine, vital signs) by each test's LOINC code,
 from a table in `src/model/panels.ts`; a test outside the table goes by the

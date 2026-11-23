@@ -9,10 +9,10 @@
     "coding": [
       {
         "system": "http://hl7.org/fhir/sid/cvx",
-        "code": "110"
+        "code": "08"
       }
     ],
-    "text": "DTaP-hepatitis B and poliovirus vaccine"
+    "text": "Hep B, adolescent or pediatric"
   },
-  "occurrenceDateTime": "2018-07-09"
+  "occurrenceDateTime": "2018-01-01"
 }

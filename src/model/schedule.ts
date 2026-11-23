@@ -12,6 +12,7 @@
 // clinical decision-making, high-risk or travel rows). RSV antibody at birth
 // depends on the mother's vaccination, so it is left out.
 
+import { isDoseGiven } from './records';
 import type { MedRecord } from './types';
 
 export const SCHEDULE_SOURCE = {
@@ -68,8 +69,6 @@ export const ANTIGENS: Antigen[] = [
 /** Influenza: every season from 6 months; 2 doses in a child's first season under 9. */
 export const FLU = { id: 'flu', name: 'Flu (influenza)', from: 6, cvx: ['15', '16', '88', '111', '135', '140', '141', '144', '149', '150', '151', '153', '155', '158', '161', '166', '168', '171', '185', '186', '197', '205'], text: /influenza|\bflu\b|fluzone|flucelvax|flulaval|fluarix|afluria|flumist/i };
 
-const NOT_GIVEN = new Set(['not-done', 'entered-in-error']);
-
 function cvxOf(r: MedRecord): string | undefined {
   const c = r.code;
   if (!c?.code || (c.system && !/cvx/i.test(c.system))) return undefined;
@@ -86,7 +85,7 @@ function carries(r: MedRecord, a: { cvx: string[]; text: RegExp }): boolean {
 function doseDays(records: MedRecord[], a: { cvx: string[]; text: RegExp }): { day: string; record: MedRecord }[] {
   const byDay = new Map<string, MedRecord>();
   for (const r of records) {
-    if (r.kind !== 'immunization' || NOT_GIVEN.has(r.status ?? '') || !r.date) continue;
+    if (r.kind !== 'immunization' || !isDoseGiven(r) || !r.date) continue;
     if (!carries(r, a)) continue;
     const day = r.date.slice(0, 10);
     if (!byDay.has(day)) byDay.set(day, r);

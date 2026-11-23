@@ -9,10 +9,10 @@
     "coding": [
       {
         "system": "http://hl7.org/fhir/sid/cvx",
-        "code": "21"
+        "code": "83"
       }
     ],
-    "text": "Varicella"
+    "text": "Hep A, ped/adol, 2 dose"
   },
-  "occurrenceDateTime": "2022-01-10"
+  "occurrenceDateTime": "2019-01-07"
 }

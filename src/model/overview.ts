@@ -4,15 +4,8 @@
 // screen; the sections show everything.
 
 import { isOutOfRange, resultFlag, type ResultFlag } from './flags';
-import { medicines, resultSeries, seriesKey, sortByDateDesc, type MedicineGroup, type ResultPoint, type ResultSeries } from './records';
+import { isDoseGiven, resultSeries, sortByDateDesc, type ResultPoint, type ResultSeries } from './records';
 import type { MedDocument, MedRecord, PersonIndex } from './types';
-
-/** Records a source withdrew: never shown as current. */
-const WITHDRAWN = new Set(['entered-in-error']);
-
-function live(r: MedRecord): boolean {
-  return !WITHDRAWN.has(r.status ?? '');
-}
 
 export interface LatestResult {
   series: ResultSeries;
@@ -29,40 +22,11 @@ export function latestResults(index: PersonIndex): LatestResult[] {
     .sort((a, b) => rank(a) - rank(b) || (b.latest.date ?? '').localeCompare(a.latest.date ?? '') || a.series.name.localeCompare(b.series.name));
 }
 
-// ---- Conditions, allergies, medicines, immunizations, visits ----
-
-/** One per code: the newest record of each, as medrec merged them per date. */
-function newestPerCode(records: MedRecord[]): MedRecord[] {
-  const seen = new Map<string, MedRecord>();
-  for (const r of sortByDateDesc(records)) if (!seen.has(seriesKey(r))) seen.set(seriesKey(r), r);
-  return [...seen.values()];
-}
-
-const ACTIVE_CONDITION = new Set(['active', 'recurrence', 'relapse']);
-
-/** Conditions whose newest record is active (FHIR clinical status active, recurrence or relapse). */
-export function activeConditions(index: PersonIndex): { active: MedRecord[]; other: number } {
-  const all = newestPerCode(index.records.filter((r) => r.kind === 'condition' && live(r)));
-  const active = all.filter((r) => ACTIVE_CONDITION.has(r.status ?? ''));
-  return { active, other: all.length - active.length };
-}
-
-const ENDED_ALLERGY = new Set(['inactive', 'resolved']);
-
-/** Allergies not marked inactive or resolved. One without a status is shown: an allergy list errs on the side of showing. */
-export function currentAllergies(index: PersonIndex): MedRecord[] {
-  return newestPerCode(index.records.filter((r) => r.kind === 'allergy' && live(r))).filter((r) => !ENDED_ALLERGY.has(r.status ?? ''));
-}
-
-export function currentMedicines(index: PersonIndex): MedicineGroup[] {
-  return medicines(index).filter((g) => g.active);
-}
-
-const NOT_GIVEN = new Set(['not-done', 'entered-in-error']);
+// ---- Immunizations and visits ----
 
 /** Doses given, newest first. */
 export function immunizationsGiven(index: PersonIndex): MedRecord[] {
-  return sortByDateDesc(index.records.filter((r) => r.kind === 'immunization' && !NOT_GIVEN.has(r.status ?? '')));
+  return sortByDateDesc(index.records.filter((r) => r.kind === 'immunization' && isDoseGiven(r)));
 }
 
 const NOT_A_VISIT = new Set(['cancelled', 'entered-in-error', 'planned']);

@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  activeConditions,
-  currentAllergies,
-  currentMedicines,
   immunizationsGiven,
   latestResults,
   newInLatestLoads,
@@ -100,39 +97,10 @@ describe('the latest results', () => {
 
 function withRecords(idx: PersonIndex, extra: Partial<MedRecord>[]): PersonIndex {
   const base = idx.records[0]!;
-  return { ...idx, records: [...idx.records, ...extra.map((x, i) => ({ ...base, id: `r_extra${i}`, fields: {}, documents: [], ...x }) as MedRecord)] };
+  return { ...idx, records: [...idx.records, ...extra.map((x, i) => ({ ...base, id: `r_extra${i}`, code: undefined, fields: {}, documents: [], ...x }) as MedRecord)] };
 }
 
 describe('what is current', () => {
-  it('lists active conditions and counts the rest', () => {
-    const c = activeConditions(index('Robin Example'));
-    expect(c.active.map((r) => r.display)).toEqual(['High blood pressure']);
-    expect(c.other).toBe(1);
-  });
-
-  it('takes a condition’s newest record, and leaves out one entered in error', () => {
-    const idx = index('Robin Example');
-    const htn = idx.records.find((r) => r.display === 'High blood pressure')!;
-    const later = withRecords(idx, [{ kind: 'condition', code: htn.code, display: 'High blood pressure', date: '2026-11-01', status: 'resolved' }]);
-    expect(activeConditions(later).active).toEqual([]);
-    const mistaken = withRecords(idx, [{ kind: 'condition', display: 'Asthma', date: '2026-11-01', status: 'entered-in-error' }]);
-    expect(activeConditions(mistaken).active.map((r) => r.display)).toEqual(['High blood pressure']);
-  });
-
-  it('shows an allergy without a status, and not a resolved one', () => {
-    const idx = withRecords(index('Sam Example'), [
-      { kind: 'allergy', display: 'Penicillin', date: '2020-01-01' },
-      { kind: 'allergy', display: 'Latex', date: '2020-01-01', status: 'resolved' },
-    ]);
-    expect(currentAllergies(idx).map((r) => r.display)).toEqual(['Penicillin']);
-    expect(currentAllergies(index('Robin Example')).map((r) => r.display)).toEqual(['Sulfa drugs']);
-  });
-
-  it('lists the active medicines', () => {
-    expect(currentMedicines(index('Robin Example')).map((g) => g.name)).toEqual(['Lisinopril 10 mg tablet']);
-    expect(currentMedicines(index('Alex Example')).map((g) => g.name)).toEqual(['Amoxicillin 400 mg/5 mL suspension']);
-  });
-
   it('lists doses given, newest first, and not one not given', () => {
     const idx = withRecords(index('Alex Example'), [{ kind: 'immunization', display: 'Hep A', date: '2026-11-01', status: 'not-done' }]);
     const given = immunizationsGiven(idx);

@@ -4,11 +4,11 @@
   "rev": 9,
   "documents": [
     {
-      "id": "d_hcwjzl5nta6exqt2f7e6",
+      "id": "d_kjzfv3f6zoknzdcgvj5v",
       "path": "Sam Example/Claims/2026/2026-07-09_bill_example_billing_statement.pdf",
-      "sha256": "5e5aa0f5bf57e97e9fa33ef4e0c9f1bd0ebeb498701a254edd707500c10de22c",
-      "md5": "35e6f3806398a35b22d965ad5be357f5",
-      "size": 200496,
+      "sha256": "d6b7b918da6ce714f7f71e81f0a83e6f9e4d8e404121e7e51079d9033d74f5ac",
+      "md5": "75979d2044622d6529e54a4d2f784cc1",
+      "size": 102950,
       "media_type": "application/pdf",
       "pages": 1,
       "original_name": "statement.pdf",
@@ -50,7 +50,7 @@
   ],
   "records": [
     {
-      "id": "r_l5wfoujthwud7t5peeo3",
+      "id": "r_tkdjgp4c5yvisq3epil5",
       "kind": "result",
       "key": "result|http://loinc.org|62292-8|2026-04-02",
       "date": "2026-04-02",
@@ -84,18 +84,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-ba2f5b78",
+            "id": "observation-4de81a04",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T14:59:00Z",
           "filed_at": "2026-11-22T14:59:00Z",
-          "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-ba2f5b78.json",
+          "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-4de81a04.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_vrkmecwwi35ragwl2tse",
+      "id": "r_io225qk2qwpgmhygdbfi",
       "kind": "result",
       "key": "result|http://loinc.org|62292-8|2026-07-09",
       "date": "2026-07-09",
@@ -129,18 +129,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-2d62ff05",
+            "id": "observation-1dd1d2a6",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T14:59:00Z",
           "filed_at": "2026-11-22T14:59:00Z",
-          "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-2d62ff05.json",
+          "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-1dd1d2a6.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_x2kzx62p6w42woejnhso",
+      "id": "r_xlnomh2dajjqxejgah7u",
       "kind": "result",
       "key": "result|http://loinc.org|62292-8|2026-10-12",
       "date": "2026-10-12",
@@ -174,18 +174,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-a23ac288",
+            "id": "observation-c758274b",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T14:59:00Z",
           "filed_at": "2026-11-22T14:59:00Z",
-          "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-a23ac288.json",
+          "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-c758274b.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_empvov253lz6rmybd2pb",
+      "id": "r_mmpbj3lgiwq36ury7q3r",
       "kind": "result",
       "key": "result|http://loinc.org|3016-3|2026-07-09",
       "date": "2026-07-09",
@@ -218,18 +218,18 @@
           "method": "portal",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-575c42de",
+            "id": "observation-aeac6137",
             "last_updated": "2026-11-13T08:00:00Z"
           },
           "fetched_at": "2026-11-13T19:59:00Z",
           "filed_at": "2026-11-13T19:59:00Z",
-          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-575c42de.json",
+          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-aeac6137.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_tkdjgp4c5yvisq3epil5",
+      "id": "r_nz4hh6jhhd7dfk7jiqri",
       "kind": "result",
       "key": "result|http://loinc.org|718-7|2026-07-09",
       "date": "2026-07-09",
@@ -262,18 +262,18 @@
           "method": "portal",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-4de81a04",
+            "id": "observation-01e3da40",
             "last_updated": "2026-11-13T08:00:00Z"
           },
           "fetched_at": "2026-11-13T19:59:00Z",
           "filed_at": "2026-11-13T19:59:00Z",
-          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-4de81a04.json",
+          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-01e3da40.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_io225qk2qwpgmhygdbfi",
+      "id": "r_gfo5w2psytbuibxyokqa",
       "kind": "result",
       "key": "result|http://loinc.org|6690-2|2026-07-09",
       "date": "2026-07-09",
@@ -306,18 +306,18 @@
           "method": "portal",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-1dd1d2a6",
+            "id": "observation-bf54864a",
             "last_updated": "2026-11-13T08:00:00Z"
           },
           "fetched_at": "2026-11-13T19:59:00Z",
           "filed_at": "2026-11-13T19:59:00Z",
-          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-1dd1d2a6.json",
+          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-bf54864a.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_xlnomh2dajjqxejgah7u",
+      "id": "r_7grjwjtwkucjq46muupr",
       "kind": "result",
       "key": "result|http://loinc.org|777-3|2026-07-09",
       "date": "2026-07-09",
@@ -350,18 +350,18 @@
           "method": "portal",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-c758274b",
+            "id": "observation-99ed2e43",
             "last_updated": "2026-11-13T08:00:00Z"
           },
           "fetched_at": "2026-11-13T19:59:00Z",
           "filed_at": "2026-11-13T19:59:00Z",
-          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-c758274b.json",
+          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-99ed2e43.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_mmpbj3lgiwq36ury7q3r",
+      "id": "r_jntrq225kumyjy25gdtp",
       "kind": "result",
       "key": "result|http://loinc.org|718-7|2026-10-12",
       "date": "2026-10-12",
@@ -394,18 +394,18 @@
           "method": "portal",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-aeac6137",
+            "id": "observation-4bdfd839",
             "last_updated": "2026-11-13T08:00:00Z"
           },
           "fetched_at": "2026-11-13T19:59:00Z",
           "filed_at": "2026-11-13T19:59:00Z",
-          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-aeac6137.json",
+          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-4bdfd839.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_nz4hh6jhhd7dfk7jiqri",
+      "id": "r_v3yq6cb3m4c36yplq2pv",
       "kind": "result",
       "key": "result|http://loinc.org|6690-2|2026-10-12",
       "date": "2026-10-12",
@@ -438,18 +438,18 @@
           "method": "portal",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-01e3da40",
+            "id": "observation-e9d08cc0",
             "last_updated": "2026-11-13T08:00:00Z"
           },
           "fetched_at": "2026-11-13T19:59:00Z",
           "filed_at": "2026-11-13T19:59:00Z",
-          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-01e3da40.json",
+          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-e9d08cc0.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_gfo5w2psytbuibxyokqa",
+      "id": "r_wjzl5nta6exqt2f7e6xz",
       "kind": "result",
       "key": "result|http://loinc.org|777-3|2026-10-12",
       "date": "2026-10-12",
@@ -482,18 +482,177 @@
           "method": "portal",
           "source_resource": {
             "type": "Observation",
-            "id": "observation-bf54864a",
+            "id": "observation-7de1a672",
             "last_updated": "2026-11-13T08:00:00Z"
           },
           "fetched_at": "2026-11-13T19:59:00Z",
           "filed_at": "2026-11-13T19:59:00Z",
-          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-bf54864a.json",
+          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-7de1a672.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_7grjwjtwkucjq46muupr",
+      "id": "r_f2ka7fl7vxojhojpkdd6",
+      "kind": "condition",
+      "key": "condition|http://hl7.org/fhir/sid/icd-10-cm|E55.9|2026-04-02",
+      "date": "2026-04-02",
+      "code": {
+        "system": "http://hl7.org/fhir/sid/icd-10-cm",
+        "code": "E55.9",
+        "display": "Vitamin D deficiency, unspecified"
+      },
+      "display": "Vitamin D deficiency",
+      "status": "active",
+      "fields": {
+        "when": "2026-04-02",
+        "verification_status": "confirmed",
+        "category": "Problem list item"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Condition",
+            "id": "condition-b1f3165e",
+            "last_updated": "2026-11-22T08:00:00Z"
+          },
+          "fetched_at": "2026-11-22T14:59:00Z",
+          "filed_at": "2026-11-22T14:59:00Z",
+          "raw_path": "Sam Example/Records/mychart-example-health/Condition/condition-b1f3165e.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_35q6loluzixar2sfeo5n",
+      "kind": "condition",
+      "key": "condition|http://hl7.org/fhir/sid/icd-10-cm|S93.401A|2026-05-20",
+      "date": "2026-05-20",
+      "code": {
+        "system": "http://hl7.org/fhir/sid/icd-10-cm",
+        "code": "S93.401A",
+        "display": "Sprain of unspecified ligament of right ankle, initial encounter"
+      },
+      "display": "Right ankle sprain",
+      "status": "resolved",
+      "fields": {
+        "when": "2026-05-20",
+        "verification_status": "confirmed",
+        "category": "Encounter diagnosis",
+        "abatement": "2026-07-01"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Condition",
+            "id": "condition-f4e0c9f1",
+            "last_updated": "2026-11-22T08:00:00Z"
+          },
+          "fetched_at": "2026-11-22T14:59:00Z",
+          "filed_at": "2026-11-22T14:59:00Z",
+          "raw_path": "Sam Example/Records/mychart-example-health/Condition/condition-f4e0c9f1.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_qn6ssmtv6wptiawdjikt",
+      "kind": "allergy",
+      "key": "allergy|http://snomed.info/sct|91935009|2001-03-01",
+      "date": "2001-03-01",
+      "code": {
+        "system": "http://snomed.info/sct",
+        "code": "91935009",
+        "display": "Allergy to peanut"
+      },
+      "display": "Peanuts",
+      "status": "active",
+      "fields": {
+        "when": "2001-03-01",
+        "criticality": "high",
+        "reaction": [
+          "Hives",
+          "Swelling of the lips"
+        ]
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "AllergyIntolerance",
+            "id": "allergyintolerance-707500c1",
+            "last_updated": "2026-11-22T08:00:00Z"
+          },
+          "fetched_at": "2026-11-22T14:59:00Z",
+          "filed_at": "2026-11-22T14:59:00Z",
+          "raw_path": "Sam Example/Records/mychart-example-health/AllergyIntolerance/allergyintolerance-707500c1.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_knvl6dvxpvqlrkl5txvk",
+      "kind": "medication",
+      "key": "medication|ibuprofen 200 mg tablet|2026-05-20",
+      "date": "2026-05-20",
+      "display": "Ibuprofen 200 mg tablet",
+      "status": "completed",
+      "fields": {
+        "when": "2026-05-20",
+        "dosage": "2 tablets by mouth every 6 hours as needed for pain",
+        "source": "statement"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "MedicationStatement",
+            "id": "medicationstatement-5b22d965",
+            "last_updated": "2026-11-22T08:00:00Z"
+          },
+          "fetched_at": "2026-11-22T14:59:00Z",
+          "filed_at": "2026-11-22T14:59:00Z",
+          "raw_path": "Sam Example/Records/mychart-example-health/MedicationStatement/medicationstatement-5b22d965.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_tysqhtx7oqqbwtc36wql",
       "kind": "medication",
       "key": "medication|vitamin d3 2,000 unit capsule|2026-04-03",
       "date": "2026-04-03",
@@ -518,18 +677,18 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "MedicationRequest",
-            "id": "medicationrequest-99ed2e43",
+            "id": "medicationrequest-91810d5a",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T14:59:00Z",
           "filed_at": "2026-11-22T14:59:00Z",
-          "raw_path": "Sam Example/Records/mychart-example-health/MedicationRequest/medicationrequest-99ed2e43.json",
+          "raw_path": "Sam Example/Records/mychart-example-health/MedicationRequest/medicationrequest-91810d5a.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
     },
     {
-      "id": "r_jntrq225kumyjy25gdtp",
+      "id": "r_7euox3ipiirwjp5zoyy5",
       "kind": "encounter",
       "key": "encounter|sports medicine visit|2026-05-20",
       "date": "2026-05-20",
@@ -555,12 +714,12 @@
           "method": "fhir-api",
           "source_resource": {
             "type": "Encounter",
-            "id": "encounter-4bdfd839",
+            "id": "encounter-dd1be4e2",
             "last_updated": "2026-11-22T08:00:00Z"
           },
           "fetched_at": "2026-11-22T14:59:00Z",
           "filed_at": "2026-11-22T14:59:00Z",
-          "raw_path": "Sam Example/Records/mychart-example-health/Encounter/encounter-4bdfd839.json",
+          "raw_path": "Sam Example/Records/mychart-example-health/Encounter/encounter-dd1be4e2.json",
           "filed_by": "medrec 0.2.11"
         }
       ]
@@ -568,8 +727,8 @@
   ],
   "studies": [
     {
-      "id": "m_6z5ay44av3yq6cb3m4c3",
-      "study_uid": "2.25.20884443502929807128",
+      "id": "m_nrnlgwom2tbzuzvotl7e",
+      "study_uid": "2.25.1857484401405079422",
       "path": "Sam Example/Imaging/2026-05-20_xr_ankle_example_imaging/",
       "date": "2026-05-20",
       "modalities": [
@@ -578,33 +737,33 @@
       "body_part": "ANKLE",
       "description": "XR ankle, 3 views",
       "facility": "Example Imaging",
-      "accession": "ACCFB0AF5",
+      "accession": "ACC5C4AA3",
       "series": [
         {
-          "uid": "2.25.258973191",
+          "uid": "2.25.505373999",
           "number": 1,
           "modality": "DX",
           "description": "AP",
           "instances": {
-            "2.25.1863064605": "S001/00001.dcm"
+            "2.25.1798594648": "S001/00001.dcm"
           }
         },
         {
-          "uid": "2.25.1626890654",
+          "uid": "2.25.572313904",
           "number": 2,
           "modality": "DX",
           "description": "Lateral",
           "instances": {
-            "2.25.1114279377": "S002/00001.dcm"
+            "2.25.3967491440": "S002/00001.dcm"
           }
         },
         {
-          "uid": "2.25.3694084522",
+          "uid": "2.25.2414675524",
           "number": 3,
           "modality": "DX",
           "description": "Oblique",
           "instances": {
-            "2.25.2458086886": "S003/00001.dcm"
+            "2.25.2271988814": "S003/00001.dcm"
           }
         }
       ],
@@ -625,10 +784,10 @@
   ],
   "imports": [
     {
-      "id": "i_lrkl5txvkzryrqnvktys",
+      "id": "i_dlseme4q2yg67wdcfeoq",
       "source_dir": "Sam Example/Records/mychart-example-health",
-      "stream_sha256": "0737fe001632be60bdd1be4e2f44e7b8f88169fd9e88dd1db66eca319495e3bf",
-      "stream_bytes": 916484,
+      "stream_sha256": "cec8f34b9a19c5423f8f3fc83f0070db3296d743b9c1420a93feb73f0a04a98f",
+      "stream_bytes": 615028,
       "cli": "mychart",
       "cli_version": "0.7.1",
       "organization": "example-health",
@@ -648,10 +807,10 @@
       "documents_added": 0
     },
     {
-      "id": "i_r6f4u2ktpyqqeokjzfv3",
+      "id": "i_32u5fpcs2s3hloks2bzu",
       "source_dir": "Sam Example/Records/labcorp-example-lab",
-      "stream_sha256": "5e9ead932659d550979e07d6b7b918da6ce714f7f71e81f0a83e6f9e4d8e4041",
-      "stream_bytes": 657394,
+      "stream_sha256": "87a6c321788c7fc57d6127a313022deb01f95678baf76f0ebfcf8d1f5c087860",
+      "stream_bytes": 726147,
       "cli": "labcorp",
       "cli_version": "0.2.1",
       "organization": "example-lab",
