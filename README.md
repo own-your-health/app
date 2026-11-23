@@ -120,8 +120,7 @@ plural. `CONCEPTS` in `src/model/search.ts` is the table:
 - When nothing of the kind has the other words, the search is every word as
   written: "lab statement" finds the lab's statement.
 - A phrase in quotes is always words.
-- The page offers to search the words as written instead. The address
-  keeps that choice as `&words=1`.
+- The page offers to search the words as written instead.
 
 Results come in groups by kind:
 - health records first, then imaging and documents, then coverage and
@@ -132,7 +131,8 @@ Results come in groups by kind:
 
 Each person's `text.json` is read from Drive on the first search, and
 nothing leaves the browser. `#/search?q=<words>` is the search page's
-address. The rules are `src/model/search.ts`.
+address, with `&words=1` when the words are searched as written. The rules
+are `src/model/search.ts`.
 
 The timeline lists visits, each with its documents, what was recorded at it
 (diagnoses, results, procedures, medicines, vaccines, allergies and
