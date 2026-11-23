@@ -34,6 +34,11 @@ and keeps what it reads in memory.
 invented records for an invented household, and a simulated Mac that answers
 Refresh.
 
+**Ask an assistant:** [connector](https://github.com/own-your-health/connector)
+serves the same folder to Claude, ChatGPT, Gemini and other assistants that
+take remote MCP connectors, from a Cloudflare Worker in the household's own
+account.
+
 ## What you need
 
 New to this? [docs/getting-started.md](docs/getting-started.md) goes from
