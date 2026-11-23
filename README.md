@@ -12,6 +12,9 @@ Google Drive. It reads the records folder that
   their reference range, medicines,
   conditions, allergies, immunizations, claims and bills, documents and
   imaging studies;
+- what care cost across the household, from the plans' claims: by plan year
+  or calendar year, by person, provider, kind of care and month, one
+  service's prices across providers and dates, and a CSV of the lines;
 - one search over everyone's records, documents and imaging, and the text
   medrec extracted from documents, from the home screen or the search
   button in the bar, or within one person;
@@ -150,7 +153,8 @@ the plan's deductible and out-of-pocket limit so far from the newest claim
 that printed them, and each insurer claim beside its bill: a statement from
 the same provider within 120 days after the visit, preferring one whose
 amount is the claim's share. A claim with nothing to pay says so, and one
-with a share but no bill yet says that. Money is added in whole cents. The
+with a share but no bill yet says that. A pharmacy fill is not matched to a
+statement: its share is paid to the pharmacy, and the claim says so. Money is added in whole cents. The
 rules are `src/model/billing.ts`.
 
 A claim is named for what it paid for, from its lines ("Lipid panel and
@@ -158,6 +162,34 @@ blood draw"), not for its type. Its page lists each line with its code, a
 category from the code (visit, lab test, imaging, vaccine and so on), its
 date and its amounts: billed, allowed, plan paid, deductible, copay,
 coinsurance, not covered and you owe. The rules are `src/model/claims.ts`.
+
+Costs (`#/costs`, from the home screen or a person's claims) adds up every
+claim line in the folder: what was billed, what the plan allowed and paid,
+and your share, with its deductible, copay and coinsurance. A claim whose
+lines do not add up to its totals keeps the difference as a line of its own,
+so a period's totals are always its claims'. It narrows to:
+- a period: this or last plan year, a calendar year, or every year. A plan
+  year starts on the month and day the person's coverage with that insurer
+  starts in these records, or with their only coverage when the insurer has
+  none (a pharmacy benefit), else on January 1. A calendar year counts care
+  by the day it was given, not the day it was paid;
+- a person, a provider, a kind of care, a month, or one billing code. Each
+  is a link from the chart or the breakdown, so back undoes one.
+
+The address keeps every choice: `period=` is `plan`, `plan-1`, a year
+(`2025`) or `all`; `by=` (the breakdown) is `person`, `provider` or
+`category`; and each `only=` is one narrowing, `person:<id>`,
+`provider:<name>`, `category:<kind>`, `month:<YYYY-MM>` or
+`code:<system>:<code>` (`code:CPT:99213`).
+
+The screen shows the plan balances each plan printed with its newest claim
+in the period, plan paid and your share month by month, where it went by
+person, provider or kind of care, and every line. A code billed more than
+once is listed under "Same service, different prices"; opening one shows,
+for every time it was billed, what the provider billed beside what the plan
+allowed. Download CSV saves the lines shown, built in the browser, with any
+cell that a spreadsheet would read as a formula prefixed with `'`. Bills and
+receipts no claim covers are not counted. The rules are `src/model/costs.ts`.
 
 Results are grouped by panel (metabolic, lipid, A1c, liver, blood count,
 thyroid, vitamins and iron, urine, vital signs) by each test's LOINC code,
@@ -263,7 +295,9 @@ The privacy policy is at https://own-your-health.github.io/app/privacy.html
   `_requests/`, and deletes only requests it made (a cancel). medrec is the
   only writer of records.
 - **Records stay in the browser.** Nothing from the folder is sent anywhere
-  but back to Drive. Error messages carry no record content.
+  but back to Drive. Error messages carry no record content. Download CSV
+  on the costs screen builds the file in the page and saves it to the
+  device; nothing is uploaded.
 - **Links out carry the thing, never the person.** A record page links to
   where a person can read about a test, medicine, condition, allergy,
   procedure or vaccine:

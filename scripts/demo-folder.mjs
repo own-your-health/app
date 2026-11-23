@@ -106,7 +106,7 @@ src.jamiePeds = source(jamie, 'athena', 'example-pediatrics', orgs.peds);
 const JAMIE_PEDS_LOAD = at(-60 * 20);
 FIRST_IMPORT.set(src.jamiePeds.id, -60 * 20);
 
-write('household.json', {
+const writeHousehold = () => write('household.json', {
   schema: 'medrec-household/v1',
   format: 1,
   folder_id: folderId,
@@ -116,6 +116,7 @@ write('household.json', {
   organizations: Object.values(orgs).map((o) => ({ ...o, aliases: [] })),
   sources: Object.values(src),
 });
+writeHousehold();
 
 // ---- Records ----
 
@@ -235,7 +236,8 @@ class PersonData {
     const f = this.person.folder;
     write(`${f}/index.json`, { schema: 'medrec-index/v1', person: this.person.id, rev: 9, documents: this.documents, records: this.records, studies: this.studies, imports: this.imports });
     write(`${f}/text.json`, { schema: 'medrec-text/v1', person: this.person.id, texts: this.texts });
-    write(`${f}/notes.md`, `# Notes: ${this.person.name}\n\n## 2026-10-02 (${id('n')})\nTags: question\n\nAsk about the cholesterol recheck at the next visit.\n`);
+    this.noteId ??= id('n');
+    write(`${f}/notes.md`, `# Notes: ${this.person.name}\n\n## 2026-10-02 (${this.noteId})\nTags: question\n\nAsk about the cholesterol recheck at the next visit.\n`);
   }
 }
 
@@ -843,6 +845,128 @@ const samLabFail = attempt(src.samLab, sam, {
 });
 const robinPlanNeeds = attempt(src.robinPlan, robin, { started: at(-60 * 8), outcome: 'needs_person', exit: 3, error: { code: 'needs_person', message: 'The member site session has expired. Sign in with `uhc auth login --browser --profile <provider profile> --overwrite`.', remedy: 'Run `uhc auth login`, then import again.' } });
 
+
+// ---- More claims, for the costs screen ----
+// Sam's employer plan, whose plan year starts in July, with Alex on it as a
+// child; and Robin's pharmacy benefit. Every id here is drawn after all the
+// others, so the rest of the folder keeps its ids.
+orgs.carePlan = { id: id('g'), name: 'Example Care Plan', fhir_base: 'https://fhir.example.com/r4' };
+orgs.rx = { id: id('g'), name: 'Example Pharmacy Benefits' };
+src.samPlan = source(sam, 'kp', 'example-care-plan', orgs.carePlan);
+src.alexPlan = source(alex, 'kp', 'example-care-plan', orgs.carePlan);
+src.robinRx = source(robin, 'caremark', 'example-pharmacy-benefits', orgs.rx, 'portal');
+const PLANS_LOAD = at(-60 * 30);
+for (const s of [src.samPlan, src.alexPlan, src.robinRx]) FIRST_IMPORT.set(s.id, -60 * 30);
+writeHousehold();
+
+const NDC = 'http://hl7.org/fhir/sid/ndc';
+const cents = (x) => Math.round(Number(x) * 100);
+const dollars = (c) => usd((c / 100).toFixed(2));
+// A line: [code, what was done, billed, allowed, deductible, copay, coinsurance, plan paid].
+// Allowed is what the plan paid plus your share (deductible, copay, coinsurance).
+function claimOf(P, s, { date, provider, insurer, type = 'Professional', system = CPT, lines, balances }) {
+  for (const l of lines) if (cents(l[3]) !== cents(l[4]) + cents(l[5]) + cents(l[6]) + cents(l[7])) throw new Error(`allowed is not paid plus share: ${l}`);
+  const share = (l) => cents(l[4]) + cents(l[5]) + cents(l[6]);
+  const amounts = (l) => [
+    ['Submitted Amount', usd(l[2])],
+    ['Eligible Amount', usd(l[3])],
+    ['Benefit Amount', usd(l[7])],
+    ['Deductible', usd(l[4])],
+    ['Copay', usd(l[5])],
+    ['Coinsurance', usd(l[6])],
+    ['Member liability', dollars(share(l))],
+  ];
+  const sumAt = (i) => (lines.reduce((t, l) => t + cents(l[i]), 0) / 100).toFixed(2);
+  const totals = amounts(['', '', sumAt(2), sumAt(3), sumAt(4), sumAt(5), sumAt(6), sumAt(7)]);
+  P.record(s, 'ExplanationOfBenefit', 'claim', {
+    date,
+    code: { system: 'http://terminology.hl7.org/CodeSystem/claim-type', code: type.toLowerCase(), display: type },
+    display: type,
+    status: 'active',
+    fields: {
+      provider,
+      insurer,
+      outcome: 'complete',
+      billable_period: { start: date, end: date },
+      total: totals.map(([category, amount]) => ({ category, amount })),
+      payment: usd(sumAt(7)),
+      type,
+      use: 'claim',
+      items: lines.map((l, i) => ({
+        sequence: i + 1,
+        service: { system, code: l[0], display: l[1] },
+        serviced: date,
+        quantity: { value: 1, unit: null },
+        net: usd(l[2]),
+        adjudication: amounts(l).map(([category, amount]) => ({ category, amount, reason: null })),
+      })),
+      ...(balances ? { benefit_balance: balances } : {}),
+    },
+    resource: {
+      status: 'active',
+      type: { coding: [{ code: type.toLowerCase() }] },
+      use: 'claim',
+      billablePeriod: { start: date, end: date },
+      outcome: 'complete',
+      item: lines.map(([code, display, b], i) => ({ sequence: i + 1, productOrService: { coding: [{ system, code, display }] }, servicedDate: date, net: { value: Number(b), currency: 'USD' } })),
+    },
+  });
+}
+const careBalance = (deductibleUsed, outOfPocketUsed) => [
+  {
+    category: '1',
+    network: 'in',
+    unit: 'individual',
+    term: 'annual',
+    financial: [
+      { type: 'Deductible', allowed: usd('750.00'), used: usd(deductibleUsed) },
+      { type: 'Out-of-pocket limit', allowed: usd('3000.00'), used: usd(outOfPocketUsed) },
+    ],
+  },
+];
+const coverage = (P, s, display, relationship) =>
+  P.record(s, 'Coverage', 'coverage', {
+    date: '2025-07-01',
+    code: { system: 'http://terminology.hl7.org/CodeSystem/v3-ActCode', code: 'HIP', display: 'health insurance plan policy' },
+    display,
+    status: 'active',
+    fields: { payer: 'Example Care Plan', period: { start: '2025-07-01' }, relationship, plan: 'HMO Family', group: 'GRP-111111' },
+    resource: { status: 'active', period: { start: '2025-07-01' } },
+  });
+
+// Sam: a sports-medicine visit with an X-ray late in one plan year; then, in
+// the next, lab work that went to the deductible.
+coverage(S, src.samPlan, 'Example Care Plan HMO', 'self');
+claimOf(S, src.samPlan, { date: '2026-05-20', provider: 'Example Health', insurer: 'Example Care Plan', lines: [['99214', 'Office visit', '260.00', '168.00', '0.00', '40.00', '0.00', '128.00'], ['73610', 'X-ray of the ankle', '145.00', '82.00', '0.00', '0.00', '16.40', '65.60']] });
+claimOf(S, src.samPlan, { date: '2026-07-09', provider: 'Example Lab', insurer: 'Example Care Plan', lines: [['84443', 'Thyroid test (TSH)', '95.00', '41.20', '41.20', '0.00', '0.00', '0.00'], ['36415', 'Blood draw', '25.00', '9.50', '9.50', '0.00', '0.00', '0.00']] });
+claimOf(S, src.samPlan, { date: '2026-10-12', provider: 'Example Lab', insurer: 'Example Care Plan', lines: [['85025', 'Blood count', '98.00', '31.40', '31.40', '0.00', '0.00', '0.00'], ['82306', 'Vitamin D test', '150.00', '38.90', '38.90', '0.00', '0.00', '0.00']], balances: careBalance('121.00', '121.00') });
+S.importRun(src.samPlan, { importedAt: PLANS_LOAD, added: 4, updated: 0, unchanged: 0, cliVersion: '0.4.0' });
+S.write();
+
+// Alex, on Sam's plan: a flu shot, and a sick visit at the pediatric practice.
+coverage(A, src.alexPlan, 'Example Care Plan HMO (dependent)', 'child');
+claimOf(A, src.alexPlan, { date: '2025-10-20', provider: 'Example Pediatrics', insurer: 'Example Care Plan', lines: [['90686', 'Flu vaccine', '55.00', '32.00', '0.00', '0.00', '0.00', '32.00'], ['90471', 'Vaccine given', '28.00', '18.00', '0.00', '0.00', '0.00', '18.00']] });
+claimOf(A, src.alexPlan, { date: '2026-11-20', provider: 'Example Pediatrics', insurer: 'Example Care Plan', lines: [['99213', 'Office visit', '165.00', '98.00', '0.00', '25.00', '0.00', '73.00'], ['87880', 'Strep test', '48.00', '21.30', '0.00', '0.00', '0.00', '21.30']], balances: careBalance('0.00', '25.00') });
+A.importRun(src.alexPlan, { importedAt: PLANS_LOAD, added: 3, updated: 0, unchanged: 0, cliVersion: '0.4.0' });
+A.write();
+
+// Robin's lisinopril fills, as the pharmacy benefit's claims.
+for (const date of ['2026-08-14', '2026-11-12']) {
+  claimOf(R, src.robinRx, { date, provider: 'Example Pharmacy', insurer: 'Example Pharmacy Benefits', type: 'Pharmacy', system: NDC, lines: [['00000-1111-90', 'Lisinopril 10 mg tablet, 90 days', '32.50', '12.40', '0.00', '10.00', '0.00', '2.40']] });
+}
+R.importRun(src.robinRx, { importedAt: PLANS_LOAD, added: 2, updated: 0, unchanged: 0, cliVersion: '1.2.0' });
+R.write();
+const planOk = (s, person, run) => attempt(s, person, { started: at(-60 * 30 - 1), importId: run.id, c: counts(run) });
+const samPlanOk = planOk(src.samPlan, sam, S.imports.at(-1));
+const alexPlanOk = planOk(src.alexPlan, alex, A.imports.at(-1));
+const robinRxOk = planOk(src.robinRx, robin, R.imports.at(-1));
+const planStatus = (s, person, ok, run) => ({
+  source: s.id, person: person.id, cli: s.cli, organization: s.organization, auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: at(60 * 24 - 30),
+  sign_in: { state: 'ok', expires_at: at(60 * 24 * 60), checked_at: at(-60 * 30 - 1), needs_person: null },
+  last_attempt: ok,
+  last_success: { attempt: ok.attempt, finished_at: ok.finished_at, import: run.id, counts: counts(run), withheld_types: [] },
+});
+
 write('_status/status.json', {
   schema: 'medrec-status/v1',
   format: 1,
@@ -885,6 +1009,9 @@ write('_status/status.json', {
       last_attempt: alexOk,
       last_success: { attempt: alexOk.attempt, finished_at: alexOk.finished_at, import: aPeds.id, counts: counts(aPeds), withheld_types: [] },
     },
+    planStatus(src.samPlan, sam, samPlanOk, S.imports.at(-1)),
+    planStatus(src.alexPlan, alex, alexPlanOk, A.imports.at(-1)),
+    planStatus(src.robinRx, robin, robinRxOk, R.imports.at(-1)),
   ],
 });
 attempts.sort((a, b) => a.started_at.localeCompare(b.started_at));

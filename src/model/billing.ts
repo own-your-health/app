@@ -5,6 +5,7 @@
 // balances (the deductible and out-of-pocket limit so far) come from the
 // newest claim that printed them. Money stays in whole cents, never floats.
 
+import { isPharmacyClaim } from './claims';
 import { providerKey, sameProvider } from './providers';
 import { AMOUNT_LABELS, amountNames, asMoney, claimTotals, isWithdrawn, sortByDateDesc, str, type AmountName, type Money } from './records';
 import type { Json, MedDocument, MedRecord, PersonIndex } from './types';
@@ -153,7 +154,8 @@ export function claimsWithBills(index: PersonIndex): { claims: Claim[]; otherBil
     .sort((a, b) => (b.service ?? '').localeCompare(a.service ?? ''));
   for (const c of claims) {
     const share = toCents(c.yourShare);
-    if (!share || share <= 0 || !c.service) continue;
+    // A fill's share is paid to the pharmacy, not billed by a statement.
+    if (!share || share <= 0 || !c.service || isPharmacyClaim(c.record)) continue;
     const until = addDays(c.service, BILL_WINDOW_DAYS);
     const candidates = bills.filter((b) => sameProvider(b.provider, c.provider) && b.date! >= c.service! && b.date! <= until).sort((a, b) => a.date!.localeCompare(b.date!));
     const exact = candidates.find((b) => toCents(b.amount) === share);

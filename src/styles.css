@@ -55,6 +55,9 @@
   --positive: var(--teal-700);
   --positive-rule: var(--teal-600);
   --positive-tint: var(--teal-50);
+  /* The costs charts' two series, checked with the dataviz validator against each surface. */
+  --series-plan: var(--ultra-500);
+  --series-share: #eb6834;
   --attention: var(--amber-600);
   --attention-text: var(--amber-700);
   --attention-tint: var(--amber-50);
@@ -103,6 +106,8 @@
   --positive: var(--teal-300);
   --positive-rule: var(--teal-300);
   --positive-tint: #183c39;
+  --series-plan: var(--ultra-400);
+  --series-share: #d95926;
   --attention: var(--amber-300);
   --attention-text: var(--amber-300);
   --attention-tint: #42331a;
@@ -136,7 +141,9 @@
     --positive: var(--teal-300);
     --positive-rule: var(--teal-300);
     --positive-tint: #183c39;
-    --attention: var(--amber-300);
+    --series-plan: var(--ultra-400);
+  --series-share: #d95926;
+  --attention: var(--amber-300);
     --attention-text: var(--amber-300);
     --attention-tint: #42331a;
     --error: var(--red-300);
@@ -1592,4 +1599,176 @@ mark {
 
 .tech[open] > summary {
   margin-bottom: 12px;
+}
+
+/* ---- Costs ---- */
+
+.cost-controls {
+  display: grid;
+  gap: 2px;
+}
+
+.cost-drill {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.cost-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cost-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 8px 0 0;
+  color: var(--ink-soft);
+}
+
+.cost-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.swatch-plan {
+  background: var(--series-plan);
+}
+
+.swatch-share {
+  background: var(--series-share);
+}
+
+.swatch-dot {
+  background: var(--series-plan);
+  border-radius: 50%;
+}
+
+.swatch-ring {
+  box-sizing: border-box;
+  border: 2px solid var(--series-plan);
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.cost-chart {
+  max-width: 520px;
+}
+
+.cost-plan {
+  fill: var(--series-plan);
+}
+
+.cost-share {
+  fill: var(--series-share);
+}
+
+/* Each month's column is its hit area and link, wider than its bar. */
+.cost-hit {
+  fill: transparent;
+}
+
+.cost-col:hover .cost-hit,
+.cost-col:focus-visible .cost-hit {
+  fill: var(--sunken);
+}
+
+.cost-col:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.chart-value {
+  fill: var(--ink);
+  font-weight: 600;
+}
+
+.cost-strip {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  height: auto;
+  margin-top: 6px;
+}
+
+.cost-track {
+  fill: var(--sunken);
+}
+
+.cost-axis {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.cost-span {
+  stroke: var(--muted);
+  stroke-width: 2;
+}
+
+.cost-billed {
+  fill: var(--surface);
+  stroke: var(--series-plan);
+  stroke-width: 2;
+}
+
+.cost-allowed {
+  fill: var(--series-plan);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.cost-table > summary {
+  margin-top: 8px;
+  cursor: pointer;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.cost-table .num {
+  text-align: right;
+}
+
+@media (forced-colors: active) {
+  .cost-plan,
+  .cost-allowed,
+  .swatch-plan,
+  .swatch-dot {
+    fill: CanvasText;
+    background: CanvasText;
+  }
+
+  .cost-share,
+  .swatch-share {
+    fill: Highlight;
+    background: Highlight;
+  }
+}
+
+.balance-item {
+  margin-top: 8px;
+}
+
+.balance-item > p {
+  margin: 0;
+}
+
+.balance-item .meter {
+  margin-top: 4px;
+}
+
+.cost-drill .filter {
+  gap: 6px;
 }
