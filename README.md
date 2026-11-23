@@ -330,8 +330,10 @@ app never asks for or holds a provider password. It shows the exact command to
 run in a terminal on the Mac, such as `medrec refresh sign-in s_…`.
 From medrec 0.7.0, the error of a sign-in that ended is medrec's own, and its
 remedy is that command. The provider tool's words, which name the tool's own
-sign-in, are kept apart (`error.provider_message`), and the app folds them
-under **Error details**.
+sign-in, are kept apart (`error.provider_message`, an empty string when the
+provider said nothing), and the app folds them under **Error details**. The
+app knows medrec's own error by that key, or by a `medrec …` command in its
+remedy, which a provider tool's own remedy never names.
 
 Some member sites keep a sign-in for less than an hour, and nothing renews
 it, so the source loads only soon after someone signs in. medrec marks such a

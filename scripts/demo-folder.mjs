@@ -1087,7 +1087,7 @@ R.write();
 
 // Robin's plan and blood centre are member sites whose sign-ins nothing
 // renews: each loads after someone signs in, and otherwise waits quietly.
-const robinBloodWaits = attempt(src.robinBlood, robin, { started: at(-60 * 6), outcome: 'needs_person', exit: 3, error: { code: 'needs_person', message: 'oneblood needs a sign-in: its export answered that the sign-in has ended', remedy: `run \`medrec refresh sign-in ${src.robinBlood.id}\` on this machine`, provider_message: 'Session expired. Run `oneblood auth login --profile <provider profile>`.' } });
+const robinBloodWaits = attempt(src.robinBlood, robin, { started: at(-60 * 6), outcome: 'needs_person', exit: 3, error: { code: 'needs_person', message: 'oneblood needs a sign-in: its export answered that the sign-in has ended', remedy: `run \`medrec refresh sign-in ${src.robinBlood.id}\` on this machine`, provider_message: '' } }); // the provider said nothing
 // Alex's practice loaded yesterday, and its next load found the sign-in
 // ended. medrec renews this sign-in on its own, so an end is news: a person
 // must sign in. These attempts are drawn last, so no other id moves.
