@@ -90,6 +90,16 @@ export function timeline(index: PersonIndex): TimelineEntry[] {
   return sortByDateDesc(out);
 }
 
+/** A record its source withdrew (FHIR entered-in-error): never shown as current. */
+export function isWithdrawn(r: MedRecord): boolean {
+  return r.status === 'entered-in-error';
+}
+
+/** A dose that was given: neither recorded as not done nor withdrawn. */
+export function isDoseGiven(r: MedRecord): boolean {
+  return r.status !== 'not-done' && !isWithdrawn(r);
+}
+
 export function sortByDateDesc<T extends { date?: string }>(xs: T[]): T[] {
   return [...xs].sort((a, b) => {
     if (a.date === b.date) return 0;

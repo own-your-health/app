@@ -7,10 +7,10 @@ const { household, indexes } = demo();
 const index = (name: string) => indexes.get(personNamed(household, name).id)!;
 const names = (xs: { name: string }[]) => xs.map((x) => x.name);
 
-/** The index with records added; one without a code is grouped by its name. */
+/** The index with records added, each with only what it gives: one without a code is grouped by its name. */
 function withRecords(idx: PersonIndex, extra: Partial<MedRecord>[]): PersonIndex {
   const base = idx.records[0]!;
-  return { ...idx, records: [...idx.records, ...extra.map((x, i) => ({ ...base, id: `r_extra${i}`, code: undefined, fields: {}, documents: [], ...x }) as MedRecord)] };
+  return { ...idx, records: [...idx.records, ...extra.map((x, i) => ({ ...base, id: `r_extra${i}`, code: undefined, status: undefined, fields: {}, documents: [], ...x }) as MedRecord)] };
 }
 
 describe('conditions', () => {
@@ -33,16 +33,19 @@ describe('conditions', () => {
     expect(names([...mistaken.active, ...mistaken.ended, ...mistaken.other])).not.toContain('Asthma');
   });
 
-  it('marks an unconfirmed one, and puts a refuted or status-less one under other', () => {
+  it('notes an unconfirmed one beside its status, and puts a ruled-out or status-less one under other', () => {
     const c = conditionList(
       withRecords(index('Sam Example'), [
-        { kind: 'condition', display: 'Migraine', date: '2026-09-01', status: 'active', fields: { verification_status: 'provisional' } },
+        { kind: 'condition', display: 'Migraine', date: '2026-09-01', status: 'recurrence', fields: { verification_status: 'provisional' } },
         { kind: 'condition', display: 'Anemia', date: '2026-09-01', status: 'active', fields: { verification_status: 'refuted' } },
         { kind: 'condition', display: 'Back pain', date: '2026-08-01' },
       ]),
     );
-    expect(c.active.find((i) => i.name === 'Migraine')!.unconfirmed).toBe(true);
+    expect(c.active.find((i) => i.name === 'Migraine')).toMatchObject({ isActive: true, notes: ['Unconfirmed', 'Recurred'] });
     expect(names(c.other)).toEqual(['Anemia', 'Back pain']);
+    expect(c.other.map((i) => i.notes)).toEqual([['Ruled out'], []]);
+    // The heading says active or resolved, so those need no note.
+    expect([...c.active, ...c.ended].filter((i) => ['Vitamin D deficiency', 'Right ankle sprain'].includes(i.name)).map((i) => i.notes)).toEqual([[], []]);
   });
 });
 
@@ -70,6 +73,15 @@ describe('medicines', () => {
     expect(active[0]).toMatchObject({ first: '2025-03-12', known: ['filled', 'prescribed'], prescriber: 'Dr. Jordan Sample', lastFill: { date: '2026-11-12', pharmacy: 'Example Pharmacy', daysSupply: 90 } });
     expect(names(past)).toEqual(['Cetirizine 10 mg tablet']);
     expect(past[0]!.latest.status).toBe('stopped');
+  });
+
+  it('leaves out a withdrawn record, even when it is the newest', () => {
+    const idx = index('Robin Example');
+    const lisinopril = idx.records.find((r) => r.display === 'Lisinopril 10 mg tablet')!;
+    const withdrawn = withRecords(idx, [{ kind: 'medication', code: lisinopril.code, display: 'Lisinopril 20 mg tablet', date: '2026-11-20', status: 'entered-in-error', fields: { dosage: 'Take 2 tablets', source: 'request' } }]);
+    const m = medicineList(withdrawn).active.find((x) => x.key === `${lisinopril.code!.system}|${lisinopril.code!.code}`)!;
+    expect(m).toMatchObject({ name: 'Lisinopril 10 mg tablet', latest: { date: '2026-11-12' } });
+    expect(m.records.map((r) => r.status)).not.toContain('entered-in-error');
   });
 
   it('says when a medicine is only reported', () => {

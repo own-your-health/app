@@ -3,7 +3,7 @@
 // (medrec keeps a record per date), its status in words, when it was first
 // and last recorded, and every source that recorded it.
 
-import { medicines, seriesKey, sortByDateDesc, type MedicineGroup } from './records';
+import { isDoseGiven, isWithdrawn, medicines, seriesKey, sortByDateDesc, type MedicineGroup } from './records';
 import type { Json, MedRecord, PersonIndex, Provenance } from './types';
 
 /** FHIR status codes, in words. */
@@ -32,7 +32,6 @@ export function statusText(status: string | undefined): string | undefined {
 }
 
 const str = (v: Json | undefined): string | undefined => (typeof v === 'string' && v.trim() ? v : undefined);
-const withdrawn = (r: MedRecord) => r.status === 'entered-in-error';
 
 /** One condition, allergy or vaccine across the dates it was recorded. */
 export interface ListItem {
@@ -69,30 +68,36 @@ const newestFirst = (a: ListItem, b: ListItem) => (b.latest.date ?? '').localeCo
 
 const ACTIVE = new Set(['active', 'recurrence', 'relapse']);
 const ENDED = new Set(['inactive', 'remission', 'resolved']);
+/** Statuses the group's heading already says, so a row needs no note for them. */
+const PLAIN = new Set(['active', 'inactive', 'resolved']);
 const UNCONFIRMED = new Set(['provisional', 'differential', 'unconfirmed']);
 
 export interface ConditionItem extends ListItem {
   /** When it ended, from the newest record's abatement. */
   ended?: string;
-  /** Unconfirmed, provisional or differential: the source was not sure. */
-  unconfirmed: boolean;
+  /** Active (FHIR active, recurrence or relapse) and not ruled out. */
+  isActive: boolean;
+  /** Notes for the row, beyond its group: Unconfirmed, Ruled out, Recurred, Relapsed, In remission. */
+  notes: string[];
 }
 
 /**
- * Active (FHIR active, recurrence, relapse), ended (inactive, remission,
- * resolved), and other (no status, or refuted), by the newest record of
+ * Active, ended (inactive, remission, resolved), and other (no status, or
+ * ruled out: FHIR verification status refuted), by the newest record of
  * each condition. Newest first in each.
  */
 export function conditionList(index: PersonIndex): { active: ConditionItem[]; ended: ConditionItem[]; other: ConditionItem[] } {
-  const all = items(index.records.filter((r) => r.kind === 'condition' && !withdrawn(r)))
-    .map((i): ConditionItem => ({ ...i, ended: str(i.latest.fields.abatement), unconfirmed: UNCONFIRMED.has(str(i.latest.fields.verification_status) ?? '') }))
+  const all = items(index.records.filter((r) => r.kind === 'condition' && !isWithdrawn(r)))
+    .map((i): ConditionItem => {
+      const status = i.latest.status ?? '';
+      const verification = str(i.latest.fields.verification_status) ?? '';
+      const refuted = verification === 'refuted';
+      const notes = [UNCONFIRMED.has(verification) ? 'Unconfirmed' : null, refuted ? 'Ruled out' : null, status && !PLAIN.has(status) ? statusText(status)! : null].filter((x): x is string => !!x);
+      return { ...i, ended: str(i.latest.fields.abatement), isActive: ACTIVE.has(status) && !refuted, notes };
+    })
     .sort(newestFirst);
-  const refuted = (i: ConditionItem) => i.latest.fields.verification_status === 'refuted';
-  return {
-    active: all.filter((i) => ACTIVE.has(i.latest.status ?? '') && !refuted(i)),
-    ended: all.filter((i) => ENDED.has(i.latest.status ?? '') && !refuted(i)),
-    other: all.filter((i) => refuted(i) || (!ACTIVE.has(i.latest.status ?? '') && !ENDED.has(i.latest.status ?? ''))),
-  };
+  const ended = (i: ConditionItem) => !i.notes.includes('Ruled out') && ENDED.has(i.latest.status ?? '');
+  return { active: all.filter((i) => i.isActive), ended: all.filter(ended), other: all.filter((i) => !i.isActive && !ended(i)) };
 }
 
 // ---- Allergies ----
@@ -112,7 +117,7 @@ export const CRITICALITY_TEXT: Record<string, string> = {
 
 /** Current (anything not inactive or resolved, a missing status included) and ended. */
 export function allergyList(index: PersonIndex): { current: AllergyItem[]; ended: AllergyItem[] } {
-  const all = items(index.records.filter((r) => r.kind === 'allergy' && !withdrawn(r)))
+  const all = items(index.records.filter((r) => r.kind === 'allergy' && !isWithdrawn(r)))
     .map((i): AllergyItem => {
       const reactions = i.records.flatMap((r) => (Array.isArray(r.fields.reaction) ? r.fields.reaction.filter((x): x is string => typeof x === 'string') : []));
       return { ...i, reactions: [...new Set(reactions)], criticality: str(i.latest.fields.criticality) };
@@ -136,11 +141,11 @@ export interface MedicineItem extends MedicineGroup {
 
 const KNOWN: Record<string, string> = { request: 'prescribed', statement: 'reported', dispense: 'filled' };
 
-/** Active (any record active) and past, newest first. */
+/** Active (any record active) and past, newest first; withdrawn records count for nothing. */
 export function medicineList(index: PersonIndex): { active: MedicineItem[]; past: MedicineItem[] } {
-  const all = medicines(index)
+  const all = medicines({ ...index, records: index.records.filter((r) => !isWithdrawn(r)) })
     .map((g): MedicineItem => {
-      const rs = g.records.filter((r) => !withdrawn(r));
+      const rs = g.records;
       const dated = rs.filter((r) => r.date);
       const fill = rs.find((r) => r.fields.source === 'dispense');
       const days = fill?.fields.days_supply;
@@ -153,19 +158,11 @@ export function medicineList(index: PersonIndex): { active: MedicineItem[]; past
         provenance: rs.flatMap((r) => r.provenance),
       };
     })
-    .filter((m) => m.records.some((r) => !withdrawn(r)))
     .sort((a, b) => (b.latest.date ?? '').localeCompare(a.latest.date ?? '') || a.name.localeCompare(b.name));
   return { active: all.filter((m) => m.active), past: all.filter((m) => !m.active) };
 }
 
 // ---- Immunizations ----
-
-const NOT_GIVEN = new Set(['not-done', 'entered-in-error']);
-
-/** A dose that was given: not recorded as not done, nor withdrawn. */
-export function isDoseGiven(r: MedRecord): boolean {
-  return !NOT_GIVEN.has(r.status ?? '');
-}
 
 /** One vaccine, by its code, with the doses given oldest first. */
 export interface VaccineItem extends ListItem {

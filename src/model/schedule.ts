@@ -12,7 +12,7 @@
 // clinical decision-making, high-risk or travel rows). RSV antibody at birth
 // depends on the mother's vaccination, so it is left out.
 
-import { isDoseGiven } from './lists';
+import { isDoseGiven } from './records';
 import type { MedRecord } from './types';
 
 export const SCHEDULE_SOURCE = {

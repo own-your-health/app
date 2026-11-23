@@ -4,8 +4,7 @@
 // screen; the sections show everything.
 
 import { isOutOfRange, resultFlag, type ResultFlag } from './flags';
-import { isDoseGiven } from './lists';
-import { resultSeries, sortByDateDesc, type ResultPoint, type ResultSeries } from './records';
+import { isDoseGiven, resultSeries, sortByDateDesc, type ResultPoint, type ResultSeries } from './records';
 import type { MedDocument, MedRecord, PersonIndex } from './types';
 
 export interface LatestResult {

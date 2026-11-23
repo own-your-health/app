@@ -280,7 +280,7 @@ function overviewSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElemen
   const notActive = conditions.ended.length + conditions.other.length;
   const conditionsCard = card(
     { title: 'Active conditions' },
-    conditions.active.length ? conditions.active.map((i) => recordRow(i.latest, [i.first ? `since ${dateText(i.first)}` : null, from(i.provenance)])) : empty('No active conditions recorded.'),
+    conditions.active.length ? conditions.active.map((i) => recordRow(i.latest, [sinceText(i), from(i.provenance)])) : empty('No active conditions recorded.'),
     conditions.active.length || notActive ? all('conditions', notActive ? `All conditions, ${notActive} past or inactive` : 'All conditions') : null,
   );
 
@@ -409,7 +409,7 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
   );
 }
 
-/** "since Mar 10, 2025", or "on" when it was recorded once. */
+/** "since Mar 10, 2025", or "recorded Mar 10, 2025" when there is one record. */
 function sinceText(item: { first?: string; records: unknown[] }): string | null {
   if (!item.first) return null;
   return item.records.length > 1 ? `since ${dateText(item.first)}` : `recorded ${dateText(item.first)}`;
@@ -424,27 +424,22 @@ const meta = (...parts: (string | null | undefined | false)[]) => parts.filter(B
 
 function conditionsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
   const { active, ended, other } = conditionList(idx);
-  const render = (i: ConditionItem) => {
-    const status = i.latest.status;
-    const unusual = status && status !== 'active' && status !== 'resolved' && status !== 'inactive' ? statusText(status) : undefined;
-    return row({
+  const render = (i: ConditionItem) =>
+    row({
       route: itemRoute(person.id, i.latest.id),
       title: i.name,
       meta: meta(i.ended ? `${i.first ? `${dateText(i.first)} to ` : 'ended '}${dateText(i.ended)}` : sinceText(i), sourcesText(ctx, person, i.provenance)),
-      aside: i.unconfirmed ? chip('Unconfirmed', 'muted') : unusual ? chip(unusual, ACTIVE_STATUS.has(status!) ? 'attention' : 'muted') : null,
+      aside: i.notes.length ? h('div', { class: 'chips-aside' }, i.notes.map((n) => chip(n, i.isActive && n !== 'Unconfirmed' ? 'attention' : 'muted'))) : null,
     });
-  };
   if (!active.length && !ended.length && !other.length) return card({ title: 'Conditions' }, empty('No conditions recorded.'));
   return h(
     'div',
     { class: 'stack' },
     card({ title: 'Active' }, active.length ? active.map(render) : empty('No active conditions recorded.')),
     ended.length ? card({ title: 'Resolved or inactive' }, ended.map(render)) : null,
-    other.length ? card({ title: 'Status not given' }, other.map(render)) : null,
+    other.length ? card({ title: 'Ruled out or no status' }, other.map(render)) : null,
   );
 }
-
-const ACTIVE_STATUS = new Set(['active', 'recurrence', 'relapse']);
 
 function allergiesSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
   const { current, ended } = allergyList(idx);
