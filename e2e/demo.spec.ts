@@ -76,6 +76,9 @@ test('home leads with the people, and one line for the sign-in that needs a pers
   await details.getByText('Error details').click();
   await expect(details.getByText(/athena auth login --profile/)).toBeVisible();
   await expect(details).toContainText('To sign in, run the medrec command above, not the tool’s own.');
+  // medrec 0.7.0's own words lead; its remedy is the command above, so it is not said twice.
+  await expect(details).toContainText('athena needs a sign-in: its export answered that the sign-in has ended');
+  await expect(details).not.toContainText('on this machine');
   // The Mac's history folds each attempt's error too.
   const attempts = page.locator('.card', { hasText: 'Attempts' });
   await expect(attempts.locator('.row').first()).toBeVisible();
@@ -635,8 +638,15 @@ test('Refresh asks the Mac and shows its answer', async ({ page }) => {
   // Home's one line counts each outcome, and says when a source loaded too recently may load again.
   const answer = page.locator('.status-strip');
   await expect(answer).toContainText(/Last refresh request just now: .*1 needed a person/, { timeout: 15_000 });
-  await expect(answer).toContainText(/too soon after (its|their) last tr(y|ies)\b.*; next load allowed (at|tomorrow at|on) /);
+  await expect(answer).not.toContainText('too soon');
   await expect(answer).not.toContainText('not due yet');
+  // Asked again at once, what just loaded waits 15 minutes from that load (medrec 0.7.0).
+  await page.getByRole('button', { name: 'Refresh everything' }).click();
+  await expect(answer).toContainText(/too soon after (its|their) last tr(y|ies)\b.*; next load allowed (at|tomorrow at) /, { timeout: 15_000 });
+  // The load finished seconds ago, so the time shown is 14 or 15 minutes from now, as this browser writes times.
+  const times = await page.evaluate(() => [14, 15].map((m) => new Date(Date.now() + m * 60_000).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })));
+  const text = (await answer.textContent()) ?? '';
+  expect(times.some((t) => text.includes(`allowed at ${t}`) || text.includes(`allowed tomorrow at ${t}`))).toBe(true);
   await expect(page.getByRole('button', { name: 'Refresh everything' })).toBeVisible();
 });
 

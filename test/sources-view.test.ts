@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ANSWER_SHOWN_MS, ATTENTION, HEALTH_ORDER, isRecentAnswer, latestAnswered, needsAttention, needsPerson, sourceViews, type AnsweredRequest } from '../src/model/sources';
 import type { RefreshRequest } from '../src/model/types';
 import { clock } from '../src/ui/format';
-import { requestAnswer, signInWords } from '../src/ui/views/sources';
+import { remedyCommand, requestAnswer, signInWords } from '../src/ui/views/sources';
 import { demo, sourceOf } from './demo-data';
 
 const NOW = new Date('2026-11-22T20:00:00Z');
@@ -163,5 +163,18 @@ describe('home’s line for a sign-in that needs a person', () => {
 
   it('is absent when nothing needs a person', () => {
     expect(signInWords(views.filter((v) => v !== peds))).toBeUndefined();
+  });
+});
+
+describe('remedyCommand', () => {
+  const base = { code: 'needs_person', message: 'athena needs a sign-in: its export answered that the sign-in has ended' };
+  it('takes the command from medrec’s own remedy, which 0.7.0 writes beside the provider’s words', () => {
+    expect(remedyCommand({ ...base, remedy: 'run `medrec refresh sign-in s_aaaaaaaaaaaaaaaaaaaa` on this machine', provider_message: 'Run `athena auth login`.' })).toBe('medrec refresh sign-in s_aaaaaaaaaaaaaaaaaaaa');
+  });
+  it('takes nothing from a remedy written before 0.7.0, or one that names no medrec command', () => {
+    expect(remedyCommand({ ...base, remedy: 'Run `athena auth login`, then import again.' })).toBeNull();
+    expect(remedyCommand({ ...base, remedy: 'Run `athena auth login`.', provider_message: 'Session ended.' })).toBeNull();
+    expect(remedyCommand({ ...base, provider_message: 'Session ended.' })).toBeNull();
+    expect(remedyCommand(null)).toBeNull();
   });
 });

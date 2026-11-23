@@ -99,16 +99,26 @@ function nextAllowed(sources: Handled['sources'], now: Date): string {
  * the one medrec asks for.
  */
 export function errorDetails(e: ErrorInfo, opts: { commandAbove?: boolean } = {}): HTMLElement | null {
-  if (!e.message && !e.remedy) return null;
-  return h(
-    'details',
-    { class: 'error-details' },
-    h('summary', null, 'Error details'),
-    opts.commandAbove ? h('p', { class: 'muted' }, 'What the provider’s tool reported. To sign in, run the medrec command above, not the tool’s own.') : null,
-    e.message ? h('p', null, e.message) : null,
-    e.remedy ? h('p', null, e.remedy) : null,
-    e.code ? h('p', { class: 'muted' }, `Code: ${e.code}`) : null,
-  );
+  if (!e.message && !e.remedy && !e.provider_message) return null;
+  const reported = opts.commandAbove ? 'What the provider’s tool reported. To sign in, run the medrec command above, not the tool’s own.' : 'What the provider’s tool reported.';
+  // From medrec 0.7.0 a sign-in that ended has medrec's own message and remedy, and the tool's words apart.
+  const body =
+    e.provider_message !== undefined
+      ? [
+          e.message ? h('p', null, e.message) : null,
+          e.remedy && !opts.commandAbove ? h('p', null, e.remedy) : null,
+          h('p', { class: 'muted' }, reported),
+          h('p', null, e.provider_message),
+        ]
+      : [opts.commandAbove ? h('p', { class: 'muted' }, reported) : null, e.message ? h('p', null, e.message) : null, e.remedy ? h('p', null, e.remedy) : null];
+  return h('details', { class: 'error-details' }, h('summary', null, 'Error details'), body, e.code ? h('p', { class: 'muted' }, `Code: ${e.code}`) : null);
+}
+
+/** The command in medrec's own remedy for a sign-in that ended (0.7.0 and later), when the status gives none. */
+export function remedyCommand(e: ErrorInfo | null | undefined): string | null {
+  if (!e || e.provider_message === undefined || !e.remedy) return null;
+  const m = /`(medrec [^`]+)`/.exec(e.remedy);
+  return m ? m[1]! : null;
 }
 
 /**
@@ -134,6 +144,9 @@ export function sourceDetail(ctx: Ctx, v: SourceView, brief = false): Child[] {
           command(np.command, ctx),
         ),
       );
+    } else {
+      const cmd = remedyCommand(a?.error);
+      if (cmd) lines.push(h('div', { class: 'needs-person' }, h('div', null, 'To sign in again, run this in a terminal on the Mac:'), command(cmd, ctx)));
     }
   } else if (v.health === 'awaits_sign_in') {
     // A sign-in that nothing renews: loading after one is how this source works.
@@ -150,7 +163,7 @@ export function sourceDetail(ctx: Ctx, v: SourceView, brief = false): Child[] {
     if ((st?.failures ?? 0) > 1) lines.push(h('div', { class: 'muted' }, `${st!.failures} failures in a row; the Mac waits longer before each new try`));
   }
   const byHand = v.health === 'awaits_sign_in';
-  if (!brief && a?.error && a.outcome !== 'ok') lines.push(errorDetails(a.error, { commandAbove: (ended || byHand) && !!np }));
+  if (!brief && a?.error && a.outcome !== 'ok') lines.push(errorDetails(a.error, { commandAbove: (ended || byHand) && (!!np || (ended && !!remedyCommand(a.error))) }));
   const si = signInText(v);
   const fine = v.status?.sign_in?.state === 'ok' || v.status?.sign_in?.state === 'not_needed';
   if (si && !ended && !byHand && !(brief && fine)) lines.push(h('div', null, si));

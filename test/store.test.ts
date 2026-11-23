@@ -67,12 +67,24 @@ describe('the store over the sample folder', () => {
     const outcome = (person: string, cli: string) => done.handled?.sources?.find((s) => s.source === sourceOf(h, person, cli).id)?.outcome;
     expect(outcome('Robin Example', 'uhc')).toBe('needs_person');
     expect(outcome('Sam Example', 'peryourhealth')).toBe('skipped_paused');
-    expect(outcome('Sam Example', 'labcorp')).toBe('skipped_interval');
+    // Loaded hours ago, inside its day-long schedule interval: a request waits only 15 minutes (medrec 0.7.0).
+    expect(outcome('Sam Example', 'labcorp')).toBe('ok');
     expect(outcome('Alex Example', 'athena')).toBe('needs_person');
     expect(outcome('Sam Example', 'kp')).toBe('ok');
     expect(outcome('Robin Example', 'oneblood')).toBe('needs_person');
     expect(outcome('Jamie Example', 'athena')).toBeUndefined();
     expect(store.sources(new Date(ANCHOR)).find((v) => v.source.id === plan.id)?.lastLoad?.at).toBe('2026-11-22T20:00:06Z');
+
+    // Asked again at once, a source loaded moments ago may load again 15 minutes after that load.
+    const again = await store.requestRefresh({ all: true }, {}, '0.1.0');
+    mac(again.file);
+    await vi.advanceTimersByTimeAsync(6000);
+    await store.loadRefreshState();
+    const second = store.done.find((r) => r.id === again.request.id)!;
+    const lab = second.handled?.sources?.find((s) => s.source === sourceOf(h, 'Sam Example', 'labcorp').id);
+    expect(lab?.outcome).toBe('skipped_interval');
+    expect(lab?.next_allowed_at).toBe('2026-11-22T20:15:06Z');
+    expect(second.handled?.sources?.find((s) => s.source === sourceOf(h, 'Alex Example', 'athena').id)?.outcome).toBe('needs_person');
   });
 
   it('treats a request with a done/ file as handled, and removes its own', async () => {

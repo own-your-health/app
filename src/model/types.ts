@@ -224,6 +224,12 @@ export interface ErrorInfo {
   code?: string;
   message?: string;
   remedy?: string;
+  /**
+   * The provider tool's own words, when its sign-in ended (medrec 0.7.0 and
+   * later). `message` and `remedy` are then medrec's, and the remedy runs
+   * `medrec refresh sign-in`; these words name the tool's own sign-in.
+   */
+  provider_message?: string;
 }
 
 export interface ImportCounts {

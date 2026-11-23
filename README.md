@@ -319,9 +319,19 @@ and writes the outcome to `_status/` and `_requests/done/`, which the app
 reads back. The app shows when a request is waiting, when the Mac is late, and
 what it answered.
 
+A request loads each source at most once every 15 minutes, counted from its
+last load or try (medrec 0.7.0 and later; before, it waited the source's own
+interval, a day for a member site). A source inside that time answers "too
+soon after its last try", and the app says when it may load again
+(`next_allowed_at`).
+
 Some sign-ins need a person: a new password, a code by text, a captcha. The
 app never asks for or holds a provider password. It shows the exact command to
 run in a terminal on the Mac, such as `medrec refresh sign-in s_…`.
+From medrec 0.7.0, the error of a sign-in that ended is medrec's own, and its
+remedy is that command. The provider tool's words, which name the tool's own
+sign-in, are kept apart (`error.provider_message`), and the app folds them
+under **Error details**.
 
 Some member sites keep a sign-in for less than an hour, and nothing renews
 it, so the source loads only soon after someone signs in. medrec marks such a

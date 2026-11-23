@@ -94,8 +94,9 @@
         "exit_code": 3,
         "error": {
           "code": "needs_person",
-          "message": "The member site session has expired. Sign in with `uhc auth login --browser --profile <provider profile> --overwrite`.",
-          "remedy": "Run `uhc auth login`, then import again."
+          "message": "uhc needs a sign-in: its export answered that the sign-in has ended",
+          "remedy": "run `medrec refresh sign-in s_m2hp2blyhdngeilmbj7z` on this machine",
+          "provider_message": "The member site session has expired. Sign in with `uhc auth login --browser --profile <provider profile> --overwrite`."
         },
         "import": null
       },
@@ -132,8 +133,9 @@
         "exit_code": 3,
         "error": {
           "code": "needs_person",
-          "message": "Session expired. Run `oneblood auth login --profile <provider profile>`.",
-          "remedy": "Sign in again with `oneblood auth login`."
+          "message": "oneblood needs a sign-in: its export answered that the sign-in has ended",
+          "remedy": "run `medrec refresh sign-in s_e2ocktqcc75b55gjsygb` on this machine",
+          "provider_message": "Session expired. Run `oneblood auth login --profile <provider profile>`."
         },
         "import": null
       },
@@ -274,8 +276,9 @@
         "exit_code": 3,
         "error": {
           "code": "needs_person",
-          "message": "The sign-in has expired and could not be renewed. Run `athena auth login --profile <provider profile>`.",
-          "remedy": "Run `athena auth login`, then import again."
+          "message": "athena needs a sign-in: its export answered that the sign-in has ended",
+          "remedy": "run `medrec refresh sign-in s_zyx7rfb4ftctwkd3wfhn` on this machine",
+          "provider_message": "The sign-in has expired and could not be renewed. Run `athena auth login --profile <provider profile>`."
         },
         "import": null
       },

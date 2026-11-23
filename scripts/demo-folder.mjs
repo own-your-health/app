@@ -859,7 +859,7 @@ const samLabFail = attempt(src.samLab, sam, {
   exit: 5,
   error: { code: 'upstream', message: 'The lab site answered 503 three times.', remedy: 'Nothing to do; the Mac tries again later.' },
 });
-const robinPlanNeeds = attempt(src.robinPlan, robin, { started: at(-60 * 8), outcome: 'needs_person', exit: 3, error: { code: 'needs_person', message: 'The member site session has expired. Sign in with `uhc auth login --browser --profile <provider profile> --overwrite`.', remedy: 'Run `uhc auth login`, then import again.' } });
+const robinPlanNeeds = attempt(src.robinPlan, robin, { started: at(-60 * 8), outcome: 'needs_person', exit: 3, error: { code: 'needs_person', message: 'uhc needs a sign-in: its export answered that the sign-in has ended', remedy: `run \`medrec refresh sign-in ${src.robinPlan.id}\` on this machine`, provider_message: 'The member site session has expired. Sign in with `uhc auth login --browser --profile <provider profile> --overwrite`.' } });
 
 
 // ---- More claims, for the costs screen ----
@@ -1087,11 +1087,11 @@ R.write();
 
 // Robin's plan and blood centre are member sites whose sign-ins nothing
 // renews: each loads after someone signs in, and otherwise waits quietly.
-const robinBloodWaits = attempt(src.robinBlood, robin, { started: at(-60 * 6), outcome: 'needs_person', exit: 3, error: { code: 'needs_person', message: 'Session expired. Run `oneblood auth login --profile <provider profile>`.', remedy: 'Sign in again with `oneblood auth login`.' } });
+const robinBloodWaits = attempt(src.robinBlood, robin, { started: at(-60 * 6), outcome: 'needs_person', exit: 3, error: { code: 'needs_person', message: 'oneblood needs a sign-in: its export answered that the sign-in has ended', remedy: `run \`medrec refresh sign-in ${src.robinBlood.id}\` on this machine`, provider_message: 'Session expired. Run `oneblood auth login --profile <provider profile>`.' } });
 // Alex's practice loaded yesterday, and its next load found the sign-in
 // ended. medrec renews this sign-in on its own, so an end is news: a person
 // must sign in. These attempts are drawn last, so no other id moves.
-const alexPedsEnded = attempt(src.alexPeds, alex, { started: at(-60 * 2), outcome: 'needs_person', exit: 3, error: { code: 'needs_person', message: 'The sign-in has expired and could not be renewed. Run `athena auth login --profile <provider profile>`.', remedy: 'Run `athena auth login`, then import again.' } });
+const alexPedsEnded = attempt(src.alexPeds, alex, { started: at(-60 * 2), outcome: 'needs_person', exit: 3, error: { code: 'needs_person', message: 'athena needs a sign-in: its export answered that the sign-in has ended', remedy: `run \`medrec refresh sign-in ${src.alexPeds.id}\` on this machine`, provider_message: 'The sign-in has expired and could not be renewed. Run `athena auth login --profile <provider profile>`.' } });
 
 write('_status/status.json', {
   schema: 'medrec-status/v1',
