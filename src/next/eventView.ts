@@ -16,7 +16,7 @@ import { card, chip, driveLink, empty, flagChip, link, row, type Ctx } from '../
 import { h, icon, type Child } from '../ui/dom';
 import { count, dateText, localDay } from '../ui/format';
 import { href, type Route } from '../ui/router';
-import { eventConfidence, eventMoney, eventOf, kindText, privateArea, PRIVATE_AREAS, RULES, type CareEvent, type EventMoney } from './event';
+import { eventConfidence, eventMoney, eventOf, kindText, paidAtCounter, privateArea, PRIVATE_AREAS, RULES, type CareEvent, type EventMoney } from './event';
 import { personEvents } from './load';
 
 const money = (c: number | undefined) => (c === undefined ? '' : formatMoney(fromCents(c)) ?? '');
@@ -94,8 +94,6 @@ function privateNote(e: CareEvent): HTMLElement | null {
 }
 
 /** A pharmacy's share is paid at pickup, with no bill to follow. */
-const atCounter = (e: CareEvent) => e.claims.length > 0 && e.claims.every((c) => c.role === 'pharmacy');
-
 /** Each provider this event's claims say you owe, with its bill from the event's papers and that bill's receipt, if any. */
 function owedBills(idx: PersonIndex, e: CareEvent, m: EventMoney): { provider: string; share: number; bill?: Bill }[] {
   const bills = billList(idx).filter((b) => b.doc.doc_type === 'bill' && e.papers.some((p) => p.doc.id === b.doc.id));
@@ -108,7 +106,7 @@ function owedBills(idx: PersonIndex, e: CareEvent, m: EventMoney): { provider: s
 function settledLine(idx: PersonIndex, e: CareEvent, m: EventMoney): HTMLElement | null {
   const owed = owedBills(idx, e, m);
   if (!owed.length) return null;
-  if (atCounter(e)) return h('p', { class: 'event-settled' }, 'A pharmacy takes your share when you pick up.');
+  if (paidAtCounter(e)) return h('p', { class: 'event-settled' }, 'A pharmacy takes your share when you pick up.');
   const sum = (xs: typeof owed) => xs.reduce((t, o) => t + o.share, 0);
   const paid = owed.filter((o) => o.bill?.receipt);
   const billed = owed.filter((o) => o.bill && !o.bill.receipt);
@@ -252,7 +250,7 @@ function chargesCard(e: CareEvent, m: EventMoney): HTMLElement | null {
 /** Each bill and receipt against what the claims say, and what has no bill yet. */
 function billsCard(idx: PersonIndex, e: CareEvent, m: EventMoney): HTMLElement | null {
   const bills = e.papers.filter((p) => p.doc.doc_type === 'bill' || p.doc.doc_type === 'receipt').map((p) => p.doc);
-  const owed = atCounter(e) ? [] : m.charges.filter((c) => (c.share ?? 0) > 0);
+  const owed = paidAtCounter(e) ? [] : m.charges.filter((c) => (c.share ?? 0) > 0);
   if (!bills.length && !owed.length) return null;
   const receipts = new Map(billList(idx).map((b) => [b.doc.id, b.receipt]));
   const billRow = (d: MedDocument) => {
@@ -273,6 +271,7 @@ function billsCard(idx: PersonIndex, e: CareEvent, m: EventMoney): HTMLElement |
     { title: 'Bills and payments' },
     bills.map(billRow),
     unbilled.map((c) => h('p', { class: 'event-gap' }, `No bill from ${c.provider} filed yet, for the ${money(c.share)} its claim says you owe.`)),
+    h('p', { class: 'small' }, link({ name: 'money', who: idx.person }, 'All bills, beside their claims')),
   );
 }
 

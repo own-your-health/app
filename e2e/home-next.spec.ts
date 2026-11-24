@@ -43,9 +43,14 @@ test('home leads with what needs you, in order, and keeps private items off it',
   await expect(sam.locator('.kv-row')).toHaveText(['To pay$370.00 in 2 bills, 1 worth a call', 'NextVitamin D3 2,000 unit capsule runs out about Nov 28, 2026']);
   await expect(stands.locator('.stand', { hasText: 'Jamie Example' })).toContainText('2 weeks old');
 
-  // A bill worth a call opens its visit.
+  // A bill worth a call opens Worth a call; a bill to pay opens its visit.
   await needs.locator('.row').first().locator('a.row-main').click();
-  await expect(page.locator('.event h1')).toHaveText('Lab tests');
+  await expect(page).toHaveURL(/#\/money\/calls\?bill=d_/);
+  await expect(page.locator('.call.bill-picked')).toBeFocused();
+  await expect(page.locator('.call.bill-picked .card-head h2')).toHaveText('Example Billing');
+  await page.goBack();
+  await needs.locator('.row').nth(1).locator('a.row-main').click();
+  await expect(page.locator('.event h1')).toHaveText('Emergency room · overnight');
 });
 
 test('a person’s overview lists their own needs, private ones marked', async ({ page }) => {

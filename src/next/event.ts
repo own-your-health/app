@@ -186,6 +186,9 @@ export function eventMoney(e: CareEvent): EventMoney {
   return out;
 }
 
+/** A pharmacy trip: the pharmacy takes your share at the counter, so no bill follows. */
+export const paidAtCounter = (e: CareEvent) => e.claims.length > 0 && e.claims.every((c) => c.role === 'pharmacy');
+
 /** The event a record belongs to: a claim, a portal visit, something recorded there, or a paper. */
 export function eventOf(events: CareEvent[], id: string): CareEvent | undefined {
   return events.find((e) => e.id === id || e.claims.some((c) => c.record.id === id) || e.visits.some((v) => v.record.id === id) || e.recorded.some((r) => r.id === id) || e.papers.some((p) => p.doc.id === id));
