@@ -592,7 +592,8 @@ app without it is unchanged.
   is near its date. All, With a visit and With none filter the list. A
   person's own (`#/papers?who=`) shows their private papers, marked;
   everyone's leaves them off and counts them. A paper is private when it or
-  its visit is.
+  its visit is, or when it is with none and could be part of a private
+  visit.
 - **Calendar** (`#/calendar`, and Recently on Home): the household's
   events a month at a time, with a lane per person (a dot for a visit or
   tests, a ring for a pharmacy trip or vaccine, a bar across the days of an
