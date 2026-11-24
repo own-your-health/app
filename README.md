@@ -184,7 +184,7 @@ with a share but no bill yet says that. A pharmacy fill is not matched to a
 statement: its share is paid to the pharmacy, and the claim says so. Money is added in whole cents. The
 rules are `src/model/billing.ts`.
 
-A claim is named for what it paid for, from its lines ("Lipid panel and
+A claim is named for what it paid for, from its lines ("Cholesterol tests and
 blood draw"), not for its type. Its page lists each line with its code, a
 category from the code (visit, lab test, imaging, vaccine, dental, facility
 charge and so on), its date and its amounts: billed, discount, allowed, plan
@@ -545,7 +545,7 @@ dropped from the address.
   vaccine is named for its dose, and a day of several doses for how many.
   A day whose claims are all for vaccines is a vaccine visit, with medrec's
   events or without; its claim names the vaccine, not the line for giving it.
-  Billing descriptors in capitals ("OFC VISIT, NEW PT, MOD MDM") are never
+  Billing descriptors in capitals ("FIRST APPOINTMENT TIER THREE") are never
   a headline; they show only in the visit's Details (`src/model/words.ts`).
   A portal platform's name ("athenahealth (all practices)") is never a
   place; a visit that names no other is at its sign-in's practice

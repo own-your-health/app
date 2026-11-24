@@ -53,7 +53,7 @@ export interface CareEvent {
   doubt?: string;
   /** What it was, in plain words: medrec's `what`, the portal's name for the visit or its reason, else the claims' services (`nameEvent`). */
   what?: string;
-  /** The billing descriptors the records name it by ("OFC VISIT, NEW PT, MOD MDM"), shown only in Details. */
+  /** The billing descriptors the records name it by ("FIRST APPOINTMENT TIER THREE"), shown only in Details. */
   descriptors?: string[];
   /** What medrec still expects for it: the doctors' claims, the hospital's claim, a claim or a bill. */
   expected?: { what: string; why: string; since?: string }[];

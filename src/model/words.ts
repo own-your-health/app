@@ -1,7 +1,7 @@
 // Words from the records as the screens may show them: a billing descriptor
 // in capitals is never a headline, and a portal platform's name is no place.
 
-/** Billing words in capitals, as an encounter or a claim gives them ("OFC VISIT, NEW PT, MOD MDM"): never a headline, and shown only in Details. */
+/** Billing words in capitals, as an encounter or a claim gives them ("FIRST APPOINTMENT TIER THREE"): never a headline, and shown only in Details. */
 export function isDescriptor(text: string): boolean {
   return (text.match(/[A-Za-z]{2,}/g)?.length ?? 0) >= 2 && !/[a-z]/.test(text);
 }

@@ -11,7 +11,7 @@
     "id": "r_visit",
     "kind": "encounter",
     "date": "2026-11-02",
-    "display": "OFC VISIT, EST PT, LOW MDM",
+    "display": "RETURN APPOINTMENT TIER THREE",
     "fields": { "class": "AMB", "service_provider": "athenahealth (all practices)" },
     "documents": [],
     "provenance": [{ "source": { "kind": "fhir", "cli": "athena", "organization_id": "900001", "fhir_base": "https://athena.example.test/fhir/r4" }, "method": "fhir-api", "filed_at": "2026-11-20T10:00:00Z", "filed_by": "medrec 0.9.3" }]

@@ -249,7 +249,7 @@ function candidate(
 /** A claim's parts searched in their own words, or not at all: lines, diagnoses, and medrec's amounts and links. */
 const CLAIM_PARTS = ['items', 'diagnoses', 'amounts', 'visit', 'results'];
 
-/** One field per claim line, "Lipid panel (80061) · billed $180.00", so a hit can say which line matched. */
+/** One field per claim line, "Cholesterol tests (80061) · billed $180.00", so a hit can say which line matched. */
 function lineFields(r: MedRecord): [string, string, true][] {
   return claimLines(r).map((l): [string, string, true] => {
     const amount = l.amounts.youOwe ?? l.amounts.billed;

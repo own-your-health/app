@@ -2563,7 +2563,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Lipid panel and Blood draw · Example Lab",
+      "display": "Cholesterol tests and Blood draw · Example Lab",
       "status": "active",
       "fields": {
         "when": "2026-10-03",
@@ -2630,7 +2630,7 @@
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
               "code": "80061",
-              "display": "Lipid panel"
+              "display": "Cholesterol tests"
             },
             "serviced": "2026-10-03",
             "quantity": {
@@ -3548,7 +3548,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Office visit and Blood count · Example Health",
+      "display": "Office visit and Blood cell test · Example Health",
       "status": "active",
       "fields": {
         "when": "2025-03-10",
@@ -3712,7 +3712,7 @@
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
               "code": "85025",
-              "display": "Blood count"
+              "display": "Blood cell test"
             },
             "serviced": "2025-03-10",
             "quantity": {
@@ -4145,9 +4145,9 @@
       "code": {
         "system": "http://www.ama-assn.org/go/cpt",
         "code": "99213",
-        "display": "OFFICE VISIT EST PATIENT LEVEL 3"
+        "display": "RETURN APPOINTMENT TIER THREE"
       },
-      "display": "OFFICE VISIT EST PATIENT LEVEL 3",
+      "display": "RETURN APPOINTMENT TIER THREE",
       "status": "finished",
       "fields": {
         "when": "2026-11-18",

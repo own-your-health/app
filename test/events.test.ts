@@ -65,8 +65,8 @@ describe('a hospital visit', () => {
     const [stay] = on('2026-06-01');
     expect([stay!.kind, stay!.end, stay!.noFacility, kindText(stay!)]).toEqual(['stay', '2026-06-02', true, 'Hospital stay · overnight']);
     expect(providers(stay!)).toEqual([
-      ['Example Hospitalists', 'hospital', 'C4', 'sure'],
-      ['Example Hospitalists', 'hospital', 'C4', 'sure'],
+      ['Sample Rheumatology Group', 'hospital', 'C4', 'sure'],
+      ['Sample Rheumatology Group', 'hospital', 'C4', 'sure'],
     ]);
   });
 });

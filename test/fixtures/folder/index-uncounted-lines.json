@@ -101,7 +101,7 @@
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
               "code": "85025",
-              "display": "Blood count"
+              "display": "Blood cell test"
             },
             "serviced": "2026-03-14",
             "category": "lab",
@@ -320,7 +320,7 @@
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
               "code": "97110",
-              "display": "Therapeutic exercise"
+              "display": "Guided stretching"
             },
             "serviced": "2026-03-24",
             "category": "procedure",
@@ -340,7 +340,7 @@
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
               "code": "97110",
-              "display": "Therapeutic exercise"
+              "display": "Guided stretching"
             },
             "serviced": "2026-03-24",
             "category": "procedure",

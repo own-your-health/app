@@ -266,9 +266,9 @@ test('each vaccine is listed once, with a link to every dose', async ({ page }) 
 });
 
 test('a claim’s page lists its lines, each with its code, kind of service and amounts', async ({ page }) => {
-  await openClaim(page, 'Robin', 'Lipid panel and blood draw');
+  await openClaim(page, 'Robin', 'Cholesterol tests and blood draw');
   const lines = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^2 lines$/ }) });
-  await expect(lines.locator('.row-title')).toHaveText(['Lipid panel', 'Blood draw']);
+  await expect(lines.locator('.row-title')).toHaveText(['Cholesterol tests', 'Blood draw']);
   await expect(lines.locator('.row-meta')).toHaveText(['80061 · Lab test · Oct 3, 2026', '36415 · Lab test · Oct 3, 2026']);
   await expect(lines.locator('.claim-amounts').first()).toHaveText('Billed $180.00 · Allowed $78.40 · Plan paid $62.72 · Deductible $0.00 · Coinsurance $15.68 · You owe $15.68');
   // A claim from before medrec linked claims: no diagnosis, no line links, and no visit that day at the lab.
@@ -299,7 +299,7 @@ test('a claim medrec linked says what it paid for: the visit, the diagnosis and 
 });
 
 test('a lab claim lists the results of its day once, a claim without the payer’s figure adds up your share, and a fill gives its discount', async ({ page }) => {
-  await openClaim(page, 'Sam', 'Blood count and vitamin D test');
+  await openClaim(page, 'Sam', 'Blood cell test and vitamin D test');
   await expect(page.locator('main .result-value').first()).toHaveText('You owe $70.30');
   await expect(field(page, 'Diagnosis')).toHaveText('Vitamin D deficiency, unspecified (E55.9)');
   // medrec links each lab line to every result and report of its day, from any source.
@@ -582,10 +582,10 @@ test('bills finds claims and statements, records before claims, and a claim name
   await page.goto('./?demo#/search?q=bills');
   await expect(page.locator('.search-concept')).toContainText('Showing claims and bills.');
   await expect(page.locator('main h3.search-group')).toHaveText([/^Documents/, /^Claims/]);
-  await expect(page.locator('main .row', { hasText: 'Lipid panel and blood draw' }).locator('.row-meta')).toHaveText('Robin · Oct 3, 2026 · Example Lab · you owe $19.28');
+  await expect(page.locator('main .row', { hasText: 'Cholesterol tests and blood draw' }).locator('.row-meta')).toHaveText('Robin · Oct 3, 2026 · Example Lab · you owe $19.28');
 
   await page.getByRole('searchbox', { name: 'Search' }).fill('blood draw');
-  const claim = page.locator('main .row', { hasText: 'Lipid panel and blood draw' });
+  const claim = page.locator('main .row', { hasText: 'Cholesterol tests and blood draw' });
   await expect(claim.locator('.snippet')).toHaveText('Line: Blood draw (36415) · you owe $3.60');
   await expect(page.locator('.search-concept')).toHaveCount(0);
 });

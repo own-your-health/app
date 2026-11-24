@@ -50,7 +50,10 @@ describe('visits with their documents', () => {
     expect(docTitles(stay)).toEqual(['linked Newborn discharge summary']);
     expect(stay.recorded.map((g) => g.kind)).toEqual(['result', 'immunization']);
     expect(visitKind(stay)).toBeUndefined();
-    expect(visitKind(timeline('Robin Example').visits[0]!)).toBeUndefined();
+    const robin = timeline('Robin Example').visits;
+    expect(visitKind(robin.find((v) => v.record.display === 'Office visit')!)).toBeUndefined();
+    // Robin's November visit, which its portal names by a billing descriptor.
+    expect(visitKind(robin[0]!)).toBe('Office visit');
     expect(visitKind(timeline('Alex Example').visits[0]!)).toBe('Office visit');
   });
 

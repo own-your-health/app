@@ -395,14 +395,14 @@ export function claimServices(r: MedRecord): string[] {
   return out;
 }
 
-/** "Lipid panel" reads "lipid panel" mid-sentence; "HbA1c", "MRI" and "CBC" keep their capitals. */
+/** "Blood draw" reads "blood draw" mid-sentence; "HbA1c", "MRI" and "CBC" keep their capitals. */
 function midSentence(label: string): string {
   return /^[A-Z][a-z]+(?![\w])/.test(label) ? label[0]!.toLowerCase() + label.slice(1) : label;
 }
 
 /**
- * A claim's title: its services ("Lipid panel", "Office visit and lipid
- * panel", "Office visit, lipid panel and 2 more"). Without lines, the name
+ * A claim's title: its services ("Blood draw", "Office visit and blood
+ * draw", "Office visit, blood draw and 2 more"). Without lines, the name
  * medrec gave unless it is only the claim's type, then the provider. medrec
  * ends its name with " · " and the provider, which the page shows apart.
  */

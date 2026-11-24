@@ -118,10 +118,10 @@ test('a visit its portal names by a billing descriptor leads with its kind, says
   await expect(happened.locator('.row-title')).toHaveText(['Blood pressure follow-up']);
   await expect(happened.locator('.row-meta')).toHaveText('with Dr. Jordan Sample · Example Health Main Clinic');
   // Nowhere but Details.
-  await expect(page.locator('.event > :not(details.tech)', { hasText: 'OFFICE VISIT EST PATIENT LEVEL 3' })).toHaveCount(0);
+  await expect(page.locator('.event > :not(details.tech)', { hasText: 'RETURN APPOINTMENT TIER THREE' })).toHaveCount(0);
   const details = page.locator('details.tech', { has: page.locator('summary', { hasText: 'Details' }) });
   await details.locator('summary').click();
-  await expect(details.locator('.event-descriptors li')).toHaveText(['OFFICE VISIT EST PATIENT LEVEL 3']);
+  await expect(details.locator('.event-descriptors li')).toHaveText(['RETURN APPOINTMENT TIER THREE']);
 });
 
 test('a bill with a receipt after it is paid, and a fill is paid at pickup', async ({ page }) => {
