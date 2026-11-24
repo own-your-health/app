@@ -258,7 +258,7 @@ function costRow(c: EventCost, max: number, who: string | undefined, order: Cost
   });
 }
 
-/** The visits the network took something off, most first; those whose claims do not say in full what was charged are left out. */
+/** The visits the network took something off. One without a discount (a claim gives no charge, or the charges are below the price) is left out, as is one with nothing off. */
 const discounted = (costs: EventCost[]) => costs.filter((c) => !c.fill && c.discount !== undefined && c.discount > 0);
 
 const ORDER_WORDS: Record<CostOrder, string> = { price: 'Network price', share: 'Your share', discount: 'Network discount' };

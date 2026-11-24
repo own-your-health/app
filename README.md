@@ -583,9 +583,10 @@ dropped from the address.
   (`#/money/events`) lists every visit of the period by network price, by
   your share, or by what the network took off (`?sort=discount`), with the
   pharmacy's fills as one line. A visit's discount is its charges less its
-  network price, and only when every one of its claims gives a charge: a
-  claim that does not would make the discount look smaller. The visits
-  left out are counted. Totals and months count
+  network price, and only when every one of its claims gives a charge and
+  the charges are not below the price: a claim without a charge would make
+  the discount look smaller. The visits and fills left out are counted
+  under the list. Totals and months count
   private care without naming it. The lists on everyone's view leave private
   visits off and count them.
 - **Bills** (`#/money/bills`, from Home, Money and each visit's bills): the
