@@ -465,12 +465,13 @@ test('the app bar opens search from anywhere', async ({ page }) => {
 test('every list of every person opens, and every old section address lands on its new page', async ({ page }) => {
   test.setTimeout(120_000);
   for (const [name, id] of Object.entries(PEOPLE)) {
-    for (const list of ['results', 'medicines', 'conditions', 'allergies', 'immunizations', 'documents', 'imaging']) await openList(page, name, list);
+    for (const list of ['results', 'medicines', 'conditions', 'allergies', 'immunizations', 'imaging']) await openList(page, name, list);
     for (const [old, now] of [
       ['', `#/health?who=${id}`],
       ['/timeline', `#/calendar?view=list&who=${id}`],
       ['/timeline/all', `#/calendar?view=list&who=${id}`],
       ['/claims', `#/money?who=${id}`],
+      ['/documents', `#/papers?who=${id}`],
     ]) {
       await page.goto(`./?demo#/p/${id}${old}`);
       await expect(page).toHaveURL((u) => u.hash === now);

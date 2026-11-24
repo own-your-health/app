@@ -486,18 +486,16 @@ export class App {
     return new Date();
   }
 
-  /** The menu: each person's documents, the sources and the settings, with a dot while a source needs attention at the Mac. */
+  /** The menu: Papers, the sources and the settings, with a dot while a source needs attention at the Mac. */
   private menuButton(): HTMLElement {
     const alert = this.store ? needsAttention(this.store.sources(this.now())).length > 0 : false;
-    const people = this.store?.household.people ?? [];
     const open = () => {
       const close = () => panel.querySelector<HTMLElement>('.sheet-head .icon-button')?.click();
       const item = (route: Route, text: string, extra?: string) => h('a', { class: 'menu-item', href: href(route), on: { click: close } }, text, extra ? h('span', { class: 'menu-note' }, extra) : null);
       const body = h(
         'div',
         { class: 'menu-list' },
-        h('h3', { class: 'menu-sub' }, 'Documents'),
-        people.map((p) => item({ name: 'person', person: p.id, section: 'documents' }, p.name)),
+        item({ name: 'papers' }, 'Papers'),
         h('h3', { class: 'menu-sub' }, 'This app'),
         item({ name: 'sources' }, 'Sources', alert ? 'A source needs attention' : undefined),
         item({ name: 'settings' }, 'Settings'),

@@ -1,6 +1,7 @@
-// Papers under ?next: the Drive folder, each file with the visit it belongs
-// to, or "with no visit" and why. Everyone's list leaves private papers off
-// and counts them; each shows, marked, on its person's own.
+// Papers: the Drive folder, each file with the visit it belongs to, or "with
+// no visit" and why, narrowed by kind of paper as the person lists of
+// documents were. Everyone's list leaves private papers off and counts them;
+// each shows, marked, on its person's own.
 
 import { docTypeLabel, documentTitle } from '../model/records';
 import { card, chip, driveLink, empty, filterChips, link, row, type Ctx } from '../ui/components';
@@ -50,7 +51,7 @@ function paperRow(ctx: Ctx, p: Paper, everyone: boolean): HTMLElement {
   return row({
     route: { name: 'item', person: p.person, id: p.doc.id },
     title: documentTitle(p.doc),
-    meta: [docTypeLabel(p.doc.doc_type), dateText(p.doc.date), everyone ? ctx.store.person(p.person)?.name : null, p.doc.organization].filter(Boolean).join(' · '),
+    meta: [docTypeLabel(p.doc.doc_type), dateText(p.doc.date), everyone ? ctx.store.person(p.person)?.name : null, p.doc.organization, p.doc.pages ? count(p.doc.pages, 'page') : null].filter(Boolean).join(' · '),
     aside: p.privateArea ? chip('Private', 'muted') : undefined,
     extra: h('div', null, placeLine(ctx, p), h('div', { class: 'row-actions' }, driveLink(ctx, p.doc.path))),
   });
@@ -88,13 +89,20 @@ export function papersView(ctx: Ctx, route: Extract<Route, { name: 'papers' }>):
   const withVisit = kept.filter((p) => p.with).length;
 
   let show: Show = 'all';
+  let kind = 'all';
+  const kindOf = (p: Paper) => p.doc.doc_type ?? 'other';
+  const kinds = [...new Set(kept.map(kindOf))].sort((a, b) => docTypeLabel(a).localeCompare(docTypeLabel(b)));
   const list = h('div');
   // A screen reader hears what a filter left, as the list changes.
   const said = h('p', { class: 'sr-only', role: 'status', 'aria-live': 'polite' });
   const draw = (announce = false) => {
-    const items = kept.filter((p) => show === 'all' || (show === 'with') === !!p.with).map((p) => ({ date: p.doc.date, paper: p }));
-    list.replaceChildren(items.length ? yearList(items, (x) => paperRow(ctx, x.paper, !who)) : empty(show === 'none' ? 'Every paper here is with its visit.' : 'No papers here yet.'));
-    if (announce) said.textContent = `${count(items.length, 'paper')} ${show === 'all' ? 'in all' : show === 'with' ? 'with a visit' : 'with no visit'}.`;
+    const items = kept
+      .filter((p) => (show === 'all' || (show === 'with') === !!p.with) && (kind === 'all' || kindOf(p) === kind))
+      .map((p) => ({ date: p.doc.date, paper: p }));
+    const what = kind === 'all' ? 'paper' : docTypeLabel(kind).toLowerCase();
+    const none = show === 'none' ? `Every ${what} here is with its visit.` : show === 'with' ? `No ${what} here is with a visit.` : 'No papers here yet.';
+    list.replaceChildren(items.length ? yearList(items, (x) => paperRow(ctx, x.paper, !who)) : empty(none));
+    if (announce) said.textContent = `${count(items.length, 'paper')} ${show === 'all' ? 'in all' : show === 'with' ? 'with a visit' : 'with no visit'}${kind === 'all' ? '' : `, ${docTypeLabel(kind).toLowerCase()}`}.`;
   };
   draw();
 
@@ -129,6 +137,14 @@ export function papersView(ctx: Ctx, route: Extract<Route, { name: 'papers' }>):
             show,
             (v) => ((show = v), draw(true)),
             'Show papers',
+          )
+        : null,
+      kinds.length > 1
+        ? filterChips<string>(
+            [['all', 'Every kind'], ...kinds.map((k): [string, string] => [k, `${docTypeLabel(k)} (${kept.filter((p) => kindOf(p) === k).length})`])],
+            kind,
+            (v) => ((kind = v), draw(true)),
+            'Kind of paper',
           )
         : null,
       said,

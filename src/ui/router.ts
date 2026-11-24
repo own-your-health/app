@@ -17,8 +17,8 @@ export const SECTIONS = [
   'search',
 ] as const;
 export type Section = (typeof SECTIONS)[number];
-/** The sections that are still pages: a person's full lists, reached from Health, and their documents. The others moved (see `moved`). */
-export const LIST_SECTIONS = ['results', 'medicines', 'conditions', 'allergies', 'immunizations', 'documents', 'imaging'] as const;
+/** The sections that are still pages: a person's full lists, reached from Health. The others moved (see `moved`). */
+export const LIST_SECTIONS = ['results', 'medicines', 'conditions', 'allergies', 'immunizations', 'imaging'] as const;
 export type ListSection = (typeof LIST_SECTIONS)[number];
 export const isListSection = (s: Section): s is ListSection => (LIST_SECTIONS as readonly string[]).includes(s);
 
@@ -219,8 +219,8 @@ function searchQuery(q: string | undefined, words: true | undefined, who?: strin
  * Where an address of the person page from before the redesign now lives, so
  * links and bookmarks still open: the overview is the person's Health, the
  * timeline their calendar's list, claims and bills their Money, and their
- * search the search, its filter on them. Undefined for an address that did
- * not move.
+ * search the search, its filter on them, and their documents their Papers.
+ * Undefined for an address that did not move.
  */
 export function moved(r: Route): Route | undefined {
   if (r.name !== 'person') return undefined;
@@ -233,6 +233,8 @@ export function moved(r: Route): Route | undefined {
       return { name: 'money', who: r.person };
     case 'search':
       return { name: 'search', ...(r.query ? { query: r.query } : {}), ...(r.query && r.words ? { words: true as const } : {}), who: r.person };
+    case 'documents':
+      return { name: 'papers', who: r.person };
     default:
       return undefined;
   }
