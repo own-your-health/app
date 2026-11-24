@@ -40,6 +40,7 @@ describe('routes', () => {
     { name: 'health', view: 'doctor', who: P },
     { name: 'money', view: 'bills', who: P },
     { name: 'money', view: 'events', who: P, period: '2025', sort: 'share' },
+    { name: 'money', view: 'events', sort: 'discount' },
   ];
 
   it.each(routes.map((r) => [href(r), r]))('%s round-trips', (h, r) => {

@@ -577,11 +577,16 @@ dropped from the address.
   charged, what the network took off and what the plans paid, from the
   claims' own lines. Bills to act on come next, then each person's
   deductible and out-of-pocket limit as their plan printed it on its newest
-  claim, a month chart whose months open the calendar, and the biggest
-  costs by visit. Any period the costs screen offers can be chosen;
+  claim, a month chart whose months open the calendar, the biggest costs
+  by visit, and where the network took off most. Any period the costs screen offers can be chosen;
   deductibles show for a plan year only. **Where the money went**
-  (`#/money/events`) lists every visit of the period by network price or by
-  your share, with the pharmacy's fills as one line. Totals and months count
+  (`#/money/events`) lists every visit of the period by network price, by
+  your share, or by what the network took off (`?sort=discount`), with the
+  pharmacy's fills as one line. A visit's discount is its charges less its
+  network price, and only when every one of its claims gives a charge and
+  the charges are not below the price: a claim without a charge would make
+  the discount look smaller. The visits and fills left out are counted
+  under the list. Totals and months count
   private care without naming it. The lists on everyone's view leave private
   visits off and count them.
 - **Bills** (`#/money/bills`, from Home, Money and each visit's bills): the

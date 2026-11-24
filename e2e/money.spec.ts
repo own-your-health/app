@@ -139,7 +139,7 @@ test('the year: what care cost, the bills to act on, deductibles, the months and
 
 test('where the money went lists every visit by price or by your share, fills as one line', async ({ page }) => {
   await open(page, '#/money');
-  await page.getByRole('link', { name: 'Where the money went: all 9, by price or by your share' }).click();
+  await page.getByRole('link', { name: 'Where the money went: all 9, by price, by your share or by what the network took off' }).click();
   await expect(page).toHaveURL(/#\/money\/events$/);
   await expect(page.locator('main h1')).toHaveText('Where the money went');
   const list = page.locator('.money-events');
@@ -158,10 +158,26 @@ test('where the money went lists every visit by price or by your share, fills as
   await expect(counseling.locator('.row-aside')).toHaveText('$30.00');
 });
 
+test('the year shows where the network took off most, and the list orders every visit by it', async ({ page }) => {
+  await open(page, '#/money');
+  const cuts = card(page, /^Where the network took off most$/);
+  await expect(cuts.locator('.row-title')).toHaveText(['Emergency room · Example General Hospital', 'Lab tests · Example Lab', 'Office visit · Example Health Main Clinic']);
+  await expect(cuts.locator('.cost-off')).toHaveText(['$3,395.80 off $4,779.00 charged, 71%', '$177.70 off $248.00 charged, 72%', '$143.60 off $412.00 charged, 35%']);
+  await expect(cuts.getByText('a provider in the plan’s network does not bill you the rest')).toBeVisible();
+
+  await cuts.getByRole('link', { name: 'Every visit, by what the network took off' }).click();
+  await expect(page).toHaveURL(/#\/money\/events\?sort=discount$/);
+  await expect(page.getByRole('group', { name: 'Order by' }).getByRole('link', { name: 'Network discount' })).toHaveAttribute('aria-current', 'page');
+  const list = page.locator('.money-events');
+  await expect(list.locator('.row-aside')).toHaveText(['$3,395.80', '$177.70', '$143.60', '$123.60', '$93.70', '$69.30', '$67.50', /^\$/]);
+  await expect(list.locator('.row').last().locator('.row-title')).toHaveText('2 prescription fills');
+  await expect(list.locator('.row').last().locator('.cost-off')).toHaveText(/ off \$[\d.,]+ charged, \d+%$|^Nothing off the /);
+});
+
 test('Money fits a 360px phone in the dark theme', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 780 });
   await page.emulateMedia({ colorScheme: 'dark' });
-  for (const path of ['#/money', '#/money/bills', '#/money/calls', '#/money/events']) {
+  for (const path of ['#/money', '#/money/bills', '#/money/calls', '#/money/events', '#/money/events?sort=discount']) {
     await open(page, path);
     await expect(page.locator('main h1')).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
