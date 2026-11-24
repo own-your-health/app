@@ -139,7 +139,7 @@ test('the year: what care cost, the bills to act on, deductibles, the months and
 
 test('where the money went lists every visit by price or by your share, fills as one line', async ({ page }) => {
   await open(page, '#/money');
-  await page.getByRole('link', { name: 'Where the money went: all 9, by price or by your share' }).click();
+  await page.getByRole('link', { name: 'Where the money went: all 9, by price, by your share or by what the network took off' }).click();
   await expect(page).toHaveURL(/#\/money\/events$/);
   await expect(page.locator('main h1')).toHaveText('Where the money went');
   const list = page.locator('.money-events');

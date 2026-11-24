@@ -1,8 +1,8 @@
 // Money's landing under ?next, the year: what a period's care cost and how
 // the price came down, what to do about bills, each person's deductible and
 // out-of-pocket limit, the months, and the visits that cost most. Where the
-// money went lists every visit of the period, by its network price or by
-// your share. Totals and months count everyone's care without naming any;
+// money went lists every visit of the period, by its network price, by your
+// share or by what the network took off. Totals and months count everyone's care without naming any;
 // the lists that name visits keep private ones off the shared view, counted.
 
 import { householdLines, inPeriod, monthLabel, monthsSpanned, periods, planYearsIn, type CostLine, type Period, type PlanBasis, type PlanYear } from '../model/costs';
@@ -261,6 +261,19 @@ const discounted = (costs: EventCost[]) => costs.filter((c) => !c.fill && c.disc
 
 const ORDER_WORDS: Record<CostOrder, string> = { price: 'Network price', share: 'Your share', discount: 'Network discount' };
 
+/** "2 visits and 1 prescription fill have no network discount to show: …", or nothing when every one has. */
+export function unsaidText(visits: number, fills: number): string | null {
+  const n = visits + fills;
+  if (!n) return null;
+  const which = [visits ? count(visits, 'visit') : '', fills ? count(fills, 'prescription fill') : ''].filter(Boolean).join(' and ');
+  return `${which} ${n === 1 ? 'has' : 'have'} no network discount to show: a claim does not say what was charged, or the charges are below the network price. ${n === 1 ? 'It is' : 'They are'} left off this order.`;
+}
+
+function unsaidNote(visits: number, fills: number): HTMLElement | null {
+  const text = unsaidText(visits, fills);
+  return text ? h('p', { class: 'small muted' }, text) : null;
+}
+
 const DISCOUNT_NOTE = 'What the providers charged above the plan’s network price. The plan and you pay the network price; a provider in the plan’s network does not bill you the rest.';
 const PRICE_NOTE = 'Network price: what the plan agreed to pay the provider, its part and yours.';
 const costLegend = () =>
@@ -307,7 +320,7 @@ export function overviewPage(ctx: Ctx, route: MoneyRoute, who: string | undefine
           costLegend(),
           top.map((c) => costRow(c, max, who, 'price')),
           h('p', { class: 'small muted' }, PRICE_NOTE),
-          h('p', { class: 'small' }, link(eventsRoute, `Where the money went: all ${costs.shown.length}, by price or by your share`)),
+          h('p', { class: 'small' }, link(eventsRoute, `Where the money went: all ${costs.shown.length}, by price, by your share or by what the network took off`)),
         )
       : null,
     cuts.length
@@ -323,7 +336,7 @@ export function overviewPage(ctx: Ctx, route: MoneyRoute, who: string | undefine
   );
 }
 
-/** Where the money went: every visit of the period, by network price or by your share; fills paid at the counter as one line. */
+/** Where the money went: every visit of the period, by network price, by your share or by network discount; fills paid at the counter as one line. */
 export function eventsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLElement {
   const d = yearData(ctx, route, who);
   const order: CostOrder = route.sort ?? 'price';
@@ -333,7 +346,8 @@ export function eventsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined)
   const byDiscount = order === 'discount';
   const visits = byDiscount ? all.filter((c) => c.discount !== undefined) : all;
   const fills = costs.shown.filter((c) => c.fill && (!byDiscount || c.discount !== undefined));
-  const unsaid = costs.shown.filter((c) => c.discount === undefined).length;
+  // Left off the discount order, counted: those with no charge for every claim, or charges below the price.
+  const unsaid = { visits: all.filter((c) => c.discount === undefined).length, fills: costs.shown.filter((c) => c.fill && c.discount === undefined).length };
   const sum = (k: 'price' | 'planPaid' | 'share' | 'discount' | 'charged') => fills.reduce((t, c) => t + (c[k] ?? 0), 0);
   const fillSum = { price: sum('price'), planPaid: sum('planPaid'), share: sum('share'), discount: sum('discount'), charged: sum('charged') };
   const key = (c: { price: number; share: number; discount?: number }) => (order === 'share' ? c.share : byDiscount ? (c.discount ?? 0) : c.price);
@@ -369,7 +383,7 @@ export function eventsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined)
           visits.map((c) => costRow(c, max, who, order)),
           fillRow,
           h('p', { class: 'small muted' }, byDiscount ? DISCOUNT_NOTE : PRICE_NOTE),
-          byDiscount && unsaid ? h('p', { class: 'small muted' }, `${count(unsaid, 'visit’s claims do', 'visits’ claims do')} not say in full what was charged, so ${unsaid === 1 ? 'it is' : 'they are'} left off this order.`) : null,
+          byDiscount ? unsaidNote(unsaid.visits, unsaid.fills) : null,
         )
       : card({}, h('p', null, `No visits with a price in ${periodWords(d.chosen)}.`)),
     privateNote(who ? [] : costs.kept),

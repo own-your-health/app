@@ -60,7 +60,7 @@ export type Route =
   // The calendar (?next): a month (YYYY-MM) and a chosen day, or the list (from the newest month, or before one), for everyone or one person.
   | { name: 'calendar'; view?: 'list'; month?: string; who?: string; day?: string; before?: string }
   // Money (?next), for everyone or one person: the year (in a `period` as the costs screen's), the bills, those worth a
-  // call (and the bill a row named), or where the money went (by network price, or by your share).
+  // call (and the bill a row named), or where the money went (by network price, by your share, or by network discount).
   | { name: 'money'; view?: MoneyView; who?: string; bill?: string; period?: string; sort?: 'share' | 'discount' }
   // Health (?next): each person's standing, one person's page, or the sheet to hand their doctor.
   | { name: 'health'; view?: 'doctor'; who?: string }
