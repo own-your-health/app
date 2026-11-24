@@ -508,7 +508,7 @@ export class App {
     const menu = h(
       'button',
       { type: 'button', class: ['icon-button', alert ? 'icon-button-alert' : null], 'aria-label': alert ? 'Menu: a source needs attention' : 'Menu', 'aria-haspopup': 'dialog', on: { click: open } },
-      icon('settings'),
+      icon('menu'),
     );
     return menu;
   }
@@ -584,7 +584,7 @@ export class App {
       case 'costs':
         return costsView(ctx, r);
       case 'search':
-        return searchView(ctx, r.query, r.words);
+        return searchView(ctx, r.query, r.words, r.who);
       case 'source':
         return sourceView(ctx, r.source);
       case 'person':

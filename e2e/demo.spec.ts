@@ -339,10 +339,20 @@ test('a result over time, down to its raw FHIR', async ({ page }) => {
   await expect(page).toHaveURL(/#\/p\/p_[a-z2-7]{20}\/r\/r_[a-z2-7]{20}$/);
 });
 
-test('search finds words inside documents, and a person’s old search address opens it', async ({ page }) => {
-  await page.goto(`./?demo#/p/${PEOPLE['Robin Example']}/search?q=fasting`);
-  await expect(page).toHaveURL(/#\/search\?q=fasting$/);
+test('search finds words inside documents, and a person’s old search address opens it on that person', async ({ page }) => {
+  const robin = PEOPLE['Robin Example'];
+  await page.goto(`./?demo#/p/${robin}/search?q=fasting`);
+  await expect(page).toHaveURL(new RegExp(`#/search\\?q=fasting&who=${robin}$`));
   await expect(page.locator('.snippet')).toContainText('Lipid panel, fasting 12 hours');
+  const whose = page.getByRole('group', { name: 'Filter by person' });
+  await expect(whose.getByRole('button', { name: 'Robin Example' })).toHaveAttribute('aria-pressed', 'true');
+
+  // Robin's search for what only Sam has says so, and Everyone shows it.
+  await page.goto(`./?demo#/search?q=peanuts&who=${robin}`);
+  await expect(page.locator('main')).toContainText(/No matches for Robin Example; \d+ match(es)? for everyone\./);
+  await whose.getByRole('button', { name: 'Everyone' }).click();
+  await expect(page).toHaveURL(/#\/search\?q=peanuts$/);
+  await expect(page.locator('main .row').first()).toContainText('Peanuts');
 });
 
 test('a visit’s page shows what belongs to it, a hand-filed note among them', async ({ page }) => {

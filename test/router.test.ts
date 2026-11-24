@@ -18,6 +18,8 @@ describe('routes', () => {
     { name: 'person', person: P, section: 'timeline', sub: 'all' },
     { name: 'search' },
     { name: 'search', query: '"fasting 12 hours" ldl' },
+    { name: 'search', query: 'flu', words: true, who: P },
+    { name: 'search', who: P },
     { name: 'costs' },
     { name: 'costs', period: 'plan-1', by: 'category' },
     { name: 'costs', period: 'all', only: [{ by: 'person', key: P }, { by: 'code', key: 'CPT:99213' }] },
@@ -112,8 +114,8 @@ describe('addresses from before the redesign', () => {
     expect(to(`#/p/${P}/timeline`)).toBe(`#/calendar?view=list&who=${P}`);
     expect(to(`#/p/${P}/timeline/all`)).toBe(`#/calendar?view=list&who=${P}`);
     expect(to(`#/p/${P}/claims`)).toBe(`#/money?who=${P}`);
-    expect(to(`#/p/${P}/search?q=flu&words=1`)).toBe('#/search?q=flu&words=1');
-    expect(to(`#/p/${P}/search`)).toBe('#/search');
+    expect(to(`#/p/${P}/search?q=flu&words=1`)).toBe(`#/search?q=flu&words=1&who=${P}`);
+    expect(to(`#/p/${P}/search`)).toBe(`#/search?who=${P}`);
   });
 
   it('leave a person’s lists, their documents and every other page where they are', () => {

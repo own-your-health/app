@@ -159,12 +159,13 @@ Results come in groups by kind:
 Each person's `text.json` is read from Drive once a search is coming (the
 search page opens, or the home screen's search field is chosen), so it
 downloads while the words are typed, and nothing leaves the browser. `#/search?q=<words>` is the search page's
-address, with `&words=1` when the words are searched as written. The rules
-are `src/model/search.ts`.
+address, with `&words=1` when the words are searched as written and
+`&who=<person id>` when its person filter starts on someone. The rules are
+`src/model/search.ts`.
 
-The timeline lists visits, each with its documents, what was recorded at it
-(diagnoses, results, procedures, medicines, vaccines, allergies and
-reports), its insurer claim and imaging. A
+A portal visit's page lists what belongs to it: its documents, what was
+recorded at it (diagnoses, results, procedures, medicines, vaccines,
+allergies and reports), its insurer claim and imaging. A
 document belongs to a visit when medrec linked it, or when it is dated within
 the visit (its day, or a stay's days) and comes from the same organization,
 by medrec's organization id or, for a document filed by hand, by name. Each
@@ -172,7 +173,7 @@ document joins one visit at most, and a linked one is never taken by another.
 Every record, in the order it happened, is one tap away. The rules are
 `src/model/visits.ts`.
 
-Claims and bills show what each provider's newest statement says is due
+Money's bills show what each provider's newest statement says is due
 (per provider and account, with a receipt filed after it counted as paid),
 the plan's deductible and out-of-pocket limit so far from the newest claim
 that printed them, and each insurer claim beside its bill: a statement from
@@ -229,7 +230,7 @@ kept for it. Every machine that imports into the folder needs medrec 0.5.0 or
 later; an earlier one files the claims it imports again in the earlier shape.
 The rules are `src/model/claims.ts`, and for the visit, `src/model/visits.ts`.
 
-Coverage, under Claims and bills, lists each insurer and plan the person has
+Coverage, on each person's Money, lists each insurer and plan the person has
 had, newest first, from when to when, and whose records name it. The same
 insurer starting on the same day is one coverage, whichever source names it:
 the insurer's own record and a provider portal's copy show once, even when
@@ -238,11 +239,10 @@ Plan"). An end of 9999-12-31 means the coverage runs on. When a coverage
 started on the day someone in the household was born, it says so ("Changed on
 Nov 8, 2026, the day Jamie Example was born") as a date the two share. No
 source gives a reason for a change, and FHIR's Coverage has no element for
-one. Each change is also on the timeline among the visits, and Costs names
-the changes inside the period it shows: the plan, and so the deductible, can
-differ on either side of one. The rules are `src/model/coverage.ts`.
+one. Costs names the changes inside the period it shows: the plan, and so
+the deductible, can differ on either side of one. The rules are `src/model/coverage.ts`.
 
-Costs (`#/costs`, from the home screen or a person's claims) adds up every
+Costs (`#/costs`, from Money, for everyone or one person) adds up every
 claim line in the folder: what was billed, what the plan allowed and paid,
 and your share, with its deductible, copay and coinsurance. A claim whose
 lines do not add up to its totals keeps the difference as a line of its own,
@@ -315,7 +315,8 @@ or another app can link straight to it. `#/hh/<id>` opens the Health of the
 person whose `links.huishouden_health_person` is that id. Addresses from
 before the redesign still open, where their page lives now:
 `#/p/<person id>` on the person's Health, `/timeline` on their calendar's
-list, `/claims` on their Money and `/search` on the search. The person's
+list, `/claims` on their Money and `/search` on the search, its person
+filter on them. The person's
 lists (`/results`, `/medicines` and so on) and `/documents` keep their
 addresses.
 
