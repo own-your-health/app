@@ -9,7 +9,7 @@ import { dateText } from '../ui/format';
 
 const COVERED_AS: Record<string, string> = { child: 'covered as a child', spouse: 'covered as a spouse', common: 'covered as a partner', parent: 'covered as a parent' };
 
-/** "Jan 1, 2024 to Nov 7, 2026", "since Nov 8, 2026". */
+/** "Jan 1, 2012 to May 16, 2016", "since May 17, 2016". */
 function coverageDays(s: CoverageSegment): string {
   if (s.start && s.end) return `${dateText(s.start)} to ${dateText(s.end)}`;
   if (s.start) return `since ${dateText(s.start)}`;

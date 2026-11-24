@@ -29,14 +29,14 @@
         "coding": [
           {
             "system": "http://www.ama-assn.org/go/cpt",
-            "code": "99215",
-            "display": "Office visit, extended"
+            "code": "99213",
+            "display": "Office visit"
           }
         ]
       },
       "servicedDate": "2026-11-20",
       "net": {
-        "value": 240,
+        "value": 165,
         "currency": "USD"
       }
     },
@@ -46,14 +46,14 @@
         "coding": [
           {
             "system": "http://www.ama-assn.org/go/cpt",
-            "code": "99213",
-            "display": "Office visit"
+            "code": "87651",
+            "display": "Strep test, DNA method"
           }
         ]
       },
       "servicedDate": "2026-11-20",
       "net": {
-        "value": 165,
+        "value": 132,
         "currency": "USD"
       }
     },

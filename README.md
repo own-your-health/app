@@ -195,16 +195,15 @@ discount. Amounts are read to the nearest cent. The page names the diagnoses
 the claim gives, and under **Paid for** the visit and the results it paid
 for. Each line links the records it paid for, unless every line links the
 same ones. A hospital's line can carry a revenue code, which says the part
-of the hospital it was billed under (0450 is the emergency room): medrec
+of the hospital it was billed under (0360 is the operating room): medrec
 0.8.2 and later gives it in `items[].revenue`, and the page shows it beside
-the line's service code ("Emergency room, revenue code 0450"). A line with
+the line's service code ("Operating room, revenue code 0360"). A line with
 a revenue code and no service code is named and coded by its revenue code,
 and counts as a facility charge.
 
-A plan that recodes a service under its coding policy (an emergency visit's
-level, say) keeps the provider's line, marked not covered, beside the one it
-paid, and a plan that writes a line off keeps that too; its totals count
-neither. medrec 0.8.2 and later marks such a line (`items[].counted: false`)
+A plan that pays a service under another code than the one billed keeps the
+provider's line, marked not covered, beside the one it paid, and a plan that
+writes a line off keeps that too; its totals count neither. medrec 0.8.2 and later marks such a line (`items[].counted: false`)
 and keeps the payer's notes on it (`items[].payer_notes`, and the claim's own
 in `payer_notes`). For a claim medrec has not marked, the app finds them by medrec's
 rule: it compares billed, plan paid and you owe, those the totals and a line
@@ -235,10 +234,10 @@ Coverage, on each person's Money, lists each insurer and plan the person has
 had, newest first, from when to when, and whose records name it. The same
 insurer starting on the same day is one coverage, whichever source names it:
 the insurer's own record and a provider portal's copy show once, even when
-one spells the name without a space ("Example Health Plan" and "ExampleHealth
-Plan"). An end of 9999-12-31 means the coverage runs on. When a coverage
+they spell the name differently ("Example Health Plan" and "EXAMPLE HEALTH
+PLAN, INC."). An end of 9999-12-31 means the coverage runs on. When a coverage
 started on the day someone in the household was born, it says so ("Changed on
-Nov 8, 2026, the day Jamie Example was born") as a date the two share. No
+May 17, 2016, the day Casey was born") as a date the two share. No
 source gives a reason for a change, and FHIR's Coverage has no element for
 one. Costs names the changes inside the period it shows: the plan, and so
 the deductible, can differ on either side of one. The rules are `src/model/coverage.ts`.
@@ -254,8 +253,8 @@ totals leave out counts nothing, and leaves no such line. It narrows to:
   ExplanationOfBenefit prints, `fields.benefit_period` in the index, when it
   is about a year long), else on the month set in Settings, **Plan year**,
   else on January 1, and the screen says which. Never on a coverage's start:
-  that is the day a coverage took effect, which can fall mid-year (a birth, a
-  new job). A calendar year counts care by the day it was given, not the day
+  that is the day a coverage took effect, which can fall mid-year (a new
+  job, say). A calendar year counts care by the day it was given, not the day
   it was paid;
 - a person, a provider, a kind of care, a month, or one billing code. Each
   is a link from the chart or the breakdown, so back undoes one.
@@ -692,12 +691,12 @@ page count. Papers took the place of each person's list of documents. A
 - A visit's address names a record in it. Any record or paper of the visit
   opens it, so a saved address still works after records arrive and the
   visit is led by another one.
-- The sample's Sam spent a night in the emergency room: five claims from
-  four providers, a line the plan re-coded and left out of its totals, a
-  bill that matches its claim and a doctor's bill not yet filed. Sam also
-  has a video counseling session that medrec's list makes private by its
-  codes, with its claim, whose copay is not billed yet, and the prescription
-  that goes with it, and a vitamin D refill due.
+- The sample's Sam had a knee procedure: five claims from four providers, a
+  line the plan left out of its totals, a bill that matches its claim and a
+  surgeon's bill not yet filed. Sam also has a video counseling session that
+  medrec's list makes private by its codes, with its claim, whose copay is
+  not billed yet, a nicotine patch that it makes private by the medicine, and
+  a loratadine refill due.
 
 Unofficial. Not affiliated with or endorsed by Google.
 

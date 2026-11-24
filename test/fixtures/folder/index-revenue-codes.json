@@ -8,37 +8,37 @@
       "id": "r_claimrevenueaaaaaaaa",
       "kind": "claim",
       "key": "claim|r_claimrevenueaaaaaaaa",
-      "date": "2026-05-09",
+      "date": "2026-06-04",
       "display": "Institutional",
       "fields": {
-        "when": "2026-05-09",
+        "when": "2026-06-04",
         "provider": "Example Hospital",
         "insurer": "Example Health Plan",
         "outcome": "complete",
         "type": "Institutional",
         "billable_period": {
-          "start": "2026-05-09",
-          "end": "2026-05-09"
+          "start": "2026-06-04",
+          "end": "2026-06-04"
         },
         "amounts": {
           "billed": {
-            "amount": "1500.00",
+            "amount": "1575.00",
             "currency": "USD"
           },
           "allowed": {
-            "amount": "700.00",
+            "amount": "602.00",
             "currency": "USD"
           },
           "plan_paid": {
-            "amount": "550.00",
+            "amount": "502.00",
             "currency": "USD"
           },
           "copay": {
-            "amount": "150.00",
+            "amount": "100.00",
             "currency": "USD"
           },
           "you_owe": {
-            "amount": "150.00",
+            "amount": "100.00",
             "currency": "USD"
           }
         },
@@ -47,35 +47,35 @@
             "sequence": 1,
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
-              "code": "99284",
-              "display": "Emergency visit, moderate severity"
+              "code": "95810",
+              "display": "Sleep study, overnight"
             },
             "revenue": {
               "system": "https://www.nubc.org/CodeSystem/RevenueCodes",
-              "code": "0450",
-              "display": "Emergency room"
+              "code": "0920",
+              "display": "Other diagnostic service"
             },
-            "serviced": "2026-05-09",
-            "category": "visit",
+            "serviced": "2026-06-04",
+            "category": "medicine",
             "amounts": {
               "billed": {
-                "amount": "1200.00",
+                "amount": "1340.00",
                 "currency": "USD"
               },
               "allowed": {
-                "amount": "600.00",
+                "amount": "520.00",
                 "currency": "USD"
               },
               "plan_paid": {
-                "amount": "450.00",
+                "amount": "420.00",
                 "currency": "USD"
               },
               "copay": {
-                "amount": "150.00",
+                "amount": "100.00",
                 "currency": "USD"
               },
               "you_owe": {
-                "amount": "150.00",
+                "amount": "100.00",
                 "currency": "USD"
               }
             }
@@ -84,21 +84,21 @@
             "sequence": 2,
             "revenue": {
               "system": "https://www.nubc.org/CodeSystem/RevenueCodes",
-              "code": "0300",
-              "display": "Laboratory"
+              "code": "0410",
+              "display": "Breathing care"
             },
-            "serviced": "2026-05-09",
+            "serviced": "2026-06-04",
             "amounts": {
               "billed": {
-                "amount": "90.00",
+                "amount": "75.00",
                 "currency": "USD"
               },
               "allowed": {
-                "amount": "30.00",
+                "amount": "24.00",
                 "currency": "USD"
               },
               "plan_paid": {
-                "amount": "30.00",
+                "amount": "24.00",
                 "currency": "USD"
               },
               "you_owe": {
@@ -111,22 +111,22 @@
             "sequence": 3,
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
-              "code": "71046",
-              "display": "Chest X-ray, 2 views"
+              "code": "94010",
+              "display": "Breathing test"
             },
-            "serviced": "2026-05-09",
-            "category": "imaging",
+            "serviced": "2026-06-04",
+            "category": "medicine",
             "amounts": {
               "billed": {
-                "amount": "210.00",
+                "amount": "160.00",
                 "currency": "USD"
               },
               "allowed": {
-                "amount": "70.00",
+                "amount": "58.00",
                 "currency": "USD"
               },
               "plan_paid": {
-                "amount": "70.00",
+                "amount": "58.00",
                 "currency": "USD"
               },
               "you_owe": {

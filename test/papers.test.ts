@@ -23,8 +23,8 @@ describe('where each paper belongs', () => {
   });
 
   it('puts a paper with the visit that holds it, at the visit’s sureness', () => {
-    const summary = titled('Sam Example', 'Emergency department discharge instructions');
-    expect([summary.with?.event.kind, summary.with?.how, summary.with?.confidence]).toEqual(['er', 'event', 'sure']);
+    const summary = titled('Sam Example', 'Going home after knee surgery');
+    expect([summary.with?.event.kind, summary.with?.how, summary.with?.confidence]).toEqual(['outpatient', 'event', 'sure']);
     expect(titled('Sam Example', 'Statement from Example Billing').with?.confidence).toBe('likely');
   });
 
@@ -49,9 +49,9 @@ describe('where each paper belongs', () => {
   it('keeps a paper private when a visit it could be part of is, since its line names that visit', () => {
     const sam = structuredClone(indexes.get(id('Sam Example'))!);
     const counseling = sam.events!.events.find((e) => e.start === '2026-10-27')!;
-    const other = sam.events!.events.find((e) => e.kind === 'er')!;
+    const other = sam.events!.events.find((e) => e.kind === 'outpatient')!;
     const doc = sam.documents.find((d) => d.title === 'Sports medicine visit note')!;
-    // The note fits the counseling session or the emergency room visit, and neither holds nor links it.
+    // The note fits the counseling session or the knee procedure, and neither holds nor links it.
     for (const e of sam.events!.events) e.members = e.members.filter((m) => m.document !== doc.id);
     for (const r of sam.records) r.documents = r.documents.filter((d) => d !== doc.id);
     sam.events!.pending.push({ document: doc.id, could_join: [other.id, counseling.id], rule: 'D4' as MedrecRule });

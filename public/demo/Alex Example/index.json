@@ -1890,62 +1890,7 @@
         "use": "claim",
         "items": [
           {
-            "service": {
-              "system": "http://www.ama-assn.org/go/cpt",
-              "code": "99215",
-              "display": "Office visit, extended"
-            },
-            "serviced": "2026-11-20",
-            "quantity": {
-              "value": 1,
-              "unit": null
-            },
-            "net": {
-              "amount": "240.00",
-              "currency": "USD"
-            },
-            "adjudication": [
-              {
-                "category": "Submitted Amount",
-                "amount": {
-                  "amount": "240.00",
-                  "currency": "USD"
-                },
-                "reason": null
-              },
-              {
-                "category": "Not covered",
-                "amount": {
-                  "amount": "240.00",
-                  "currency": "USD"
-                },
-                "reason": {
-                  "text": "Replaced under the plan’s coding policy"
-                }
-              }
-            ],
-            "category": "visit",
-            "amounts": {
-              "billed": {
-                "amount": "240.00",
-                "currency": "USD"
-              },
-              "not_covered": {
-                "amount": "240.00",
-                "currency": "USD"
-              }
-            },
-            "records": [
-              "r_hh2prly7o3vxhre55eph"
-            ],
-            "counted": false,
-            "payer_notes": [
-              "C7 -- This service was paid under a different code than the one billed."
-            ],
-            "sequence": 1
-          },
-          {
-            "sequence": 2,
+            "sequence": 1,
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
               "code": "99213",
@@ -2052,6 +1997,59 @@
             "records": [
               "r_hh2prly7o3vxhre55eph"
             ]
+          },
+          {
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "87651",
+              "display": "Strep test, DNA method"
+            },
+            "serviced": "2026-11-20",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "132.00",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "132.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Not covered",
+                "amount": {
+                  "amount": "132.00",
+                  "currency": "USD"
+                },
+                "reason": {
+                  "text": "Replaced under the plan’s coding policy"
+                }
+              }
+            ],
+            "category": "lab",
+            "amounts": {
+              "billed": {
+                "amount": "132.00",
+                "currency": "USD"
+              },
+              "not_covered": {
+                "amount": "132.00",
+                "currency": "USD"
+              }
+            },
+            "records": [],
+            "counted": false,
+            "payer_notes": [
+              "C7 -- This service was paid under a different code than the one billed."
+            ],
+            "sequence": 2
           },
           {
             "sequence": 3,

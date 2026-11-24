@@ -9,7 +9,7 @@ import { manifestWith, privateCase, type Overlay } from '../test/helpers';
 const SAM = 'p_wwezzed7kml67hnp6s7n';
 const ROBIN = 'p_xo4em46i7yj3hphlpajo';
 /** Sam's items, private or not, by words only they have. */
-const SAMS = /Example Billing|Example General Hospital|Example Counseling|Sertraline|Peanuts|Vitamin D|Sports medicine|ankle/i;
+const SAMS = /Example Billing|Example Surgery Center|Example Counseling|Nicotine|Loratadine|Peanuts|Vitamin D|Sports medicine|ankle/i;
 
 let problems: string[] = [];
 
@@ -75,7 +75,7 @@ test('someone whose private list can’t be used is left off every shared screen
 test('a person held back keeps every one of their own pages', async ({ page }) => {
   await lay(page, privateCase('unreadable'));
   await go(page, `#/health?who=${SAM}`);
-  await expect(card(page, /^Current$/)).toContainText('Sertraline 50 mg tablet');
+  await expect(card(page, /^Current$/)).toContainText('Nicotine 14 mg/24 hour patch');
   await expect(card(page, /^Current$/)).toContainText('Peanuts');
   await go(page, `#/money/bills?who=${SAM}`);
   await expect(page.locator('main')).toContainText('Example Billing');
@@ -117,7 +117,7 @@ test('the doctor’s sheet of someone held back holds nothing until it is all in
   await expect(page.getByRole('status')).toHaveText(`Sam’s items are left off this sheet until you include them, private ones too. ${WHY}`);
   await page.getByRole('button', { name: 'Include them all' }).click();
   await expect(page.locator('.sheet')).toContainText('Peanuts');
-  await expect(page.locator('.sheet')).toContainText('Sertraline 50 mg tablet');
+  await expect(page.locator('.sheet')).toContainText('Nicotine 14 mg/24 hour patch');
   await expect(page.getByRole('status')).toHaveText('All Sam’s items are included, private ones too.');
   await page.getByRole('button', { name: 'Leave them off' }).click();
   await expect(page.locator('.sheet')).toHaveCount(0);
@@ -144,27 +144,27 @@ test('a folder whose medrec wrote no views leaves everyone off, in one line', as
 
 test('what the household marked private stays off, and what it marked not private shows', async ({ page }) => {
   await lay(page, privateCase('marked'));
-  // Sam's emergency room visit, marked private, with its claims and its bill.
-  for (const path of ['#/', '#/calendar?month=2026-09', '#/money/bills', '#/costs']) {
+  // Sam's knee procedure, marked private, with its claims and its bill.
+  for (const path of ['#/', '#/calendar?month=2026-08', '#/money/bills', '#/costs']) {
     await go(page, path);
-    await expect(page.locator('main'), path).not.toContainText('Example General Hospital');
+    await expect(page.locator('main'), path).not.toContainText('Example Surgery Center');
     await expect(heldNote(page), path).toHaveCount(0);
   }
-  await go(page, '#/calendar?month=2026-09');
+  await go(page, '#/calendar?month=2026-08');
   await expect(page.locator('.cal-private')).toContainText('1 private event (marked private) is kept off this shared view.');
   // Its one paper marked not private shows, without the visit.
   await go(page, '#/papers');
-  const discharge = page.locator('.row', { hasText: 'Emergency department discharge instructions' });
-  await expect(discharge.locator('.paper-place')).toHaveText('With a visit kept off this shared view.');
-  await expect(page.locator('main')).not.toContainText('Statement from Example General Hospital');
+  const goingHome = page.locator('.row', { hasText: 'Going home after knee surgery' });
+  await expect(goingHome.locator('.paper-place')).toHaveText('With a visit kept off this shared view.');
+  await expect(page.locator('main')).not.toContainText('Statement from Example Surgery Center');
   await expect(page.locator('main')).not.toContainText('Statement from Example Lab');
   await expect(page.locator('.papers-private')).toContainText('2 private papers are kept off this shared view.');
   // On Sam's own Papers it names its visit.
   await go(page, `#/papers?who=${SAM}`);
-  await expect(page.locator('.row', { hasText: 'Emergency department discharge instructions' }).locator('.paper-place')).toContainText('With Emergency room · overnight at Example General Hospital');
+  await expect(page.locator('.row', { hasText: 'Going home after knee surgery' }).locator('.paper-place')).toContainText('With Hospital visit at Example Surgery Center');
   // The counseling visit, marked not private, is on the shared calendar; its claim, still private, is on no shared Money list.
   await go(page, '#/calendar?month=2026-10');
-  await expect(page.locator('.cal-private')).toContainText('1 private event (mental health) is kept off this shared view.');
+  await expect(page.locator('.cal-private')).toContainText('1 private event (substance use) is kept off this shared view.');
   await go(page, '#/money/events');
   await expect(page.locator('main')).not.toContainText('Example Counseling');
   // Robin's only allergy is private: the sheet must not say there are none.
@@ -177,7 +177,7 @@ test('what the household marked private stays off, and what it marked not privat
 });
 
 test('everyone’s search never finds a private item, or says whose it is', async ({ page }) => {
-  await go(page, '#/search?q=sertraline');
+  await go(page, '#/search?q=nicotine');
   await expect(page.locator('main .row')).toHaveCount(0);
   await expect(page.locator('main')).toContainText('Private items are left off everyone’s results.');
   await expect(page.locator('main [aria-live]').filter({ hasText: 'match' })).toHaveText(/^0 matches\./);

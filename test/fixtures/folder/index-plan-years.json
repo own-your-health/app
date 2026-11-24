@@ -8,13 +8,13 @@
       "id": "r_cccccccccccccccccccc",
       "kind": "coverage",
       "key": "coverage|uhc",
-      "date": "2026-09-14",
-      "display": "ExampleHealth Plan",
+      "date": "2026-04-20",
+      "display": "EXAMPLE HEALTH PLAN, INC.",
       "status": "active",
       "fields": {
-        "payer": "ExampleHealth Plan",
+        "payer": "EXAMPLE HEALTH PLAN, INC.",
         "period": {
-          "start": "2026-09-14",
+          "start": "2026-04-20",
           "end": "9999-12-31"
         },
         "relationship": "self"

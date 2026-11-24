@@ -9,12 +9,12 @@ import { fixture } from './helpers';
 // Results whose value came as text (a FHIR valueString), as some labs send
 // them, next to one that came as a quantity: test/fixtures/folder/index-text-values.json.
 const idx = parseIndex(fixture('folder/index-text-values.json'), 'p_aaaaaaaaaaaaaaaaaaaa');
-const named = (display: string, date = '2026-10-15'): MedRecord => idx.records.find((r) => r.display === display && r.date === date)!;
+const named = (display: string, date = '2026-02-03'): MedRecord => idx.records.find((r) => r.display === display && r.date === date)!;
 
 describe('a result’s value sent as text', () => {
   it('reads a bare number as a number, in the unit its range names', () => {
-    expect(resultReading(named('Glucose').fields)).toEqual({ value: 95, unit: 'mg/dL', text: '95 mg/dL' });
-    expect(resultReading(named('Fasting glucose').fields)).toEqual({ value: 105, unit: 'mg/dL', text: '105 mg/dL' });
+    expect(resultReading(named('Sodium').fields)).toEqual({ value: 138, unit: 'mmol/L', text: '138 mmol/L' });
+    expect(resultReading(named('Uric acid').fields)).toEqual({ value: 8.1, unit: 'mg/dL', text: '8.1 mg/dL' });
   });
 
   it('keeps a bare number with no range unitless', () => {
@@ -23,16 +23,16 @@ describe('a result’s value sent as text', () => {
   });
 
   it('reads it against the lab’s range, as a quantity would be', () => {
-    expect(verdict(resultPoint(named('Glucose')))).toMatchObject({ text: 'Within the lab’s range of 65–99 mg/dL.', outOfRange: false, flag: { level: 'normal' } });
-    expect(verdict(resultPoint(named('Fasting glucose')))).toMatchObject({ text: 'Above the lab’s range of 65–99 mg/dL.', outOfRange: true, flag: { level: 'high' } });
+    expect(verdict(resultPoint(named('Sodium')))).toMatchObject({ text: 'Within the lab’s range of 135–145 mmol/L.', outOfRange: false, flag: { level: 'normal' } });
+    expect(verdict(resultPoint(named('Uric acid')))).toMatchObject({ text: 'Above the lab’s range of 3.4–7 mg/dL.', outOfRange: true, flag: { level: 'high' } });
   });
 
   it('plots it with the series’ quantities, in one unit', () => {
-    const glucose = resultSeries(idx).find((s) => s.name === 'Glucose')!;
-    expect(glucose.unit).toBe('mg/dL');
-    expect(glucose.points.map((p) => [p.date, p.value])).toEqual([
-      ['2026-04-15', 88],
-      ['2026-10-15', 95],
+    const sodium = resultSeries(idx).find((s) => s.name === 'Sodium')!;
+    expect(sodium.unit).toBe('mmol/L');
+    expect(sodium.points.map((p) => [p.date, p.value])).toEqual([
+      ['2025-08-12', 141],
+      ['2026-02-03', 138],
     ]);
   });
 

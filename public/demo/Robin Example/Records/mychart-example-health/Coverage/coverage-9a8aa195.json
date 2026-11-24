@@ -7,11 +7,11 @@
   "status": "active",
   "payor": [
     {
-      "display": "ExampleHealth Plan"
+      "display": "EXAMPLE HEALTH PLAN, INC."
     }
   ],
   "period": {
-    "start": "2026-11-08"
+    "start": "2026-03-01"
   },
   "class": [
     {

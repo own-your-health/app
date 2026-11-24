@@ -24,13 +24,13 @@ test('everyone’s Health gives each person’s standing and counts what it keep
   const sam = card(page, /^Sam$/);
   await expect(sam.locator('.card-head')).toContainText('Doctors’ records and claims');
   // Sam's private medicine and its refill are one private item, kept off.
-  await expect(sam.locator('dd')).toHaveText(['1 item: Vitamin D3 2,000 unit capsule refill', '1 condition, 1 medicine, 1 allergy', 'Hemoglobin']);
+  await expect(sam.locator('dd')).toHaveText(['1 item: Loratadine 10 mg tablet refill', '1 condition, 2 medicines, 1 allergy', 'Hemoglobin']);
   await expect(page.getByText('1 private item is kept off this shared view. Each shows on its person’s own Health.')).toBeVisible();
-  await expect(page.locator('main')).not.toContainText('Sertraline');
+  await expect(page.locator('main')).not.toContainText('Nicotine');
 
   const jamie = card(page, /^Jamie$/);
   await expect(jamie.locator('.card-head')).toContainText('Doctors’ records only');
-  await expect(jamie.locator('dd').first()).toHaveText('Nothing listed here. Next: Hepatitis B, dose 2 from Dec 8, 2026');
+  await expect(jamie.locator('dd').first()).toHaveText('Nothing listed here. Next: 4-month vaccines from Nov 28, 2026');
 
   await sam.getByRole('link', { name: 'Sam’s health' }).click();
   await expect(page).toHaveURL(new RegExp(`#/health\\?who=${SAM}$`));
@@ -43,8 +43,8 @@ test('a person’s page runs Due, Current, Worth noticing, Recently, then Quiet'
 
   // On Sam's own page the private medicine shows, marked, with its refill.
   const due = card(page, /^Due$/);
-  await expect(due.locator('.need-title')).toHaveText(['Sertraline 50 mg tablet', 'Vitamin D3 2,000 unit capsule']);
-  await expect(due.locator('.row').first()).toContainText('Private');
+  await expect(due.locator('.need-title')).toHaveText(['Loratadine 10 mg tablet', 'Nicotine 14 mg/24 hour patch']);
+  await expect(due.locator('.row').last()).toContainText('Private');
 
   const current = card(page, /^Current$/);
   await expect(current.locator('h3')).toHaveText(['Conditions', 'Medicines', 'Allergies']);
@@ -77,14 +77,14 @@ test('the doctor’s sheet leaves private items off until they are included', as
   await expect(sheet).toContainText('Peanuts · Hives, Swelling of the lips · criticality high');
   await expect(sheet).toContainText('Vitamin D deficiency · ICD-10 E55.9 · since Apr 2, 2026');
   await expect(sheet.locator('tbody tr').first().locator('td')).toHaveText(['Hemoglobin', '11.8 g/dL (low)', '12–15.5 g/dL', 'Oct 12, 2026']);
-  await expect(sheet).not.toContainText('Sertraline');
+  await expect(sheet).not.toContainText('Nicotine');
   await expect(sheet).not.toContainText('Dr. Morgan Placeholder');
   await expect(page.locator('.sheet-private')).toContainText('2 private items are left off. This is discretion, not security: the files stay readable in the shared Drive folder.');
 
   await page.getByRole('button', { name: 'Include 2 private items' }).click();
   await expect(page.getByRole('button', { name: 'Leave private items off' })).toBeFocused();
   await expect(page.getByRole('status')).toHaveText('2 private items are included.');
-  await expect(sheet.locator('.sheet-section', { hasText: 'Medicines' }).locator('li')).toHaveText([/^Sertraline 50 mg tablet/, /^Vitamin D3 2,000 unit capsule/]);
+  await expect(sheet.locator('.sheet-section', { hasText: 'Medicines' }).locator('li')).toHaveText([/^Loratadine 10 mg tablet/, /^Nicotine 14 mg\/24 hour patch/, /^Vitamin D3 2,000 unit capsule/]);
   await expect(sheet).toContainText('Dr. Morgan Placeholder');
 
   // Another person's sheet never inherits it: back on Sam's, they are off again.
@@ -99,7 +99,7 @@ test('the doctor’s sheet leaves private items off until they are included', as
   await page.locator('main').getByRole('link', { name: 'Health', exact: true }).click();
   await page.getByRole('link', { name: 'Hand to a doctor' }).click();
   await expect(page.getByRole('button', { name: 'Include 2 private items' })).toBeVisible();
-  await expect(page.locator('.sheet')).not.toContainText('Sertraline');
+  await expect(page.locator('.sheet')).not.toContainText('Nicotine');
 
   // Printed, the sheet stands alone: no app bar, no chips, no note about private items.
   await page.emulateMedia({ media: 'print' });

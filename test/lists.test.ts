@@ -92,8 +92,9 @@ describe('medicines', () => {
 
   it('says when a medicine is only reported', () => {
     const { active, past } = medicineList(index('Sam Example'));
-    expect(names(active)).toEqual(['Vitamin D3 2,000 unit capsule', 'Sertraline 50 mg tablet']);
-    expect(active[0]).toMatchObject({ known: ['filled', 'prescribed'], lastFill: { date: '2026-10-29', daysSupply: 30 } });
+    expect(names(active)).toEqual(['Nicotine 14 mg/24 hour patch', 'Loratadine 10 mg tablet', 'Vitamin D3 2,000 unit capsule']);
+    expect(active[1]).toMatchObject({ known: ['filled', 'prescribed'], lastFill: { date: '2026-10-25', daysSupply: 30 } });
+    expect(active[2]).toMatchObject({ known: ['prescribed'] });
     expect(past[0]).toMatchObject({ name: 'Ibuprofen 200 mg tablet', known: ['reported'] });
   });
 

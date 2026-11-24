@@ -7,12 +7,12 @@
   "status": "active",
   "payor": [
     {
-      "display": "ExampleHealth Plan"
+      "display": "EXAMPLE HEALTH PLAN, INC."
     }
   ],
   "period": {
-    "start": "2024-01-01",
-    "end": "2026-11-07"
+    "start": "2023-06-01",
+    "end": "2026-02-28"
   },
   "class": [
     {
@@ -23,7 +23,7 @@
           }
         ]
       },
-      "name": "PPO Choice"
+      "name": "HMO Basic"
     }
   ]
 }

@@ -20,7 +20,7 @@ describe('shares not billed yet', () => {
     expect(shares('Sam Example')).toEqual([
       ['2026-10-27', 'Example Counseling', 3000],
       ['2026-10-12', 'Example Lab', 7030],
-      ['2026-09-12', 'Example Emergency Physicians', 9640],
+      ['2026-08-26', 'Example Orthopedic Surgeons', 11250],
       ['2026-05-20', 'Example Health', 5640],
     ]);
   });
@@ -67,14 +67,14 @@ describe('worth a call', () => {
   it('takes a bill’s privacy from its visit when medrec did not judge the two together', () => {
     const idx = index('Sam Example');
     const doc = idx.documents.find((d) => d.doc_type === 'bill')!;
-    const visit = events('Sam Example').find((x) => x.private)!;
+    const visit = events('Sam Example').find((x) => x.private && x.event.kind === 'office')!;
     expect([billPrivate(idx, doc), billPrivate(idx, doc, visit), billPrivate(idx, { ...doc, id: 'd_inanovisitofmedrecsx' }, visit)]).toEqual([undefined, undefined, 'mental_health']);
   });
 });
 
 describe('what the plan changed', () => {
   it('lists the left-out lines of the last year with what the visit’s provider is owed in all', () => {
-    expect(explainedLines(index('Sam Example'), events('Sam Example'), TODAY).map((x) => [x.event.event.start, x.provider, x.insurer, x.line.label, x.share])).toEqual([['2026-09-12', 'Example General Hospital', 'Example Care Plan', 'Emergency visit, high severity', 25000]]);
-    expect(explainedLines(index('Sam Example'), events('Sam Example'), '2027-09-13')).toEqual([]);
+    expect(explainedLines(index('Sam Example'), events('Sam Example'), TODAY).map((x) => [x.event.event.start, x.provider, x.insurer, x.line.label, x.share])).toEqual([['2026-08-26', 'Example Surgery Center', 'Example Care Plan', 'Knee scope, both sides', 17500]]);
+    expect(explainedLines(index('Sam Example'), events('Sam Example'), '2027-08-27')).toEqual([]);
   });
 });

@@ -152,20 +152,20 @@ test('a person’s old address opens their Health, and its lists still open', as
   await expect(page).toHaveURL(new RegExp(`#/health\\?who=${PEOPLE['Robin']}$`));
 });
 
-test('a newborn’s immunizations list the schedule’s doses, those coming up first', async ({ page }) => {
+test('a baby’s immunizations list the schedule’s doses, those coming up first', async ({ page }) => {
   // The sample's birth date and doses are fixed, so the clock is too.
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
   await openList(page, 'Jamie', 'immunizations');
   const full = page.locator('.card', { hasText: 'By the schedule' });
   await expect(full.locator('.row')).toHaveCount(12);
   await expect(full.locator('.row').first()).toContainText('Hepatitis B');
-  await expect(full.locator('.row').first()).toContainText('1 of 3 doses in these records · next at 1–2 months, from Dec 8, 2026');
+  await expect(full.locator('.row').first()).toContainText('2 of 3 doses in these records · next at 6–18 months, from Jan 28, 2027');
   await expect(full.locator('.row', { hasText: 'Coming up' })).toHaveCount(6);
   await expect(full.locator('.row', { hasText: 'Not in these records' })).toHaveCount(0);
-  await expect(full.locator('.row', { hasText: 'MMR' })).toContainText('0 of 2 doses in these records · next at 12–15 months, from Nov 8, 2027');
-  await expect(full.locator('.row', { hasText: 'Rotavirus' })).toContainText('0 of 2 or 3 doses in these records');
+  await expect(full.locator('.row', { hasText: 'MMR' })).toContainText('0 of 2 doses in these records · next at 12–15 months, from Jul 28, 2027');
+  await expect(full.locator('.row', { hasText: 'Rotavirus' })).toContainText('1 of 2 doses in these records');
   await expect(full.getByRole('link', { name: 'CDC child and adolescent immunization schedule' })).toHaveAttribute('href', 'https://www.cdc.gov/vaccines/hcp/imz-schedules/child-adolescent-age-compliant.html');
-  await expect(page.locator('.card', { has: page.locator('.card-head h2', { hasText: 'Doses given' }) }).locator('.row', { hasText: 'Hep B, adolescent or pediatric' })).toContainText('Nov 8, 2026');
+  await expect(page.locator('.card', { has: page.locator('.card-head h2', { hasText: 'Doses given' }) }).locator('.row', { hasText: 'Hep B, adolescent or pediatric' })).toContainText('Jul 28, 2026');
 });
 
 test('a school-age child’s schedule shows only this season’s flu dose missing', async ({ page }) => {
@@ -278,7 +278,7 @@ test('a claim’s page lists its lines, each with its code, kind of service and 
   await page.goBack();
   // Without medrec's link, the visit is the one of the same day from a matching provider.
   await claimRow(page, 'Office visit').locator('a.row-main').click();
-  await expect(page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Paid for$/ }) }).locator('.row-title')).toHaveText(['Blood pressure follow-up']);
+  await expect(page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Paid for$/ }) }).locator('.row-title')).toHaveText(['Office visit']);
 });
 
 /** A label's value in the page's key-value list. */
@@ -291,7 +291,7 @@ test('a claim medrec linked says what it paid for: the visit, the diagnosis and 
   await expect(paidFor(page).locator('.row-title')).toHaveText(['Sick visit']);
   await expect(paidFor(page).locator('.row-meta').first()).toContainText('Visit · Nov 20, 2026');
   const lines = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^3 lines$/ }) });
-  await expect(lines.locator('.row-meta')).toHaveText(['99215 · Visit · Nov 20, 2026', '99213 · Visit · Nov 20, 2026', '87880 · Lab test · Nov 20, 2026']);
+  await expect(lines.locator('.row-meta')).toHaveText(['99213 · Visit · Nov 20, 2026', '87651 · Lab test · Nov 20, 2026', '87880 · Lab test · Nov 20, 2026']);
   // The strep test's result is not in these records, so only the visit line links; the line the plan left out paid for nothing.
   await expect(lines.locator('.claim-paid-for')).toHaveText(['Paid for: Sick visit']);
   await lines.locator('.claim-paid-for').getByRole('link', { name: 'Sick visit' }).click();
@@ -396,16 +396,15 @@ test('one search over everyone, from the home screen, with filters by kind and p
   await expect(results.first()).toContainText('Robin');
   await expect(results.first().locator('mark').first()).toHaveText(/lisinopril/i);
   const kinds = page.getByRole('group', { name: 'Filter by kind' });
-  // The August fill's claim names lisinopril on its line; November's says only "Prescription drug".
-  await expect(kinds.getByRole('button', { name: 'All 5' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(kinds.getByRole('button', { name: 'Claims 1' })).toBeVisible();
-  await expect(page.locator('main p[aria-live]')).toHaveText('5 matches.');
+  await expect(kinds.getByRole('button', { name: 'All 6' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(kinds.getByRole('button', { name: 'Claims 2' })).toBeVisible();
+  await expect(page.locator('main p[aria-live]')).toHaveText('6 matches.');
   // By keyboard: the chip pressed keeps focus, and the status counts what is shown.
   await kinds.getByRole('button', { name: 'Documents 1' }).focus();
   await page.keyboard.press('Enter');
   await expect(kinds.getByRole('button', { name: 'Documents 1' })).toBeFocused();
   await expect(kinds.getByRole('button', { name: 'Documents 1' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('main p[aria-live]')).toHaveText('1 of 5 matches.');
+  await expect(page.locator('main p[aria-live]')).toHaveText('1 of 6 matches.');
   await expect(results).toHaveText([/After visit summary.*Robin.*in the document text.*continuing lisinopril/]);
   await expect(results.locator('.snippet mark')).toHaveText(['lisinopril']);
 });
@@ -590,7 +589,7 @@ test('bills finds claims and statements, records before claims, and a claim name
   await expect(page.locator('.search-concept')).toHaveCount(0);
 });
 
-test('coverage over time: each insurer and plan, newest first, the same coverage from two sources once, a change on a birthday marked', async ({ page }) => {
+test('coverage over time: each insurer and plan, newest first, the same coverage from two sources once', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
   // On the person's Money, where their old claims address leads.
   await page.goto(`./?demo#/p/${PEOPLE['Robin']}/claims`);
@@ -598,15 +597,15 @@ test('coverage over time: each insurer and plan, newest first, the same coverage
 
   const coverage = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Coverage$/ }) });
   const rows = coverage.locator('.row');
-  await expect(rows.locator('.row-title')).toHaveText(['Example Health Plan, PPO Choice', 'ExampleHealth Plan, PPO Choice']);
-  await expect(rows.nth(0)).toContainText('since Nov 8, 2026');
-  // The insurer's record and the portal's copy, spelled without the space, are one coverage.
+  await expect(rows.locator('.row-title')).toHaveText(['Example Health Plan, PPO Choice', 'EXAMPLE HEALTH PLAN, INC., HMO Basic']);
+  await expect(rows.nth(0)).toContainText('since Mar 1, 2026');
+  // The insurer's record and the portal's copy, spelled another way, are one coverage.
   await expect(rows.nth(0)).toContainText('In records from Example Health Plan and Example Health.');
-  await expect(rows.nth(0).locator('.coverage-born')).toHaveText('Changed on Nov 8, 2026, the day Jamie was born.');
-  await expect(rows.nth(1)).toContainText('Jan 1, 2024 to Nov 7, 2026');
+  // No one was born the day either started.
+  await expect(rows.nth(1)).toContainText('Jun 1, 2023 to Feb 28, 2026');
   await expect(rows.nth(1)).toContainText('In records from Example Health.');
-  await expect(rows.nth(1).locator('.coverage-born')).toHaveCount(0);
-  await expect(coverage).toContainText('A birthday beside a change is a date the two share. These records don’t say why coverage changed.');
+  await expect(coverage.locator('.coverage-born')).toHaveCount(0);
+  await expect(coverage).not.toContainText('A birthday beside a change');
 
   await rows.nth(0).getByRole('link', { name: 'Example Health Plan, PPO Choice' }).click();
   await expect(page.locator('.card-head h1')).toHaveText('Example Health Plan PPO');
@@ -616,7 +615,7 @@ test('costs say when a coverage changed inside the period shown', async ({ page 
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
   await page.goto('./?demo#/costs');
   const note = page.locator('.cost-summary .coverage-note');
-  await expect(note).toHaveText('Coverage changed in this period: Robin, Example Health Plan from Nov 8, 2026, the day Jamie was born.');
+  await expect(note).toHaveText('Coverage changed in this period: Robin, Example Health Plan from Mar 1, 2026.');
   await page.getByRole('group', { name: 'Period' }).getByRole('button', { name: '2025' }).click();
   await expect(page.locator('.cost-summary')).toBeVisible();
   await expect(note).toHaveCount(0);

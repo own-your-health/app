@@ -12,7 +12,7 @@
       "media_type": "application/pdf",
       "title": "Discharge instructions",
       "doc_type": "discharge_summary",
-      "date": "2026-03-03",
+      "date": "2026-02-22",
       "organization": "Example Hospital",
       "filed_at": "2026-06-30T08:00:00Z",
       "provenance": {
@@ -32,7 +32,7 @@
       "media_type": "application/pdf",
       "title": "Statement from Example Hospital",
       "doc_type": "bill",
-      "date": "2026-04-01",
+      "date": "2026-03-18",
       "organization": "Example Hospital",
       "filed_at": "2026-06-30T08:00:00Z",
       "provenance": {
@@ -43,9 +43,9 @@
         "filed_at": "2026-06-30T08:00:00Z"
       },
       "statement": {
-        "statement_date": "2026-04-01",
+        "statement_date": "2026-03-18",
         "amount_due": {
-          "amount": "200.00",
+          "amount": "160.00",
           "currency": "USD"
         }
       }
@@ -76,7 +76,7 @@
       "id": "r_erhospitlaaaaaaaaaaa",
       "kind": "claim",
       "key": "claim|erhospitalaaaaaaaaaa",
-      "date": "2026-03-02",
+      "date": "2026-02-21",
       "display": "Institutional",
       "documents": [],
       "provenance": [
@@ -97,28 +97,28 @@
         "type": "Institutional",
         "outcome": "complete",
         "billable_period": {
-          "start": "2026-03-02",
-          "end": "2026-03-03"
+          "start": "2026-02-21",
+          "end": "2026-02-22"
         },
         "amounts": {
           "billed": {
-            "amount": "2000.00",
+            "amount": "1180.00",
             "currency": "USD"
           },
           "allowed": {
-            "amount": "700.00",
+            "amount": "512.00",
             "currency": "USD"
           },
           "plan_paid": {
-            "amount": "500.00",
+            "amount": "352.00",
             "currency": "USD"
           },
           "you_owe": {
-            "amount": "200.00",
+            "amount": "160.00",
             "currency": "USD"
           },
           "copay": {
-            "amount": "200.00",
+            "amount": "160.00",
             "currency": "USD"
           }
         },
@@ -126,45 +126,25 @@
           {
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
-              "code": "99285",
-              "display": "Emergency visit, high severity"
+              "code": "99283",
+              "display": "Emergency visit"
             },
             "category": "visit",
             "amounts": {
               "billed": {
-                "amount": "3000.00",
-                "currency": "USD"
-              },
-              "not_covered": {
-                "amount": "3000.00",
-                "currency": "USD"
-              }
-            },
-            "counted": false,
-            "sequence": 1
-          },
-          {
-            "service": {
-              "system": "http://www.ama-assn.org/go/cpt",
-              "code": "99284",
-              "display": "Emergency visit, moderate severity"
-            },
-            "category": "visit",
-            "amounts": {
-              "billed": {
-                "amount": "2000.00",
+                "amount": "940.00",
                 "currency": "USD"
               },
               "allowed": {
-                "amount": "700.00",
+                "amount": "410.00",
                 "currency": "USD"
               },
               "plan_paid": {
-                "amount": "500.00",
+                "amount": "250.00",
                 "currency": "USD"
               },
               "you_owe": {
-                "amount": "200.00",
+                "amount": "160.00",
                 "currency": "USD"
               }
             },
@@ -173,7 +153,54 @@
               "code": "0450",
               "display": "Emergency room"
             },
+            "sequence": 1
+          },
+          {
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "29125",
+              "display": "Splint on the forearm"
+            },
+            "category": "procedure",
+            "amounts": {
+              "billed": {
+                "amount": "240.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "102.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "102.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "0.00",
+                "currency": "USD"
+              }
+            },
             "sequence": 2
+          },
+          {
+            "service": {
+              "system": "https://www.cms.gov/Medicare/Coding/HCPCSReleaseCodeSets",
+              "code": "A4565",
+              "display": "Sling"
+            },
+            "category": "supply",
+            "amounts": {
+              "billed": {
+                "amount": "45.00",
+                "currency": "USD"
+              },
+              "not_covered": {
+                "amount": "45.00",
+                "currency": "USD"
+              }
+            },
+            "counted": false,
+            "sequence": 3
           }
         ]
       }
@@ -182,7 +209,7 @@
       "id": "r_erdoctoraaaaaaaaaaaa",
       "kind": "claim",
       "key": "claim|erdoctoraaaaaaaaaaaaa",
-      "date": "2026-03-02",
+      "date": "2026-02-21",
       "display": "Professional",
       "documents": [],
       "provenance": [
@@ -203,28 +230,28 @@
         "type": "Professional",
         "outcome": "complete",
         "billable_period": {
-          "start": "2026-03-02",
-          "end": "2026-03-02"
+          "start": "2026-02-21",
+          "end": "2026-02-21"
         },
         "amounts": {
           "billed": {
-            "amount": "600.00",
+            "amount": "420.00",
             "currency": "USD"
           },
           "allowed": {
-            "amount": "180.00",
+            "amount": "140.00",
             "currency": "USD"
           },
           "plan_paid": {
-            "amount": "100.00",
+            "amount": "75.00",
             "currency": "USD"
           },
           "you_owe": {
-            "amount": "80.00",
+            "amount": "65.00",
             "currency": "USD"
           },
           "deductible": {
-            "amount": "80.00",
+            "amount": "65.00",
             "currency": "USD"
           }
         },
@@ -232,25 +259,25 @@
           {
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
-              "code": "99284",
-              "display": "Emergency visit, moderate severity"
+              "code": "99283",
+              "display": "Emergency visit"
             },
             "category": "visit",
             "amounts": {
               "billed": {
-                "amount": "600.00",
+                "amount": "420.00",
                 "currency": "USD"
               },
               "allowed": {
-                "amount": "180.00",
+                "amount": "140.00",
                 "currency": "USD"
               },
               "plan_paid": {
-                "amount": "100.00",
+                "amount": "75.00",
                 "currency": "USD"
               },
               "you_owe": {
-                "amount": "80.00",
+                "amount": "65.00",
                 "currency": "USD"
               }
             },
@@ -263,7 +290,7 @@
       "id": "r_erxryaaaaaaaaaaaaaaa",
       "kind": "claim",
       "key": "claim|erxrayaaaaaaaaaaaaaaa",
-      "date": "2026-03-03",
+      "date": "2026-02-21",
       "display": "Professional",
       "documents": [],
       "provenance": [
@@ -284,20 +311,20 @@
         "type": "Professional",
         "outcome": "complete",
         "billable_period": {
-          "start": "2026-03-03",
-          "end": "2026-03-03"
+          "start": "2026-02-21",
+          "end": "2026-02-21"
         },
         "amounts": {
           "billed": {
-            "amount": "90.00",
+            "amount": "110.00",
             "currency": "USD"
           },
           "allowed": {
-            "amount": "30.00",
+            "amount": "36.00",
             "currency": "USD"
           },
           "plan_paid": {
-            "amount": "30.00",
+            "amount": "36.00",
             "currency": "USD"
           },
           "you_owe": {
@@ -309,21 +336,21 @@
           {
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
-              "code": "71046",
-              "display": "Chest X-ray, 2 views"
+              "code": "73110",
+              "display": "X-ray of the wrist"
             },
             "category": "imaging",
             "amounts": {
               "billed": {
-                "amount": "90.00",
+                "amount": "110.00",
                 "currency": "USD"
               },
               "allowed": {
-                "amount": "30.00",
+                "amount": "36.00",
                 "currency": "USD"
               },
               "plan_paid": {
-                "amount": "30.00",
+                "amount": "36.00",
                 "currency": "USD"
               },
               "you_owe": {
@@ -340,7 +367,7 @@
       "id": "r_erlbaaaaaaaaaaaaaaaa",
       "kind": "claim",
       "key": "claim|erlabaaaaaaaaaaaaaaaa",
-      "date": "2026-03-02",
+      "date": "2026-02-22",
       "display": "Professional",
       "documents": [],
       "provenance": [
@@ -361,20 +388,20 @@
         "type": "Professional",
         "outcome": "complete",
         "billable_period": {
-          "start": "2026-03-02",
-          "end": "2026-03-02"
+          "start": "2026-02-22",
+          "end": "2026-02-22"
         },
         "amounts": {
           "billed": {
-            "amount": "60.00",
+            "amount": "70.00",
             "currency": "USD"
           },
           "allowed": {
-            "amount": "10.00",
+            "amount": "12.00",
             "currency": "USD"
           },
           "plan_paid": {
-            "amount": "10.00",
+            "amount": "12.00",
             "currency": "USD"
           },
           "you_owe": {
@@ -386,21 +413,21 @@
           {
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
-              "code": "85025",
-              "display": "Blood cell test"
+              "code": "80048",
+              "display": "Basic blood tests"
             },
             "category": "lab",
             "amounts": {
               "billed": {
-                "amount": "60.00",
+                "amount": "70.00",
                 "currency": "USD"
               },
               "allowed": {
-                "amount": "10.00",
+                "amount": "12.00",
                 "currency": "USD"
               },
               "plan_paid": {
-                "amount": "10.00",
+                "amount": "12.00",
                 "currency": "USD"
               },
               "you_owe": {

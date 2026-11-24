@@ -6,12 +6,12 @@
   },
   "status": "completed",
   "medicationCodeableConcept": {
-    "text": "Vitamin D3 2,000 unit capsule"
+    "text": "Loratadine 10 mg tablet"
   },
-  "whenHandedOver": "2026-10-29",
+  "whenHandedOver": "2026-10-25",
   "quantity": {
     "value": 30,
-    "unit": "capsule"
+    "unit": "tablet"
   },
   "daysSupply": {
     "value": 30,

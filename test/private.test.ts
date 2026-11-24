@@ -53,7 +53,7 @@ describe('reading private.json', () => {
     const p = index(SAMPLE, sam).privacy!;
     if (p.kind !== 'known') throw new Error('not known');
     expect([p.records.size, p.documents.size, p.events.size]).toEqual([4, 0, 2]);
-    expect(new Set([...p.records.values(), ...p.events.values()])).toEqual(new Set(['mental_health']));
+    expect(new Set([...p.records.values(), ...p.events.values()])).toEqual(new Set(['mental_health', 'substance_use']));
     for (const name of ['Robin Example', 'Alex Example', 'Jamie Example']) expect([anyPrivate(index(SAMPLE, id(name))), isHeld(index(SAMPLE, id(name)))]).toEqual([false, false]);
     expect(held(SAMPLE)).toEqual([]);
   });
@@ -218,33 +218,33 @@ describe('a person whose list can’t be used is held back', () => {
 });
 
 describe('what the household marked', () => {
-  const day = '2026-09-12';
+  const day = '2026-08-26';
 
   it('a visit marked private takes its records and papers with it', () => {
-    const stay = eventOn(MARKED, sam, day);
-    expect(eventPrivate(stay, index(MARKED, sam))).toBe('household');
-    for (const c of stay.claims) expect(recordPrivate(index(MARKED, sam), c.record.id)).toBe('household');
+    const knee = eventOn(MARKED, sam, day);
+    expect(eventPrivate(knee, index(MARKED, sam))).toBe('household');
+    for (const c of knee.claims) expect(recordPrivate(index(MARKED, sam), c.record.id)).toBe('household');
     const bills = openBills(index(MARKED, sam), events(MARKED).filter((x) => x.person.id === sam), TODAY);
-    expect(bills.map((b) => [b.bill.provider, b.private])).toEqual([['Example Billing', undefined], ['Example General Hospital', 'household']]);
+    expect(bills.map((b) => [b.bill.provider, b.private])).toEqual([['Example Billing', undefined], ['Example Surgery Center', 'household']]);
     expect(forShared(bills).map((b) => b.bill.provider)).toEqual(['Example Billing']);
-    expect(shown(events(MARKED), undefined, false).events.some((x) => x.event.id === stay.id)).toBe(false);
+    expect(shown(events(MARKED), undefined, false).events.some((x) => x.event.id === knee.id)).toBe(false);
   });
 
   it('a paper marked not private shows, without the private visit it is in', () => {
-    const p = householdPapers(MARKED.household, MARKED.indexes, TODAY).find((x) => x.doc.title === 'Emergency department discharge instructions')!;
+    const p = householdPapers(MARKED.household, MARKED.indexes, TODAY).find((x) => x.doc.title === 'Going home after knee surgery')!;
     expect([p.private, p.with?.private, p.with?.event.start]).toEqual([undefined, 'household', day]);
     expect(paperPrivate(index(MARKED, sam), p.doc.id)).toBeUndefined();
     // The visit's other paper, its bill, was not.
     expect(householdPapers(MARKED.household, MARKED.indexes, TODAY).filter((x) => x.private).map((x) => [x.doc.title, x.private])).toEqual([
       ['Statement from Example Lab', 'household'],
-      ['Statement from Example General Hospital', 'household'],
+      ['Statement from Example Surgery Center', 'household'],
     ]);
   });
 
   it('a bill whose visit alone is private shows without the visit', () => {
     const idx = index(MARKED, sam);
-    const stay = events(MARKED).find((x) => x.person.id === sam && x.event.start === day)!;
-    const bill = openBills(idx, events(MARKED).filter((x) => x.person.id === sam), TODAY).find((b) => b.event?.event.id === stay.event.id)!;
+    const knee = events(MARKED).find((x) => x.person.id === sam && x.event.start === day)!;
+    const bill = openBills(idx, events(MARKED).filter((x) => x.person.id === sam), TODAY).find((b) => b.event?.event.id === knee.event.id)!;
     expect(forShared([bill])).toEqual([]);
     const cleared = { ...bill };
     delete cleared.private;
@@ -267,9 +267,9 @@ describe('what the household marked', () => {
   it('a fill is as private as the record it is named for, whatever its event says', () => {
     const idx = structuredClone(index(SAMPLE, sam));
     if (idx.privacy?.kind !== 'known') throw new Error('not known');
-    const fill = personEvents(idx, SAMPLE.household, TODAY).find((e) => e.kind === 'fill' && e.start === '2026-10-28')!;
+    const fill = personEvents(idx, SAMPLE.household, TODAY).find((e) => e.kind === 'fill' && e.start === '2026-10-31')!;
     expect(idx.privacy.events.delete(fill.id)).toBe(true);
-    expect(eventPrivate(fill, idx)).toBe('mental_health');
+    expect(eventPrivate(fill, idx)).toBe('substance_use');
   });
 
   it('one record and one paper marked by themselves are the only ones of theirs left off', () => {
@@ -294,8 +294,8 @@ describe('the app’s own grouping, with medrec’s list', () => {
   it('cannot tell a paper the household took out, so it stays off with its visit', () => {
     const idx = structuredClone(index(MARKED, sam));
     delete idx.events;
-    const discharge = papersOf(idx, MARKED.household, TODAY, new Map([[sam, idx]])).find((p) => p.doc.title === 'Emergency department discharge instructions')!;
-    expect(discharge.private).toBe('household');
+    const goingHome = papersOf(idx, MARKED.household, TODAY, new Map([[sam, idx]])).find((p) => p.doc.title === 'Going home after knee surgery')!;
+    expect(goingHome.private).toBe('household');
   });
 });
 
@@ -317,8 +317,8 @@ describe('what medrec’s list does not judge', () => {
     expect(studyPrivate(idx, study)).toBe(HELD);
     const note = paper(SAMPLE, sam, 'Sports medicine visit note');
     expect(studyPrivate(idx, { ...study, report: note.id })).toBeUndefined();
-    const meds = record(SAMPLE, sam, (r) => r.kind === 'medication' && /sertraline/i.test(r.display));
-    expect(studyPrivate(idx, { ...study, report: meds.id })).toBe('mental_health');
+    const meds = record(SAMPLE, sam, (r) => r.kind === 'medication' && /nicotine/i.test(r.display));
+    expect(studyPrivate(idx, { ...study, report: meds.id })).toBe('substance_use');
     expect(studyPrivate(idx, { ...study, report: 'd_notfiledyetxxxxxxxxxx' })).toBe(HELD);
   });
 
@@ -342,10 +342,10 @@ describe('search', () => {
     const scope = [...SAMPLE.indexes.values()].map((i) => ({ person: i.person, index: i, text: null }));
     const clear = scope.map((s) => ({ ...s, leave: (kind: string, item: string) => !!itemPrivate(s.index, kind, item) }));
     const names = (people: typeof scope, q: string) => find(people, q).hits.map((h) => h.title);
-    expect(names(scope, 'sertraline').length).toBe(2);
-    expect(names(clear, 'sertraline')).toEqual([]);
-    expect(names(clear, 'my meds')).not.toContain('Sertraline 50 mg tablet');
-    expect(names(scope, 'my meds')).toContain('Sertraline 50 mg tablet');
+    expect(names(scope, 'nicotine').length).toBe(2);
+    expect(names(clear, 'nicotine')).toEqual([]);
+    expect(names(clear, 'my meds')).not.toContain('Nicotine 14 mg/24 hour patch');
+    expect(names(scope, 'my meds')).toContain('Nicotine 14 mg/24 hour patch');
     expect(names(clear, 'lisinopril')).toEqual(names(scope, 'lisinopril'));
   });
 });

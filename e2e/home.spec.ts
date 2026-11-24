@@ -19,20 +19,20 @@ test('home leads with what needs you, in order, and keeps private items off it',
   await expect(needs.locator('.need-kind')).toHaveText(['Worth a call', 'No payment on file', 'No payment on file', 'Bill to pay', 'Vaccine due', 'Refill', 'Coming up', 'Coming up']);
   await expect(needs.locator('.need-title')).toHaveText([
     'Lab tests, Jul 9, 2026',
-    'Emergency room, Sep 12–13, 2026',
+    'Hospital visit, Aug 26, 2026',
     'Office visit, Oct 1, 2026',
     'Lab tests, Oct 3, 2026',
     'Flu, 2026–27 season',
-    'Vitamin D3 2,000 unit capsule',
-    'Hepatitis B, dose 2',
-    '2-month vaccines',
+    'Loratadine 10 mg tablet',
+    '4-month vaccines',
+    'Hepatitis B, dose 3',
   ]);
   await expect(needs.locator('.row').first()).toContainText('Example Billing asks $120.00; the visit’s claims say you owe $50.70');
 
   // The schedule's version and the court's stay are named; the private refill is counted, not named.
   await expect(needs).toContainText('CDC child schedule of Jul 2, 2025, restored after a court stayed the January 2026 changes on Mar 16, 2026.');
   await expect(needs).toContainText('1 private item is kept off Home. Each shows on its person’s own Health or Money.');
-  await expect(page.locator('main')).not.toContainText('Sertraline');
+  await expect(page.locator('main')).not.toContainText('Nicotine');
   await expect(page.locator('main')).not.toContainText('Counseling');
 
   // Where everyone stands: one block per person.
@@ -40,8 +40,8 @@ test('home leads with what needs you, in order, and keeps private items off it',
   await expect(stands.locator('.stand-name')).toHaveText(['Robin', 'Sam', 'Alex', 'Jamie']);
   const sam = stands.locator('.stand', { hasText: 'Sam' });
   await expect(sam).toContainText('46 years old · last visit Oct 12, 2026 at Example Lab');
-  await expect(sam.locator('.kv-row')).toHaveText(['To pay$370.00 in 2 bills, 1 worth a call', 'NextVitamin D3 2,000 unit capsule runs out about Nov 28, 2026']);
-  await expect(stands.locator('.stand', { hasText: 'Jamie' })).toContainText('2 weeks old');
+  await expect(sam.locator('.kv-row')).toHaveText(['To pay$295.00 in 2 bills, 1 worth a call', 'NextLoratadine 10 mg tablet runs out about Nov 24, 2026']);
+  await expect(stands.locator('.stand', { hasText: 'Jamie' })).toContainText('3 months old');
 
   // A bill worth a call opens Worth a call; a bill to pay opens its visit.
   await needs.locator('.row').first().locator('a.row-main').click();
@@ -50,15 +50,15 @@ test('home leads with what needs you, in order, and keeps private items off it',
   await expect(page.locator('.call.bill-picked .card-head h2')).toHaveText('Example Billing');
   await page.goBack();
   await needs.locator('.row').nth(1).locator('a.row-main').click();
-  await expect(page.locator('.event h1')).toHaveText('Emergency room · overnight');
+  await expect(page.locator('.event h1')).toHaveText('Hospital visit');
 });
 
 test('a person’s own pages list their needs, private ones marked: refills on Health, bills on Money', async ({ page }) => {
   await open(page, `#/health?who=${SAM}`);
   const due = card(page, /^Due$/);
-  await expect(due.locator('.need-title')).toHaveText(['Sertraline 50 mg tablet', 'Vitamin D3 2,000 unit capsule']);
-  const refill = due.locator('.row', { hasText: 'Sertraline' });
-  await expect(refill.locator('.row-meta')).toHaveText('Runs out about Nov 27, 2026 · 30 days filled Oct 28, 2026 at Example Pharmacy');
+  await expect(due.locator('.need-title')).toHaveText(['Loratadine 10 mg tablet', 'Nicotine 14 mg/24 hour patch']);
+  const refill = due.locator('.row', { hasText: 'Nicotine' });
+  await expect(refill.locator('.row-meta')).toHaveText('Runs out about Nov 28, 2026 · 28 days filled Oct 31, 2026 at Example Pharmacy');
   await expect(refill.locator('.chip').first()).toHaveText('Private');
   await expect(page.locator('main')).not.toContainText('kept off Home');
 
@@ -71,7 +71,7 @@ test('a person’s own pages list their needs, private ones marked: refills on H
   // From Home, Jamie's Health lists the doses coming up.
   await open(page, '#/');
   await card(page, 'Where everyone stands').getByRole('link', { name: 'Jamie' }).click();
-  await expect(card(page, /^Due$/).locator('.need-title')).toHaveText(['Hepatitis B, dose 2', '2-month vaccines']);
+  await expect(card(page, /^Due$/).locator('.need-title')).toHaveText(['4-month vaccines', 'Hepatitis B, dose 3']);
 });
 
 test('home fits a 360px phone in the dark theme', async ({ page }) => {

@@ -27,31 +27,36 @@ function dose(date: string, code: string | undefined, display: string, status = 
   };
 }
 
+const BORN = '2026-07-28';
+const AT_TWO_WEEKS = '2026-08-11';
+const birthDose = records('Jamie Example').filter((r) => r.kind === 'immunization' && r.date === BORN);
+
 describe('ages and dates', () => {
   it('counts whole months', () => {
-    expect(monthsBetween('2026-11-08', '2026-11-22')).toBe(0);
-    expect(monthsBetween('2026-11-08', '2027-01-07')).toBe(1);
-    expect(monthsBetween('2026-11-08', '2027-01-08')).toBe(2);
+    expect(monthsBetween('2026-07-28', '2026-08-11')).toBe(0);
+    expect(monthsBetween('2026-07-28', '2026-09-27')).toBe(1);
+    expect(monthsBetween('2026-07-28', '2026-09-28')).toBe(2);
     expect(monthsBetween('2018-01-01', TODAY)).toBe(106);
   });
 
   it('adds months, keeping to the end of a shorter month', () => {
-    expect(addMonths('2026-11-08', 2)).toBe('2027-01-08');
+    expect(addMonths('2026-07-28', 2)).toBe('2026-09-28');
     expect(addMonths('2027-01-31', 1)).toBe('2027-02-28');
     expect(addMonths('2028-01-31', 1)).toBe('2028-02-29');
   });
 });
 
 describe('a newborn against the schedule', () => {
-  const rows = byId(scheduleFor('2026-11-08', records('Jamie Example'), TODAY)!);
+  // Jamie at two weeks, with the birth dose alone.
+  const rows = byId(scheduleFor(BORN, birthDose, AT_TWO_WEEKS)!);
 
   it('has the birth dose of hepatitis B, and the second coming up at 1–2 months', () => {
-    expect(rows.hepb!.given.map((g) => g.day)).toEqual(['2026-11-08']);
-    expect(rows.hepb!.next).toEqual({ dose: 2, state: 'coming_up', from: '2026-12-08', when: 'at 1–2 months' });
+    expect(rows.hepb!.given.map((g) => g.day)).toEqual([BORN]);
+    expect(rows.hepb!.next).toEqual({ dose: 2, state: 'coming_up', from: '2026-08-28', when: 'at 1–2 months' });
   });
 
   it('has the 2-month doses coming up within 90 days', () => {
-    for (const id of ['rota', 'dtap', 'hib', 'pcv', 'ipv']) expect(rows[id]!.next, id).toMatchObject({ dose: 1, state: 'coming_up', from: '2027-01-08', when: 'at 2 months' });
+    for (const id of ['rota', 'dtap', 'hib', 'pcv', 'ipv']) expect(rows[id]!.next, id).toMatchObject({ dose: 1, state: 'coming_up', from: '2026-09-28', when: 'at 2 months' });
   });
 
   it('leaves the rotavirus and Hib counts open until a dose names the brand', () => {
@@ -60,12 +65,26 @@ describe('a newborn against the schedule', () => {
 
   it('has the 12-month and school-age doses later', () => {
     for (const id of ['mmr', 'var', 'hepa', 'tdap', 'hpv', 'menacwy']) expect(rows[id]!.next?.state, id).toBe('later');
-    expect(rows.mmr!.next).toMatchObject({ from: '2027-11-08', when: 'at 12–15 months' });
+    expect(rows.mmr!.next).toMatchObject({ from: '2027-07-28', when: 'at 12–15 months' });
     expect(rows.tdap!.next).toMatchObject({ when: 'at 11–12 years' });
   });
 
   it('has no flu season before 6 months', () => {
-    expect(fluSeason('2026-11-08', records('Jamie Example'), TODAY)).toBeUndefined();
+    expect(fluSeason(BORN, records('Jamie Example'), TODAY)).toBeUndefined();
+  });
+});
+
+describe('a baby with the two-month doses', () => {
+  const rows = byId(scheduleFor(BORN, records('Jamie Example'), TODAY)!);
+
+  it('has the four-month doses coming up, and counts the combination vaccine toward hepatitis B', () => {
+    for (const id of ['rota', 'dtap', 'hib', 'pcv', 'ipv']) expect(rows[id]!.next, id).toMatchObject({ dose: 2, state: 'coming_up', from: '2026-11-28', when: 'at 4 months' });
+    expect(rows.hepb!.given.map((g) => g.day)).toEqual([BORN, '2026-09-29']);
+    expect(rows.hepb!.next).toMatchObject({ dose: 3, state: 'coming_up', from: '2027-01-28' });
+  });
+
+  it('has the rotavirus and Hib counts the doses’ brands give', () => {
+    expect([rows.rota!.totalText, rows.hib!.totalText]).toEqual(['2', '4']);
   });
 });
 
@@ -147,7 +166,7 @@ describe('the schedule’s own rules', () => {
 
 describe('the overview’s digest', () => {
   it('lists a newborn’s coming doses, soonest first, then in the table’s order', () => {
-    const rows = scheduleFor('2026-11-08', records('Jamie Example'), TODAY)!;
+    const rows = scheduleFor(BORN, birthDose, AT_TWO_WEEKS)!;
     expect(digestIds(scheduleDigest(rows, undefined))).toEqual(['hepb:coming_up', 'rota:coming_up', 'dtap:coming_up', 'hib:coming_up', 'pcv:coming_up', 'ipv:coming_up']);
   });
 

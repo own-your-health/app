@@ -8,38 +8,38 @@
       "id": "r_claimreplacedaaaaaaa",
       "kind": "claim",
       "key": "claim|r_claimreplacedaaaaaaa",
-      "date": "2026-03-14",
-      "display": "Emergency visit and blood count \u00b7 Example Hospital",
+      "date": "2026-02-19",
+      "display": "MRI of the knee, no dye and Kidney test \u00b7 Example Imaging Center",
       "fields": {
-        "when": "2026-03-14",
-        "provider": "Example Hospital",
+        "when": "2026-02-19",
+        "provider": "Example Imaging Center",
         "insurer": "Example Health Plan",
         "outcome": "complete",
         "type": "Institutional",
         "billable_period": {
-          "start": "2026-03-14",
-          "end": "2026-03-14"
+          "start": "2026-02-19",
+          "end": "2026-02-19"
         },
         "category": "mixed",
         "amounts": {
           "billed": {
-            "amount": "1576.00",
+            "amount": "1244.00",
             "currency": "USD"
           },
           "allowed": {
-            "amount": "643.60",
+            "amount": "504.40",
             "currency": "USD"
           },
           "plan_paid": {
-            "amount": "493.60",
+            "amount": "379.40",
             "currency": "USD"
           },
           "copay": {
-            "amount": "150.00",
+            "amount": "125.00",
             "currency": "USD"
           },
           "you_owe": {
-            "amount": "150.00",
+            "amount": "125.00",
             "currency": "USD"
           }
         },
@@ -48,18 +48,18 @@
             "sequence": 1,
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
-              "code": "99285",
-              "display": "Emergency visit, high severity"
+              "code": "73723",
+              "display": "MRI of the knee, with and without dye"
             },
-            "serviced": "2026-03-14",
-            "category": "visit",
+            "serviced": "2026-02-19",
+            "category": "imaging",
             "amounts": {
               "billed": {
-                "amount": "3120.00",
+                "amount": "2640.00",
                 "currency": "USD"
               },
               "not_covered": {
-                "amount": "3120.00",
+                "amount": "2640.00",
                 "currency": "USD"
               }
             }
@@ -68,30 +68,30 @@
             "sequence": 2,
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
-              "code": "99284",
-              "display": "Emergency visit, moderate severity"
+              "code": "73721",
+              "display": "MRI of the knee, no dye"
             },
-            "serviced": "2026-03-14",
-            "category": "visit",
+            "serviced": "2026-02-19",
+            "category": "imaging",
             "amounts": {
               "billed": {
-                "amount": "1480.00",
+                "amount": "1180.00",
                 "currency": "USD"
               },
               "allowed": {
-                "amount": "612.40",
+                "amount": "486.00",
                 "currency": "USD"
               },
               "plan_paid": {
-                "amount": "462.40",
+                "amount": "361.00",
                 "currency": "USD"
               },
               "copay": {
-                "amount": "150.00",
+                "amount": "125.00",
                 "currency": "USD"
               },
               "you_owe": {
-                "amount": "150.00",
+                "amount": "125.00",
                 "currency": "USD"
               }
             }
@@ -100,22 +100,22 @@
             "sequence": 3,
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
-              "code": "85025",
-              "display": "Blood cell test"
+              "code": "82565",
+              "display": "Kidney test"
             },
-            "serviced": "2026-03-14",
+            "serviced": "2026-02-19",
             "category": "lab",
             "amounts": {
               "billed": {
-                "amount": "96.00",
+                "amount": "64.00",
                 "currency": "USD"
               },
               "allowed": {
-                "amount": "31.20",
+                "amount": "18.40",
                 "currency": "USD"
               },
               "plan_paid": {
-                "amount": "31.20",
+                "amount": "18.40",
                 "currency": "USD"
               },
               "you_owe": {
@@ -144,51 +144,51 @@
       "id": "r_claimreplacedwordsaa",
       "kind": "claim",
       "key": "claim|r_claimreplacedwordsaa",
-      "date": "2026-03-21",
+      "date": "2026-03-25",
       "display": "Institutional",
       "fields": {
-        "when": "2026-03-21",
-        "provider": "Example Urgent Care",
+        "when": "2026-03-25",
+        "provider": "Example Breathing Lab",
         "insurer": "Example Health Plan",
         "outcome": "complete",
         "type": "Institutional",
         "billable_period": {
-          "start": "2026-03-21",
-          "end": "2026-03-21"
+          "start": "2026-03-25",
+          "end": "2026-03-25"
         },
         "total": [
           {
             "category": "Submitted Amount",
             "amount": {
-              "amount": "900.00",
+              "amount": "720.00",
               "currency": "USD"
             }
           },
           {
             "category": "Eligible Amount",
             "amount": {
-              "amount": "420.00",
+              "amount": "310.00",
               "currency": "USD"
             }
           },
           {
             "category": "Benefit Amount",
             "amount": {
-              "amount": "340.00",
+              "amount": "250.00",
               "currency": "USD"
             }
           },
           {
             "category": "Copay",
             "amount": {
-              "amount": "80.00",
+              "amount": "60.00",
               "currency": "USD"
             }
           },
           {
             "category": "Member liability",
             "amount": {
-              "amount": "80.00",
+              "amount": "60.00",
               "currency": "USD"
             }
           }
@@ -198,29 +198,29 @@
             "sequence": 1,
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
-              "code": "99285",
-              "display": "Emergency visit, high severity"
+              "code": "94070",
+              "display": "Breathing test, long"
             },
-            "serviced": "2026-03-21",
+            "serviced": "2026-03-25",
             "adjudication": [
               {
                 "category": "Submitted Amount",
                 "amount": {
-                  "amount": "2400.00",
+                  "amount": "1150.00",
                   "currency": "USD"
                 }
               },
               {
                 "category": "Not Covered",
                 "amount": {
-                  "amount": "2400.00",
+                  "amount": "1150.00",
                   "currency": "USD"
                 }
               },
               {
                 "category": "Member liability",
                 "amount": {
-                  "amount": "2400.00",
+                  "amount": "1150.00",
                   "currency": "USD"
                 }
               }
@@ -230,43 +230,43 @@
             "sequence": 2,
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
-              "code": "99284",
-              "display": "Emergency visit, moderate severity"
+              "code": "94060",
+              "display": "Breathing test, before and after medicine"
             },
-            "serviced": "2026-03-21",
+            "serviced": "2026-03-25",
             "adjudication": [
               {
                 "category": "Submitted Amount",
                 "amount": {
-                  "amount": "900.00",
+                  "amount": "720.00",
                   "currency": "USD"
                 }
               },
               {
                 "category": "Eligible Amount",
                 "amount": {
-                  "amount": "420.00",
+                  "amount": "310.00",
                   "currency": "USD"
                 }
               },
               {
                 "category": "Benefit Amount",
                 "amount": {
-                  "amount": "340.00",
+                  "amount": "250.00",
                   "currency": "USD"
                 }
               },
               {
                 "category": "Copay",
                 "amount": {
-                  "amount": "80.00",
+                  "amount": "60.00",
                   "currency": "USD"
                 }
               },
               {
                 "category": "Member liability",
                 "amount": {
-                  "amount": "80.00",
+                  "amount": "60.00",
                   "currency": "USD"
                 }
               }
@@ -585,21 +585,21 @@
       "id": "r_claimmarkedaaaaaaaaa",
       "kind": "claim",
       "key": "claim|r_claimmarkedaaaaaaaaa",
-      "date": "2026-04-01",
+      "date": "2026-04-14",
       "display": "Institutional",
       "fields": {
-        "when": "2026-04-01",
-        "provider": "Example Hospital",
+        "when": "2026-04-14",
+        "provider": "Example Wound Clinic",
         "insurer": "Example Health Plan",
         "outcome": "complete",
         "type": "Institutional",
         "billable_period": {
-          "start": "2026-04-01",
-          "end": "2026-04-01"
+          "start": "2026-04-14",
+          "end": "2026-04-14"
         },
         "amounts": {
           "billed": {
-            "amount": "200.00",
+            "amount": "260.00",
             "currency": "USD"
           }
         },
@@ -611,18 +611,18 @@
             "sequence": 1,
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
-              "code": "99284",
-              "display": "Emergency visit, moderate severity"
+              "code": "11043",
+              "display": "Wound cleaned, deep"
             },
-            "serviced": "2026-04-01",
-            "category": "visit",
+            "serviced": "2026-04-14",
+            "category": "procedure",
             "amounts": {
               "billed": {
-                "amount": "500.00",
+                "amount": "640.00",
                 "currency": "USD"
               },
               "not_covered": {
-                "amount": "500.00",
+                "amount": "640.00",
                 "currency": "USD"
               }
             },
@@ -635,18 +635,18 @@
             "sequence": 2,
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
-              "code": "99283",
-              "display": "Emergency visit, low severity"
+              "code": "11042",
+              "display": "Wound cleaned"
             },
-            "serviced": "2026-04-01",
-            "category": "visit",
+            "serviced": "2026-04-14",
+            "category": "procedure",
             "amounts": {
               "billed": {
-                "amount": "200.00",
+                "amount": "260.00",
                 "currency": "USD"
               },
               "you_owe": {
-                "amount": "25.00",
+                "amount": "35.00",
                 "currency": "USD"
               }
             }

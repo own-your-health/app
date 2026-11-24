@@ -168,18 +168,18 @@ describe('when the store uses medrec’s events', () => {
 
 describe('medrec’s events as the app’s', () => {
   it('sorts each member into the visit’s claims, portal visits, records and papers', () => {
-    const er = events('Sam Example').find((e) => e.kind === 'er')!;
-    expect([er.start, er.end, er.title, er.place]).toEqual(['2026-09-12', '2026-09-13', 'Emergency room', 'Example General Hospital']);
-    expect(er.claims.map((c) => c.role)).toEqual(['facility', 'hospital', 'ancillary', 'ancillary', 'ancillary']);
-    expect(er.papers.map((p) => p.doc.title)).toEqual(['Emergency department discharge instructions', 'Statement from Example General Hospital']);
-    expect(ruleText(er.claims[0]!.rule)).toBe('The hospital’s own claim, over its dates');
+    const knee = events('Sam Example').find((e) => e.kind === 'outpatient')!;
+    expect([knee.start, knee.end, knee.title, knee.place]).toEqual(['2026-08-26', '2026-08-26', 'Hospital visit', 'Example Surgery Center']);
+    expect(knee.claims.map((c) => c.role)).toEqual(['facility', 'ancillary', 'service', 'service', 'service']);
+    expect(knee.papers.map((p) => p.doc.title)).toEqual(['Statement from Example Surgery Center', 'Going home after knee surgery']);
+    expect(ruleText(knee.claims[0]!.rule)).toBe('The hospital’s own claim, over its dates');
     // Any record of the visit opens it.
-    expect(eventOf(events('Sam Example'), er.claims[2]!.record.id)).toBe(er);
+    expect(eventOf(events('Sam Example'), knee.claims[2]!.record.id)).toBe(knee);
   });
 
   it('names a fill from the pharmacy’s record when no claim came with it, and keeps what medrec still expects', () => {
-    const fill = events('Sam Example').find((e) => e.start === '2026-10-29')!;
-    expect([fill.kind, fill.title, fill.claims.length, fill.recorded.map((r) => r.kind)]).toEqual(['fill', 'Vitamin D3 2,000 unit capsule', 0, ['medication']]);
+    const fill = events('Sam Example').find((e) => e.start === '2026-10-25')!;
+    expect([fill.kind, fill.title, fill.claims.length, fill.recorded.map((r) => r.kind)]).toEqual(['fill', 'Loratadine 10 mg tablet', 0, ['medication']]);
     const robinVisit = events('Robin Example').find((e) => e.start === '2026-11-18')!;
     expect(robinVisit.expected).toEqual([{ what: 'bill', why: 'No bill filed yet.', since: '2026-11-18' }]);
     expect(robinVisit.what).toBe('Blood pressure follow-up');
@@ -187,7 +187,7 @@ describe('medrec’s events as the app’s', () => {
 
   it('makes a portal stay with no claim a hospital stay', () => {
     const birth = events('Jamie Example').find((e) => e.visits.some((v) => v.record.display === 'Birth hospital stay'))!;
-    expect([birth.kind, birth.title, birth.what, birth.place]).toEqual(['stay', 'Hospital stay', 'Newborn delivery', 'Example Health Birth Center']);
+    expect([birth.kind, birth.title, birth.what, birth.place]).toEqual(['stay', 'Hospital stay', 'Birth', 'Example Health Birth Center']);
   });
 
   it('leaves out a member the index no longer has, names a kind it does not know by medrec’s title, and says why an unsure one is unsure', () => {
@@ -217,13 +217,13 @@ describe('naming an event', () => {
   const medication = () => sam().records.find((r): r is MedRecord => r.kind === 'medication' && !!r.display)!;
 
   it('heads a visit with its kind, says what it was in plain words, and keeps a billing descriptor for Details', () => {
-    const visit = events('Robin Example').find((e) => e.start === '2026-11-18')!;
-    expect([visit.title, visit.what, visit.place, visit.descriptors]).toEqual(['Office visit', 'Blood pressure follow-up', 'Example Health Main Clinic', ['RETURN APPOINTMENT TIER THREE']]);
+    const visit = events('Robin Example').find((e) => e.start === '2025-03-10')!;
+    expect([visit.title, visit.what, visit.place, visit.descriptors]).toEqual(['Office visit', 'Annual physical', 'Example Health Main Clinic', ['YEARLY EXAM RETURNING ADULT']]);
     // Named again once its records say it plainly, it keeps no descriptor.
     const again = structuredClone(visit);
-    again.visits[0]!.record.display = 'Blood pressure check';
+    again.visits[0]!.record.display = 'Yearly checkup';
     nameEvent(again, household, id('Robin Example'));
-    expect([again.what, again.descriptors]).toEqual(['Blood pressure check', undefined]);
+    expect([again.what, again.descriptors]).toEqual(['Yearly checkup', undefined]);
   });
 
   it('makes a day of vaccine claims a vaccine visit named for its dose, as the app’s own grouping does', () => {
@@ -246,10 +246,13 @@ describe('naming an event', () => {
     const said = (list: CareEvent[], day: string) => list.find((e) => e.start === day && e.kind !== 'tests')!.what;
     const own = (name: string) => careEvents(indexes.get(id(name))!, household, TODAY);
     // The portal calls each of these "Office visit": medrec's words, else the portal's reason.
-    expect(['2025-03-10', '2025-09-15', '2026-10-01'].map((day) => said(events('Robin Example'), day))).toEqual(['Annual physical', 'Follow-up visit', 'Annual physical']);
-    expect(['2025-03-10', '2025-09-15', '2026-10-01'].map((day) => said(own('Robin Example'), day))).toEqual(['Annual physical', 'Follow-up', 'Annual physical']);
-    // medrec's "Emergency room visit" is the title again, so the claims say it.
-    expect(said(events('Sam Example'), '2026-09-12')).toBe('Emergency visit, moderate severity and chest X-ray, 2 views');
+    expect(['2025-09-15', '2026-10-01', '2026-11-18'].map((day) => said(events('Robin Example'), day))).toEqual(['Follow-up visit', 'Annual physical', 'Blood pressure follow-up']);
+    expect(['2025-09-15', '2026-10-01', '2026-11-18'].map((day) => said(own('Robin Example'), day))).toEqual(['Follow-up', 'Annual physical', 'Blood pressure follow-up']);
+    // medrec's words, unless they are the title again: then the claims say it.
+    expect(said(events('Sam Example'), '2026-08-26')).toBe('Knee scope, one side and Antibiotic during surgery');
+    const knee = structuredClone(events('Sam Example').find((e) => e.start === '2026-08-26')!);
+    nameEvent(knee, household, id('Sam Example'), { what: knee.title });
+    expect(knee.what).toBe('Knee scope, one side and antibiotic during surgery');
     // medrec's words come before the portal's name for the visit ("Sick visit").
     expect(said(events('Alex Example'), '2026-11-20')).toBe('Ear pain');
   });
@@ -270,17 +273,18 @@ describe('naming an event', () => {
     expect(visit.place).toBe('Example Health Main Clinic');
   });
 
-  it('names a fill for the pharmacy’s record of the drug, never a claim’s word for any drug, at its store with its number once', () => {
+  it('names a fill for the pharmacy’s record of the drug, never a claim’s word for any drug', () => {
     const fill = events('Robin Example').find((e) => e.kind === 'fill' && e.start === '2026-11-12')!;
-    expect([fill.title, fill.what, fill.place, fill.claims[0]!.provider]).toEqual(['Lisinopril 10 mg tablet', undefined, 'Example Pharmacy #1234', 'Example Pharmacy #1234']);
+    expect([fill.title, fill.what, fill.place, fill.claims[0]!.provider]).toEqual(['Lisinopril 10 mg tablet', undefined, 'Example Pharmacy', 'Example Pharmacy']);
     // A claim that says only "Prescription drug", with no record of the drug.
-    const claimOnly = { ...blank('fill'), claims: fill.claims };
+    const claimOnly = { ...blank('fill'), claims: structuredClone(fill.claims) };
+    for (const item of claimOnly.claims[0]!.record.fields.items as { service: { display: string } }[]) item.service.display = 'Prescription drug';
     nameEvent(claimOnly, household, id('Robin Example'));
     expect(claimOnly.title).toBe('Pharmacy fill');
     // A drug a pharmacy names in capitals.
     const capitals = blank('fill');
-    nameEvent(capitals, household, id('Sam Example'), { what: 'SERTRALINE 50 MG TABLET' });
-    expect(capitals.title).toBe('Sertraline 50 mg tablet');
+    nameEvent(capitals, household, id('Sam Example'), { what: 'CETIRIZINE 10 MG TABLET' });
+    expect(capitals.title).toBe('Cetirizine 10 mg tablet');
   });
 
   it('names a fill or a vaccine known only from the portal for what it was', () => {
@@ -313,6 +317,6 @@ describe('a folder without events.json', () => {
     const own = personEvents(index, household, TODAY);
     expect(own.length).toBeGreaterThan(0);
     expect(own.every((e) => e.id.startsWith('r_'))).toBe(true);
-    expect(own.find((e) => e.kind === 'er')?.claims).toHaveLength(5);
+    expect(own.find((e) => e.kind === 'outpatient')?.claims).toHaveLength(5);
   });
 });
