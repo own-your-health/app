@@ -321,10 +321,10 @@ for (const [date, k, cr, na] of [['2025-03-10', 4.4, 0.8, 140], ['2025-09-15', 4
   lab(R, src.robinChart, date, ['2160-0', 'Creatinine [Mass/volume] in Serum or Plasma', 'Creatinine', cr, 'mg/dL', '0.6-1.2 mg/dL', 'Normal']);
   lab(R, src.robinChart, date, ['2951-2', 'Sodium [Moles/volume] in Serum or Plasma', 'Sodium', na, 'mmol/L', '136-145 mmol/L', 'Normal']);
 }
-for (const [date, reason] of [['2025-03-10', 'Annual physical'], ['2025-09-15', 'Follow-up'], ['2026-10-01', 'Annual physical']]) {
+for (const [date, reason, code] of [['2025-03-10', 'Annual physical', '99396'], ['2025-09-15', 'Follow-up', '99213'], ['2026-10-01', 'Annual physical', '99396']]) {
   R.record(src.robinChart, 'Encounter', 'encounter', {
     date,
-    code: { system: 'http://www.ama-assn.org/go/cpt', code: '99396', display: 'Office visit' },
+    code: { system: 'http://www.ama-assn.org/go/cpt', code, display: 'Office visit' },
     display: 'Office visit',
     status: 'finished',
     fields: { class: 'ambulatory', practitioner: 'Dr. Jordan Sample', location: 'Example Health Main Clinic', reason, period: { start: `${date}T14:00:00Z`, end: `${date}T14:40:00Z` } },
@@ -1320,9 +1320,10 @@ for (const path of list) {
 const MEDREC = process.env.MEDREC ?? 'medrec';
 const medrecVersion = execFileSync(MEDREC, ['--version'], { encoding: 'utf8' }).trim().split(/\s+/).at(-1);
 // 0.9.1 dates a portal stay across its days and makes a day's doses one
-// event; the sample's checks expect both.
+// event. 0.9.3 names a visit plainly for its code and makes a day billed only
+// for vaccines a vaccine. The sample's checks expect all of it.
 const [major, minor, patch] = medrecVersion.split('.').map(Number);
-if (major === 0 && (minor < 9 || (minor === 9 && patch < 1))) throw new Error(`medrec ${medrecVersion} writes the sample's events differently: set MEDREC to medrec 0.9.1 or later`);
+if (major === 0 && (minor < 9 || (minor === 9 && patch < 3))) throw new Error(`medrec ${medrecVersion} writes the sample's events differently: set MEDREC to medrec 0.9.3 or later`);
 const medrecHome = mkdtempSync(join(tmpdir(), 'medrec-demo-'));
 try {
   const env = {

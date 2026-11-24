@@ -1744,11 +1744,11 @@
     {
       "id": "r_xg4egjewerq2z3hkgdfs",
       "kind": "encounter",
-      "key": "encounter|http://www.ama-assn.org/go/cpt|99396|2025-09-15",
+      "key": "encounter|http://www.ama-assn.org/go/cpt|99213|2025-09-15",
       "date": "2025-09-15",
       "code": {
         "system": "http://www.ama-assn.org/go/cpt",
-        "code": "99396",
+        "code": "99213",
         "display": "Office visit"
       },
       "display": "Office visit",
