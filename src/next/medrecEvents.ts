@@ -5,7 +5,8 @@
 import { claimCategory } from '../model/claims';
 import type { MedrecEvent, MedrecEvents } from '../model/events';
 import type { Household, MedDocument, MedRecord, PersonIndex } from '../model/types';
-import { nameEvent, type CareEvent, type ClaimRole, type EventKind } from './event';
+import { knownArea } from '../model/private';
+import { eventPrivate, nameEvent, type CareEvent, type ClaimRole, type EventKind } from './event';
 import { tidyName } from '../model/words';
 
 const KINDS: Record<string, EventKind> = {
@@ -72,7 +73,7 @@ export function fromMedrec(file: MedrecEvents, index: PersonIndex, household: Ho
     if (m.place) e.place = m.place;
     if (m.expected.length) e.expected = m.expected;
     if (m.confidence === 'unsure') e.doubt = m.could_join.length > 1 ? `It could be part of any of ${m.could_join.length} other visits` : m.could_join.length ? 'It could be part of another visit' : 'medrec is not sure what it belongs with';
-    nameEvent(e, household, index.person, { ...(title ? { title } : {}), ...(m.what ? { what: m.what } : {}) });
+    nameEvent(e, household, index.person, { ...(title ? { title } : {}), ...(m.what ? { what: m.what } : {}), private: !!knownArea(eventPrivate(e, index)) });
     return [e];
   });
 }

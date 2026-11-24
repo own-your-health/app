@@ -7,12 +7,13 @@
 // events, load.ts reads those instead and this file is deleted.
 
 import { claimCategory, claimProvider, claimVisitId, countedLines, isPharmacyClaim } from '../model/claims';
+import { knownArea } from '../model/private';
 import { sameProvider } from '../model/providers';
 import { day, decimalCents, isWithdrawn, organizationName, sortByDateDesc, str } from '../model/records';
 import type { Household, MedRecord, PersonIndex } from '../model/types';
 import { recentVisits, visitTimeline, type Visit } from '../model/visits';
 
-import { eventMoney, nameEvent, type CareEvent, type ClaimRole, type Confidence, type EventKind, type Rule } from './event';
+import { eventMoney, eventPrivate, nameEvent, type CareEvent, type ClaimRole, type Confidence, type EventKind, type Rule } from './event';
 
 // ---- Claims (C) ----
 
@@ -340,7 +341,7 @@ export function careEvents(index: PersonIndex, household: Household, today: stri
     }
   }
 
-  for (const e of events) nameEvent(e, household, index.person);
+  for (const e of events) nameEvent(e, household, index.person, { private: !!knownArea(eventPrivate(e, index)) });
   return events.sort((a, b) => b.start.localeCompare(a.start) || b.end.localeCompare(a.end) || a.id.localeCompare(b.id));
 }
 

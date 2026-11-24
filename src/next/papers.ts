@@ -6,9 +6,10 @@
 // which.
 
 import { billList } from '../model/billing';
+import { HELD, inVisit, paperPrivate } from '../model/private';
 import type { Household, MedDocument, PersonIndex } from '../model/types';
 import { dateText } from '../ui/format';
-import { privateArea, type CareEvent, type Confidence } from './event';
+import { eventPrivate, type CareEvent, type Confidence } from './event';
 import { personEvents } from './load';
 
 /** How a paper is with its visit: the visit holds it, a record of the visit links it, or it is the receipt for the visit's bill. */
@@ -18,14 +19,19 @@ export interface Paper {
   doc: MedDocument;
   /** Whose folder holds it. */
   person: string;
-  /** Its visit, and whose visit that is: another person's for a paper filed under a parent before a birth (medrec's X2). */
-  with?: { event: CareEvent; person: string; how: PaperHow; confidence: Confidence };
+  /** Its visit, and whose visit that is: another person's for a paper filed under a parent before a birth (medrec's X2); `private` says why a shared screen does not name it. */
+  with?: { event: CareEvent; person: string; how: PaperHow; confidence: Confidence; private?: string };
   /** Why it is with no visit. */
   why?: string;
   /** The visits a paper with none could be part of. */
   could?: CareEvent[];
-  /** Its private area, when it, its visit, or a visit it could be part of is private. */
-  privateArea?: string;
+  /**
+   * Why it stays off shared screens: the private area of it, a record that
+   * names it, its visit or a visit it could be part of, or HELD. medrec judged
+   * a paper its events hold with that visit, so one it left out, the household
+   * took out, and only its visit stays private.
+   */
+  private?: string;
 }
 
 /** Why a paper of a kind that is about no one visit is with none. */
@@ -65,10 +71,17 @@ export function papersOf(index: PersonIndex, household: Household, today: string
 
   return index.documents
     .map((doc): Paper => {
-      const own = doc.private === true ? (doc.private_area ?? 'household') : undefined;
+      const own = paperPrivate(index, doc.id);
+      const areaOf = (e: CareEvent, of: string) => {
+        const idx = of === person ? index : indexes.get(of);
+        return idx ? eventPrivate(e, idx) : HELD;
+      };
       const place = (event: CareEvent, of: string, how: PaperHow, confidence: Confidence): Paper => {
-        const area = own ?? privateArea(event);
-        return { doc, person, with: { event, person: of, how, confidence }, ...(area ? { privateArea: area } : {}) };
+        const visits = areaOf(event, of);
+        // Another person's visit (X2) does not decide: the paper is judged as its own person's.
+        const judged = of !== person || (how === 'event' && inVisit(index, doc.id));
+        const area = own ?? (judged ? undefined : visits);
+        return { doc, person, with: { event, person: of, how, confidence, ...(visits ? { private: visits } : {}) }, ...(area ? { private: area } : {}) };
       };
       const held = byDoc.get(doc.id);
       if (held) return place(held.event, held.person, 'event', held.confidence);
@@ -79,8 +92,8 @@ export function papersOf(index: PersonIndex, household: Household, today: string
       if (billed) return place(billed.event, billed.person, 'bill', 'likely');
       // A paper that could be part of a private visit is private too: its line names that visit.
       const loose = (why: string, could?: CareEvent[]): Paper => {
-        const area = own ?? (could ?? []).map(privateArea).find(Boolean);
-        return { doc, person, why, ...(could?.length ? { could } : {}), ...(area ? { privateArea: area } : {}) };
+        const area = own ?? (could ?? []).map((e) => areaOf(e, person)).find(Boolean);
+        return { doc, person, why, ...(could?.length ? { could } : {}), ...(area ? { private: area } : {}) };
       };
       const could = pending.get(doc.id);
       if (could?.length) return loose(`It fits ${could.length} visits, so medrec puts it with none of them.`, could);

@@ -8,12 +8,13 @@
 // from the app's own grouping still finds its visit.
 
 import type { MedrecEvents } from '../model/events';
+import type { Privacy } from '../model/private';
 import type { Household, PersonIndex } from '../model/types';
 import type { CareEvent } from './event';
 import { careEvents } from './grouping';
 import { fromMedrec } from './medrecEvents';
 
-const cache = new WeakMap<PersonIndex, { today: string; household: Household; file: MedrecEvents | undefined; events: CareEvent[] }>();
+const cache = new WeakMap<PersonIndex, { today: string; household: Household; file: MedrecEvents | undefined; privacy: Privacy | undefined; events: CareEvent[] }>();
 
 /** Whose events medrec grouped: false while the app groups a person's records itself. */
 export const groupedByMedrec = (index: PersonIndex): boolean => !!index.events;
@@ -21,8 +22,8 @@ export const groupedByMedrec = (index: PersonIndex): boolean => !!index.events;
 /** A person's events, newest first, made once per loaded index and day. */
 export function personEvents(index: PersonIndex, household: Household, today: string): CareEvent[] {
   const hit = cache.get(index);
-  if (hit && hit.today === today && hit.household === household && hit.file === index.events) return hit.events;
+  if (hit && hit.today === today && hit.household === household && hit.file === index.events && hit.privacy === index.privacy) return hit.events;
   const events = index.events ? fromMedrec(index.events, index, household) : careEvents(index, household, today);
-  cache.set(index, { today, household, file: index.events, events });
+  cache.set(index, { today, household, file: index.events, privacy: index.privacy, events });
   return events;
 }

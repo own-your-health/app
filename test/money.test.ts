@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PersonIndex } from '../src/model/types';
 import { householdEvents } from '../src/next/calendar';
-import { billPrivateArea, byDue, callsSummary, explainedLines, openBills, paidBills, unbilledShares, type OpenBill } from '../src/next/money';
+import { billPrivate, byDue, callsSummary, explainedLines, openBills, paidBills, unbilledShares, type OpenBill } from '../src/next/money';
 import { demo, personNamed } from './demo-data';
 
 const TODAY = '2026-11-22';
@@ -64,16 +64,17 @@ describe('worth a call', () => {
     expect([...robin].reverse().sort(byDue).map((b) => b.bill.due)).toEqual(['2026-11-19', '2026-11-27']);
   });
 
-  it('takes a bill’s privacy from the bill, else from its visit', () => {
-    const doc = index('Robin Example').documents.find((d) => d.doc_type === 'bill')!;
+  it('takes a bill’s privacy from its visit when medrec did not judge the two together', () => {
+    const idx = index('Sam Example');
+    const doc = idx.documents.find((d) => d.doc_type === 'bill')!;
     const visit = events('Sam Example').find((x) => x.private)!;
-    expect([billPrivateArea(doc), billPrivateArea({ ...doc, private: true }), billPrivateArea({ ...doc, private: true, private_area: 'reproductive' }), billPrivateArea(doc, visit)]).toEqual([undefined, 'household', 'reproductive', 'mental_health']);
+    expect([billPrivate(idx, doc), billPrivate(idx, doc, visit), billPrivate(idx, { ...doc, id: 'd_inanovisitofmedrecsx' }, visit)]).toEqual([undefined, undefined, 'mental_health']);
   });
 });
 
 describe('what the plan changed', () => {
   it('lists the left-out lines of the last year with what the visit’s provider is owed in all', () => {
-    expect(explainedLines(events('Sam Example'), TODAY).map((x) => [x.event.event.start, x.provider, x.insurer, x.line.label, x.share])).toEqual([['2026-09-12', 'Example General Hospital', 'Example Care Plan', 'Emergency visit, high severity', 25000]]);
-    expect(explainedLines(events('Sam Example'), '2027-09-13')).toEqual([]);
+    expect(explainedLines(index('Sam Example'), events('Sam Example'), TODAY).map((x) => [x.event.event.start, x.provider, x.insurer, x.line.label, x.share])).toEqual([['2026-09-12', 'Example General Hospital', 'Example Care Plan', 'Emergency visit, high severity', 25000]]);
+    expect(explainedLines(index('Sam Example'), events('Sam Example'), '2027-09-13')).toEqual([]);
   });
 });

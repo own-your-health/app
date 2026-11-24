@@ -8,6 +8,7 @@
 import { billList, owedByProvider, type Bill } from '../model/billing';
 import { sameProvider } from '../model/providers';
 import { claimLines, type ClaimLine } from '../model/claims';
+import { documentPrivate, inVisit, recordPrivate, recordsPrivate } from '../model/private';
 import { str, toCents } from '../model/records';
 import type { MedDocument, MedRecord, PersonIndex } from '../model/types';
 import type { PersonEvent } from './calendar';
@@ -37,9 +38,24 @@ export interface OpenBill {
   private?: string;
 }
 
-/** Why a bill is private: its own marker, else its visit's; undefined when neither is. */
-export function billPrivateArea(doc: MedDocument, event?: PersonEvent): string | undefined {
-  return doc.private ? (doc.private_area ?? 'household') : event?.private;
+/**
+ * Why a bill is private: medrec's answer for it, else its visit's. medrec
+ * judged a bill its events hold with that visit, so one it left out, the
+ * household took out, and only its visit stays private.
+ */
+export function billPrivate(idx: PersonIndex, doc: MedDocument, event?: PersonEvent): string | undefined {
+  return documentPrivate(idx, doc.id) ?? (event && inVisit(idx, doc.id) ? undefined : event?.private);
+}
+
+/** What a shared screen shows of some bills: those not private, without the visit of one whose visit is. */
+export function forShared<T extends { private?: string; event?: PersonEvent }>(bills: T[]): T[] {
+  return bills.flatMap((b) => {
+    if (b.private) return [];
+    if (!b.event?.private) return [b];
+    const shown = { ...b };
+    delete shown.event;
+    return [shown];
+  });
 }
 
 /** Open bills in the order they are listed: overdue first, then by due date. */
@@ -56,7 +72,7 @@ export function openBills(idx: PersonIndex, events: PersonEvent[], today: string
       const own = event?.money.charges.find((c) => sameProvider(c.provider, provider));
       const shares = event?.money.charges.filter((c) => (c.share ?? 0) > 0) ?? [];
       const claimSays = own ? (own.share ?? 0) : shares.length ? shares.reduce((t, c) => t + c.share!, 0) : undefined;
-      const area = billPrivateArea(bill.doc, event);
+      const area = billPrivate(idx, bill.doc, event);
       return {
         bill,
         cents,
@@ -96,7 +112,10 @@ export function unbilledShares(idx: PersonIndex, events: PersonEvent[]): Unbille
       .filter((c) => (c.share ?? 0) > 0)
       .filter((c) => !papers.some((d) => sameProvider(c.provider, d.organization)))
       .filter((c) => !receipts.some((r) => sameProvider(c.provider, r.organization) && !!r.date && r.date >= e.start))
-      .map((c) => ({ event: x, provider: c.provider, cents: c.share!, ...(x.private ? { private: x.private } : {}) }));
+      .map((c) => {
+        const area = x.private ?? recordsPrivate(idx, c.claims.map((r) => r.id));
+        return { event: x, provider: c.provider, cents: c.share!, ...(area ? { private: area } : {}) };
+      });
   });
 }
 
@@ -114,7 +133,7 @@ export function paidBills(idx: PersonIndex, events: PersonEvent[]): PaidBill[] {
     .filter((b) => b.receipt)
     .map((bill): PaidBill => {
       const event = events.find((x) => eventOf([x.event], bill.doc.id));
-      const area = billPrivateArea(bill.doc, event);
+      const area = billPrivate(idx, bill.doc, event);
       const cents = toCents(bill.amount);
       return { bill, ...(cents !== undefined ? { cents } : {}), ...(event ? { event } : {}), ...(area ? { private: area } : {}) };
     });
@@ -168,7 +187,7 @@ export interface Explained {
 export const EXPLAINED_DAYS = 365;
 
 /** The left-out lines of visits from the last EXPLAINED_DAYS, newest visit first. */
-export function explainedLines(events: PersonEvent[], today: string): Explained[] {
+export function explainedLines(idx: PersonIndex, events: PersonEvent[], today: string): Explained[] {
   const since = new Date(Date.parse(`${today}T00:00:00Z`) - EXPLAINED_DAYS * 86_400_000).toISOString().slice(0, 10);
   return events
     .filter((x) => x.event.start >= since)
@@ -178,6 +197,7 @@ export function explainedLines(events: PersonEvent[], today: string): Explained[
           .filter((l) => !l.counted)
           .map((line): Explained => {
             const share = x.money.charges.find((ch) => sameProvider(ch.provider, c.provider))?.share;
+            const area = x.private ?? recordPrivate(idx, c.record.id);
             return {
               event: x,
               claim: c.record,
@@ -185,7 +205,7 @@ export function explainedLines(events: PersonEvent[], today: string): Explained[
               insurer: str(c.record.fields.insurer) ?? 'The plan',
               line,
               ...(share !== undefined ? { share } : {}),
-              ...(x.private ? { private: x.private } : {}),
+              ...(area ? { private: area } : {}),
             };
           }),
       ),

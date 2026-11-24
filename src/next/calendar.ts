@@ -3,8 +3,9 @@
 // line: a dot for a visit or a test, a ring for a pharmacy trip or a vaccine,
 // a bar across the days of an emergency room visit or a hospital stay.
 
+import { HELD } from '../model/private';
 import type { Household, Person, PersonIndex } from '../model/types';
-import { eventMoney, privateArea, type CareEvent, type EventMoney } from './event';
+import { eventMoney, eventPrivate, type CareEvent, type EventMoney } from './event';
 import { personEvents } from './load';
 
 export interface PersonEvent {
@@ -13,7 +14,7 @@ export interface PersonEvent {
   lane: number;
   event: CareEvent;
   money: EventMoney;
-  /** Why it is private, when it is (medrec's `private_area`). */
+  /** Why it stays off shared screens: its private area, or HELD; undefined when it does not. */
   private?: string;
 }
 
@@ -24,7 +25,7 @@ export function householdEvents(household: Household, index: (id: string) => Per
     const idx = index(person.id);
     if (!idx) return;
     for (const event of personEvents(idx, household, today)) {
-      const area = privateArea(event);
+      const area = eventPrivate(event, idx);
       out.push({ person, lane, event, money: eventMoney(event), ...(area ? { private: area } : {}) });
     }
   });
@@ -34,13 +35,16 @@ export function householdEvents(household: Household, index: (id: string) => Per
 /**
  * What a view shows: one person's events, private ones too (their own page),
  * or everyone's, where a private event shows only when the household turned
- * that on. `hidden` counts the private events left out.
+ * that on. `hidden` counts the private events left out. Events held back,
+ * because no current list says which are private, never show on everyone's,
+ * and are not counted as private.
  */
 export function shown(events: PersonEvent[], who: string | undefined, showPrivate: boolean): { events: PersonEvent[]; hidden: number } {
   if (who) return { events: events.filter((x) => x.person.id === who), hidden: 0 };
-  if (showPrivate) return { events, hidden: 0 };
-  const kept = events.filter((x) => !x.private);
-  return { events: kept, hidden: events.length - kept.length };
+  const cleared = events.filter((x) => x.private !== HELD);
+  if (showPrivate) return { events: cleared, hidden: 0 };
+  const kept = cleared.filter((x) => !x.private);
+  return { events: kept, hidden: cleared.length - kept.length };
 }
 
 export type MarkShape = 'dot' | 'ring' | 'bar';

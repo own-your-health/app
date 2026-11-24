@@ -1,11 +1,13 @@
 // Home: quiet until something needs you. First what needs you
 // (bills worth a call, bills to pay, vaccine doses, refills, doses coming
 // up), then where everyone stands, then what happened recently. Home is a
-// shared screen: anything private stays off it, counted and not named. A
+// shared screen: anything private stays off it, counted and not named, and so
+// does everything of a person's while nothing says which of it is private. A
 // person's own Health (vaccines and refills) and Money (bills) list the same
 // needs, private ones marked.
 
 import { formatMoney, fromCents } from '../model/records';
+import { knownArea, whyHeld } from '../model/private';
 import { SCHEDULE_SOURCE } from '../model/schedule';
 import type { Person, PersonIndex } from '../model/types';
 import { card, chip, kv, link, row, type Ctx } from '../ui/components';
@@ -15,7 +17,8 @@ import type { Route } from '../ui/router';
 import { householdEvents, type PersonEvent } from './calendar';
 import { recentCard } from './calendarView';
 import { eventRoute, eventWhen } from './eventView';
-import { openBills, type OpenBill } from './money';
+import { forShared, openBills, type OpenBill } from './money';
+import { anyLeftOff, heldNotes, privateCount } from './shared';
 import { daysBetween, refillsDue, vaccineNeeds, type DoseVisit, type Refill, type VaccineNeeds } from './needs';
 import { called } from '../model/people';
 
@@ -31,7 +34,7 @@ function needRow(kind: string, tone: Tone, opts: { route: Route; title: string; 
     meta: typeof opts.meta === 'string' ? opts.meta.charAt(0).toUpperCase() + opts.meta.slice(1) : opts.meta,
     class: 'need',
     title: [h('span', { class: ['need-kind', `need-${tone}`] }, kind), h('span', { class: 'need-title' }, opts.title)],
-    aside: [opts.private ? chip('Private', 'muted') : null, opts.aside ?? null],
+    aside: [knownArea(opts.private) ? chip('Private', 'muted') : null, opts.aside ?? null],
   });
 }
 
@@ -139,13 +142,18 @@ interface Standing {
   bills: OpenBill[];
   refills: Refill[];
   vaccines?: VaccineNeeds;
+  /** Their visits are all private, so none is named. */
+  quiet?: boolean;
+  /** Why all their items are held back. */
+  held?: string;
 }
 
 /** One person's lines: open bills, what comes next, current medicines, the latest visit. */
-function standing(s: Standing, today: string, error?: string): HTMLElement {
+function standing(s: Standing, today: string, left: boolean, error?: string): HTMLElement {
   const p = s.person;
   const head = h('h3', { class: 'card-sub stand-name' }, link({ name: 'health', who: p.id }, called(p)));
   if (!s.idx) return h('div', { class: 'stand' }, head, h('p', { class: 'small muted' }, error ?? 'Loading…'));
+  if (s.held) return h('div', { class: 'stand' }, head, h('p', { class: 'small muted' }, p.birth_date ? ageWords(p.birth_date, today) : null), h('p', null, 'Left off Home'));
   const calls = s.bills.filter((b) => b.verdict !== 'matches').length;
   const owed = s.bills.reduce((t, b) => t + b.cents, 0);
   const v = s.vaccines;
@@ -165,7 +173,7 @@ function standing(s: Standing, today: string, error?: string): HTMLElement {
       { class: 'small muted' },
       [
         p.birth_date ? ageWords(p.birth_date, today) : null,
-        s.latest ? `last visit ${dateText(s.latest.event.start)}${s.latest.event.place ? ` at ${s.latest.event.place}` : ''}` : 'no visits in these records',
+        s.latest ? `last visit ${dateText(s.latest.event.start)}${s.latest.event.place ? ` at ${s.latest.event.place}` : ''}` : s.quiet ? null : 'no visits in these records',
       ]
         .filter(Boolean)
         .join(' · '),
@@ -175,7 +183,7 @@ function standing(s: Standing, today: string, error?: string): HTMLElement {
           ['To pay', owed ? `${money(owed)} in ${count(s.bills.length, 'bill')}${calls ? `, ${calls} worth a call` : ''}` : null],
           ['Next', nexts[0]?.text ?? null],
         ])
-      : h('p', null, 'Nothing due'),
+      : h('p', null, left ? 'Nothing due listed here' : 'Nothing due'),
   );
 }
 
@@ -190,11 +198,13 @@ interface PersonNeeds {
   standing: Standing;
 }
 
-/** One person's needs as rows. On their own page (`own`) private ones are in and marked, and rows leave out the name; elsewhere private ones are left out and counted. */
+/** One person's needs as rows. On their own page (`own`) private ones are in and marked, and rows leave out the name; elsewhere private ones are left out and counted, and a person whose items are held back has none. */
 function personNeeds(p: Person, idx: PersonIndex, mine: PersonEvent[], today: string, own: boolean): PersonNeeds {
+  const held = own ? undefined : whyHeld(idx);
+  if (held) return { calls: [], pay: [], vaccines: [], refills: [], soon: [], kept: 0, standing: { person: p, idx, bills: [], refills: [], held } };
   const allBills = openBills(idx, mine, today);
   const allRefills = refillsDue(idx, today);
-  const bills = own ? allBills : allBills.filter((b) => !b.private);
+  const bills = own ? allBills : forShared(allBills);
   const refills = own ? allRefills : allRefills.filter((r) => !r.private);
   const vaccines = vaccineNeeds(p.birth_date, idx, today);
   const vRow = vaccines ? vaccinesDueRow(p, vaccines, own) : null;
@@ -204,14 +214,14 @@ function personNeeds(p: Person, idx: PersonIndex, mine: PersonEvent[], today: st
     vaccines: vRow ? [vRow] : [],
     refills: refills.map((r) => refillRow(p, r, own)),
     soon: (vaccines?.visits ?? []).map((v) => visitRow(p, v, own)),
-    kept: allBills.length - bills.length + allRefills.length - refills.length,
+    kept: own ? 0 : privateCount([...allBills, ...allRefills].map((x) => x.private)),
     // A pharmacy fill is not a visit.
-    standing: { person: p, idx, latest: mine.find((x) => x.event.kind !== 'fill' && (own || !x.private)), bills, refills, ...(vaccines ? { vaccines } : {}) },
+    standing: { person: p, idx, latest: mine.find((x) => x.event.kind !== 'fill' && (own || !x.private)), bills, refills, ...(vaccines ? { vaccines } : {}), quiet: !own && mine.some((x) => x.event.kind !== 'fill' && x.private) },
   };
 }
 
 /** The Needs you card over one or more people's needs (one person's on their own page), with the notes its rows call for. */
-function needsCard(all: PersonNeeds[], own?: string): HTMLElement | null {
+function needsCard(all: PersonNeeds[], notes: HTMLElement[], own?: string): HTMLElement | null {
   const byDay = (k: 'calls' | 'pay') => all.flatMap((n) => n[k]).sort((a, b) => a.day.localeCompare(b.day)).map((x) => x.el);
   const pick = (k: 'vaccines' | 'refills' | 'soon') => all.flatMap((n) => n[k]);
   const [calls, pay, vaccines, refills, soon] = [byDay('calls'), byDay('pay'), pick('vaccines'), pick('refills'), pick('soon')];
@@ -220,7 +230,7 @@ function needsCard(all: PersonNeeds[], own?: string): HTMLElement | null {
   if (!rows.length && own) return null;
   return card(
     { title: 'Needs you', actions: rows.length ? h('span', { class: 'small muted' }, count(rows.length, 'thing')) : null },
-    rows.length ? rows : h('p', null, 'Nothing needs you: no open bill, no vaccine dose due or coming up, and no refill running out.'),
+    rows.length ? rows : h('p', null, notes.length || kept ? 'Nothing to show here.' : 'Nothing needs you: no open bill, no vaccine dose due or coming up, and no refill running out.'),
     vaccines.length || soon.length
       ? h(
           'p',
@@ -234,6 +244,7 @@ function needsCard(all: PersonNeeds[], own?: string): HTMLElement | null {
       ? h('p', { class: 'small muted' }, 'A bill stays here until a receipt from its provider is filed after it. ', link({ name: 'money', view: 'bills', ...(own ? { who: own } : {}) }, 'Bills: each one beside its claim'))
       : null,
     kept ? h('p', { class: 'small muted' }, `${count(kept, 'private item')} ${kept === 1 ? 'is' : 'are'} kept off Home. Each shows on its person’s own Health or Money.`) : null,
+    notes,
   );
 }
 
@@ -242,17 +253,18 @@ export function nextHome(ctx: Ctx, signIn: HTMLElement | null): HTMLElement[] {
   const store = ctx.store;
   const today = localDay(ctx.now());
   const all = householdEvents(store.household, (id) => store.index(id), today);
+  const left = anyLeftOff(store);
   const needs: PersonNeeds[] = [];
   const stands: HTMLElement[] = [];
   for (const p of store.household.people) {
     const idx = store.index(p.id);
     if (!idx) {
-      stands.push(standing({ person: p, bills: [], refills: [] }, today, store.indexErrors.get(p.id)));
+      stands.push(standing({ person: p, bills: [], refills: [] }, today, left, store.indexErrors.get(p.id)));
       continue;
     }
     const n = personNeeds(p, idx, all.filter((x) => x.person.id === p.id), today, false);
     needs.push(n);
-    stands.push(standing(n.standing, today));
+    stands.push(standing(n.standing, today, left));
   }
-  return [needsCard(needs)!, ...(signIn ? [signIn] : []), card({ title: 'Where everyone stands' }, stands, h('p', { class: 'small' }, link({ name: 'health' }, 'Health: what each person has now and what is worth a look'))), recentCard(ctx)];
+  return [needsCard(needs, heldNotes(ctx, 'Home'))!, ...(signIn ? [signIn] : []), card({ title: 'Where everyone stands' }, stands, h('p', { class: 'small' }, link({ name: 'health' }, 'Health: what each person has now and what is worth a look'))), recentCard(ctx)];
 }

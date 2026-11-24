@@ -410,7 +410,6 @@ function allergyView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
       kv([
         ['Reaction', reactions.length ? reactions.join(', ') : undefined],
         ['Risk', crit && Object.hasOwn(CRITICALITY_TEXT, crit) ? sentence(CRITICALITY_TEXT[crit]!) : crit],
-        ['Kind', str(r.fields.category)],
       ]),
       learnLink(r, name),
     ),
@@ -428,11 +427,10 @@ function immunizationView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
       given ? null : chip(statusText(r.status) ?? 'Not given', 'muted'),
       ['Vaccine', given ? `given ${dateText(r.date)}` : dateText(r.date), fromText(ctx, idx, r)],
       kv([
-        ['Where', str(r.fields.performer) ?? str(r.fields.location)],
+        ['Where', str(r.fields.performer)],
         ['Site', str(r.fields.site)],
         ['How', route !== undefined ? fieldValue(route) : undefined],
         ['Lot', str(r.fields.lot_number)],
-        ['Why not given', given ? undefined : str(r.fields.status_reason)],
       ]),
       learnLink(r, name),
     ),

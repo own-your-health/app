@@ -81,7 +81,7 @@ test('a private event stays off the Everyone calendar until shown, and on its pe
   const own = card(page, 'What happened in October 2026');
   await expect(own.locator('.row-title')).toHaveText(['Vitamin D3 2,000 unit capsule · Example Pharmacy', 'Sertraline 50 mg tablet · Example Pharmacy', 'Office visit · Example Counseling', 'Lab tests · Example Lab']);
   await own.locator('.row', { hasText: 'Counseling session' }).locator('a.row-main').click();
-  await expect(page.locator('.event-private')).toContainText('Mental health. Kept off Home and the Everyone calendar.');
+  await expect(page.locator('.event-private')).toContainText('Mental health. Kept off Home and everyone’s Calendar, Money, Papers and search results.');
 
   // Home's shared list leaves it off.
   await page.goto('./?demo#/');

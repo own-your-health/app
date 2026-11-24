@@ -30,7 +30,7 @@ test('everyone’s Health gives each person’s standing and counts what it keep
 
   const jamie = card(page, /^Jamie$/);
   await expect(jamie.locator('.card-head')).toContainText('Doctors’ records only');
-  await expect(jamie.locator('dd').first()).toHaveText('Nothing now. Next: Hepatitis B, dose 2 from Dec 8, 2026');
+  await expect(jamie.locator('dd').first()).toHaveText('Nothing listed here. Next: Hepatitis B, dose 2 from Dec 8, 2026');
 
   await sam.getByRole('link', { name: 'Sam’s health' }).click();
   await expect(page).toHaveURL(new RegExp(`#/health\\?who=${SAM}$`));

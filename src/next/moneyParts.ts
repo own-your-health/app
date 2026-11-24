@@ -2,6 +2,7 @@
 // everyone or one person (private ones kept off the shared view, counted),
 // the heading with its Whose choices, and the money formats.
 
+import { knownArea } from '../model/private';
 import { formatMoney, fromCents } from '../model/records';
 import type { Person } from '../model/types';
 import { chip, link, type Ctx } from '../ui/components';
@@ -10,7 +11,7 @@ import { count, localDay } from '../ui/format';
 import { href, type Route } from '../ui/router';
 import { householdEvents, type PersonEvent } from './calendar';
 import { eventWhen } from './eventView';
-import { byDue, explainedLines, openBills, paidBills, unbilledShares, type Explained, type OpenBill, type PaidBill, type Unbilled } from './money';
+import { byDue, explainedLines, forShared, openBills, paidBills, unbilledShares, type Explained, type OpenBill, type PaidBill, type Unbilled } from './money';
 import { called } from '../model/people';
 
 export type MoneyRoute = Extract<Route, { name: 'money' }>;
@@ -18,14 +19,14 @@ export type MoneyRoute = Extract<Route, { name: 'money' }>;
 export const money = (cents: number) => formatMoney(fromCents(cents)) ?? '';
 export const num = (cents: number) => h('span', { class: 'num' }, money(cents));
 export const visitText = (x: PersonEvent) => `${x.event.title}, ${eventWhen(x.event)}`;
-export const privateChip = (area: string | undefined) => (area ? chip('Private', 'muted') : null);
+export const privateChip = (area: string | undefined) => (knownArea(area) ? chip('Private', 'muted') : null);
 
 export interface Mine<T> {
   person: Person;
   item: T;
 }
 
-/** Everyone's bills, or one person's: private ones kept off the shared view, and how many each part left off. */
+/** Everyone's bills, or one person's: private ones kept off the shared view, and how many each part left off; those only held back are not counted as private. */
 export function gather(ctx: Ctx, who: string | undefined) {
   const store = ctx.store;
   const today = localDay(ctx.now());
@@ -44,14 +45,15 @@ export function gather(ctx: Ctx, who: string | undefined) {
       continue;
     }
     const mine = all.filter((x) => x.person.id === p.id);
-    const keep = <T extends { private?: string }>(xs: T[]): { shown: Mine<T>[]; left: T[] } => ({
-      shown: (who ? xs : xs.filter((x) => !x.private)).map((item) => ({ person: p, item })),
-      left: who ? [] : xs.filter((x) => x.private),
+    const keep = <T extends { private?: string }>(xs: T[], share: (xs: T[]) => T[]): { shown: Mine<T>[]; left: T[] } => ({
+      shown: (who ? xs : share(xs)).map((item) => ({ person: p, item })),
+      left: who ? [] : xs.filter((x) => knownArea(x.private)),
     });
-    const o = keep(openBills(idx, mine, today));
-    const u = keep(unbilledShares(idx, mine));
-    const pd = keep(paidBills(idx, mine));
-    const ex = keep(explainedLines(mine, today));
+    const cleared = <T extends { private?: string }>(xs: T[]) => xs.filter((x) => !x.private);
+    const o = keep(openBills(idx, mine, today), forShared);
+    const u = keep(unbilledShares(idx, mine), cleared);
+    const pd = keep(paidBills(idx, mine), forShared);
+    const ex = keep(explainedLines(idx, mine, today), cleared);
     open.push(...o.shown);
     unbilled.push(...u.shown);
     paid.push(...pd.shown);

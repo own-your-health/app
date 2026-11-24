@@ -12,6 +12,8 @@ import { yearList } from '../ui/views/person';
 import { eventRoute, eventWhen, headline } from './eventView';
 import { householdPapers, papersOf, type Paper, type PaperHow } from './papers';
 import { called } from '../model/people';
+import { knownArea } from '../model/private';
+import { heldNotes, privateCount } from './shared';
 
 type Show = 'all' | 'with' | 'none';
 
@@ -23,11 +25,12 @@ const HOW: Record<PaperHow, string> = {
 };
 
 /** Where a paper belongs, in a line: its visit as a link, or why it has none. */
-function placeLine(ctx: Ctx, p: Paper): HTMLElement {
+function placeLine(ctx: Ctx, p: Paper, everyone: boolean): HTMLElement {
   const name = (id: string) => (ctx.store.person(id) ? called(ctx.store.person(id)!) : 'someone else');
   const visit = (e: NonNullable<Paper['with']>['event'], person: string) => link(eventRoute(person, e.id), `${[headline(e).title, e.place].filter(Boolean).join(' at ')}, ${eventWhen(e)}`);
   if (p.with) {
     const w = p.with;
+    if (everyone && w.private) return h('p', { class: 'paper-place small' }, 'With a visit kept off this shared view.');
     return h(
       'p',
       { class: 'paper-place small' },
@@ -53,8 +56,8 @@ function paperRow(ctx: Ctx, p: Paper, everyone: boolean): HTMLElement {
     route: { name: 'item', person: p.person, id: p.doc.id },
     title: documentTitle(p.doc),
     meta: [docTypeLabel(p.doc.doc_type), dateText(p.doc.date), everyone && ctx.store.person(p.person) ? called(ctx.store.person(p.person)!) : null, p.doc.organization, p.doc.pages ? count(p.doc.pages, 'page') : null].filter(Boolean).join(' · '),
-    aside: p.privateArea ? chip('Private', 'muted') : undefined,
-    extra: h('div', null, placeLine(ctx, p), h('div', { class: 'row-actions' }, driveLink(ctx, p.doc.path))),
+    aside: knownArea(p.private) ? chip('Private', 'muted') : undefined,
+    extra: h('div', null, placeLine(ctx, p, everyone), h('div', { class: 'row-actions' }, driveLink(ctx, p.doc.path))),
   });
 }
 
@@ -85,8 +88,8 @@ export function papersView(ctx: Ctx, route: Extract<Route, { name: 'papers' }>):
   const unreadable = people.filter((p) => store.indexErrors.has(p.id));
   const all = who ? (store.index(who) ? papersOf(store.index(who)!, store.household, today, store.indexes) : []) : householdPapers(store.household, store.indexes, today);
   // Everyone's list is shared: a private paper shows only on its person's own.
-  const kept = who ? all : all.filter((p) => !p.privateArea);
-  const hidden = all.length - kept.length;
+  const kept = who ? all : all.filter((p) => !p.private);
+  const hidden = who ? 0 : privateCount(all.map((p) => p.private));
   const withVisit = kept.filter((p) => p.with).length;
 
   let show: Show = 'all';
@@ -118,6 +121,7 @@ export function papersView(ctx: Ctx, route: Extract<Route, { name: 'papers' }>):
           h('p', { class: 'small muted' }, 'This is discretion, not security: everyone the Drive folder is shared with can still read those files.'),
         )
       : null,
+    ...(who ? [] : heldNotes(ctx, 'this shared view')),
   ];
 
   return h(

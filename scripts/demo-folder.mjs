@@ -8,12 +8,10 @@
 // them (LOAD_TIMES in src/folder.ts), so the sample's loads always look
 // recent; times of care stay as written.
 
-import { createHash } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { APP_VIEW, md5Of, withMedrec } from './medrec.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'demo');
 const ANCHOR = '2026-11-22T20:00:00Z';
@@ -1238,18 +1236,16 @@ S.document(null, { date: '2026-09-13', doc_type: 'discharge_summary', title: 'Em
 S.write();
 
 // ---- A private visit ----
-// Sam's video counseling session. medrec marks a record private from its
-// codes (`private`, `private_area`), so the app keeps it on Sam's own pages
-// and off the household's shared screens unless someone turns that on.
-const counseling = S.record(src.samChart, 'Encounter', 'encounter', {
+// Sam's video counseling session. Its practice says its area, so medrec lists
+// it in Sam's private.json, and the app keeps it on Sam's own pages and off
+// the household's shared screens unless someone turns that on.
+S.record(src.samChart, 'Encounter', 'encounter', {
   date: '2026-10-27',
   display: 'Counseling session',
   status: 'finished',
   fields: { class: 'virtual', practitioner: 'Dr. Morgan Placeholder', location: 'Example Counseling', reason: 'Anxiety' },
   resource: { status: 'finished', class: { code: 'VR' }, type: [{ text: 'Counseling session' }], period: { start: '2026-10-27T21:00:00Z' }, reasonCode: [{ text: 'Anxiety' }] },
 });
-counseling.private = true;
-counseling.private_area = 'mental_health';
 S.write();
 
 // ---- Refills ----
@@ -1263,26 +1259,20 @@ S.record(src.samChart, 'MedicationDispense', 'medication', {
   fields: { dosage: 'Take 1 capsule by mouth once a day', quantity: '30 capsule', days_supply: 30, pharmacy: 'Example Pharmacy', prescriber: 'Dr. Casey Placeholder', source: 'dispense' },
   resource: { status: 'completed', medicationCodeableConcept: { text: 'Vitamin D3 2,000 unit capsule' }, whenHandedOver: '2026-10-29', quantity: { value: 30, unit: 'capsule' }, daysSupply: { value: 30, unit: 'days' } },
 });
-const sertraline = [
-  S.record(src.samChart, 'MedicationRequest', 'medication', {
-    date: '2026-10-27',
-    display: 'Sertraline 50 mg tablet',
-    status: 'active',
-    fields: { dosage: 'Take 1 tablet by mouth once a day', prescriber: 'Dr. Morgan Placeholder', source: 'request' },
-    resource: { status: 'active', intent: 'order', medicationCodeableConcept: { text: 'Sertraline 50 mg tablet' }, authoredOn: '2026-10-27', dosageInstruction: [{ text: 'Take 1 tablet by mouth once a day' }] },
-  }),
-  S.record(src.samChart, 'MedicationDispense', 'medication', {
-    date: '2026-10-28',
-    display: 'Sertraline 50 mg tablet',
-    status: 'completed',
-    fields: { dosage: 'Take 1 tablet by mouth once a day', quantity: '30 tablet', days_supply: 30, pharmacy: 'Example Pharmacy', prescriber: 'Dr. Morgan Placeholder', source: 'dispense' },
-    resource: { status: 'completed', medicationCodeableConcept: { text: 'Sertraline 50 mg tablet' }, whenHandedOver: '2026-10-28', quantity: { value: 30, unit: 'tablet' }, daysSupply: { value: 30, unit: 'days' } },
-  }),
-];
-for (const r of sertraline) {
-  r.private = true;
-  r.private_area = 'mental_health';
-}
+S.record(src.samChart, 'MedicationRequest', 'medication', {
+  date: '2026-10-27',
+  display: 'Sertraline 50 mg tablet',
+  status: 'active',
+  fields: { dosage: 'Take 1 tablet by mouth once a day', prescriber: 'Dr. Morgan Placeholder', source: 'request' },
+  resource: { status: 'active', intent: 'order', medicationCodeableConcept: { text: 'Sertraline 50 mg tablet' }, authoredOn: '2026-10-27', dosageInstruction: [{ text: 'Take 1 tablet by mouth once a day' }] },
+});
+S.record(src.samChart, 'MedicationDispense', 'medication', {
+  date: '2026-10-28',
+  display: 'Sertraline 50 mg tablet',
+  status: 'completed',
+  fields: { dosage: 'Take 1 tablet by mouth once a day', quantity: '30 tablet', days_supply: 30, pharmacy: 'Example Pharmacy', prescriber: 'Dr. Morgan Placeholder', source: 'dispense' },
+  resource: { status: 'completed', medicationCodeableConcept: { text: 'Sertraline 50 mg tablet' }, whenHandedOver: '2026-10-28', quantity: { value: 30, unit: 'tablet' }, daysSupply: { value: 30, unit: 'days' } },
+});
 S.write();
 
 // ---- What the counseling cost ----
@@ -1291,9 +1281,7 @@ S.write();
 // owes a copay and no bill has come yet. It is the newest claim to print
 // Sam's plan balances, so a shared view must not date or link it. Drawn
 // last, so no other id moves.
-const counselingClaim = claimOf(S, src.samPlan, { date: '2026-10-27', provider: 'Example Counseling', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-10-27'), diagnoses: [['F41.1', 'Generalized anxiety disorder']], lines: [['90834', 'Talk therapy session', '180.00', '110.00', '0.00', '30.00', '0.00', '80.00']], balances: careBalance('217.40', '497.40') });
-counselingClaim.private = true;
-counselingClaim.private_area = 'mental_health';
+claimOf(S, src.samPlan, { date: '2026-10-27', provider: 'Example Counseling', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-10-27'), diagnoses: [['F41.1', 'Generalized anxiety disorder']], lines: [['90834', 'Talk therapy session', '180.00', '110.00', '0.00', '30.00', '0.00', '80.00']], balances: careBalance('217.40', '497.40') });
 S.write();
 
 // ---- Write ----
@@ -1307,51 +1295,21 @@ for (const path of list) {
 }
 
 // ---- medrec's views ----
-// The app reads each person's events from medrec's views: views/views.json
-// and views/<person id>/events.<md5>.json (medrec 0.9.0 and later). medrec
-// writes them here itself, under a scratch home and profile, so this
-// machine's own medrec setup is never touched: it gets only the variables
-// below, every config, data, cache and state directory inside the scratch
-// home, and no MEDREC_* setting of the shell's. The time zone is fixed (a US
-// one, as medrec reads a UTC time's day in the writing machine's zone), so a
-// visit's local days are the same on every machine. MEDREC names the binary,
-// else `medrec` on the PATH. The app reads no other view, so the rest are
-// not kept.
-const MEDREC = process.env.MEDREC ?? 'medrec';
-const medrecVersion = execFileSync(MEDREC, ['--version'], { encoding: 'utf8' }).trim().split(/\s+/).at(-1);
-// 0.9.1 dates a portal stay across its days and makes a day's doses one
-// event. 0.9.3 names a visit plainly for its code and makes a day billed only
-// for vaccines a vaccine. The sample's checks expect all of it.
-const [major, minor, patch] = medrecVersion.split('.').map(Number);
-if (major === 0 && (minor < 9 || (minor === 9 && patch < 3))) throw new Error(`medrec ${medrecVersion} writes the sample's events differently: set MEDREC to medrec 0.9.3 or later`);
-const medrecHome = mkdtempSync(join(tmpdir(), 'medrec-demo-'));
-try {
-  const env = {
-    PATH: process.env.PATH ?? '/usr/bin:/bin',
-    ...(process.env.TMPDIR ? { TMPDIR: process.env.TMPDIR } : {}),
-    HOME: medrecHome,
-    XDG_CONFIG_HOME: join(medrecHome, '.config'),
-    XDG_DATA_HOME: join(medrecHome, '.local', 'share'),
-    XDG_CACHE_HOME: join(medrecHome, '.cache'),
-    XDG_STATE_HOME: join(medrecHome, '.local', 'state'),
-    MEDREC_PROFILE: 'demo',
-    TZ: 'America/New_York',
-    LANG: 'C.UTF-8',
-    NO_COLOR: '1',
-  };
-  for (const args of [['profiles', 'add', 'demo'], ['init', ROOT], ['views', 'write', '--all']]) execFileSync(MEDREC, ['-q', ...args], { env, stdio: ['ignore', 'ignore', 'inherit'] });
-} finally {
-  rmSync(medrecHome, { recursive: true, force: true });
-}
+// The app reads each person's events and private items from medrec's views:
+// views/views.json and, under views/<person id>/, events.<md5>.json (medrec
+// 0.9.0 and later) and private.<md5>.json (0.9.1 and later). medrec writes
+// them here itself (scripts/medrec.mjs): nothing in them is set by hand. The
+// app reads no other view, so the rest are not kept.
+withMedrec(ROOT, (medrec) => medrec('views', 'write', '--all'));
 list.push('views/views.json');
 for (const person of readdirSync(join(ROOT, 'views'), { withFileTypes: true }).filter((e) => e.isDirectory())) {
   for (const name of readdirSync(join(ROOT, 'views', person.name))) {
-    if (/^events\.[0-9a-f]{12}\.json$/.test(name)) list.push(`views/${person.name}/${name}`);
+    if (APP_VIEW.test(name)) list.push(`views/${person.name}/${name}`);
     else rmSync(join(ROOT, 'views', person.name, name));
   }
 }
 list.sort();
-// Each file's MD5, as Drive reports it: the app checks medrec's events against them.
-const md5 = Object.fromEntries(list.map((f) => [f, createHash('md5').update(readFileSync(join(ROOT, f))).digest('hex')]));
+// Each file's MD5, as Drive reports it: the app checks medrec's views against them.
+const md5 = Object.fromEntries(list.map((f) => [f, md5Of(readFileSync(join(ROOT, f)))]));
 writeFileSync(join(ROOT, 'manifest.json'), `${JSON.stringify({ anchor: ANCHOR, files: list, md5 }, null, 2)}\n`);
 console.log(`wrote ${list.length} files under public/demo/`);
