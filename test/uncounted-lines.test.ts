@@ -78,10 +78,10 @@ describe('a line the claim’s totals leave out', () => {
     expect(claimsOf(of(named.id).filter((l) => l.code === '85025'), lines).map((x) => [x.cents.youOwe, x.lines.length, x.of])).toEqual([[15000, 1, 3]]);
   });
 
-  it('downloads with its service as the payer wrote it, its amounts empty and "yes" in the last column', () => {
+  it('downloads with its service as the payer wrote it, its amounts empty and "yes" under Left out by the plan', () => {
     const [left, paid] = toCsv(of(named.id).slice(0, 2), new Map()).split('\r\n').slice(1);
-    expect(left).toBe('2026-03-14,,Example Hospital,Example Health Plan,2026-01-01 to 2026-12-31,"Emergency visit, high severity",99285,CPT,Visit,,,,,,,,,r_claimreplacedaaaaaaa,yes');
-    expect(paid).toMatch(/,150\.00,r_claimreplacedaaaaaaa,$/);
+    expect(left).toBe('2026-03-14,,Example Hospital,Example Health Plan,2026-01-01 to 2026-12-31,"Emergency visit, high severity",99285,CPT,Visit,,,,,,,,,r_claimreplacedaaaaaaa,yes,');
+    expect(paid).toMatch(/,150\.00,r_claimreplacedaaaaaaa,,$/);
   });
 });
 

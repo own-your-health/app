@@ -12,7 +12,7 @@
 // `{ words: true }` searches every word as written instead, and so does a
 // concept with nothing that has the other words ("Example Lab").
 
-import { claimAmounts, claimDiagnoses, claimLines, diagnosisText } from './claims';
+import { claimAmounts, claimDiagnoses, claimLines, diagnosisText, revenueText } from './claims';
 import { panelFor } from './panels';
 import { KIND_LABELS, asMoney, docTypeLabel, documentTitle, formatMoney, resultReading, seriesKey, str, studyTitle, toCents, valueText } from './records';
 import { unitText } from './result';
@@ -254,7 +254,8 @@ function lineFields(r: MedRecord): [string, string, true][] {
   return claimLines(r).map((l): [string, string, true] => {
     const amount = l.amounts.youOwe ?? l.amounts.billed;
     const said = !l.counted ? 'left out by the plan, not owed' : amount ? `${l.amounts.youOwe ? 'you owe' : 'billed'} ${formatMoney(amount)}` : '';
-    return ['Line', [`${l.label}${l.code && l.code !== l.label ? ` (${l.code})` : ''}`, said].filter(Boolean).join(' · '), true];
+    const revenue = l.revenue && l.revenue.code !== l.code ? revenueText(l.revenue) : '';
+    return ['Line', [`${l.label}${l.code && l.code !== l.label ? ` (${l.code})` : ''}`, revenue, said].filter(Boolean).join(' · '), true];
   });
 }
 
