@@ -230,6 +230,11 @@ export const PRIVATE_AREAS: Record<string, string> = {
   household: 'Marked private',
 };
 
+/** How many vaccines a vaccine event gave: its doses from the portal, else one. */
+export function doseCount(e: CareEvent): number {
+  return Math.max(1, e.recorded.filter((r) => r.kind === 'immunization').length);
+}
+
 /** Its title, and its place when its source gave none: the portal's words where there are some, else `title` (medrec's, for a kind the app does not know), else from the claims. */
 export function nameEvent(e: CareEvent, household: Household, person: string, title?: string): void {
   const v = e.visits[0]?.record;
@@ -248,7 +253,9 @@ export function nameEvent(e: CareEvent, household: Household, person: string, ti
     const cats = new Set(e.claims.map((c) => claimCategory(c.record)));
     e.title = cats.size === 1 && cats.has('imaging') ? 'Imaging' : cats.size === 1 && cats.has('lab') ? 'Lab tests' : 'Tests';
   } else if ((e.kind === 'service' || e.kind === 'fill' || e.kind === 'vaccine') && first) e.title = claimTitle(first);
-  // A fill or a vaccine known only from the portal is named for what it was.
-  else if (!e.claims.length && e.recorded[0]?.display && (e.kind === 'fill' || e.kind === 'vaccine')) e.title = e.recorded[0].display;
+  // A fill or a vaccine known only from the portal is named for what it was;
+  // a day's several doses, for how many, since their names hold commas
+  // ("Influenza, seasonal, injectable") that would muddle a list.
+  else if (!e.claims.length && e.recorded[0]?.display && (e.kind === 'fill' || e.kind === 'vaccine')) e.title = e.kind === 'vaccine' && doseCount(e) > 1 ? `${doseCount(e)} vaccines` : e.recorded[0].display;
   else e.title = KIND_TITLES[e.kind];
 }

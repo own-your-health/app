@@ -98,6 +98,18 @@ test('the list has every event by month, and a person’s Health opens theirs', 
   await expect(page.locator('.cal-private')).toContainText('2 private events');
 });
 
+test('a day of several vaccines counts its doses, and its page lists each from the clinic’s records', async ({ page }) => {
+  await open(page, '#/calendar?view=list&who=p_xo4em46i7yj3hphlpajo');
+  const october = card(page, 'October 2025');
+  await expect(october).toContainText('2 vaccines.');
+  await october.getByRole('link', { name: /2 vaccines/ }).click();
+  await expect(page.locator('main h1')).toHaveText('2 vaccines');
+  await expect(page.locator('.event-sources')).toHaveText('Example Health 2 records');
+  const happened = card(page, /^What happened$/);
+  await expect(happened.locator('.row-title')).toHaveText(['COVID-19 vaccine', 'Influenza, seasonal, injectable']);
+  await expect(happened).toContainText('From the provider’s own records.');
+});
+
 test('the month fits a 360px phone in the dark theme', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 780 });
   await page.emulateMedia({ colorScheme: 'dark' });

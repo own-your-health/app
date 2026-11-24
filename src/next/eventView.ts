@@ -51,8 +51,9 @@ export function eventNumber(m: EventMoney): string | undefined {
 function sourcesStrip(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
   const portal = e.visits.length + e.recorded.length;
   const insurers = [...new Set(e.claims.map((c) => str(c.record.fields.insurer)).filter((x): x is string => !!x))];
-  const orgs = [...new Set(e.visits.flatMap((v) => v.record.provenance.map((p) => p.source.organization_id)).filter((x): x is string => !!x))];
-  const orgName = orgs.length ? organizationName(ctx.store.household, idx.person, orgs[0]!) : 'The portal';
+  // The clinic or pharmacy whose portal gave the records: a visit's, else a dose's or a medicine's.
+  const orgs = [...new Set([...e.visits.map((v) => v.record), ...e.recorded].flatMap((r) => r.provenance.map((p) => p.source.organization_id)).filter((x): x is string => !!x))];
+  const orgName = orgs.length ? organizationName(ctx.store.household, idx.person, orgs[0]!) : 'Portal';
   const part = (label: string, n: string) => h('span', { class: 'event-source' }, h('span', { class: 'event-source-label' }, label), ' ', h('strong', null, n));
   return h(
     'p',
@@ -126,7 +127,7 @@ function settledLine(idx: PersonIndex, e: CareEvent, m: EventMoney): HTMLElement
   );
 }
 
-/** What happened: the portal's words when there are any, else the papers', else the claims'. */
+/** What happened: the portal's visits when there are any, else its doses, medicines and procedures with what the claims billed, else the papers'. */
 function happenedCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
   if (e.visits.length) {
     const conditions = e.recorded.filter((r) => r.kind === 'condition').map(recordTitle);
@@ -145,15 +146,25 @@ function happenedCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
       h('p', { class: 'small muted' }, 'From the provider’s own records.'),
     );
   }
+  // A fill or a vaccine the portal knows with no visit (medrec makes one of each, and of a day's doses).
+  const recorded = e.recorded.filter((r) => r.kind === 'procedure' || r.kind === 'immunization' || r.kind === 'medication');
   const summaries = e.papers.filter((p) => p.doc.doc_type === 'discharge_summary' || p.doc.doc_type === 'visit_summary');
   const services = [...new Set(e.claims.flatMap((c) => claimLines(c.record).filter((l) => l.counted).map((l) => l.label)))];
   const diagnoses = [...new Set(e.claims.flatMap((c) => claimDiagnoses(c.record).map(diagnosisText)))];
+  const from = recorded.length
+    ? e.claims.length
+      ? 'From the provider’s own records and the claims.'
+      : 'From the provider’s own records.'
+    : e.claims.length
+      ? 'From the claims: no portal record of this visit is in the folder.'
+      : 'From the papers.';
   return card(
     { title: 'What happened' },
+    recorded.map((r) => row({ route: itemRoute(idx.person, r.id), title: recordTitle(r), meta: [KIND_LABELS[r.kind] ?? r.kind, str(r.fields.dosage)].filter(Boolean).join(' · ') })),
     services.length ? h('p', null, h('span', { class: 'muted' }, 'Billed for: '), services.join(', ')) : null,
     diagnoses.length ? h('p', null, h('span', { class: 'muted' }, diagnoses.length === 1 ? 'Diagnosis: ' : 'Diagnoses: '), diagnoses.join(', ')) : null,
     summaries.length ? h('p', null, h('span', { class: 'muted' }, 'Read more in: '), ...summaries.flatMap((p, i) => [i ? ', ' : null, link(itemRoute(idx.person, p.doc.id), documentTitle(p.doc))])) : null,
-    h('p', { class: 'small muted' }, e.claims.length ? 'From the claims: no portal record of this visit is in the folder.' : 'From the papers.'),
+    h('p', { class: 'small muted' }, from),
   );
 }
 
