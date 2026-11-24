@@ -280,6 +280,7 @@ export function nameEvent(e: CareEvent, household: Household, person: string, ti
   else delete e.what;
   const descriptors = [...new Set(said.filter(isDescriptor))];
   if (descriptors.length) e.descriptors = descriptors;
+  else delete e.descriptors;
 }
 
 function kindTitle(e: CareEvent, claimSaid: string | undefined): string {
