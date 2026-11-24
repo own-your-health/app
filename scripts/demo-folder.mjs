@@ -429,10 +429,10 @@ const planBalance = [
 const CPT = 'http://www.ama-assn.org/go/cpt';
 const claims = [
   ['2026-11-18', 'Example Health', [['99213', 'Office visit', '180.00', '112.50', '87.50', '25.00']]],
-  ['2026-10-03', 'Example Lab', [['80061', 'Lipid panel', '180.00', '78.40', '62.72', '15.68'], ['36415', 'Blood draw', '40.00', '18.00', '14.40', '3.60']]],
+  ['2026-10-03', 'Example Lab', [['80061', 'Cholesterol tests', '180.00', '78.40', '62.72', '15.68'], ['36415', 'Blood draw', '40.00', '18.00', '14.40', '3.60']]],
   ['2026-10-01', 'Example Health', [['99396', 'Preventive visit', '320.00', '210.00', '168.00', '42.00'], ['90686', 'Flu vaccine', '62.00', '38.40', '30.72', '7.68'], ['90471', 'Vaccine given', '30.00', '20.00', '16.00', '4.00']], planBalance],
   ['2025-09-15', 'Example Health', [['99213', 'Office visit', '189.00', '121.10', '121.10', '0.00']]],
-  ['2025-03-10', 'Example Health', [['99214', 'Office visit', '290.00', '190.00', '152.00', '38.00'], ['85025', 'Blood count', '108.00', '65.90', '52.72', '13.18']]],
+  ['2025-03-10', 'Example Health', [['99214', 'Office visit', '290.00', '190.00', '152.00', '38.00'], ['85025', 'Blood cell test', '108.00', '65.90', '52.72', '13.18']]],
 ];
 const sum = (xs) => (xs.reduce((a, x) => a + Math.round(Number(x) * 100), 0) / 100).toFixed(2);
 const adjudication = (billed, allowed, paid, coinsurance) => [
@@ -557,11 +557,11 @@ for (const [code, name, display, v, unit, range, interp] of [
 // do: the app shows its reason instead and keeps the descriptor for Details.
 R.record(src.robinChart, 'Encounter', 'encounter', {
   date: '2026-11-18',
-  code: { system: 'http://www.ama-assn.org/go/cpt', code: '99213', display: 'OFFICE VISIT EST PATIENT LEVEL 3' },
-  display: 'OFFICE VISIT EST PATIENT LEVEL 3',
+  code: { system: 'http://www.ama-assn.org/go/cpt', code: '99213', display: 'RETURN APPOINTMENT TIER THREE' },
+  display: 'RETURN APPOINTMENT TIER THREE',
   status: 'finished',
   fields: { class: 'ambulatory', practitioner: 'Dr. Jordan Sample', location: 'Example Health Main Clinic', reason: 'Blood pressure follow-up', period: { start: '2026-11-18T15:00:00Z', end: '2026-11-18T15:20:00Z' } },
-  resource: { status: 'finished', class: { code: 'AMB', display: 'ambulatory' }, type: [{ text: 'OFFICE VISIT EST PATIENT LEVEL 3' }], period: { start: '2026-11-18T15:00:00Z', end: '2026-11-18T15:20:00Z' }, reasonCode: [{ text: 'Blood pressure follow-up' }] },
+  resource: { status: 'finished', class: { code: 'AMB', display: 'ambulatory' }, type: [{ text: 'RETURN APPOINTMENT TIER THREE' }], period: { start: '2026-11-18T15:00:00Z', end: '2026-11-18T15:20:00Z' }, reasonCode: [{ text: 'Blood pressure follow-up' }] },
 });
 R.document(src.robinChart, { date: '2026-11-18', doc_type: 'lab_report', title: 'Basic metabolic panel', organization: 'Example Health', text: 'Basic metabolic panel. Potassium 5.4 mmol/L (high). Creatinine 0.9 mg/dL.', original: 'basic_metabolic_panel.pdf', filed: ROBIN_CHART_LOAD });
 const rChart = R.importRun(src.robinChart, { importedAt: ROBIN_CHART_LOAD, added: 2, updated: 0, unchanged: 41, docs: 1 });
@@ -1059,7 +1059,7 @@ const coverage = (P, s, display, relationship) =>
 coverage(S, src.samPlan, 'Example Care Plan HMO', 'self');
 claimOf(S, src.samPlan, { date: '2026-05-20', provider: 'Example Health', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-05-20'), diagnoses: [['S93.401A', 'Sprain of unspecified ligament of right ankle, initial encounter']], lines: [['99214', 'Office visit', '260.00', '168.00', '0.00', '40.00', '0.00', '128.00'], ['73610', 'X-ray of the ankle', '145.00', '82.00', '0.00', '0.00', '16.40', '65.60']] });
 claimOf(S, src.samPlan, { date: '2026-07-09', provider: 'Example Lab', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-07-09'), liability: false, diagnoses: [['Z13.29', 'Encounter for screening for other suspected endocrine disorder']], lines: [['84443', 'Thyroid test (TSH)', '95.00', '41.20', '41.20', '0.00', '0.00', '0.00'], ['36415', 'Blood draw', '25.00', '9.50', '9.50', '0.00', '0.00', '0.00']] });
-claimOf(S, src.samPlan, { date: '2026-10-12', provider: 'Example Lab', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-10-12'), diagnoses: [['E55.9', 'Vitamin D deficiency, unspecified']], lines: [['85025', 'Blood count', '98.00', '31.40', '31.40', '0.00', '0.00', '0.00'], ['82306', 'Vitamin D test', '150.00', '38.90', '38.90', '0.00', '0.00', '0.00']], balances: careBalance('217.40', '467.40') });
+claimOf(S, src.samPlan, { date: '2026-10-12', provider: 'Example Lab', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-10-12'), diagnoses: [['E55.9', 'Vitamin D deficiency, unspecified']], lines: [['85025', 'Blood cell test', '98.00', '31.40', '31.40', '0.00', '0.00', '0.00'], ['82306', 'Vitamin D test', '150.00', '38.90', '38.90', '0.00', '0.00', '0.00']], balances: careBalance('217.40', '467.40') });
 S.importRun(src.samPlan, { importedAt: PLANS_LOAD, added: 9, updated: 0, unchanged: 0, cliVersion: '0.4.0' });
 S.write();
 
@@ -1223,8 +1223,8 @@ claimOf(S, src.samPlan, { ...erPlan, date: erDay, end: '2026-09-13', provider: '
 ] });
 claimOf(S, src.samPlan, { ...erPlan, date: erDay, provider: 'Example Emergency Physicians', lines: [['99284', 'Emergency visit, moderate severity', '780.00', '210.00', '96.40', '0.00', '0.00', '113.60']] });
 claimOf(S, src.samPlan, { ...erPlan, date: erDay, provider: 'Example Radiology Associates', lines: [['71046', 'Chest X-ray, 2 views', '95.00', '31.00', '0.00', '0.00', '0.00', '31.00']] });
-claimOf(S, src.samPlan, { ...erPlan, date: erDay, provider: 'Example Lab', lines: [['85025', 'Blood count', '64.00', '9.80', '0.00', '0.00', '0.00', '9.80']] });
-claimOf(S, src.samPlan, { ...erPlan, date: erDay, provider: 'Example Lab', lines: [['80053', 'Comprehensive metabolic panel', '120.00', '12.40', '0.00', '0.00', '0.00', '12.40']] });
+claimOf(S, src.samPlan, { ...erPlan, date: erDay, provider: 'Example Lab', lines: [['85025', 'Blood cell test', '64.00', '9.80', '0.00', '0.00', '0.00', '9.80']] });
+claimOf(S, src.samPlan, { ...erPlan, date: erDay, provider: 'Example Lab', lines: [['80053', 'Chemistry tests', '120.00', '12.40', '0.00', '0.00', '0.00', '12.40']] });
 S.document(null, {
   date: erDay,
   doc_type: 'bill',
@@ -1291,7 +1291,7 @@ S.write();
 // owes a copay and no bill has come yet. It is the newest claim to print
 // Sam's plan balances, so a shared view must not date or link it. Drawn
 // last, so no other id moves.
-const counselingClaim = claimOf(S, src.samPlan, { date: '2026-10-27', provider: 'Example Counseling', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-10-27'), diagnoses: [['F41.1', 'Generalized anxiety disorder']], lines: [['90834', 'Psychotherapy, 45 minutes', '180.00', '110.00', '0.00', '30.00', '0.00', '80.00']], balances: careBalance('217.40', '497.40') });
+const counselingClaim = claimOf(S, src.samPlan, { date: '2026-10-27', provider: 'Example Counseling', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-10-27'), diagnoses: [['F41.1', 'Generalized anxiety disorder']], lines: [['90834', 'Talk therapy session', '180.00', '110.00', '0.00', '30.00', '0.00', '80.00']], balances: careBalance('217.40', '497.40') });
 counselingClaim.private = true;
 counselingClaim.private_area = 'mental_health';
 S.write();

@@ -174,8 +174,7 @@ describe('concepts', () => {
     const bills = find(everyone, 'bills').hits;
     expect(new Set(bills.map((x) => x.kind))).toEqual(new Set(['claim', 'document']));
     expect(new Set(bills.filter((x) => x.kind === 'document').map((x) => x.docType))).toEqual(new Set(['Bill', 'Explanation of benefits', 'Receipt']));
-    // Robin's November visit is named by its billing descriptor, which holds the words too.
-    expect(find(everyone, 'office visit').hits.every((x) => x.kind === 'encounter' && (x.title === 'Office visit' || x.title === 'OFFICE VISIT EST PATIENT LEVEL 3'))).toBe(true);
+    expect(find(everyone, 'office visit').hits.every((x) => x.kind === 'encounter' && x.title === 'Office visit')).toBe(true);
     expect(find(everyone, 'meds').hits.every((x) => x.kind === 'medication')).toBe(true);
   });
 
@@ -202,8 +201,8 @@ describe('what a hit carries', () => {
 
   it('a claim’s provider, what you owe, and the line that matched', () => {
     const hit = find(everyone, 'blood draw').hits.find((x) => x.kind === 'claim')!;
-    expect(hit).toMatchObject({ title: 'Lipid panel and blood draw', claim: { provider: 'Example Lab', amount: 'you owe $19.28' }, line: 'Blood draw (36415) · you owe $3.60' });
-    expect(find(everyone, '80061').hits.find((x) => x.kind === 'claim')).toMatchObject({ where: 'field', line: 'Lipid panel (80061) · you owe $15.68' });
+    expect(hit).toMatchObject({ title: 'Cholesterol tests and blood draw', claim: { provider: 'Example Lab', amount: 'you owe $19.28' }, line: 'Blood draw (36415) · you owe $3.60' });
+    expect(find(everyone, '80061').hits.find((x) => x.kind === 'claim')).toMatchObject({ where: 'field', line: 'Cholesterol tests (80061) · you owe $15.68' });
     expect(find(everyone, 'bills').hits.find((x) => x.claim?.amount === 'you owe nothing')).toBeDefined();
   });
 });

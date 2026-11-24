@@ -17,7 +17,7 @@ const item = (code: string | null, display: string | null, more: object = {}) =>
 describe('a claim title', () => {
   it('names the services, not the claim type', () => {
     expect(claimTitle(claimOn('2026-11-18'))).toBe('Office visit');
-    expect(claimTitle(claimOn('2026-10-03'))).toBe('Lipid panel and blood draw');
+    expect(claimTitle(claimOn('2026-10-03'))).toBe('Cholesterol tests and blood draw');
     expect(claimTitle(claimOn('2026-10-01'))).toBe('Preventive visit, flu vaccine and 1 more');
   });
 
@@ -47,7 +47,7 @@ describe('claim lines', () => {
   it('carry their code, category and amounts', () => {
     const lines = claimLines(claimOn('2026-10-03'));
     expect(lines.map((l) => [l.label, l.code, l.category])).toEqual([
-      ['Lipid panel', '80061', 'lab'],
+      ['Cholesterol tests', '80061', 'lab'],
       ['Blood draw', '36415', 'lab'],
     ]);
     expect(lines[0]!.amounts).toMatchObject({ billed: { amount: '180.00' }, allowed: { amount: '78.40' }, planPaid: { amount: '62.72' }, coinsurance: { amount: '15.68' }, youOwe: { amount: '15.68' } });

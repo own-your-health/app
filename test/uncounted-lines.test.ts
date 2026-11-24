@@ -53,7 +53,7 @@ describe('a line the claim’s totals leave out', () => {
   });
 
   it('is never named in the claim’s title or kind of care', () => {
-    expect(claimTitle(named)).toBe('Emergency visit, moderate severity and blood count');
+    expect(claimTitle(named)).toBe('Emergency visit, moderate severity and blood cell test');
     expect(claimTitle(worded)).toBe('Emergency visit, moderate severity');
     expect(claimCategory(worded)).toBe('visit');
   });
@@ -62,7 +62,7 @@ describe('a line the claim’s totals leave out', () => {
     expect(of(named.id).map((l) => [l.service, l.split, l.cents, l.uncounted])).toEqual([
       ['Emergency visit, high severity', true, {}, { billed: 312000, notCovered: 312000, youOwe: 312000 }],
       ['Emergency visit, moderate severity', true, { billed: 148000, allowed: 61240, planPaid: 46240, copay: 15000, youOwe: 15000 }, undefined],
-      ['Blood count', true, { billed: 9600, allowed: 3120, planPaid: 3120, youOwe: 0 }, undefined],
+      ['Blood cell test', true, { billed: 9600, allowed: 3120, planPaid: 3120, youOwe: 0 }, undefined],
     ]);
     expect(totals(of(named.id))).toEqual({ cents: { billed: 157600, allowed: 64360, planPaid: 49360, copay: 15000, youOwe: 15000 }, claims: 1, lines: 2 });
     expect(totals(of(worded.id)).cents).toEqual({ billed: 90000, allowed: 42000, planPaid: 34000, copay: 8000, youOwe: 8000 });
@@ -70,7 +70,7 @@ describe('a line the claim’s totals leave out', () => {
 
   it('leaves its claim leading with what the claim says you owe', () => {
     const [c] = claimsOf(of(named.id), lines);
-    expect(c).toMatchObject({ claim: named.id, title: 'Emergency visit, moderate severity and blood count', date: '2026-03-14', of: 3 });
+    expect(c).toMatchObject({ claim: named.id, title: 'Emergency visit, moderate severity and blood cell test', date: '2026-03-14', of: 3 });
     expect(c!.cents.youOwe).toBe(15000);
     // A choice that shows only the left-out line shows no claim: nothing of it counts there.
     expect(claimsOf(of(named.id).filter((l) => l.uncounted), lines)).toEqual([]);
@@ -90,8 +90,8 @@ describe('lines that do not add up, with no one set of lines to blame', () => {
     const c = record('r_claimambiguousaaaaaa');
     expect(claimLines(c).every((l) => l.counted)).toBe(true);
     expect(of(c.id).map((l) => [l.service, l.cents])).toEqual([
-      ['Therapeutic exercise', { billed: 10000, youOwe: 2000 }],
-      ['Therapeutic exercise', { billed: 10000, youOwe: 2000 }],
+      ['Guided stretching', { billed: 10000, youOwe: 2000 }],
+      ['Guided stretching', { billed: 10000, youOwe: 2000 }],
       ['Not split by line', { billed: -10000, youOwe: -2000 }],
     ]);
   });
