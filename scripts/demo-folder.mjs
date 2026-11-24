@@ -1215,6 +1215,21 @@ S.document(null, {
 S.document(null, { date: '2026-09-13', doc_type: 'discharge_summary', title: 'Emergency department discharge instructions', organization: 'Example General Hospital', pages: 2, text: 'Seen for chest pain. Chest X-ray and blood tests normal. Discharged home 09/13/2026. Follow up with your primary care doctor within one week.', original: 'er_discharge.pdf' });
 S.write();
 
+// ---- A private visit ----
+// Sam's video counseling session. medrec marks a record private from its
+// codes (`private`, `private_area`), so the app keeps it on Sam's own pages
+// and off the household's shared screens unless someone turns that on.
+const counseling = S.record(src.samChart, 'Encounter', 'encounter', {
+  date: '2026-10-27',
+  display: 'Counseling session',
+  status: 'finished',
+  fields: { class: 'virtual', practitioner: 'Dr. Morgan Placeholder', location: 'Example Counseling', reason: 'Anxiety' },
+  resource: { status: 'finished', class: { code: 'VR' }, type: [{ text: 'Counseling session' }], period: { start: '2026-10-27T21:00:00Z' }, reasonCode: [{ text: 'Anxiety' }] },
+});
+counseling.private = true;
+counseling.private_area = 'mental_health';
+S.write();
+
 // ---- Write ----
 
 rmSync(ROOT, { recursive: true, force: true });

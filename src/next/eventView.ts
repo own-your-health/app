@@ -16,7 +16,7 @@ import { card, chip, driveLink, empty, flagChip, link, row, type Ctx } from '../
 import { h, icon, type Child } from '../ui/dom';
 import { count, dateText, localDay } from '../ui/format';
 import { href, type Route } from '../ui/router';
-import { eventConfidence, eventMoney, eventOf, kindText, RULES, type CareEvent, type EventMoney } from './event';
+import { eventConfidence, eventMoney, eventOf, kindText, privateArea, PRIVATE_AREAS, RULES, type CareEvent, type EventMoney } from './event';
 import { personEvents } from './load';
 
 const money = (c: number | undefined) => (c === undefined ? '' : formatMoney(fromCents(c)) ?? '');
@@ -35,7 +35,7 @@ export function eventWhen(e: CareEvent): string {
 }
 
 /** What a card and the page's head call it: "Emergency room · overnight" for an event the portal did not name, else its own name. */
-function headline(e: CareEvent): { title: string; kind?: string } {
+export function headline(e: CareEvent): { title: string; kind?: string } {
   const kind = kindText(e);
   if (kind.startsWith(e.title)) return { title: kind };
   // "Lab tests" says "Tests" already.
@@ -77,6 +77,19 @@ function headCard(ctx: Ctx, idx: PersonIndex, e: CareEvent, m: EventMoney): HTML
     sourcesStrip(ctx, idx, e),
     number ? h('p', { class: 'result-value' }, m.share === 0 ? 'Nothing for you to pay' : `${m.shareAdded ? 'Your share' : 'You owe'} ${number}`) : null,
     settledLine(idx, e, m),
+    privateNote(e),
+  );
+}
+
+/** A private event says so on its page: where it stays off, and that this is discretion, not security. */
+function privateNote(e: CareEvent): HTMLElement | null {
+  const area = privateArea(e);
+  if (!area) return null;
+  return h(
+    'p',
+    { class: 'event-private small' },
+    chip('Private', 'muted'),
+    ` ${PRIVATE_AREAS[area] ?? PRIVATE_AREAS.household}. Kept off Home and the Everyone calendar. This is discretion, not security: everyone the Drive folder is shared with can still read its files.`,
   );
 }
 
@@ -356,10 +369,10 @@ export function eventsCard(ctx: Ctx, personId: string, idx: PersonIndex, shown =
       ? events.slice(0, shown).map((e) => {
           const n = eventNumber(eventMoney(e));
           const { title, kind } = headline(e);
-          return row({ route: eventRoute(personId, e.id), title, meta: [kind, eventWhen(e), e.place].filter(Boolean).join(' · '), aside: n ? h('span', { class: 'num' }, n) : null });
+          return row({ route: eventRoute(personId, e.id), title, meta: [kind, eventWhen(e), e.place].filter(Boolean).join(' · '), aside: [privateArea(e) ? chip('Private', 'muted') : null, n ? h('span', { class: 'num' }, n) : null] });
         })
       : empty('No visits, claims or papers yet.'),
-    events.length > shown ? h('p', { class: 'small muted' }, `${count(events.length - shown, 'earlier visit')} not shown yet; Calendar will list them all.`) : null,
+    events.length ? h('p', { class: 'small' }, link({ name: 'calendar', view: 'list', who: personId }, events.length > shown ? `All ${events.length} in the calendar` : 'In the calendar')) : null,
   );
 }
 

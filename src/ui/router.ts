@@ -57,6 +57,8 @@ export type Route =
   | { name: 'item'; person: string; id: string }
   // An event: a visit, stay, test or fill, with its claims and papers (?next).
   | { name: 'event'; person: string; id: string }
+  // The calendar (?next): a month (YYYY-MM) and a chosen day, or the list (from the newest month, or before one), for everyone or one person.
+  | { name: 'calendar'; view?: 'list'; month?: string; who?: string; day?: string; before?: string }
   | { name: 'huishouden'; hh: string }
   | { name: 'not_found' };
 
@@ -78,6 +80,7 @@ export function parseRoute(hash: string): Route {
   if (head === 'settings' && parts.length === 1) return { name: 'settings' };
   if (head === 'sources' && parts.length === 1) return { name: 'sources' };
   if (head === 'costs' && parts.length === 1) return costsRoute(query);
+  if (head === 'calendar' && parts.length === 1) return calendarRoute(query);
   if (head === 'search' && parts.length === 1) {
     const q = query.get('q') ?? undefined;
     return { name: 'search', ...(q ? { query: q } : {}), ...(q && query.get('words') === '1' ? { words: true as const } : {}) };
@@ -117,6 +120,38 @@ function costsRoute(query: URLSearchParams): Route {
   };
 }
 
+const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
+const DAY = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+/** A calendar day that exists: not Feb 31. */
+const isDay = (d: string) => DAY.test(d) && new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) === d;
+
+function calendarRoute(query: URLSearchParams): Route {
+  const view = query.get('view') === 'list' ? ('list' as const) : undefined;
+  const month = query.get('month') ?? '';
+  const before = query.get('before') ?? '';
+  const who = query.get('who') ?? '';
+  const day = query.get('day') ?? '';
+  return {
+    name: 'calendar',
+    ...(view ? { view } : {}),
+    ...(!view && MONTH.test(month) ? { month } : {}),
+    ...(ID.test(who) ? { who } : {}),
+    ...(!view && isDay(day) ? { day, month: day.slice(0, 7) } : {}),
+    ...(view && MONTH.test(before) ? { before } : {}),
+  };
+}
+
+function calendarQuery(r: Extract<Route, { name: 'calendar' }>): string {
+  const q = new URLSearchParams();
+  if (r.view) q.set('view', r.view);
+  if (r.month && !r.view) q.set('month', r.month);
+  if (r.before && r.view) q.set('before', r.before);
+  if (r.day && !r.view) q.set('day', r.day);
+  if (r.who) q.set('who', r.who);
+  const t = q.toString();
+  return t ? `?${t}` : '';
+}
+
 function costsQuery(r: Extract<Route, { name: 'costs' }>): string {
   const q = new URLSearchParams();
   if (r.period) q.set('period', r.period);
@@ -140,6 +175,8 @@ export function href(route: Route): string {
       return '#/sources';
     case 'costs':
       return `#/costs${costsQuery(route)}`;
+    case 'calendar':
+      return `#/calendar${calendarQuery(route)}`;
     case 'search':
       return route.query ? `#/search?${searchQuery(route.query, route.words)}` : '#/search';
     case 'source':

@@ -22,6 +22,7 @@ import { settingsView } from './views/settings';
 import { sourceView } from './views/source';
 import { sourcesView } from './views/sources';
 import { searchView } from './search';
+import { calendarView, hidePrivateEvents } from '../next/calendarView';
 import { eventView } from '../next/eventView';
 
 /** What the app says when a renewal interrupted a write the person asked for. */
@@ -422,6 +423,8 @@ export class App {
   }
 
   private onRoute(): void {
+    // Private events shown on the calendar are hidden again once it is left.
+    if (parseRoute(location.hash).name !== 'calendar') hidePrivateEvents();
     if (this.phase.name === 'ready') {
       this.render();
       window.scrollTo(0, 0);
@@ -550,6 +553,9 @@ export class App {
       case 'event':
         if (ctx.next) return eventView(ctx, r.person, r.id);
         return messageView('Page not found', 'Visit pages are part of the redesign. Add ?next to the address to try it.', [h('a', { class: 'button button-primary', href: '#/' }, 'Home')]);
+      case 'calendar':
+        if (ctx.next) return calendarView(ctx, r);
+        return messageView('Page not found', 'The calendar is part of the redesign. Add ?next to the address to try it.', [h('a', { class: 'button button-primary', href: '#/' }, 'Home')]);
       case 'huishouden': {
         const person = this.store!.personForHuishouden(r.hh);
         if (person) {

@@ -22,6 +22,12 @@ describe('routes', () => {
     { name: 'costs', period: 'plan-1', by: 'category' },
     { name: 'costs', period: 'all', only: [{ by: 'person', key: P }, { by: 'code', key: 'CPT:99213' }] },
     { name: 'costs', only: [{ by: 'provider', key: 'example lab' }, { by: 'month', key: '2026-10' }] },
+    { name: 'event', person: P, id: 'r_aaaaaaaaaaaaaaaaaaaa' },
+    { name: 'calendar' },
+    { name: 'calendar', month: '2026-10' },
+    { name: 'calendar', month: '2026-10', day: '2026-10-12', who: P },
+    { name: 'calendar', view: 'list', who: P },
+    { name: 'calendar', view: 'list', before: '2026-07' },
   ];
 
   it.each(routes.map((r) => [href(r), r]))('%s round-trips', (h, r) => {
@@ -48,6 +54,18 @@ describe('routes', () => {
     // One key for each kind: the last one wins.
     expect(parseRoute('#/costs?only=person:a&only=person:b')).toEqual({ name: 'costs', only: [{ by: 'person', key: 'b' }] });
     expect(parseRoute('#/costs/x')).toEqual({ name: 'not_found' });
+  });
+
+  it('keep only the calendar choices they know', () => {
+    expect(href({ name: 'calendar', month: '2026-10', day: '2026-10-12' })).toBe('#/calendar?month=2026-10&day=2026-10-12');
+    expect(parseRoute('#/calendar?month=2026-13&day=2026-02-3x&who=%3Cscript%3E&view=year&before=2026-07')).toEqual({ name: 'calendar' });
+    // A day that does not exist is dropped, not rolled over.
+    expect(parseRoute('#/calendar?day=2026-02-31')).toEqual({ name: 'calendar' });
+    expect(parseRoute('#/calendar?day=2028-02-29')).toEqual({ name: 'calendar', month: '2028-02', day: '2028-02-29' });
+    // A day picks its month; the list has neither.
+    expect(parseRoute('#/calendar?month=2026-01&day=2026-10-12')).toEqual({ name: 'calendar', month: '2026-10', day: '2026-10-12' });
+    expect(parseRoute('#/calendar?view=list&month=2026-10&day=2026-10-12')).toEqual({ name: 'calendar', view: 'list' });
+    expect(parseRoute('#/calendar/x')).toEqual({ name: 'not_found' });
   });
 
   it('turn anything else into not found', () => {
