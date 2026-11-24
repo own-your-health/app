@@ -2,6 +2,7 @@
 // belongs together and how sure it is; the app keeps naming and pricing an
 // event from its records (event.ts), so a screen reads the same either way.
 
+import { claimCategory } from '../model/claims';
 import type { MedrecEvent, MedrecEvents } from '../model/events';
 import type { Household, MedDocument, MedRecord, PersonIndex } from '../model/types';
 import { nameEvent, type CareEvent, type ClaimRole, type EventKind } from './event';
@@ -65,7 +66,8 @@ export function fromMedrec(file: MedrecEvents, index: PersonIndex, household: Ho
     // Papers newest first, as the app lists them.
     e.papers.sort((a, b) => (b.doc.date ?? '').localeCompare(a.doc.date ?? ''));
     const { kind, title } = kindOf(m, e.visits[0]?.record);
-    e.kind = kind;
+    // A day of vaccine claims only is a vaccine visit, as the app's own grouping makes it.
+    e.kind = kind === 'service' && !title && e.claims.length && e.claims.every((c) => claimCategory(c.record) === 'vaccine') ? 'vaccine' : kind;
     if (m.kind === 'stay_no_facility' || m.kind === 'er_no_facility') e.noFacility = true;
     if (m.place) e.place = m.place;
     if (m.what) e.what = m.what;

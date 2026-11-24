@@ -4,7 +4,7 @@
 // event's shape, its kind in words, how sure it is, and what it cost from its
 // claims' totals. Who makes the events is load.ts's choice.
 
-import { CATEGORY_LABELS, claimAmounts, claimCategory, claimCents, claimTitle, type Category } from '../model/claims';
+import { CATEGORY_LABELS, claimAmounts, claimCategory, claimCents, claimTitle, countedLines, type Category } from '../model/claims';
 import { sameProvider } from '../model/providers';
 import { organizationName, str } from '../model/records';
 import type { MedrecRule, Sureness } from '../model/events';
@@ -233,9 +233,18 @@ export const PRIVATE_AREAS: Record<string, string> = {
   household: 'Marked private',
 };
 
-/** How many vaccines a vaccine event gave: its doses from the portal, else one. */
+/** CPT and HCPCS codes for giving a vaccine, billed beside the vaccine itself. */
+const GIVING = /^(9046[01]|9047[1-4]|G00(08|09|10))$/;
+
+/** The vaccines a vaccine event's claims bill for, by name, leaving out the lines for giving them. */
+function vaccinesBilled(e: CareEvent): string[] {
+  const lines = e.claims.flatMap((c) => countedLines(c.record)).filter((l) => !GIVING.test(l.code ?? ''));
+  return [...new Set(lines.map((l) => l.label))];
+}
+
+/** How many vaccines a vaccine event gave: its doses from the portal, else the vaccines its claims bill, else one. */
 export function doseCount(e: CareEvent): number {
-  return Math.max(1, e.recorded.filter((r) => r.kind === 'immunization').length);
+  return Math.max(1, e.recorded.filter((r) => r.kind === 'immunization').length || vaccinesBilled(e).length);
 }
 
 // A pharmacy claim's word for any drug.
@@ -289,6 +298,6 @@ function kindTitle(e: CareEvent, claimSaid: string | undefined): string {
     return cats.size === 1 && cats.has('imaging') ? 'Imaging' : cats.size === 1 && cats.has('lab') ? 'Lab tests' : 'Tests';
   }
   if (e.kind === 'fill') return drugName(e.recorded.find((r) => r.kind === 'medication')?.display) ?? drugName(claimSaid) ?? drugName(e.what) ?? 'Pharmacy fill';
-  if (e.kind === 'vaccine') return doseCount(e) > 1 ? `${doseCount(e)} vaccines` : (plainWords(e.recorded.find((r) => r.kind === 'immunization')?.display) ?? plainWords(claimSaid) ?? 'Vaccine');
+  if (e.kind === 'vaccine') return doseCount(e) > 1 ? `${doseCount(e)} vaccines` : (plainWords(e.recorded.find((r) => r.kind === 'immunization')?.display) ?? plainWords(vaccinesBilled(e)[0]) ?? plainWords(claimSaid) ?? 'Vaccine');
   return KIND_TITLES[e.kind];
 }

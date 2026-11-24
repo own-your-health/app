@@ -541,6 +541,8 @@ dropped from the address.
   the claims' services. A fill is named for its drug, from the pharmacy's
   record before a claim's word for any drug ("Prescription drug"). A
   vaccine is named for its dose, and a day of several doses for how many.
+  A day whose claims are all for vaccines is a vaccine visit, with medrec's
+  events or without; its claim names the vaccine, not the line for giving it.
   Billing descriptors in capitals ("OFC VISIT, NEW PT, MOD MDM") are never
   a headline; they show only in the visit's Details (`src/model/words.ts`).
   A portal platform's name ("athenahealth (all practices)") is never a

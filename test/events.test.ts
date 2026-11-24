@@ -114,9 +114,9 @@ describe('a day of claims', () => {
     expect([tests.doubt, eventConfidence(tests)]).toEqual(['2 office visits that day could have ordered these', 'unsure']);
   });
 
-  it('is a vaccine when only shots were billed', () => {
+  it('is a vaccine when only shots were billed, named for the vaccine and not the line for giving it', () => {
     const [shot] = on('2026-06-20');
-    expect([shot!.kind, shot!.title, kindText(shot!), eventMoney(shot!).share]).toEqual(['vaccine', 'Flu vaccine and vaccine given', 'Vaccine', 0]);
+    expect([shot!.kind, shot!.title, kindText(shot!), eventMoney(shot!).share]).toEqual(['vaccine', 'Flu vaccine', 'Vaccine', 0]);
   });
 
   it('is a fill at a pharmacy', () => {

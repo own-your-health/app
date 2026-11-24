@@ -101,6 +101,13 @@ test('the list has every event by month, and a person’s Health opens theirs', 
   await expect(page.locator('.cal-private')).toContainText('2 private events');
 });
 
+test('a day billed for a vaccine is a vaccine visit, named for the dose', async ({ page }) => {
+  await open(page, '#/calendar?month=2025-10&day=2025-10-20');
+  const row = page.locator('.cal-row');
+  await expect(row.locator('.row-title')).toHaveText(['Influenza, seasonal, injectable · Example Pediatrics']);
+  await expect(row.locator('.row-meta')).toHaveText(['Alex · Vaccine']);
+});
+
 test('a day of several vaccines counts its doses, and its page lists each from the clinic’s records', async ({ page }) => {
   await open(page, '#/calendar?view=list&who=p_xo4em46i7yj3hphlpajo');
   const october = card(page, 'October 2025');
