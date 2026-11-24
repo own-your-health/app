@@ -32,10 +32,10 @@ describe('the household’s events', () => {
   });
 
   it('keep a private event off the shared view, and on its person’s own', () => {
-    // Sam's counseling session, and the fill of the medicine tied to it.
+    // Sam's counseling session, and a fill of a medicine medrec lists as private.
     const kept = events.filter((x) => x.private);
     expect(kept.map((x) => [x.person.id, x.private, x.event.title, x.event.start])).toEqual([
-      [sam, 'mental_health', 'Sertraline 50 mg tablet', '2026-10-28'],
+      [sam, 'substance_use', 'Nicotine 14 mg/24 hour patch', '2026-10-31'],
       [sam, 'mental_health', 'Office visit', '2026-10-27'],
     ]);
     const counseling = kept[1]!;
@@ -50,9 +50,9 @@ describe('the household’s events', () => {
 
   it('mark a stay across its days, a fill as a ring and a visit as a dot', () => {
     const birth = events.find((x) => x.person.id === jamie && x.event.kind === 'stay')!;
-    expect([birth.event.start, birth.event.end, markShape(birth.event)]).toEqual(['2026-11-08', '2026-11-10', 'bar']);
-    expect(['2026-11-08', '2026-11-09', '2026-11-10'].map((d) => barPart(birth.event, d))).toEqual(['start', 'mid', 'end']);
-    expect(onDay(events, '2026-11-09')).toEqual([birth]);
+    expect([birth.event.start, birth.event.end, markShape(birth.event)]).toEqual(['2026-07-28', '2026-07-30', 'bar']);
+    expect(['2026-07-28', '2026-07-29', '2026-07-30'].map((d) => barPart(birth.event, d))).toEqual(['start', 'mid', 'end']);
+    expect(onDay(events, '2026-07-29')).toEqual([birth]);
     const fill = events.find((x) => x.event.kind === 'fill')!;
     expect(markShape(fill.event)).toBe('ring');
     expect(markShape(events.find((x) => x.event.kind === 'office')!.event)).toBe('dot');
@@ -68,9 +68,9 @@ describe('the household’s events', () => {
   });
 
   it('belong to every month they touch', () => {
-    const er = events.find((x) => x.event.kind === 'er')!;
-    expect(inMonth(events, '2026-09')).toContain(er);
-    expect(inMonth(events, '2026-10')).not.toContain(er);
-    expect(inMonth([{ ...er, event: { ...er.event, start: '2026-09-30', end: '2026-10-02' } }], '2026-10')).toHaveLength(1);
+    const stay = events.find((x) => x.event.kind === 'stay')!;
+    expect(inMonth(events, '2026-07')).toContain(stay);
+    expect(inMonth(events, '2026-08')).not.toContain(stay);
+    expect(inMonth([{ ...stay, event: { ...stay.event, start: '2026-07-30', end: '2026-08-02' } }], '2026-08')).toHaveLength(1);
   });
 });

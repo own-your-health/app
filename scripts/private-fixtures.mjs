@@ -41,12 +41,12 @@ function eventWith(name, item) {
   return event.id;
 }
 
-const discharge = only('Sam Example', 'documents', (d) => d.title === 'Emergency department discharge instructions', 'the discharge instructions');
+const goingHome = only('Sam Example', 'documents', (d) => d.title === 'Going home after knee surgery', 'the going-home instructions');
 const counseling = only('Sam Example', 'records', (r) => r.kind === 'encounter' && r.display === 'Counseling session', 'the counseling session');
 const MARKS = [
-  // A stay marked private takes its claims and papers with it; one paper of it is marked not private.
-  ['mark', eventWith('Sam Example', discharge)],
-  ['unmark', discharge],
+  // A procedure marked private takes its claims and papers with it; one paper of it is marked not private.
+  ['mark', eventWith('Sam Example', goingHome)],
+  ['unmark', goingHome],
   // A visit the rules make private, marked not private. Its records stay private.
   ['unmark', eventWith('Sam Example', counseling)],
   // One record, and one paper, marked by themselves.

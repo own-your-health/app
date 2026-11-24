@@ -17,7 +17,7 @@ const events = householdEvents(household, (p) => indexes.get(p), TODAY);
 
 describe('a period’s care in four figures', () => {
   it('adds the claims’ lines, so charged less the discount and what the plans paid is your share', () => {
-    expect(yearMoney(plan)).toEqual({ charged: 641700, discount: 418140, planPaid: 159524, share: 64036, adds: true, claims: 14, first: '2026-07-09', last: '2026-11-20' });
+    expect(yearMoney(plan)).toEqual({ charged: 745600, discount: 458790, planPaid: 228664, share: 58146, adds: true, claims: 14, first: '2026-07-09', last: '2026-11-20' });
   });
 
   it('takes what the plan paid and your share as the price of a line whose allowed amount is negative', () => {
@@ -34,10 +34,10 @@ describe('a period’s care in four figures', () => {
   });
 
   it('sums each month by day of service', () => {
-    // Sam's emergency room: the plans paid $1,036.80 and Sam's share is $346.40.
-    expect(monthMoney(plan, ['2026-06', '2026-09'])).toEqual([
+    // Sam's knee procedure ($1,728.20 paid, $287.50 Sam's) and Robin's fill ($2.40 and $10.00).
+    expect(monthMoney(plan, ['2026-06', '2026-08'])).toEqual([
       { ym: '2026-06', planPaid: 0, share: 0 },
-      { ym: '2026-09', planPaid: 103680, share: 34640 },
+      { ym: '2026-08', planPaid: 173060, share: 29750 },
     ]);
   });
 });
@@ -47,15 +47,15 @@ describe('deductibles and out-of-pocket limits', () => {
     expect(planLimits(plan, records).map((l) => [household.people.find((p) => p.id === l.person)?.name, l.kind, l.used, l.limit, l.asOf, l.fromClaims, l.metOn])).toEqual([
       ['Alex Example', 'deductible', 0, 75000, '2026-11-20', 0, undefined],
       ['Alex Example', 'out_of_pocket', 2500, 300000, '2026-11-20', undefined, undefined],
-      ['Sam Example', 'deductible', 21740, 75000, '2026-10-27', 21740, undefined],
-      ['Sam Example', 'out_of_pocket', 49740, 300000, '2026-10-27', undefined, undefined],
+      ['Sam Example', 'deductible', 23350, 75000, '2026-10-27', 23350, undefined],
+      ['Sam Example', 'out_of_pocket', 43850, 300000, '2026-10-27', undefined, undefined],
       ['Robin Example', 'deductible', 112040, 150000, '2026-10-01', 0, undefined],
       ['Robin Example', 'out_of_pocket', 135610, 400000, '2026-10-01', undefined, undefined],
     ]);
   });
 
   it('name the claim that met a deductible, when these records’ claims add up to it', () => {
-    // Sam's deductible parts: $50.70 on Jul 9, $96.40 on Sep 12, $70.30 on Oct 12. A $140 deductible is met on Sep 12.
+    // Sam's deductible parts: $50.70 on Jul 9, $112.50 on Aug 26, $70.30 on Oct 12. A $140 deductible is met on Aug 26.
     const lower = (limit: string) =>
       new Map(
         [...records].map(([k, r]): [string, MedRecord] => {
@@ -69,8 +69,8 @@ describe('deductibles and out-of-pocket limits', () => {
         }),
       );
     const sam = (m: Map<string, MedRecord>) => planLimits(plan, m).find((l) => l.person === id('Sam Example') && l.kind === 'deductible')!;
-    expect([sam(lower('140.00')).metOn, sam(lower('217.40')).metOn]).toEqual(['2026-09-12', '2026-10-12']);
-    expect(sam(lower('140.00')).metClaim).toBe(plan.find((l) => l.person === id('Sam Example') && l.date === '2026-09-12' && l.provider === 'Example Emergency Physicians')?.claim);
+    expect([sam(lower('140.00')).metOn, sam(lower('233.50')).metOn]).toEqual(['2026-08-26', '2026-10-12']);
+    expect(sam(lower('140.00')).metClaim).toBe(plan.find((l) => l.person === id('Sam Example') && l.date === '2026-08-26' && l.provider === 'Example Orthopedic Surgeons')?.claim);
     // What the plan printed is more than these records' claims add up to: met, with no claim to name.
     const robin = planLimits(plan, records).find((l) => l.person === id('Robin Example') && l.kind === 'deductible')!;
     expect(robin.fromClaims).not.toBe(robin.used);
@@ -81,7 +81,7 @@ describe('the visits by cost', () => {
   it('lists this plan year’s by network price, a private one and fills among them', () => {
     const costs = eventCosts(events, plan, 'plan');
     expect(costs.map((c) => [c.event.person.name, c.event.event.start, c.price, c.fill, c.event.private ?? null])).toEqual([
-      ['Sam Example', '2026-09-12', 138320, false, null],
+      ['Sam Example', '2026-08-26', 201570, false, null],
       ['Robin Example', '2026-10-01', 26840, false, null],
       ['Alex Example', '2026-11-20', 11930, false, null],
       ['Robin Example', '2026-11-18', 11250, false, null],
@@ -108,15 +108,15 @@ describe('the visits by cost', () => {
     expect(said.map((c) => c.discount)).toEqual([...said.map((c) => c.discount!)].sort((a, b) => b - a));
     expect(said.every((c) => c.charged! - c.discount! === c.price)).toBe(true);
     expect(cuts.slice(said.length).every((c) => c.discount === undefined)).toBe(true);
-    expect([said[0]!.event.event.start, said[0]!.charged, said[0]!.discount]).toEqual(['2026-09-12', 477900, 339580]);
+    expect([said[0]!.event.event.start, said[0]!.charged, said[0]!.discount]).toEqual(['2026-08-26', 581800, 380230]);
   });
 
   it('says no discount when a claim does not say what was charged, or the charge is below the price', () => {
-    const er = events.find((x) => x.event.start === '2026-09-12' && x.money.billed !== undefined)!;
-    const claim = er.event.claims[0]!;
+    const knee = events.find((x) => x.event.start === '2026-08-26' && x.money.billed !== undefined)!;
+    const claim = knee.event.claims[0]!;
     // One more claim with no totals: the visit's charge would leave it out and look like a smaller discount.
-    const silent = { ...er, event: { ...er.event, claims: [...er.event.claims, { ...claim, record: { ...claim.record, fields: {} } }] } };
-    const under = { ...er, money: { ...er.money, billed: er.money.price! - 100, discount: -100 } };
+    const silent = { ...knee, event: { ...knee.event, claims: [...knee.event.claims, { ...claim, record: { ...claim.record, fields: {} } }] } };
+    const under = { ...knee, money: { ...knee.money, billed: knee.money.price! - 100, discount: -100 } };
     const costs = eventCosts([silent, under], plan, 'plan', 'discount');
     expect(costs.map((c) => [c.charged, c.discount])).toEqual([
       [undefined, undefined],

@@ -6,15 +6,15 @@
   },
   "status": "completed",
   "medicationCodeableConcept": {
-    "text": "Sertraline 50 mg tablet"
+    "text": "Nicotine 14 mg/24 hour patch"
   },
-  "whenHandedOver": "2026-10-28",
+  "whenHandedOver": "2026-10-31",
   "quantity": {
-    "value": 30,
-    "unit": "tablet"
+    "value": 28,
+    "unit": "patch"
   },
   "daysSupply": {
-    "value": 30,
+    "value": 28,
     "unit": "days"
   }
 }

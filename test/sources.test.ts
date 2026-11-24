@@ -97,7 +97,7 @@ describe('source views over the sample', () => {
   it('show an everything request only on sources the Mac refreshes', () => {
     const req = buildRequest({ scope: { all: true }, now: NOW, by: {}, appVersion: '0' });
     const vs = sourceViews({ household, indexes, status, pending: [req], done: [], now: NOW });
-    // The newborn's practice is not set up for refresh.
+    // Jamie's practice is not set up for refresh.
     const notRefreshed = [sourceOf(household, 'Jamie Example', 'athena').id];
     for (const v of vs) expect(v.pending.length).toBe(notRefreshed.includes(v.source.id) ? 0 : 1);
   });

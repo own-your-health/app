@@ -7,18 +7,18 @@
     {
       "id": "r_aaaaaaaaaaaaaaaaaaaa",
       "kind": "result",
-      "key": "result|2345-7|2026-10-15",
-      "display": "Glucose",
-      "date": "2026-10-15",
+      "key": "result|2951-2|2026-02-03",
+      "display": "Sodium",
+      "date": "2026-02-03",
       "status": "final",
       "code": {
         "system": "http://loinc.org",
-        "code": "2345-7",
-        "display": "Glucose"
+        "code": "2951-2",
+        "display": "Sodium [Moles/volume] in Serum or Plasma"
       },
       "fields": {
-        "value": "95",
-        "reference_range": "65 mg/dL – 99 mg/dL",
+        "value": "138",
+        "reference_range": "135 mmol/L – 145 mmol/L",
         "category": "Laboratory"
       },
       "documents": [],
@@ -27,21 +27,21 @@
     {
       "id": "r_bbbbbbbbbbbbbbbbbbbb",
       "kind": "result",
-      "key": "result|2345-7|2026-04-15",
-      "display": "Glucose",
-      "date": "2026-04-15",
+      "key": "result|2951-2|2025-08-12",
+      "display": "Sodium",
+      "date": "2025-08-12",
       "status": "final",
       "code": {
         "system": "http://loinc.org",
-        "code": "2345-7",
-        "display": "Glucose"
+        "code": "2951-2",
+        "display": "Sodium [Moles/volume] in Serum or Plasma"
       },
       "fields": {
         "value": {
-          "value": 88,
-          "unit": "mg/dL"
+          "value": 141,
+          "unit": "mmol/L"
         },
-        "reference_range": "65-99 mg/dL",
+        "reference_range": "135-145 mmol/L",
         "interpretation": "Normal",
         "category": "Laboratory"
       },
@@ -51,18 +51,18 @@
     {
       "id": "r_cccccccccccccccccccc",
       "kind": "result",
-      "key": "result|1558-6|2026-10-15",
-      "display": "Fasting glucose",
-      "date": "2026-10-15",
+      "key": "result|3084-1|2026-02-03",
+      "display": "Uric acid",
+      "date": "2026-02-03",
       "status": "final",
       "code": {
         "system": "http://loinc.org",
-        "code": "1558-6",
-        "display": "Fasting glucose"
+        "code": "3084-1",
+        "display": "Urate [Mass/volume] in Serum or Plasma"
       },
       "fields": {
-        "value": "105",
-        "reference_range": "65 - 99 mg/dL",
+        "value": "8.1",
+        "reference_range": "3.4 - 7.0 mg/dL",
         "category": "Laboratory"
       },
       "documents": [],
@@ -71,9 +71,9 @@
     {
       "id": "r_dddddddddddddddddddd",
       "kind": "result",
-      "key": "result|777-3|2026-10-15",
+      "key": "result|777-3|2026-02-03",
       "display": "Platelets",
-      "date": "2026-10-15",
+      "date": "2026-02-03",
       "status": "final",
       "code": {
         "system": "http://loinc.org",
@@ -90,9 +90,9 @@
     {
       "id": "r_eeeeeeeeeeeeeeeeeeee",
       "kind": "result",
-      "key": "result|1975-2|2026-10-15",
+      "key": "result|1975-2|2026-02-03",
       "display": "Bilirubin, total",
-      "date": "2026-10-15",
+      "date": "2026-02-03",
       "status": "final",
       "code": {
         "system": "http://loinc.org",
@@ -110,9 +110,9 @@
     {
       "id": "r_ffffffffffffffffffff",
       "kind": "result",
-      "key": "result|33914-3|2026-10-15",
+      "key": "result|33914-3|2026-02-03",
       "display": "eGFR",
-      "date": "2026-10-15",
+      "date": "2026-02-03",
       "status": "final",
       "code": {
         "system": "http://loinc.org",
@@ -130,9 +130,9 @@
     {
       "id": "r_gggggggggggggggggggg",
       "kind": "result",
-      "key": "result|2276-4|2026-10-15",
+      "key": "result|2276-4|2026-02-03",
       "display": "Ferritin",
-      "date": "2026-10-15",
+      "date": "2026-02-03",
       "status": "final",
       "code": {
         "system": "http://loinc.org",
@@ -150,9 +150,9 @@
     {
       "id": "r_hhhhhhhhhhhhhhhhhhhh",
       "kind": "result",
-      "key": "result|5778-6|2026-10-15",
+      "key": "result|5778-6|2026-02-03",
       "display": "Urine color",
-      "date": "2026-10-15",
+      "date": "2026-02-03",
       "status": "final",
       "code": {
         "system": "http://loinc.org",

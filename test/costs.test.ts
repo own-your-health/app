@@ -36,7 +36,7 @@ describe('plan years', () => {
     ]);
   });
 
-  // A coverage that took effect mid-year (a birth, a new job), claims under
+  // A coverage that took effect mid-year (a new job, say), claims under
   // the same plan by another spelling, a plan that prints its benefit period
   // on one claim only, and one whose "benefit period" is a single day.
   const planYears = parseIndex(fixture('folder/index-plan-years.json'), 'p_aaaaaaaaaaaaaaaaaaaa');
@@ -66,7 +66,7 @@ describe('a day in a period', () => {
   it('is in a person’s plan year, the calendar year, or any day for every year', () => {
     const sam = inPlanYear.filter((l) => l.person === id('Sam Example'));
     expect([dayInPeriod('2026-07-01', 'plan', sam), dayInPeriod('2027-06-30', 'plan', sam), dayInPeriod('2026-06-30', 'plan', sam)]).toEqual([true, true, false]);
-    expect([dayInPeriod('2026-11-08', '2026', []), dayInPeriod('2025-12-31', '2026', [])]).toEqual([true, false]);
+    expect([dayInPeriod('2026-05-08', '2026', []), dayInPeriod('2025-12-31', '2026', [])]).toEqual([true, false]);
     expect(dayInPeriod('1999-01-01', 'all', [])).toBe(true);
   });
 });
@@ -75,14 +75,14 @@ describe('the sample household', () => {
   it('has a line for each thing each claim paid for, newest first', () => {
     expect(all).toHaveLength(30);
     expect(all.every((l) => l.split)).toBe(true);
-    // Alex's sick visit, billed as a longer one, was paid as a routine one, and Sam's emergency visit
-    // as a lower level than the hospital billed: those lines count nothing.
+    // Alex's strep test was billed as a costlier one, and Sam's knee scope for both sides of the
+    // joint: the plan paid each as another code and left the billed line out, so it counts nothing.
     expect(all.filter((l) => l.uncounted).map((l) => [l.date, l.code, l.cents, l.uncounted])).toEqual([
-      ['2026-11-20', '99215', {}, { billed: 24000, notCovered: 24000, youOwe: 24000 }],
-      ['2026-09-12', '99285', {}, { billed: 420000, notCovered: 420000, youOwe: 420000 }],
+      ['2026-11-20', '87651', {}, { billed: 13200, notCovered: 13200, youOwe: 13200 }],
+      ['2026-08-26', '29880', {}, { billed: 512000, notCovered: 512000, youOwe: 512000 }],
     ]);
     expect(all.map((l) => l.date)).toEqual([...all.map((l) => l.date)].sort().reverse());
-    expect(all.find((l) => l.code === '00000-1111-90')).toMatchObject({ category: 'pharmacy', provider: 'Example Pharmacy #1234', insurer: 'Example Pharmacy Benefits' });
+    expect(all.find((l) => l.code === '00000-1111-90')).toMatchObject({ category: 'pharmacy', provider: 'Example Pharmacy', insurer: 'Example Pharmacy Benefits' });
   });
 
   it('offers this and last plan year, each calendar year, and every year', () => {
@@ -91,7 +91,7 @@ describe('the sample household', () => {
 
   it('totals this plan year across everyone, each person in their own plan’s year', () => {
     expect(totals(inPlanYear)).toEqual({
-      cents: { billed: 641700, allowed: 223560, planPaid: 159524, deductible: 21740, copay: 32500, coinsurance: 9796, youOwe: 64036 },
+      cents: { billed: 745600, allowed: 286810, planPaid: 228664, deductible: 23350, copay: 25000, coinsurance: 9796, youOwe: 58146 },
       claims: 14,
       lines: 21,
     });
@@ -103,17 +103,18 @@ describe('the sample household', () => {
 
   it('breaks it down by provider, your share first, and by month in order', () => {
     expect(breakdown(inPlanYear, 'provider', names).map((g) => [g.label, g.cents.youOwe, g.claims])).toEqual([
-      ['Example General Hospital', 25000, 1],
-      ['Example Lab', 14028, 5],
-      ['Example Emergency Physicians', 9640, 1],
+      ['Example Surgery Center', 17500, 1],
+      ['Example Lab', 14028, 3],
+      ['Example Orthopedic Surgeons', 11250, 1],
       ['Example Health', 7868, 2],
       ['Example Counseling', 3000, 1],
       ['Example Pediatrics', 2500, 1],
-      ['Example Pharmacy #1234', 2000, 2],
-      ['Example Radiology Associates', 0, 1],
+      ['Example Pharmacy', 2000, 2],
+      ['Example Medical Supply', 0, 2],
+      ['Example Imaging Partners', 0, 1],
     ]);
-    expect(breakdown(inPlanYear, 'month', names).map((g) => g.key)).toEqual(['2026-07', '2026-08', '2026-09', '2026-10', '2026-11']);
-    expect(breakdown(inPlanYear, 'category', names).map((g) => g.label)).toEqual(['Visits', 'Lab tests', 'Pharmacy', 'Vaccines', 'Imaging']);
+    expect(breakdown(inPlanYear, 'month', names).map((g) => g.key)).toEqual(['2026-07', '2026-08', '2026-10', '2026-11']);
+    expect(breakdown(inPlanYear, 'category', names).map((g) => g.label)).toEqual(['Procedures', 'Lab tests', 'Visits', 'Pharmacy', 'Vaccines', 'Supplies and equipment', 'Imaging', 'Drugs given']);
   });
 
   it('spans every month of the period up to now, the quiet ones too', () => {
@@ -128,8 +129,6 @@ describe('the sample household', () => {
   it('compares a code billed more than once, across providers and dates', () => {
     const codes = comparableCodes(all);
     expect(codes.find((c) => c.key === 'CPT:99213')).toMatchObject({ label: 'Office visit', count: 3, providers: 2, minAllowed: 9800, maxAllowed: 12110 });
-    // The emergency visit, billed by the hospital and by its doctors.
-    expect(codes.find((c) => c.key === 'CPT:99284')).toMatchObject({ count: 2, providers: 2, minAllowed: 21000, maxAllowed: 98000 });
     expect(codes.map((c) => c.key)).toContain('NDC:00000-1111-90');
     expect(codeLines(all, 'CPT:99213').map((l) => [l.date, l.provider, l.cents.billed, l.cents.allowed])).toEqual([
       ['2026-11-20', 'Example Pediatrics', 16500, 9800],
@@ -140,8 +139,8 @@ describe('the sample household', () => {
 
   it('reads each plan’s deductible and out-of-pocket limit from its newest claim in the plan year', () => {
     const got = balances(inPlanYear, records).map((b) => [names.get(b.person), b.insurer, b.planYear.start, b.asOf, b.items.map((i) => [i.label, i.used, i.limit])]);
-    // Counting September's emergency visit, which came before; the newest is the private counseling's.
-    expect(got).toContainEqual(['Sam Example', 'Example Care Plan', '2026-07-01', '2026-10-27', [['Deductible', 21740, 75000], ['Out-of-pocket limit', 49740, 300000]]]);
+    // Counting August's knee procedure, which came before; the newest is the private counseling's.
+    expect(got).toContainEqual(['Sam Example', 'Example Care Plan', '2026-07-01', '2026-10-27', [['Deductible', 23350, 75000], ['Out-of-pocket limit', 43850, 300000]]]);
     expect(got).toContainEqual(['Robin Example', 'Example Health Plan', '2026-01-01', '2026-10-01', [['Deductible', 112040, 150000], ['Out-of-pocket limit', 135610, 400000]]]);
     // The pharmacy benefit printed none.
     expect(got.some((b) => b[1] === 'Example Pharmacy Benefits')).toBe(false);

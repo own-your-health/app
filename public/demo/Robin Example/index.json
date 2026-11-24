@@ -588,8 +588,12 @@
       "status": "final",
       "fields": {
         "when": "2025-03-10",
-        "value": "94",
-        "reference_range": "70 mg/dL – 99 mg/dL",
+        "value": {
+          "value": 94,
+          "unit": "mg/dL"
+        },
+        "reference_range": "70-99 mg/dL",
+        "interpretation": "Normal",
         "category": "Laboratory"
       },
       "documents": [],
@@ -1529,12 +1533,8 @@
       "status": "final",
       "fields": {
         "when": "2025-09-15",
-        "value": {
-          "value": 139,
-          "unit": "mmol/L"
-        },
-        "reference_range": "136-145 mmol/L",
-        "interpretation": "Normal",
+        "value": "139",
+        "reference_range": "136 mmol/L – 145 mmol/L",
         "category": "Laboratory"
       },
       "documents": [],
@@ -1703,9 +1703,9 @@
       "code": {
         "system": "http://www.ama-assn.org/go/cpt",
         "code": "99396",
-        "display": "Office visit"
+        "display": "YEARLY EXAM RETURNING ADULT"
       },
-      "display": "Office visit",
+      "display": "YEARLY EXAM RETURNING ADULT",
       "status": "finished",
       "fields": {
         "when": "2025-03-10",
@@ -3877,8 +3877,8 @@
     {
       "id": "r_27hwlsasluzk4kq5hooh",
       "kind": "coverage",
-      "key": "coverage|http://terminology.hl7.org/CodeSystem/v3-ActCode|HIP|2026-11-08",
-      "date": "2026-11-08",
+      "key": "coverage|http://terminology.hl7.org/CodeSystem/v3-ActCode|HIP|2026-03-01",
+      "date": "2026-03-01",
       "code": {
         "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
         "code": "HIP",
@@ -3887,10 +3887,10 @@
       "display": "Example Health Plan PPO",
       "status": "active",
       "fields": {
-        "when": "2026-11-08",
+        "when": "2026-03-01",
         "payer": "Example Health Plan",
         "period": {
-          "start": "2026-11-08",
+          "start": "2026-03-01",
           "end": "9999-12-31"
         },
         "relationship": "self",
@@ -4145,9 +4145,9 @@
       "code": {
         "system": "http://www.ama-assn.org/go/cpt",
         "code": "99213",
-        "display": "RETURN APPOINTMENT TIER THREE"
+        "display": "Office visit"
       },
-      "display": "RETURN APPOINTMENT TIER THREE",
+      "display": "Office visit",
       "status": "finished",
       "fields": {
         "when": "2026-11-18",
@@ -4193,11 +4193,11 @@
         "code": "pharmacy",
         "display": "Pharmacy"
       },
-      "display": "Lisinopril 10 mg tablet, 90 days · Example Pharmacy #1234 1234",
+      "display": "Lisinopril 10 mg tablet, 90 days · Example Pharmacy",
       "status": "active",
       "fields": {
         "when": "2026-08-14",
-        "provider": "Example Pharmacy #1234 1234",
+        "provider": "Example Pharmacy",
         "insurer": "Example Pharmacy Benefits",
         "outcome": "complete",
         "billable_period": {
@@ -4468,11 +4468,11 @@
         "code": "pharmacy",
         "display": "Pharmacy"
       },
-      "display": "Prescription drug · Example Pharmacy #1234 1234",
+      "display": "Lisinopril 10 mg tablet, 90 days · Example Pharmacy",
       "status": "active",
       "fields": {
         "when": "2026-11-12",
-        "provider": "Example Pharmacy #1234 1234",
+        "provider": "Example Pharmacy",
         "insurer": "Example Pharmacy Benefits",
         "outcome": "complete",
         "billable_period": {
@@ -4549,7 +4549,7 @@
             "service": {
               "system": "http://hl7.org/fhir/sid/ndc",
               "code": "00000-1111-90",
-              "display": "Prescription drug"
+              "display": "Lisinopril 10 mg tablet, 90 days"
             },
             "serviced": "2026-11-12",
             "quantity": {
@@ -4736,24 +4736,24 @@
     {
       "id": "r_ewjfubj6a265zedeuuec",
       "kind": "coverage",
-      "key": "coverage|http://terminology.hl7.org/CodeSystem/v3-ActCode|HIP|2024-01-01",
-      "date": "2024-01-01",
+      "key": "coverage|http://terminology.hl7.org/CodeSystem/v3-ActCode|HIP|2023-06-01",
+      "date": "2023-06-01",
       "code": {
         "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
         "code": "HIP",
         "display": "health insurance plan policy"
       },
-      "display": "ExampleHealth Plan",
+      "display": "EXAMPLE HEALTH PLAN, INC.",
       "status": "active",
       "fields": {
-        "when": "2024-01-01",
-        "payer": "ExampleHealth Plan",
+        "when": "2023-06-01",
+        "payer": "EXAMPLE HEALTH PLAN, INC.",
         "period": {
-          "start": "2024-01-01",
-          "end": "2026-11-07"
+          "start": "2023-06-01",
+          "end": "2026-02-28"
         },
         "relationship": "self",
-        "plan": "PPO Choice"
+        "plan": "HMO Basic"
       },
       "documents": [],
       "provenance": [
@@ -4781,20 +4781,20 @@
     {
       "id": "r_iux25a366smwsdvkvzap",
       "kind": "coverage",
-      "key": "coverage|http://terminology.hl7.org/CodeSystem/v3-ActCode|HIP|2026-11-08",
-      "date": "2026-11-08",
+      "key": "coverage|http://terminology.hl7.org/CodeSystem/v3-ActCode|HIP|2026-03-01",
+      "date": "2026-03-01",
       "code": {
         "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
         "code": "HIP",
         "display": "health insurance plan policy"
       },
-      "display": "ExampleHealth Plan",
+      "display": "EXAMPLE HEALTH PLAN, INC.",
       "status": "active",
       "fields": {
-        "when": "2026-11-08",
-        "payer": "ExampleHealth Plan",
+        "when": "2026-03-01",
+        "payer": "EXAMPLE HEALTH PLAN, INC.",
         "period": {
-          "start": "2026-11-08"
+          "start": "2026-03-01"
         },
         "relationship": "self",
         "plan": "PPO Choice"

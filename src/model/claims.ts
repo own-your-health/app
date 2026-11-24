@@ -113,7 +113,7 @@ export interface ClaimLine {
   /** The payer's notes on this line, as medrec gives them (`payer_notes`, "XX -- …"). */
   payerNotes: string[];
   /**
-   * A hospital's revenue code for the line (NUBC: 0450 is the emergency
+   * A hospital's revenue code for the line (NUBC: 0360 is the operating
    * room), beside its service code or, on a line with none, as its code.
    */
   revenue?: LineCode;
@@ -295,7 +295,7 @@ function lineCode(v: Json | undefined): LineCode | undefined {
   return code && isObject(v) ? { code, system: str(v.system), display: str(v.display) } : undefined;
 }
 
-/** A revenue code in words: "Emergency room, revenue code 0450". */
+/** A revenue code in words: "Operating room, revenue code 0360". */
 export function revenueText(r: LineCode): string {
   return r.display ? `${r.display}, revenue code ${r.code}` : `Revenue code ${r.code}`;
 }

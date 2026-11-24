@@ -24,13 +24,13 @@ const counted = (r: MedRecord) => claimLines(r).map((l) => [l.code, l.counted]);
 describe('a line the claim’s totals leave out', () => {
   it('is the one line whose removal makes billed, plan paid and you owe agree, in medrec’s names or the payer’s words', () => {
     expect(counted(named)).toEqual([
-      ['99285', false],
-      ['99284', true],
-      ['85025', true],
+      ['73723', false],
+      ['73721', true],
+      ['82565', true],
     ]);
     expect(counted(worded)).toEqual([
-      ['99285', false],
-      ['99284', true],
+      ['94070', false],
+      ['94060', true],
     ]);
   });
 
@@ -45,43 +45,43 @@ describe('a line the claim’s totals leave out', () => {
 
   it('is as medrec marks it, with the payer’s notes, when medrec marks one', () => {
     expect(counted(marked)).toEqual([
-      ['99284', false],
-      ['99283', true],
+      ['11043', false],
+      ['11042', true],
     ]);
     expect(claimLines(marked)[0]!.payerNotes).toEqual(['C7 -- This service was paid under a different code than the one billed.']);
     expect(claimNotes(marked)).toEqual(['N1 -- The deductible for this plan year has been met.']);
   });
 
   it('is never named in the claim’s title or kind of care', () => {
-    expect(claimTitle(named)).toBe('Emergency visit, moderate severity and blood cell test');
-    expect(claimTitle(worded)).toBe('Emergency visit, moderate severity');
-    expect(claimCategory(worded)).toBe('visit');
+    expect(claimTitle(named)).toBe('MRI of the knee, no dye and kidney test');
+    expect(claimTitle(worded)).toBe('Breathing test, before and after medicine');
+    expect(claimCategory(worded)).toBe('medicine');
   });
 
   it('counts nothing, keeps what it carried, and leaves no line of the difference', () => {
     expect(of(named.id).map((l) => [l.service, l.split, l.cents, l.uncounted])).toEqual([
-      ['Emergency visit, high severity', true, {}, { billed: 312000, notCovered: 312000, youOwe: 312000 }],
-      ['Emergency visit, moderate severity', true, { billed: 148000, allowed: 61240, planPaid: 46240, copay: 15000, youOwe: 15000 }, undefined],
-      ['Blood cell test', true, { billed: 9600, allowed: 3120, planPaid: 3120, youOwe: 0 }, undefined],
+      ['MRI of the knee, with and without dye', true, {}, { billed: 264000, notCovered: 264000, youOwe: 264000 }],
+      ['MRI of the knee, no dye', true, { billed: 118000, allowed: 48600, planPaid: 36100, copay: 12500, youOwe: 12500 }, undefined],
+      ['Kidney test', true, { billed: 6400, allowed: 1840, planPaid: 1840, youOwe: 0 }, undefined],
     ]);
-    expect(totals(of(named.id))).toEqual({ cents: { billed: 157600, allowed: 64360, planPaid: 49360, copay: 15000, youOwe: 15000 }, claims: 1, lines: 2 });
-    expect(totals(of(worded.id)).cents).toEqual({ billed: 90000, allowed: 42000, planPaid: 34000, copay: 8000, youOwe: 8000 });
+    expect(totals(of(named.id))).toEqual({ cents: { billed: 124400, allowed: 50440, planPaid: 37940, copay: 12500, youOwe: 12500 }, claims: 1, lines: 2 });
+    expect(totals(of(worded.id)).cents).toEqual({ billed: 72000, allowed: 31000, planPaid: 25000, copay: 6000, youOwe: 6000 });
   });
 
   it('leaves its claim leading with what the claim says you owe', () => {
     const [c] = claimsOf(of(named.id), lines);
-    expect(c).toMatchObject({ claim: named.id, title: 'Emergency visit, moderate severity and blood cell test', date: '2026-03-14', of: 3 });
-    expect(c!.cents.youOwe).toBe(15000);
+    expect(c).toMatchObject({ claim: named.id, title: 'MRI of the knee, no dye and kidney test', date: '2026-02-19', of: 3 });
+    expect(c!.cents.youOwe).toBe(12500);
     // A choice that shows only the left-out line shows no claim: nothing of it counts there.
     expect(claimsOf(of(named.id).filter((l) => l.uncounted), lines)).toEqual([]);
     // One that shows the lab alone still leads with the whole claim's.
-    expect(claimsOf(of(named.id).filter((l) => l.code === '85025'), lines).map((x) => [x.cents.youOwe, x.lines.length, x.of])).toEqual([[15000, 1, 3]]);
+    expect(claimsOf(of(named.id).filter((l) => l.code === '82565'), lines).map((x) => [x.cents.youOwe, x.lines.length, x.of])).toEqual([[12500, 1, 3]]);
   });
 
   it('downloads with its service as the payer wrote it, its amounts empty and "yes" under Left out by the plan', () => {
     const [left, paid] = toCsv(of(named.id).slice(0, 2), new Map()).split('\r\n').slice(1);
-    expect(left).toBe('2026-03-14,,Example Hospital,Example Health Plan,2026-01-01 to 2026-12-31,"Emergency visit, high severity",99285,CPT,Visit,,,,,,,,,r_claimreplacedaaaaaaa,yes,');
-    expect(paid).toMatch(/,150\.00,r_claimreplacedaaaaaaa,,$/);
+    expect(left).toBe('2026-02-19,,Example Imaging Center,Example Health Plan,2026-01-01 to 2026-12-31,"MRI of the knee, with and without dye",73723,CPT,Imaging,,,,,,,,,r_claimreplacedaaaaaaa,yes,');
+    expect(paid).toMatch(/,125\.00,r_claimreplacedaaaaaaa,,$/);
   });
 });
 

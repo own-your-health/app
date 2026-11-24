@@ -26,31 +26,31 @@ const on = (start: string) => events.filter((e) => e.start === start);
 const providers = (e: CareEvent) => e.claims.map((c) => [c.provider, c.role, c.rule, c.confidence]);
 
 describe('a hospital visit', () => {
-  const [er] = on('2026-03-02');
+  const [er] = on('2026-02-21');
 
   it('is the hospital’s claim and every doctor’s, lab’s and imaging claim within its days', () => {
-    expect(on('2026-03-02')).toHaveLength(1);
-    expect([er!.kind, er!.start, er!.end, kindText(er!), er!.place]).toEqual(['er', '2026-03-02', '2026-03-03', 'Emergency room · overnight', 'Example Hospital']);
+    expect(on('2026-02-21')).toHaveLength(1);
+    expect([er!.kind, er!.start, er!.end, kindText(er!), er!.place]).toEqual(['er', '2026-02-21', '2026-02-22', 'Emergency room · overnight', 'Example Hospital']);
     expect(providers(er!)).toEqual([
       ['Example Hospital', 'facility', 'C1', 'sure'],
       ['Example Emergency Doctors', 'hospital', 'C2', 'sure'],
-      ['Example Lab', 'ancillary', 'C2', 'sure'],
       ['Example Imaging', 'ancillary', 'C2', 'sure'],
+      ['Example Lab', 'ancillary', 'C2', 'sure'],
     ]);
   });
 
   it('costs what its claims’ totals say, never a line they leave out, and the steps add up', () => {
     const m = eventMoney(er!);
-    expect([m.billed, m.discount, m.planPaid, m.share, m.adds]).toEqual([275000, 183000, 64000, 28000, true]);
+    expect([m.billed, m.discount, m.planPaid, m.share, m.adds]).toEqual([178000, 108000, 47500, 22500, true]);
     expect(m.reasons).toEqual([
-      { name: 'copay', cents: 20000 },
-      { name: 'deductible', cents: 8000 },
+      { name: 'copay', cents: 16000 },
+      { name: 'deductible', cents: 6500 },
     ]);
     expect(m.charges.map((c) => [c.provider, c.role, c.share])).toEqual([
-      ['Example Hospital', 'The hospital', 20000],
-      ['Example Emergency Doctors', 'Emergency doctor', 8000],
-      ['Example Lab', 'Lab', 0],
+      ['Example Hospital', 'The hospital', 16000],
+      ['Example Emergency Doctors', 'Emergency doctor', 6500],
       ['Example Imaging', 'Imaging', 0],
+      ['Example Lab', 'Lab', 0],
     ]);
   });
 
@@ -134,7 +134,7 @@ describe('every event', () => {
   });
 
   it('is found from any record or paper in it', () => {
-    const er = on('2026-03-02')[0]!;
+    const er = on('2026-02-21')[0]!;
     expect(eventOf(events, er.claims[2]!.record.id)).toBe(er);
     expect(eventOf(events, er.papers[0]!.doc.id)).toBe(er);
     expect(eventOf(events, on('2026-04-10')[0]!.recorded[0]!.id)).toBe(on('2026-04-10')[0]);
@@ -146,11 +146,11 @@ describe('the sample', () => {
   const sam = personNamed(hh, 'Sam Example');
   const samEvents = careEvents(indexes.get(sam.id)!, hh, '2026-11-22');
 
-  it('makes Sam’s night in the emergency room one event from four billers, whose steps add up to what Sam owes', () => {
-    const er = samEvents.find((e) => e.kind === 'er')!;
-    expect([kindText(er), er.start, er.end, er.claims.length, new Set(er.claims.map((c) => c.provider)).size]).toEqual(['Emergency room · overnight', '2026-09-12', '2026-09-13', 5, 4]);
-    const m = eventMoney(er);
-    expect([m.billed, m.discount, m.planPaid, m.share, m.adds]).toEqual([477900, 339580, 103680, 34640, true]);
-    expect(er.papers.map((p) => p.doc.doc_type).sort()).toEqual(['bill', 'discharge_summary']);
+  it('makes Sam’s knee procedure one event from four billers, whose steps add up to what Sam owes', () => {
+    const knee = samEvents.find((e) => e.kind === 'outpatient')!;
+    expect([kindText(knee), knee.start, knee.end, knee.claims.length, new Set(knee.claims.map((c) => c.provider)).size]).toEqual(['Hospital visit', '2026-08-26', '2026-08-26', 5, 4]);
+    const m = eventMoney(knee);
+    expect([m.billed, m.discount, m.planPaid, m.share, m.adds]).toEqual([581800, 380230, 172820, 28750, true]);
+    expect(knee.papers.map((p) => p.doc.doc_type).sort()).toEqual(['bill', 'discharge_summary']);
   });
 });

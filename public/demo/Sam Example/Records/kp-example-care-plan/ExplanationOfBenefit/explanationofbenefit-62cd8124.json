@@ -14,8 +14,8 @@
   },
   "use": "claim",
   "billablePeriod": {
-    "start": "2026-09-12",
-    "end": "2026-09-12"
+    "start": "2026-08-26",
+    "end": "2026-08-26"
   },
   "benefitPeriod": {
     "start": "2026-07-01",
@@ -29,14 +29,14 @@
         "coding": [
           {
             "system": "http://www.ama-assn.org/go/cpt",
-            "code": "99284",
-            "display": "Emergency visit, moderate severity"
+            "code": "29881",
+            "display": "Knee scope, one side"
           }
         ]
       },
-      "servicedDate": "2026-09-12",
+      "servicedDate": "2026-08-26",
       "net": {
-        "value": 780,
+        "value": 1450,
         "currency": "USD"
       }
     }

@@ -1,7 +1,7 @@
 // A person's coverage over time: each insurer and plan, from when to when,
 // newest first. Two sources often describe the same coverage (the insurer's
 // own records and a provider portal's copy), and they may spell the insurer
-// differently ("Example Health Plan", "ExampleHealth Plan"): the same insurer
+// differently ("Example Health Plan", "EXAMPLE HEALTH PLAN, INC."): the same insurer
 // starting on the same day is one coverage, whichever source names it.
 //
 // No source in these records says why a coverage changed. FHIR's Coverage has
@@ -97,7 +97,7 @@ export function bornClause(s: CoverageSegment): string | undefined {
   return s.born && s.start ? `the day ${called(s.born)} was born` : undefined;
 }
 
-/** "Changed on Nov 8, 2026, the day Jamie was born." Nothing when no one was born that day. */
+/** "Changed on May 17, 2016, the day Casey was born." Nothing when no one was born that day. */
 export function birthWords(s: CoverageSegment, dateText: (d: string) => string): string | undefined {
   const born = bornClause(s);
   return born ? `${s.first ? 'Started' : 'Changed'} on ${dateText(s.start!)}, ${born}.` : undefined;

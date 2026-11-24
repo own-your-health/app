@@ -69,10 +69,10 @@ describe('claims beside their bills', () => {
     const view = claims.map((c) => [c.service, c.provider, c.yourShare?.amount, c.bill?.how, c.bill?.bill.date, c.bill?.bill.receipt ? 'receipt' : null]);
     expect(view).toEqual([
       ['2026-11-18', 'Example Health', '25.00', undefined, undefined, null],
-      ['2026-11-12', 'Example Pharmacy #1234', '10.00', undefined, undefined, null],
+      ['2026-11-12', 'Example Pharmacy', '10.00', undefined, undefined, null],
       ['2026-10-03', 'Example Lab', '19.28', 'amount', '2026-10-28', null],
       ['2026-10-01', 'Example Health', '53.68', 'amount', '2026-10-20', null],
-      ['2026-08-14', 'Example Pharmacy #1234', '10.00', undefined, undefined, null],
+      ['2026-08-14', 'Example Pharmacy', '10.00', undefined, undefined, null],
       ['2025-09-15', 'Example Health', '0.00', undefined, undefined, null],
       ['2025-03-10', 'Example Health', '51.18', 'amount', '2025-04-02', 'receipt'],
     ]);

@@ -45,11 +45,9 @@ describe('results by panel', () => {
     ]);
   });
 
-  it('groups a newborn’s weights as vital signs and bilirubin with the liver panel', () => {
-    expect(shape(index('Jamie Example'))).toEqual([
-      ['Vital signs', 0, ['Weight']],
-      ['Liver panel', 0, ['Bilirubin']],
-    ]);
+  it('groups a baby’s weights and oxygen as vital signs, and bilirubin with the liver panel', () => {
+    expect(shape(index('Jamie Example'))).toEqual([['Vital signs', 0, ['Weight', 'Oxygen saturation, right hand']]]);
+    expect(shape(idx([result('1975-2', 'Bilirubin, total', '2026-03-02', 0.7, 'mg/dL', '0.2-1.2 mg/dL')]))).toEqual([['Liver panel', 0, ['Bilirubin']]]);
   });
 
   it('puts a critical result’s panel ahead of one merely out of range, whatever the dates', () => {

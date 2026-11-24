@@ -1,6 +1,6 @@
 {
   "schema": "medrec-index/v1",
-  "person": "p_skrlw3od3nik2hkngezu",
+  "person": "p_bbbbbbbbbbbbbbbbbbbb",
   "rev": 1,
   "documents": [],
   "records": [
@@ -8,14 +8,14 @@
       "id": "r_gggggggggggggggggggg",
       "kind": "coverage",
       "key": "coverage|g",
-      "date": "2026-11-08",
+      "date": "2016-05-17",
       "display": "Example Health Plan",
       "status": "active",
       "fields": {
         "payer": "Example Health Plan",
         "relationship": "child",
         "period": {
-          "start": "2026-11-08",
+          "start": "2016-05-17",
           "end": "9999-12-31"
         },
         "plan": "PPO Choice"

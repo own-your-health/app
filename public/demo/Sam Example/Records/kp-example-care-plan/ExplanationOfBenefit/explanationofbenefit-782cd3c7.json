@@ -14,8 +14,8 @@
   },
   "use": "claim",
   "billablePeriod": {
-    "start": "2026-09-12",
-    "end": "2026-09-13"
+    "start": "2026-08-26",
+    "end": "2026-08-26"
   },
   "benefitPeriod": {
     "start": "2026-07-01",
@@ -29,14 +29,14 @@
         "coding": [
           {
             "system": "http://www.ama-assn.org/go/cpt",
-            "code": "99285",
-            "display": "Emergency visit, high severity"
+            "code": "29880",
+            "display": "Knee scope, both sides"
           }
         ]
       },
-      "servicedDate": "2026-09-12",
+      "servicedDate": "2026-08-26",
       "net": {
-        "value": 4200,
+        "value": 5120,
         "currency": "USD"
       }
     },
@@ -46,14 +46,14 @@
         "coding": [
           {
             "system": "http://www.ama-assn.org/go/cpt",
-            "code": "99284",
-            "display": "Emergency visit, moderate severity"
+            "code": "29881",
+            "display": "Knee scope, one side"
           }
         ]
       },
-      "servicedDate": "2026-09-12",
+      "servicedDate": "2026-08-26",
       "net": {
-        "value": 3100,
+        "value": 3960,
         "currency": "USD"
       }
     },
@@ -63,14 +63,14 @@
         "coding": [
           {
             "system": "http://www.ama-assn.org/go/cpt",
-            "code": "71046",
-            "display": "Chest X-ray, 2 views"
+            "code": "J0690",
+            "display": "Antibiotic during surgery"
           }
         ]
       },
-      "servicedDate": "2026-09-12",
+      "servicedDate": "2026-08-26",
       "net": {
-        "value": 620,
+        "value": 88,
         "currency": "USD"
       }
     }

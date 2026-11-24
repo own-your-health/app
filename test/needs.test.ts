@@ -18,7 +18,7 @@ describe('open bills', () => {
     const sam = openBills(index('Sam Example'), events('Sam Example'), TODAY);
     expect(sam.map((b) => [b.bill.provider, b.cents, b.verdict, b.claimSays, b.claimSaysVisit, b.overdue])).toEqual([
       ['Example Billing', 12000, 'differs', 5070, true, true],
-      ['Example General Hospital', 25000, 'matches', 25000, false, true],
+      ['Example Surgery Center', 17500, 'matches', 17500, false, true],
     ]);
     expect(sam[0]!.event?.event.title).toBe('Lab tests');
   });
@@ -44,8 +44,8 @@ describe('refills', () => {
   it('show from two weeks before a supply runs out to two weeks after, soonest first, private ones marked', () => {
     const sam = refillsDue(index('Sam Example'), TODAY);
     expect(sam.map((r) => [r.medicine.name, r.runsOut, r.days, r.private])).toEqual([
-      ['Sertraline 50 mg tablet', '2026-11-27', 5, 'mental_health'],
-      ['Vitamin D3 2,000 unit capsule', '2026-11-28', 6, undefined],
+      ['Loratadine 10 mg tablet', '2026-11-24', 2, undefined],
+      ['Nicotine 14 mg/24 hour patch', '2026-11-28', 6, 'substance_use'],
     ]);
     expect(refillsDue(index('Sam Example'), '2026-12-12').map((r) => r.days)).toEqual([-14]);
     expect(refillsDue(index('Sam Example'), '2026-12-13')).toEqual([]);
@@ -64,8 +64,8 @@ describe('vaccine doses', () => {
     expect(v.due).toEqual([]);
     expect(v.flu).toBeUndefined();
     expect(v.visits.map((x) => [x.from, x.days, x.months, x.doses.map((d) => d.id).sort()])).toEqual([
-      ['2026-12-08', 16, 1, ['hepb']],
-      ['2027-01-08', 47, 2, ['dtap', 'hib', 'ipv', 'pcv', 'rota']],
+      ['2026-11-28', 6, 4, ['dtap', 'hib', 'ipv', 'pcv', 'rota']],
+      ['2027-01-28', 67, 6, ['hepb']],
     ]);
   });
 
@@ -79,7 +79,8 @@ describe('vaccine doses', () => {
 
 describe('an age', () => {
   it('reads in days, weeks, months, then years', () => {
-    expect([ageWords('2026-11-12', TODAY), ageWords('2026-11-08', TODAY), ageWords('2026-06-30', TODAY), ageWords('2018-01-01', TODAY), ageWords('2026-12-01', TODAY)]).toEqual([
+    const on = '2026-03-20';
+    expect([ageWords('2026-03-10', on), ageWords('2026-03-06', on), ageWords('2025-10-30', on), ageWords('2018-01-01', on), ageWords('2026-03-29', on)]).toEqual([
       '10 days old',
       '2 weeks old',
       '4 months old',

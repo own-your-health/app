@@ -94,36 +94,36 @@
     },
     {
       "id": "d_aipiyvveklwqqrz7ejff",
-      "path": "Sam Example/Claims/2026/2026-09-12_bill_example_general_hospital_hospital_statement_sep.pdf",
+      "path": "Sam Example/Claims/2026/2026-08-26_bill_example_surgery_center_surgery_center_statement_sep.pdf",
       "sha256": "128d6d85a4d6bffd50a2156435ca418823879b5bb7c9931a07d870694d6cf944",
       "md5": "fa073229367f8975fa2bfd0540f24021",
       "size": 59393,
       "media_type": "application/pdf",
       "pages": 1,
-      "original_name": "hospital_statement_sep.pdf",
-      "title": "Statement from Example General Hospital",
+      "original_name": "surgery_center_statement_sep.pdf",
+      "title": "Statement from Example Surgery Center",
       "doc_type": "bill",
-      "date": "2026-09-12",
-      "organization": "Example General Hospital",
+      "date": "2026-08-26",
+      "organization": "Example Surgery Center",
       "filed_at": "2026-11-02T20:00:00Z",
       "origin": {
         "kind": "inbox",
-        "name": "hospital_statement_sep.pdf",
+        "name": "surgery_center_statement_sep.pdf",
         "action": "moved"
       },
       "text": {
-        "chars": 129,
+        "chars": 117,
         "engines": [
           "pdftotext 26.10.0"
         ]
       },
       "statement": {
-        "statement_date": "2026-09-28",
+        "statement_date": "2026-09-21",
         "amount_due": {
-          "amount": "250.00",
+          "amount": "175.00",
           "currency": "USD"
         },
-        "due_date": "2026-10-28",
+        "due_date": "2026-10-21",
         "account": "****2222"
       },
       "provenance": {
@@ -138,25 +138,25 @@
     },
     {
       "id": "d_d6i3awfvotrthuovzda3",
-      "path": "Sam Example/Documents/2026/2026-09-13_discharge_summary_example_general_hospital_er_discharge.pdf",
+      "path": "Sam Example/Documents/2026/2026-08-26_discharge_summary_example_surgery_center_knee_going_home.pdf",
       "sha256": "cdb8081afeb9098f029ef75c1d92d13850a898ddf1c571a1960f132cb643555e",
       "md5": "9a17a37e613591c5b5702f9cc4e7561a",
       "size": 211798,
       "media_type": "application/pdf",
       "pages": 2,
-      "original_name": "er_discharge.pdf",
-      "title": "Emergency department discharge instructions",
+      "original_name": "knee_going_home.pdf",
+      "title": "Going home after knee surgery",
       "doc_type": "discharge_summary",
-      "date": "2026-09-13",
-      "organization": "Example General Hospital",
+      "date": "2026-08-26",
+      "organization": "Example Surgery Center",
       "filed_at": "2026-11-02T20:00:00Z",
       "origin": {
         "kind": "inbox",
-        "name": "er_discharge.pdf",
+        "name": "knee_going_home.pdf",
         "action": "moved"
       },
       "text": {
-        "chars": 141,
+        "chars": 132,
         "engines": [
           "pdftotext 26.10.0"
         ]
@@ -1927,7 +1927,7 @@
                   "currency": "USD"
                 },
                 "used": {
-                  "amount": "217.40",
+                  "amount": "233.50",
                   "currency": "USD"
                 }
               },
@@ -1938,7 +1938,7 @@
                   "currency": "USD"
                 },
                 "used": {
-                  "amount": "467.40",
+                  "amount": "408.50",
                   "currency": "USD"
                 }
               }
@@ -2023,43 +2023,43 @@
     {
       "id": "r_se4qctpgoqorqqvlkebf",
       "kind": "claim",
-      "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|institutional|2026-09-12",
-      "date": "2026-09-12",
+      "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|institutional|2026-08-26",
+      "date": "2026-08-26",
       "code": {
         "system": "http://terminology.hl7.org/CodeSystem/claim-type",
         "code": "institutional",
         "display": "Institutional"
       },
-      "display": "Emergency visit, moderate severity and Chest X-ray, 2 views · Example General Hospital",
+      "display": "Knee scope, one side and Antibiotic during surgery · Example Surgery Center",
       "status": "active",
       "fields": {
-        "when": "2026-09-12",
-        "provider": "Example General Hospital",
+        "when": "2026-08-26",
+        "provider": "Example Surgery Center",
         "insurer": "Example Care Plan",
         "outcome": "complete",
         "billable_period": {
-          "start": "2026-09-12",
-          "end": "2026-09-13"
+          "start": "2026-08-26",
+          "end": "2026-08-26"
         },
         "total": [
           {
             "category": "Submitted Amount",
             "amount": {
-              "amount": "3720.00",
+              "amount": "4048.00",
               "currency": "USD"
             }
           },
           {
             "category": "Eligible Amount",
             "amount": {
-              "amount": "1120.00",
+              "amount": "1262.00",
               "currency": "USD"
             }
           },
           {
             "category": "Benefit Amount",
             "amount": {
-              "amount": "870.00",
+              "amount": "1087.00",
               "currency": "USD"
             }
           },
@@ -2073,7 +2073,7 @@
           {
             "category": "Copay",
             "amount": {
-              "amount": "250.00",
+              "amount": "175.00",
               "currency": "USD"
             }
           },
@@ -2087,13 +2087,13 @@
           {
             "category": "Member liability",
             "amount": {
-              "amount": "250.00",
+              "amount": "175.00",
               "currency": "USD"
             }
           }
         ],
         "payment": {
-          "amount": "870.00",
+          "amount": "1087.00",
           "currency": "USD"
         },
         "type": "Institutional",
@@ -2102,23 +2102,23 @@
           {
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
-              "code": "99285",
-              "display": "Emergency visit, high severity"
+              "code": "29880",
+              "display": "Knee scope, both sides"
             },
-            "serviced": "2026-09-12",
+            "serviced": "2026-08-26",
             "quantity": {
               "value": 1,
               "unit": null
             },
             "net": {
-              "amount": "4200.00",
+              "amount": "5120.00",
               "currency": "USD"
             },
             "adjudication": [
               {
                 "category": "Submitted Amount",
                 "amount": {
-                  "amount": "4200.00",
+                  "amount": "5120.00",
                   "currency": "USD"
                 },
                 "reason": null
@@ -2126,7 +2126,7 @@
               {
                 "category": "Not covered",
                 "amount": {
-                  "amount": "4200.00",
+                  "amount": "5120.00",
                   "currency": "USD"
                 },
                 "reason": {
@@ -2134,14 +2134,14 @@
                 }
               }
             ],
-            "category": "visit",
+            "category": "procedure",
             "amounts": {
               "billed": {
-                "amount": "4200.00",
+                "amount": "5120.00",
                 "currency": "USD"
               },
               "not_covered": {
-                "amount": "4200.00",
+                "amount": "5120.00",
                 "currency": "USD"
               }
             },
@@ -2156,23 +2156,23 @@
             "sequence": 2,
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
-              "code": "99284",
-              "display": "Emergency visit, moderate severity"
+              "code": "29881",
+              "display": "Knee scope, one side"
             },
-            "serviced": "2026-09-12",
+            "serviced": "2026-08-26",
             "quantity": {
               "value": 1,
               "unit": null
             },
             "net": {
-              "amount": "3100.00",
+              "amount": "3960.00",
               "currency": "USD"
             },
             "adjudication": [
               {
                 "category": "Submitted Amount",
                 "amount": {
-                  "amount": "3100.00",
+                  "amount": "3960.00",
                   "currency": "USD"
                 },
                 "reason": null
@@ -2180,7 +2180,7 @@
               {
                 "category": "Eligible Amount",
                 "amount": {
-                  "amount": "980.00",
+                  "amount": "1240.00",
                   "currency": "USD"
                 },
                 "reason": null
@@ -2188,7 +2188,7 @@
               {
                 "category": "Benefit Amount",
                 "amount": {
-                  "amount": "730.00",
+                  "amount": "1065.00",
                   "currency": "USD"
                 },
                 "reason": null
@@ -2204,7 +2204,7 @@
               {
                 "category": "Copay",
                 "amount": {
-                  "amount": "250.00",
+                  "amount": "175.00",
                   "currency": "USD"
                 },
                 "reason": null
@@ -2220,24 +2220,24 @@
               {
                 "category": "Member liability",
                 "amount": {
-                  "amount": "250.00",
+                  "amount": "175.00",
                   "currency": "USD"
                 },
                 "reason": null
               }
             ],
-            "category": "visit",
+            "category": "procedure",
             "amounts": {
               "billed": {
-                "amount": "3100.00",
+                "amount": "3960.00",
                 "currency": "USD"
               },
               "allowed": {
-                "amount": "980.00",
+                "amount": "1240.00",
                 "currency": "USD"
               },
               "plan_paid": {
-                "amount": "730.00",
+                "amount": "1065.00",
                 "currency": "USD"
               },
               "deductible": {
@@ -2245,7 +2245,7 @@
                 "currency": "USD"
               },
               "copay": {
-                "amount": "250.00",
+                "amount": "175.00",
                 "currency": "USD"
               },
               "coinsurance": {
@@ -2253,38 +2253,38 @@
                 "currency": "USD"
               },
               "you_owe": {
-                "amount": "250.00",
+                "amount": "175.00",
                 "currency": "USD"
               }
             },
             "records": [],
             "revenue": {
               "system": "https://www.nubc.org/CodeSystem/RevenueCodes",
-              "code": "0450",
-              "display": "Emergency room"
+              "code": "0360",
+              "display": "Operating room"
             }
           },
           {
             "sequence": 3,
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
-              "code": "71046",
-              "display": "Chest X-ray, 2 views"
+              "code": "J0690",
+              "display": "Antibiotic during surgery"
             },
-            "serviced": "2026-09-12",
+            "serviced": "2026-08-26",
             "quantity": {
               "value": 1,
               "unit": null
             },
             "net": {
-              "amount": "620.00",
+              "amount": "88.00",
               "currency": "USD"
             },
             "adjudication": [
               {
                 "category": "Submitted Amount",
                 "amount": {
-                  "amount": "620.00",
+                  "amount": "88.00",
                   "currency": "USD"
                 },
                 "reason": null
@@ -2292,7 +2292,7 @@
               {
                 "category": "Eligible Amount",
                 "amount": {
-                  "amount": "140.00",
+                  "amount": "22.00",
                   "currency": "USD"
                 },
                 "reason": null
@@ -2300,7 +2300,7 @@
               {
                 "category": "Benefit Amount",
                 "amount": {
-                  "amount": "140.00",
+                  "amount": "22.00",
                   "currency": "USD"
                 },
                 "reason": null
@@ -2338,18 +2338,18 @@
                 "reason": null
               }
             ],
-            "category": "imaging",
+            "category": "drug",
             "amounts": {
               "billed": {
-                "amount": "620.00",
+                "amount": "88.00",
                 "currency": "USD"
               },
               "allowed": {
-                "amount": "140.00",
+                "amount": "22.00",
                 "currency": "USD"
               },
               "plan_paid": {
-                "amount": "140.00",
+                "amount": "22.00",
                 "currency": "USD"
               },
               "deductible": {
@@ -2372,8 +2372,8 @@
             "records": [],
             "revenue": {
               "system": "https://www.nubc.org/CodeSystem/RevenueCodes",
-              "code": "0320",
-              "display": "Radiology, diagnostic"
+              "code": "0636",
+              "display": "Medicine given"
             }
           }
         ],
@@ -2384,15 +2384,15 @@
         "category": "mixed",
         "amounts": {
           "billed": {
-            "amount": "3720.00",
+            "amount": "4048.00",
             "currency": "USD"
           },
           "allowed": {
-            "amount": "1120.00",
+            "amount": "1262.00",
             "currency": "USD"
           },
           "plan_paid": {
-            "amount": "870.00",
+            "amount": "1087.00",
             "currency": "USD"
           },
           "deductible": {
@@ -2400,7 +2400,7 @@
             "currency": "USD"
           },
           "copay": {
-            "amount": "250.00",
+            "amount": "175.00",
             "currency": "USD"
           },
           "coinsurance": {
@@ -2408,7 +2408,7 @@
             "currency": "USD"
           },
           "you_owe": {
-            "amount": "250.00",
+            "amount": "175.00",
             "currency": "USD"
           }
         },
@@ -2417,8 +2417,8 @@
             "sequence": 1,
             "code": {
               "system": "http://hl7.org/fhir/sid/icd-10-cm",
-              "code": "R07.9",
-              "display": "Chest pain, unspecified"
+              "code": "S83.241A",
+              "display": "Other tear of medial meniscus, current injury, right knee, initial encounter"
             }
           }
         ],
@@ -2450,50 +2450,50 @@
     {
       "id": "r_nnd6s3bmzjztavm4wea5",
       "kind": "claim",
-      "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|professional|2026-09-12",
-      "date": "2026-09-12",
+      "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|professional|2026-08-26",
+      "date": "2026-08-26",
       "code": {
         "system": "http://terminology.hl7.org/CodeSystem/claim-type",
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Emergency visit, moderate severity · Example Emergency Physicians",
+      "display": "Knee scope, one side · Example Orthopedic Surgeons",
       "status": "active",
       "fields": {
-        "when": "2026-09-12",
-        "provider": "Example Emergency Physicians",
+        "when": "2026-08-26",
+        "provider": "Example Orthopedic Surgeons",
         "insurer": "Example Care Plan",
         "outcome": "complete",
         "billable_period": {
-          "start": "2026-09-12",
-          "end": "2026-09-12"
+          "start": "2026-08-26",
+          "end": "2026-08-26"
         },
         "total": [
           {
             "category": "Submitted Amount",
             "amount": {
-              "amount": "780.00",
+              "amount": "1450.00",
               "currency": "USD"
             }
           },
           {
             "category": "Eligible Amount",
             "amount": {
-              "amount": "210.00",
+              "amount": "610.00",
               "currency": "USD"
             }
           },
           {
             "category": "Benefit Amount",
             "amount": {
-              "amount": "113.60",
+              "amount": "497.50",
               "currency": "USD"
             }
           },
           {
             "category": "Deductible",
             "amount": {
-              "amount": "96.40",
+              "amount": "112.50",
               "currency": "USD"
             }
           },
@@ -2514,13 +2514,13 @@
           {
             "category": "Member liability",
             "amount": {
-              "amount": "96.40",
+              "amount": "112.50",
               "currency": "USD"
             }
           }
         ],
         "payment": {
-          "amount": "113.60",
+          "amount": "497.50",
           "currency": "USD"
         },
         "type": "Professional",
@@ -2530,23 +2530,23 @@
             "sequence": 1,
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
-              "code": "99284",
-              "display": "Emergency visit, moderate severity"
+              "code": "29881",
+              "display": "Knee scope, one side"
             },
-            "serviced": "2026-09-12",
+            "serviced": "2026-08-26",
             "quantity": {
               "value": 1,
               "unit": null
             },
             "net": {
-              "amount": "780.00",
+              "amount": "1450.00",
               "currency": "USD"
             },
             "adjudication": [
               {
                 "category": "Submitted Amount",
                 "amount": {
-                  "amount": "780.00",
+                  "amount": "1450.00",
                   "currency": "USD"
                 },
                 "reason": null
@@ -2554,7 +2554,7 @@
               {
                 "category": "Eligible Amount",
                 "amount": {
-                  "amount": "210.00",
+                  "amount": "610.00",
                   "currency": "USD"
                 },
                 "reason": null
@@ -2562,7 +2562,7 @@
               {
                 "category": "Benefit Amount",
                 "amount": {
-                  "amount": "113.60",
+                  "amount": "497.50",
                   "currency": "USD"
                 },
                 "reason": null
@@ -2570,7 +2570,7 @@
               {
                 "category": "Deductible",
                 "amount": {
-                  "amount": "96.40",
+                  "amount": "112.50",
                   "currency": "USD"
                 },
                 "reason": null
@@ -2594,28 +2594,28 @@
               {
                 "category": "Member liability",
                 "amount": {
-                  "amount": "96.40",
+                  "amount": "112.50",
                   "currency": "USD"
                 },
                 "reason": null
               }
             ],
-            "category": "visit",
+            "category": "procedure",
             "amounts": {
               "billed": {
-                "amount": "780.00",
+                "amount": "1450.00",
                 "currency": "USD"
               },
               "allowed": {
-                "amount": "210.00",
+                "amount": "610.00",
                 "currency": "USD"
               },
               "plan_paid": {
-                "amount": "113.60",
+                "amount": "497.50",
                 "currency": "USD"
               },
               "deductible": {
-                "amount": "96.40",
+                "amount": "112.50",
                 "currency": "USD"
               },
               "copay": {
@@ -2627,7 +2627,7 @@
                 "currency": "USD"
               },
               "you_owe": {
-                "amount": "96.40",
+                "amount": "112.50",
                 "currency": "USD"
               }
             },
@@ -2638,22 +2638,22 @@
           "start": "2026-07-01",
           "end": "2027-06-30"
         },
-        "category": "visit",
+        "category": "procedure",
         "amounts": {
           "billed": {
-            "amount": "780.00",
+            "amount": "1450.00",
             "currency": "USD"
           },
           "allowed": {
-            "amount": "210.00",
+            "amount": "610.00",
             "currency": "USD"
           },
           "plan_paid": {
-            "amount": "113.60",
+            "amount": "497.50",
             "currency": "USD"
           },
           "deductible": {
-            "amount": "96.40",
+            "amount": "112.50",
             "currency": "USD"
           },
           "copay": {
@@ -2665,7 +2665,7 @@
             "currency": "USD"
           },
           "you_owe": {
-            "amount": "96.40",
+            "amount": "112.50",
             "currency": "USD"
           }
         },
@@ -2674,8 +2674,8 @@
             "sequence": 1,
             "code": {
               "system": "http://hl7.org/fhir/sid/icd-10-cm",
-              "code": "R07.9",
-              "display": "Chest pain, unspecified"
+              "code": "S83.241A",
+              "display": "Other tear of medial meniscus, current injury, right knee, initial encounter"
             }
           }
         ],
@@ -2707,43 +2707,43 @@
     {
       "id": "r_fbhlexithgaohaghqvwc",
       "kind": "claim",
-      "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|professional|2026-09-12",
-      "date": "2026-09-12",
+      "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|professional|2026-08-26",
+      "date": "2026-08-26",
       "code": {
         "system": "http://terminology.hl7.org/CodeSystem/claim-type",
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Chest X-ray, 2 views · Example Radiology Associates",
+      "display": "X-ray of the knee · Example Imaging Partners",
       "status": "active",
       "fields": {
-        "when": "2026-09-12",
-        "provider": "Example Radiology Associates",
+        "when": "2026-08-26",
+        "provider": "Example Imaging Partners",
         "insurer": "Example Care Plan",
         "outcome": "complete",
         "billable_period": {
-          "start": "2026-09-12",
-          "end": "2026-09-12"
+          "start": "2026-08-26",
+          "end": "2026-08-26"
         },
         "total": [
           {
             "category": "Submitted Amount",
             "amount": {
-              "amount": "95.00",
+              "amount": "118.00",
               "currency": "USD"
             }
           },
           {
             "category": "Eligible Amount",
             "amount": {
-              "amount": "31.00",
+              "amount": "44.00",
               "currency": "USD"
             }
           },
           {
             "category": "Benefit Amount",
             "amount": {
-              "amount": "31.00",
+              "amount": "44.00",
               "currency": "USD"
             }
           },
@@ -2777,7 +2777,7 @@
           }
         ],
         "payment": {
-          "amount": "31.00",
+          "amount": "44.00",
           "currency": "USD"
         },
         "type": "Professional",
@@ -2787,23 +2787,23 @@
             "sequence": 1,
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
-              "code": "71046",
-              "display": "Chest X-ray, 2 views"
+              "code": "73560",
+              "display": "X-ray of the knee"
             },
-            "serviced": "2026-09-12",
+            "serviced": "2026-08-26",
             "quantity": {
               "value": 1,
               "unit": null
             },
             "net": {
-              "amount": "95.00",
+              "amount": "118.00",
               "currency": "USD"
             },
             "adjudication": [
               {
                 "category": "Submitted Amount",
                 "amount": {
-                  "amount": "95.00",
+                  "amount": "118.00",
                   "currency": "USD"
                 },
                 "reason": null
@@ -2811,7 +2811,7 @@
               {
                 "category": "Eligible Amount",
                 "amount": {
-                  "amount": "31.00",
+                  "amount": "44.00",
                   "currency": "USD"
                 },
                 "reason": null
@@ -2819,7 +2819,7 @@
               {
                 "category": "Benefit Amount",
                 "amount": {
-                  "amount": "31.00",
+                  "amount": "44.00",
                   "currency": "USD"
                 },
                 "reason": null
@@ -2860,15 +2860,15 @@
             "category": "imaging",
             "amounts": {
               "billed": {
-                "amount": "95.00",
+                "amount": "118.00",
                 "currency": "USD"
               },
               "allowed": {
-                "amount": "31.00",
+                "amount": "44.00",
                 "currency": "USD"
               },
               "plan_paid": {
-                "amount": "31.00",
+                "amount": "44.00",
                 "currency": "USD"
               },
               "deductible": {
@@ -2898,15 +2898,15 @@
         "category": "imaging",
         "amounts": {
           "billed": {
-            "amount": "95.00",
+            "amount": "118.00",
             "currency": "USD"
           },
           "allowed": {
-            "amount": "31.00",
+            "amount": "44.00",
             "currency": "USD"
           },
           "plan_paid": {
-            "amount": "31.00",
+            "amount": "44.00",
             "currency": "USD"
           },
           "deductible": {
@@ -2931,8 +2931,8 @@
             "sequence": 1,
             "code": {
               "system": "http://hl7.org/fhir/sid/icd-10-cm",
-              "code": "R07.9",
-              "display": "Chest pain, unspecified"
+              "code": "S83.241A",
+              "display": "Other tear of medial meniscus, current injury, right knee, initial encounter"
             }
           }
         ],
@@ -2964,43 +2964,43 @@
     {
       "id": "r_vghqmkdiawjewfytl46h",
       "kind": "claim",
-      "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|professional|2026-09-12",
-      "date": "2026-09-12",
+      "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|professional|2026-08-26",
+      "date": "2026-08-26",
       "code": {
         "system": "http://terminology.hl7.org/CodeSystem/claim-type",
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Blood cell test · Example Lab",
+      "display": "Crutches · Example Medical Supply",
       "status": "active",
       "fields": {
-        "when": "2026-09-12",
-        "provider": "Example Lab",
+        "when": "2026-08-26",
+        "provider": "Example Medical Supply",
         "insurer": "Example Care Plan",
         "outcome": "complete",
         "billable_period": {
-          "start": "2026-09-12",
-          "end": "2026-09-12"
+          "start": "2026-08-26",
+          "end": "2026-08-26"
         },
         "total": [
           {
             "category": "Submitted Amount",
             "amount": {
-              "amount": "64.00",
+              "amount": "62.00",
               "currency": "USD"
             }
           },
           {
             "category": "Eligible Amount",
             "amount": {
-              "amount": "9.80",
+              "amount": "28.40",
               "currency": "USD"
             }
           },
           {
             "category": "Benefit Amount",
             "amount": {
-              "amount": "9.80",
+              "amount": "28.40",
               "currency": "USD"
             }
           },
@@ -3034,7 +3034,7 @@
           }
         ],
         "payment": {
-          "amount": "9.80",
+          "amount": "28.40",
           "currency": "USD"
         },
         "type": "Professional",
@@ -3044,23 +3044,23 @@
             "sequence": 1,
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
-              "code": "85025",
-              "display": "Blood cell test"
+              "code": "E0114",
+              "display": "Crutches"
             },
-            "serviced": "2026-09-12",
+            "serviced": "2026-08-26",
             "quantity": {
               "value": 1,
               "unit": null
             },
             "net": {
-              "amount": "64.00",
+              "amount": "62.00",
               "currency": "USD"
             },
             "adjudication": [
               {
                 "category": "Submitted Amount",
                 "amount": {
-                  "amount": "64.00",
+                  "amount": "62.00",
                   "currency": "USD"
                 },
                 "reason": null
@@ -3068,7 +3068,7 @@
               {
                 "category": "Eligible Amount",
                 "amount": {
-                  "amount": "9.80",
+                  "amount": "28.40",
                   "currency": "USD"
                 },
                 "reason": null
@@ -3076,7 +3076,7 @@
               {
                 "category": "Benefit Amount",
                 "amount": {
-                  "amount": "9.80",
+                  "amount": "28.40",
                   "currency": "USD"
                 },
                 "reason": null
@@ -3114,18 +3114,18 @@
                 "reason": null
               }
             ],
-            "category": "lab",
+            "category": "supply",
             "amounts": {
               "billed": {
-                "amount": "64.00",
+                "amount": "62.00",
                 "currency": "USD"
               },
               "allowed": {
-                "amount": "9.80",
+                "amount": "28.40",
                 "currency": "USD"
               },
               "plan_paid": {
-                "amount": "9.80",
+                "amount": "28.40",
                 "currency": "USD"
               },
               "deductible": {
@@ -3152,18 +3152,18 @@
           "start": "2026-07-01",
           "end": "2027-06-30"
         },
-        "category": "lab",
+        "category": "supply",
         "amounts": {
           "billed": {
-            "amount": "64.00",
+            "amount": "62.00",
             "currency": "USD"
           },
           "allowed": {
-            "amount": "9.80",
+            "amount": "28.40",
             "currency": "USD"
           },
           "plan_paid": {
-            "amount": "9.80",
+            "amount": "28.40",
             "currency": "USD"
           },
           "deductible": {
@@ -3188,8 +3188,8 @@
             "sequence": 1,
             "code": {
               "system": "http://hl7.org/fhir/sid/icd-10-cm",
-              "code": "R07.9",
-              "display": "Chest pain, unspecified"
+              "code": "S83.241A",
+              "display": "Other tear of medial meniscus, current injury, right knee, initial encounter"
             }
           }
         ],
@@ -3221,43 +3221,43 @@
     {
       "id": "r_of53xumfha5kozo67hn6",
       "kind": "claim",
-      "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|professional|2026-09-12",
-      "date": "2026-09-12",
+      "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|professional|2026-08-26",
+      "date": "2026-08-26",
       "code": {
         "system": "http://terminology.hl7.org/CodeSystem/claim-type",
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Chemistry tests · Example Lab",
+      "display": "Knee brace · Example Medical Supply",
       "status": "active",
       "fields": {
-        "when": "2026-09-12",
-        "provider": "Example Lab",
+        "when": "2026-08-26",
+        "provider": "Example Medical Supply",
         "insurer": "Example Care Plan",
         "outcome": "complete",
         "billable_period": {
-          "start": "2026-09-12",
-          "end": "2026-09-12"
+          "start": "2026-08-26",
+          "end": "2026-08-26"
         },
         "total": [
           {
             "category": "Submitted Amount",
             "amount": {
-              "amount": "120.00",
+              "amount": "140.00",
               "currency": "USD"
             }
           },
           {
             "category": "Eligible Amount",
             "amount": {
-              "amount": "12.40",
+              "amount": "71.30",
               "currency": "USD"
             }
           },
           {
             "category": "Benefit Amount",
             "amount": {
-              "amount": "12.40",
+              "amount": "71.30",
               "currency": "USD"
             }
           },
@@ -3291,7 +3291,7 @@
           }
         ],
         "payment": {
-          "amount": "12.40",
+          "amount": "71.30",
           "currency": "USD"
         },
         "type": "Professional",
@@ -3301,23 +3301,23 @@
             "sequence": 1,
             "service": {
               "system": "http://www.ama-assn.org/go/cpt",
-              "code": "80053",
-              "display": "Chemistry tests"
+              "code": "L1820",
+              "display": "Knee brace"
             },
-            "serviced": "2026-09-12",
+            "serviced": "2026-08-26",
             "quantity": {
               "value": 1,
               "unit": null
             },
             "net": {
-              "amount": "120.00",
+              "amount": "140.00",
               "currency": "USD"
             },
             "adjudication": [
               {
                 "category": "Submitted Amount",
                 "amount": {
-                  "amount": "120.00",
+                  "amount": "140.00",
                   "currency": "USD"
                 },
                 "reason": null
@@ -3325,7 +3325,7 @@
               {
                 "category": "Eligible Amount",
                 "amount": {
-                  "amount": "12.40",
+                  "amount": "71.30",
                   "currency": "USD"
                 },
                 "reason": null
@@ -3333,7 +3333,7 @@
               {
                 "category": "Benefit Amount",
                 "amount": {
-                  "amount": "12.40",
+                  "amount": "71.30",
                   "currency": "USD"
                 },
                 "reason": null
@@ -3371,18 +3371,18 @@
                 "reason": null
               }
             ],
-            "category": "lab",
+            "category": "supply",
             "amounts": {
               "billed": {
-                "amount": "120.00",
+                "amount": "140.00",
                 "currency": "USD"
               },
               "allowed": {
-                "amount": "12.40",
+                "amount": "71.30",
                 "currency": "USD"
               },
               "plan_paid": {
-                "amount": "12.40",
+                "amount": "71.30",
                 "currency": "USD"
               },
               "deductible": {
@@ -3409,18 +3409,18 @@
           "start": "2026-07-01",
           "end": "2027-06-30"
         },
-        "category": "lab",
+        "category": "supply",
         "amounts": {
           "billed": {
-            "amount": "120.00",
+            "amount": "140.00",
             "currency": "USD"
           },
           "allowed": {
-            "amount": "12.40",
+            "amount": "71.30",
             "currency": "USD"
           },
           "plan_paid": {
-            "amount": "12.40",
+            "amount": "71.30",
             "currency": "USD"
           },
           "deductible": {
@@ -3445,8 +3445,8 @@
             "sequence": 1,
             "code": {
               "system": "http://hl7.org/fhir/sid/icd-10-cm",
-              "code": "R07.9",
-              "display": "Chest pain, unspecified"
+              "code": "S83.241A",
+              "display": "Other tear of medial meniscus, current injury, right knee, initial encounter"
             }
           }
         ],
@@ -3515,14 +3515,14 @@
     {
       "id": "r_x7kgkq2xdb3nnofipq3r",
       "kind": "medication",
-      "key": "medication|vitamin d3 2,000 unit capsule|2026-10-29",
-      "date": "2026-10-29",
-      "display": "Vitamin D3 2,000 unit capsule",
+      "key": "medication|loratadine 10 mg tablet|2026-10-25",
+      "date": "2026-10-25",
+      "display": "Loratadine 10 mg tablet",
       "status": "completed",
       "fields": {
-        "when": "2026-10-29",
-        "dosage": "Take 1 capsule by mouth once a day",
-        "quantity": "30 capsule",
+        "when": "2026-10-25",
+        "dosage": "Take 1 tablet by mouth once a day",
+        "quantity": "30 tablet",
         "days_supply": 30,
         "pharmacy": "Example Pharmacy",
         "prescriber": "Dr. Casey Placeholder",
@@ -3554,14 +3554,14 @@
     {
       "id": "r_lb4q27vbooxofbabuls4",
       "kind": "medication",
-      "key": "medication|sertraline 50 mg tablet|2026-10-27",
-      "date": "2026-10-27",
-      "display": "Sertraline 50 mg tablet",
+      "key": "medication|nicotine 14 mg/24 hour patch|2026-10-30",
+      "date": "2026-10-30",
+      "display": "Nicotine 14 mg/24 hour patch",
       "status": "active",
       "fields": {
-        "when": "2026-10-27",
-        "dosage": "Take 1 tablet by mouth once a day",
-        "prescriber": "Dr. Morgan Placeholder",
+        "when": "2026-10-30",
+        "dosage": "Put on 1 patch once a day",
+        "prescriber": "Dr. Casey Placeholder",
         "source": "request"
       },
       "documents": [],
@@ -3590,17 +3590,17 @@
     {
       "id": "r_4dy25xkew72toq7h45n5",
       "kind": "medication",
-      "key": "medication|sertraline 50 mg tablet|2026-10-28",
-      "date": "2026-10-28",
-      "display": "Sertraline 50 mg tablet",
+      "key": "medication|nicotine 14 mg/24 hour patch|2026-10-31",
+      "date": "2026-10-31",
+      "display": "Nicotine 14 mg/24 hour patch",
       "status": "completed",
       "fields": {
-        "when": "2026-10-28",
-        "dosage": "Take 1 tablet by mouth once a day",
-        "quantity": "30 tablet",
-        "days_supply": 30,
+        "when": "2026-10-31",
+        "dosage": "Put on 1 patch once a day",
+        "quantity": "28 patch",
+        "days_supply": 28,
         "pharmacy": "Example Pharmacy",
-        "prescriber": "Dr. Morgan Placeholder",
+        "prescriber": "Dr. Casey Placeholder",
         "source": "dispense"
       },
       "documents": [],
@@ -3829,7 +3829,7 @@
                   "currency": "USD"
                 },
                 "used": {
-                  "amount": "217.40",
+                  "amount": "233.50",
                   "currency": "USD"
                 }
               },
@@ -3840,7 +3840,7 @@
                   "currency": "USD"
                 },
                 "used": {
-                  "amount": "497.40",
+                  "amount": "438.50",
                   "currency": "USD"
                 }
               }
@@ -3914,6 +3914,42 @@
           "fetched_at": "2026-11-21T13:59:00Z",
           "filed_at": "2026-11-21T13:59:00Z",
           "raw_path": "Sam Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-f74e903d.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_36yc5pgtgmcjyhuswl7p",
+      "kind": "medication",
+      "key": "medication|loratadine 10 mg tablet|2026-04-21",
+      "date": "2026-04-21",
+      "display": "Loratadine 10 mg tablet",
+      "status": "active",
+      "fields": {
+        "when": "2026-04-21",
+        "dosage": "Take 1 tablet by mouth once a day",
+        "prescriber": "Dr. Casey Placeholder",
+        "source": "request"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "MedicationRequest",
+            "id": "medicationrequest-1797ee6b",
+            "last_updated": "2026-11-22T08:00:00Z"
+          },
+          "fetched_at": "2026-11-22T14:59:00Z",
+          "filed_at": "2026-11-22T14:59:00Z",
+          "raw_path": "Sam Example/Records/mychart-example-health/MedicationRequest/medicationrequest-1797ee6b.json",
           "filed_by": "medrec 0.2.11"
         }
       ]

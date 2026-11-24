@@ -17,34 +17,34 @@ const lines = costLines(PERSON, index);
 describe('a hospital’s revenue code', () => {
   it('sits beside a line’s service code, and names and codes a line that has none', () => {
     expect(claimLines(claim).map((l) => [l.label, l.code, systemName(l.system), l.category, l.revenue?.code])).toEqual([
-      ['Emergency visit, moderate severity', '99284', 'CPT', 'visit', '0450'],
-      ['Laboratory', '0300', 'Revenue code', 'facility', '0300'],
-      ['Chest X-ray, 2 views', '71046', 'CPT', 'imaging', undefined],
+      ['Sleep study, overnight', '95810', 'CPT', 'medicine', '0920'],
+      ['Breathing care', '0410', 'Revenue code', 'facility', '0410'],
+      ['Breathing test', '94010', 'CPT', 'medicine', undefined],
     ]);
   });
 
   it('is said in words, with its code', () => {
-    expect(revenueText({ code: '0450', display: 'Emergency room' })).toBe('Emergency room, revenue code 0450');
-    expect(revenueText({ code: '0300' })).toBe('Revenue code 0300');
+    expect(revenueText({ code: '0920', display: 'Other diagnostic service' })).toBe('Other diagnostic service, revenue code 0920');
+    expect(revenueText({ code: '0410' })).toBe('Revenue code 0410');
   });
 
   it('keeps a line with no service code in every sum, so nothing is left “Not split by line”', () => {
-    expect(lines.map((l) => l.service)).toEqual(['Emergency visit, moderate severity', 'Laboratory', 'Chest X-ray, 2 views']);
-    expect(totals(lines).cents).toEqual({ billed: 150000, allowed: 70000, planPaid: 55000, copay: 15000, youOwe: 15000 });
+    expect(lines.map((l) => l.service)).toEqual(['Sleep study, overnight', 'Breathing care', 'Breathing test']);
+    expect(totals(lines).cents).toEqual({ billed: 157500, allowed: 60200, planPaid: 50200, copay: 10000, youOwe: 10000 });
   });
 
   it('downloads in the last column, whether it is the line’s code or beside it', () => {
     const [head, ...rows] = toCsv(lines, new Map()).trimEnd().split('\r\n');
     expect(head!.split(',').slice(-3)).toEqual(['Claim', 'Left out by the plan', 'Revenue code']);
     expect(rows.map((r) => r.split(',').slice(-3))).toEqual([
-      ['r_claimrevenueaaaaaaaa', '', '0450'],
-      ['r_claimrevenueaaaaaaaa', '', '0300'],
+      ['r_claimrevenueaaaaaaaa', '', '0920'],
+      ['r_claimrevenueaaaaaaaa', '', '0410'],
       ['r_claimrevenueaaaaaaaa', '', ''],
     ]);
   });
 
   it('is found by search, in its own words', () => {
-    const hit = search(index, null, 'emergency room').find((h) => h.id === claim.id);
-    expect(hit).toMatchObject({ where: 'field', line: 'Emergency visit, moderate severity (99284) · Emergency room, revenue code 0450 · you owe $150.00' });
+    const hit = search(index, null, 'other diagnostic').find((h) => h.id === claim.id);
+    expect(hit).toMatchObject({ where: 'field', line: 'Sleep study, overnight (95810) · Other diagnostic service, revenue code 0920 · you owe $100.00' });
   });
 });

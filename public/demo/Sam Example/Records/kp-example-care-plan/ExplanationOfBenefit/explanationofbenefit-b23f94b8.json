@@ -14,8 +14,8 @@
   },
   "use": "claim",
   "billablePeriod": {
-    "start": "2026-09-12",
-    "end": "2026-09-12"
+    "start": "2026-08-26",
+    "end": "2026-08-26"
   },
   "benefitPeriod": {
     "start": "2026-07-01",
@@ -29,14 +29,14 @@
         "coding": [
           {
             "system": "http://www.ama-assn.org/go/cpt",
-            "code": "80053",
-            "display": "Chemistry tests"
+            "code": "L1820",
+            "display": "Knee brace"
           }
         ]
       },
-      "servicedDate": "2026-09-12",
+      "servicedDate": "2026-08-26",
       "net": {
-        "value": 120,
+        "value": 140,
         "currency": "USD"
       }
     }

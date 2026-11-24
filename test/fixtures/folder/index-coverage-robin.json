@@ -8,14 +8,14 @@
       "id": "r_aaaaaaaaaaaaaaaaaaaa",
       "kind": "coverage",
       "key": "coverage|a",
-      "date": "2026-11-08",
+      "date": "2016-05-17",
       "display": "Example Health Plan",
       "status": "active",
       "fields": {
         "payer": "Example Health Plan",
         "relationship": "self",
         "period": {
-          "start": "2026-11-08",
+          "start": "2016-05-17",
           "end": "9999-12-31"
         },
         "plan": "PPO Choice"
@@ -38,14 +38,14 @@
       "id": "r_bbbbbbbbbbbbbbbbbbbb",
       "kind": "coverage",
       "key": "coverage|b",
-      "date": "2026-11-08",
-      "display": "ExampleHealth Plan",
+      "date": "2016-05-17",
+      "display": "EXAMPLE HEALTH PLAN, INC.",
       "status": "active",
       "fields": {
-        "payer": "ExampleHealth Plan",
+        "payer": "EXAMPLE HEALTH PLAN, INC.",
         "relationship": "self",
         "period": {
-          "start": "2026-11-08"
+          "start": "2016-05-17"
         }
       },
       "documents": [],
@@ -66,15 +66,15 @@
       "id": "r_cccccccccccccccccccc",
       "kind": "coverage",
       "key": "coverage|c",
-      "date": "2024-01-01",
-      "display": "ExampleHealth Plan",
+      "date": "2012-01-01",
+      "display": "EXAMPLE HEALTH PLAN, INC.",
       "status": "active",
       "fields": {
-        "payer": "ExampleHealth Plan",
+        "payer": "EXAMPLE HEALTH PLAN, INC.",
         "relationship": "self",
         "period": {
-          "start": "2024-01-01",
-          "end": "2026-11-07"
+          "start": "2012-01-01",
+          "end": "2016-05-16"
         },
         "plan": "PPO Choice"
       },
@@ -96,15 +96,15 @@
       "id": "r_dddddddddddddddddddd",
       "kind": "coverage",
       "key": "coverage|d",
-      "date": "2025-03-01",
+      "date": "2014-09-01",
       "display": "Example Dental",
       "status": "active",
       "fields": {
         "payer": "Example Dental",
         "relationship": "self",
         "period": {
-          "start": "2025-03-01",
-          "end": "2025-12-31"
+          "start": "2014-09-01",
+          "end": "2015-06-30"
         },
         "plan": "Dental Basic"
       },
@@ -126,14 +126,14 @@
       "id": "r_eeeeeeeeeeeeeeeeeeee",
       "kind": "coverage",
       "key": "coverage|e",
-      "date": "2023-01-01",
+      "date": "2010-01-01",
       "display": "Example Health Plan",
       "status": "entered-in-error",
       "fields": {
         "payer": "Example Health Plan",
         "relationship": "self",
         "period": {
-          "start": "2023-01-01"
+          "start": "2010-01-01"
         }
       },
       "documents": [],
