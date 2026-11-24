@@ -8,8 +8,10 @@ import { DemoFolder } from '../src/folder';
 import { eventsView, parseMedrecEvents } from '../src/model/events';
 import { FolderError, parseIndex } from '../src/model/parse';
 import type { MedRecord, PersonIndex } from '../src/model/types';
-import { eventOf, nameEvent, ruleText, type CareEvent } from '../src/next/event';
+import { doseCount, eventOf, nameEvent, ruleText, type CareEvent } from '../src/next/event';
 import { groupedByMedrec, personEvents } from '../src/next/load';
+import { claimLines } from '../src/model/claims';
+import { careEvents } from '../src/next/grouping';
 import { fromMedrec } from '../src/next/medrecEvents';
 import { demo, demoEventsNotes, personNamed } from './demo-data';
 import { demoFetch, demoJson, fixture } from './helpers';
@@ -221,6 +223,22 @@ describe('naming an event', () => {
     again.visits[0]!.record.display = 'Blood pressure check';
     nameEvent(again, household, id('Robin Example'));
     expect([again.what, again.descriptors]).toEqual(['Blood pressure check', undefined]);
+  });
+
+  it('makes a day of vaccine claims a vaccine visit named for its dose, as the app’s own grouping does', () => {
+    // medrec files the claim's day as a service, with the portal's record of the dose.
+    const shot = events('Alex Example').find((e) => e.start === '2025-10-20')!;
+    expect([shot.kind, shot.title, shot.what, shot.place]).toEqual(['vaccine', 'Influenza, seasonal, injectable', undefined, 'Example Pediatrics']);
+    // Without medrec, the dose's record is not in the event: the claim names it, without its line for giving it.
+    const own = careEvents(indexes.get(id('Alex Example'))!, household, TODAY).find((e) => e.start === '2025-10-20')!;
+    expect([own.kind, own.title]).toEqual(['vaccine', 'Flu vaccine']);
+    // A claim for two vaccines is two doses.
+    const line = claimLines(own.claims[0]!.record)[0]!;
+    const two = structuredClone(own);
+    const items = two.claims[0]!.record.fields.items as Record<string, unknown>[];
+    items.push({ ...structuredClone(items[0]!), sequence: 9, service: { system: line.system, code: '91320', display: 'COVID-19 vaccine' } });
+    nameEvent(two, household, id('Alex Example'));
+    expect([doseCount(two), two.title]).toEqual([2, '2 vaccines']);
   });
 
   it('never makes a portal platform’s name a place', () => {
