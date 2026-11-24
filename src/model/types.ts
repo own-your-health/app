@@ -114,6 +114,9 @@ export interface MedDocument {
   origin?: { kind: string; name?: string; action: string };
   text?: { chars: number; engines?: string[]; ocr_pages?: number; note?: string };
   statement?: Statement;
+  /** As on a record: medrec 0.9.1's private marker, present only when true. */
+  private?: true;
+  private_area?: string;
   same_statement_as?: string;
   near_duplicates?: { document: string; similarity: number }[];
   provenance: Provenance;
@@ -142,6 +145,10 @@ export interface MedRecord {
   fields: JsonObject;
   documents: string[];
   provenance: Provenance[];
+  /** medrec 0.9.1: kept off shared screens (Home, the Everyone calendar, Hand to a doctor) unless turned on. Present only when true. */
+  private?: true;
+  /** Why it is private: mental_health, reproductive, sexual_health, substance_use, or household when the household set it. */
+  private_area?: string;
 }
 
 export interface ImagingSeries {

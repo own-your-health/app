@@ -190,3 +190,17 @@ export function eventMoney(e: CareEvent): EventMoney {
 export function eventOf(events: CareEvent[], id: string): CareEvent | undefined {
   return events.find((e) => e.id === id || e.claims.some((c) => c.record.id === id) || e.visits.some((v) => v.record.id === id) || e.recorded.some((r) => r.id === id) || e.papers.some((p) => p.doc.id === id));
 }
+
+/** Why an event is private, when a record or paper in it is (medrec's `private_area`); undefined when nothing in it is. */
+export function privateArea(e: CareEvent): string | undefined {
+  const marked = [...e.claims.map((c) => c.record), ...e.visits.map((v) => v.record), ...e.recorded, ...e.papers.map((p) => p.doc)].find((x) => x.private === true);
+  return marked ? (marked.private_area ?? 'household') : undefined;
+}
+
+export const PRIVATE_AREAS: Record<string, string> = {
+  mental_health: 'Mental health',
+  reproductive: 'Reproductive care',
+  sexual_health: 'Sexual health',
+  substance_use: 'Substance use',
+  household: 'Marked private',
+};
