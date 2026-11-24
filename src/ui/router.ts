@@ -59,6 +59,8 @@ export type Route =
   | { name: 'event'; person: string; id: string }
   // The calendar (?next): a month (YYYY-MM) and a chosen day, or the list (from the newest month, or before one), for everyone or one person.
   | { name: 'calendar'; view?: 'list'; month?: string; who?: string; day?: string; before?: string }
+  // Money (?next): the bills, or those worth a call, for everyone or one person.
+  | { name: 'money'; view?: 'calls'; who?: string }
   | { name: 'huishouden'; hh: string }
   | { name: 'not_found' };
 
@@ -81,6 +83,10 @@ export function parseRoute(hash: string): Route {
   if (head === 'sources' && parts.length === 1) return { name: 'sources' };
   if (head === 'costs' && parts.length === 1) return costsRoute(query);
   if (head === 'calendar' && parts.length === 1) return calendarRoute(query);
+  if (head === 'money' && (parts.length === 1 || (parts.length === 2 && a === 'calls'))) {
+    const who = query.get('who') ?? '';
+    return { name: 'money', ...(a === 'calls' ? { view: 'calls' as const } : {}), ...(ID.test(who) ? { who } : {}) };
+  }
   if (head === 'search' && parts.length === 1) {
     const q = query.get('q') ?? undefined;
     return { name: 'search', ...(q ? { query: q } : {}), ...(q && query.get('words') === '1' ? { words: true as const } : {}) };
@@ -177,6 +183,8 @@ export function href(route: Route): string {
       return `#/costs${costsQuery(route)}`;
     case 'calendar':
       return `#/calendar${calendarQuery(route)}`;
+    case 'money':
+      return `#/money${route.view ? `/${route.view}` : ''}${route.who ? `?${new URLSearchParams({ who: route.who })}` : ''}`;
     case 'search':
       return route.query ? `#/search?${searchQuery(route.query, route.words)}` : '#/search';
     case 'source':

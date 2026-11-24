@@ -23,6 +23,7 @@ import { sourceView } from './views/source';
 import { sourcesView } from './views/sources';
 import { searchView } from './search';
 import { calendarView, hidePrivateEvents } from '../next/calendarView';
+import { moneyView } from '../next/moneyView';
 import { eventView } from '../next/eventView';
 
 /** What the app says when a renewal interrupted a write the person asked for. */
@@ -553,6 +554,9 @@ export class App {
       case 'event':
         if (ctx.next) return eventView(ctx, r.person, r.id);
         return messageView('Page not found', 'Visit pages are part of the redesign. Add ?next to the address to try it.', [h('a', { class: 'button button-primary', href: '#/' }, 'Home')]);
+      case 'money':
+        if (ctx.next) return moneyView(ctx, r);
+        return messageView('Page not found', 'Bills are part of the redesign. Add ?next to the address to try them.', [h('a', { class: 'button button-primary', href: '#/' }, 'Home')]);
       case 'calendar':
         if (ctx.next) return calendarView(ctx, r);
         return messageView('Page not found', 'The calendar is part of the redesign. Add ?next to the address to try it.', [h('a', { class: 'button button-primary', href: '#/' }, 'Home')]);

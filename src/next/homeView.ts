@@ -48,7 +48,7 @@ function callRow(p: Person, b: OpenBill, own: boolean): HTMLElement {
       ? 'no claim in these records is for it'
       : `the ${b.claimSaysVisit ? 'visit’s claims say' : 'claim says'} you owe ${money(b.claimSays)}`;
   return needRow('Worth a call', 'attention', {
-    route: b.event ? eventRoute(p.id, b.event.event.id) : { name: 'item', person: p.id, id: b.bill.doc.id },
+    route: { name: 'money', view: 'calls', ...(own ? { who: p.id } : {}) },
     title: b.event ? visitText(b.event) : `Bill from ${b.bill.provider}`,
     meta: [own ? null : p.name, `${b.bill.provider} asks ${money(b.cents)}; ${says}`, dueText(b)].filter(Boolean).join(' · '),
     aside: h('span', { class: 'num' }, money(b.cents)),
@@ -207,14 +207,14 @@ function personNeeds(p: Person, idx: PersonIndex, mine: PersonEvent[], today: st
   };
 }
 
-/** The Needs you card over one or more people's needs, with the notes its rows call for. */
-function needsCard(all: PersonNeeds[], place: 'home' | 'person'): HTMLElement | null {
+/** The Needs you card over one or more people's needs (one person's on their own page), with the notes its rows call for. */
+function needsCard(all: PersonNeeds[], own?: string): HTMLElement | null {
   const byDay = (k: 'calls' | 'pay') => all.flatMap((n) => n[k]).sort((a, b) => a.day.localeCompare(b.day)).map((x) => x.el);
   const pick = (k: 'vaccines' | 'refills' | 'soon') => all.flatMap((n) => n[k]);
   const [calls, pay, vaccines, refills, soon] = [byDay('calls'), byDay('pay'), pick('vaccines'), pick('refills'), pick('soon')];
   const rows = [...calls, ...pay, ...vaccines, ...refills, ...soon];
   const kept = all.reduce((t, n) => t + n.kept, 0);
-  if (!rows.length && place === 'person') return null;
+  if (!rows.length && own) return null;
   return card(
     { title: 'Needs you', actions: rows.length ? h('span', { class: 'small muted' }, count(rows.length, 'thing')) : null },
     rows.length ? rows : h('p', null, 'Nothing needs you: no open bill, no vaccine dose due or coming up, and no refill running out.'),
@@ -227,7 +227,9 @@ function needsCard(all: PersonNeeds[], place: 'home' | 'person'): HTMLElement | 
           ` of ${dateText(SCHEDULE_SOURCE.date)}, restored after a court stayed the January 2026 changes on ${dateText(SCHEDULE_SOURCE.stayed)}. Doses given elsewhere may not be in these records.`,
         )
       : null,
-    calls.length || pay.length ? h('p', { class: 'small muted' }, 'A bill stays here until a receipt from its provider is filed after it.') : null,
+    calls.length || pay.length
+      ? h('p', { class: 'small muted' }, 'A bill stays here until a receipt from its provider is filed after it. ', link({ name: 'money', ...(own ? { who: own } : {}) }, 'Bills: each one beside its claim'))
+      : null,
     kept ? h('p', { class: 'small muted' }, `${count(kept, 'private item')} ${kept === 1 ? 'is' : 'are'} kept off Home. Each shows on its person’s own overview.`) : null,
   );
 }
@@ -236,7 +238,7 @@ function needsCard(all: PersonNeeds[], place: 'home' | 'person'): HTMLElement | 
 export function personNeedsCard(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement | null {
   const today = localDay(ctx.now());
   const mine = householdEvents(ctx.store.household, (id) => (id === person.id ? idx : undefined), today);
-  return needsCard([personNeeds(person, idx, mine, today, true)], 'person');
+  return needsCard([personNeeds(person, idx, mine, today, true)], person.id);
 }
 
 /** Home's first sections under ?next: what needs you, where everyone stands, and what happened recently. */
@@ -256,5 +258,5 @@ export function nextHome(ctx: Ctx, signIn: HTMLElement | null): HTMLElement[] {
     needs.push(n);
     stands.push(standing(n.standing, today));
   }
-  return [needsCard(needs, 'home')!, ...(signIn ? [signIn] : []), card({ title: 'Where everyone stands' }, stands), recentCard(ctx)];
+  return [needsCard(needs)!, ...(signIn ? [signIn] : []), card({ title: 'Where everyone stands' }, stands), recentCard(ctx)];
 }

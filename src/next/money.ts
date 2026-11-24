@@ -5,12 +5,12 @@
 // records backs it. Receipts carry no amount yet, so a payment above what
 // the claims say cannot be found here.
 
-import { owedByProvider, type Bill } from '../model/billing';
+import { billList, owedByProvider, type Bill } from '../model/billing';
 import { sameProvider } from '../model/providers';
 import { toCents } from '../model/records';
 import type { PersonIndex } from '../model/types';
 import type { PersonEvent } from './calendar';
-import { eventOf } from './event';
+import { eventOf, paidAtCounter } from './event';
 
 export type BillVerdict =
   /** The bill asks what the claims say. */
@@ -58,4 +58,53 @@ export function openBills(idx: PersonIndex, events: PersonEvent[], today: string
       };
     })
     .sort((a, b) => Number(b.overdue) - Number(a.overdue) || (a.bill.due ?? '9999').localeCompare(b.bill.due ?? '9999'));
+}
+
+/** A share the claims say you owe a provider for a visit, with no bill or receipt from them in the folder yet. */
+export interface Unbilled {
+  event: PersonEvent;
+  provider: string;
+  cents: number;
+  private?: string;
+}
+
+/**
+ * The shares no paper accounts for yet, newest visit first. A pharmacy takes
+ * its share at the counter, so a fill has none. A bill in the visit from a
+ * provider with no claim of its own (a billing company) accounts for all of
+ * the visit's shares, as does a receipt from the provider on or after it.
+ */
+export function unbilledShares(idx: PersonIndex, events: PersonEvent[]): Unbilled[] {
+  const receipts = idx.documents.filter((d) => d.doc_type === 'receipt');
+  return events.flatMap((x): Unbilled[] => {
+    const e = x.event;
+    if (paidAtCounter(e)) return [];
+    const papers = e.papers.map((p) => p.doc).filter((d) => d.doc_type === 'bill' || d.doc_type === 'receipt');
+    if (papers.some((d) => d.doc_type === 'bill' && !x.money.charges.some((c) => sameProvider(c.provider, d.organization)))) return [];
+    return x.money.charges
+      .filter((c) => (c.share ?? 0) > 0)
+      .filter((c) => !papers.some((d) => sameProvider(c.provider, d.organization)))
+      .filter((c) => !receipts.some((r) => sameProvider(c.provider, r.organization) && !!r.date && r.date >= e.start))
+      .map((c) => ({ event: x, provider: c.provider, cents: c.share!, ...(x.private ? { private: x.private } : {}) }));
+  });
+}
+
+/** A bill with a receipt from its provider filed after it. */
+export interface PaidBill {
+  bill: Bill;
+  cents?: number;
+  event?: PersonEvent;
+  private?: string;
+}
+
+/** Bills paid by a receipt, newest first. */
+export function paidBills(idx: PersonIndex, events: PersonEvent[]): PaidBill[] {
+  return billList(idx)
+    .filter((b) => b.receipt)
+    .map((bill): PaidBill => {
+      const event = events.find((x) => eventOf([x.event], bill.doc.id));
+      const area = bill.doc.private ? (bill.doc.private_area ?? 'household') : event?.private;
+      const cents = toCents(bill.amount);
+      return { bill, ...(cents !== undefined ? { cents } : {}), ...(event ? { event } : {}), ...(area ? { private: area } : {}) };
+    });
 }

@@ -28,6 +28,9 @@ describe('routes', () => {
     { name: 'calendar', month: '2026-10', day: '2026-10-12', who: P },
     { name: 'calendar', view: 'list', who: P },
     { name: 'calendar', view: 'list', before: '2026-07' },
+    { name: 'money' },
+    { name: 'money', view: 'calls' },
+    { name: 'money', view: 'calls', who: P },
   ];
 
   it.each(routes.map((r) => [href(r), r]))('%s round-trips', (h, r) => {
@@ -54,6 +57,12 @@ describe('routes', () => {
     // One key for each kind: the last one wins.
     expect(parseRoute('#/costs?only=person:a&only=person:b')).toEqual({ name: 'costs', only: [{ by: 'person', key: 'b' }] });
     expect(parseRoute('#/costs/x')).toEqual({ name: 'not_found' });
+  });
+
+  it('give money its bills and calls, and nothing else', () => {
+    expect(href({ name: 'money', view: 'calls', who: P })).toBe(`#/money/calls?who=${P}`);
+    expect(parseRoute('#/money/bills')).toEqual({ name: 'not_found' });
+    expect(parseRoute('#/money?who=%3Cscript%3E')).toEqual({ name: 'money' });
   });
 
   it('keep only the calendar choices they know', () => {
