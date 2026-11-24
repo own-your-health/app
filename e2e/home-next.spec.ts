@@ -45,7 +45,9 @@ test('home leads with what needs you, in order, and keeps private items off it',
 
   // A bill worth a call opens Worth a call; a bill to pay opens its visit.
   await needs.locator('.row').first().locator('a.row-main').click();
-  await expect(page).toHaveURL(/#\/money\/calls$/);
+  await expect(page).toHaveURL(/#\/money\/calls\?bill=d_/);
+  await expect(page.locator('.call.bill-picked')).toBeFocused();
+  await expect(page.locator('.call.bill-picked .card-head h2')).toHaveText('Example Billing');
   await page.goBack();
   await needs.locator('.row').nth(1).locator('a.row-main').click();
   await expect(page.locator('.event h1')).toHaveText('Emergency room · overnight');

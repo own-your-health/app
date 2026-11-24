@@ -26,6 +26,9 @@ test('bills sets each open bill beside its claim, then what is not billed yet an
   await expect(due.locator('.row-title')).toHaveText(['Example General Hospital', 'Example Health', 'Example Lab']);
   await expect(due.locator('.row').first().locator('.chip')).toHaveText(['Was due Oct 28, 2026', 'Matches the claim']);
   await expect(card(page, 'Check before paying').locator('.row-meta')).toHaveText('Sam Example · Lab tests, Jul 9, 2026 · asks $120.00; the visit’s claims say you owe $50.70');
+  await card(page, 'Check before paying').locator('a.row-main').click();
+  await expect(page.locator('.call.bill-picked')).toBeFocused();
+  await page.goBack();
   await expect(card(page, 'Not billed yet').locator('.card-head')).toContainText('$273.10');
   await expect(card(page, 'Not billed yet').locator('.row-title')).toHaveText(['Example Pediatrics', 'Example Health', 'Example Lab', 'Example Emergency Physicians', 'Example Health']);
   await expect(card(page, /^Paid$/).locator('.row-meta')).toHaveText('Robin Example · Office visit, Mar 10, 2025 · receipt Apr 20, 2025');

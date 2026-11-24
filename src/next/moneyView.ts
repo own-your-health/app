@@ -4,17 +4,16 @@
 // facts to read out on the phone. Everyone's view is a shared screen:
 // private bills stay off it, counted, and show on their person's own view.
 
-import { claimLines } from '../model/claims';
-import { formatMoney, fromCents, str } from '../model/records';
+import { formatMoney, fromCents } from '../model/records';
 import type { Person } from '../model/types';
 import { card, chip, driveLink, kv, link, row, type Ctx } from '../ui/components';
-import { h, type Child } from '../ui/dom';
+import { h } from '../ui/dom';
 import { count, dateText, localDay } from '../ui/format';
 import { href, type Route } from '../ui/router';
 import { householdEvents, type PersonEvent } from './calendar';
 import { daysBetween } from './needs';
 import { eventRoute, eventWhen } from './eventView';
-import { openBills, paidBills, unbilledShares, type OpenBill, type PaidBill, type Unbilled } from './money';
+import { byDue, callsSummary, explainedLines, openBills, paidBills, unbilledShares, type Explained, type OpenBill, type PaidBill, type Unbilled } from './money';
 
 type MoneyRoute = Extract<Route, { name: 'money' }>;
 
@@ -28,7 +27,7 @@ interface Mine<T> {
   item: T;
 }
 
-/** Everyone's bills, or one person's: private ones kept off the shared view and counted. */
+/** Everyone's bills, or one person's: private ones kept off the shared view, and how many each part left off. */
 function gather(ctx: Ctx, who: string | undefined) {
   const store = ctx.store;
   const today = localDay(ctx.now());
@@ -36,7 +35,8 @@ function gather(ctx: Ctx, who: string | undefined) {
   const open: Mine<OpenBill>[] = [];
   const unbilled: Mine<Unbilled>[] = [];
   const paid: Mine<PaidBill>[] = [];
-  let kept = 0;
+  const explained: Mine<Explained>[] = [];
+  const hidden = { open: [] as OpenBill[], unbilled: 0, paid: 0, explained: 0 };
   let loading = 0;
   for (const p of store.household.people) {
     if (who && p.id !== who) continue;
@@ -46,20 +46,39 @@ function gather(ctx: Ctx, who: string | undefined) {
       continue;
     }
     const mine = all.filter((x) => x.person.id === p.id);
-    const keep = <T extends { private?: string }>(xs: T[]): Mine<T>[] => {
-      const shownXs = who ? xs : xs.filter((x) => !x.private);
-      kept += xs.length - shownXs.length;
-      return shownXs.map((item) => ({ person: p, item }));
-    };
-    open.push(...keep(openBills(idx, mine, today)));
-    unbilled.push(...keep(unbilledShares(idx, mine)));
-    paid.push(...keep(paidBills(idx, mine)));
+    const keep = <T extends { private?: string }>(xs: T[]): { shown: Mine<T>[]; left: T[] } => ({
+      shown: (who ? xs : xs.filter((x) => !x.private)).map((item) => ({ person: p, item })),
+      left: who ? [] : xs.filter((x) => x.private),
+    });
+    const o = keep(openBills(idx, mine, today));
+    const u = keep(unbilledShares(idx, mine));
+    const pd = keep(paidBills(idx, mine));
+    const ex = keep(explainedLines(mine, today));
+    open.push(...o.shown);
+    unbilled.push(...u.shown);
+    paid.push(...pd.shown);
+    explained.push(...ex.shown);
+    hidden.open.push(...o.left);
+    hidden.unbilled += u.left.length;
+    hidden.paid += pd.left.length;
+    hidden.explained += ex.left.length;
   }
-  const byDue = (a: Mine<OpenBill>, b: Mine<OpenBill>) => Number(b.item.overdue) - Number(a.item.overdue) || (a.item.bill.due ?? '9999').localeCompare(b.item.bill.due ?? '9999');
-  open.sort(byDue);
+  open.sort((a, b) => byDue(a.item, b.item));
   unbilled.sort((a, b) => b.item.event.event.start.localeCompare(a.item.event.event.start));
   paid.sort((a, b) => (b.item.bill.date ?? '').localeCompare(a.item.bill.date ?? ''));
-  return { today, all, open, unbilled, paid, kept, loading };
+  explained.sort((a, b) => b.item.event.event.start.localeCompare(a.item.event.event.start));
+  return { today, open, unbilled, paid, explained, hidden, loading };
+}
+
+/** "2 private items are kept off this shared view. Each shows on its person's own view." */
+function keptNote(n: number, where: string): HTMLElement | null {
+  return n ? h('p', { class: 'small muted' }, `${count(n, 'private item')} ${n === 1 ? 'is' : 'are'} kept off this shared view. Each shows on its person’s own ${where}.`) : null;
+}
+
+/** A row or card for one bill, so Worth a call can find the one a row named. */
+function forBill<T extends HTMLElement>(el: T, id: string): T {
+  el.dataset.bill = id;
+  return el;
 }
 
 /** The view's heading, its choices and the line under them. */
@@ -120,7 +139,7 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
   const check = g.open.filter((m) => m.item.verdict !== 'matches');
   const readyCents = ready.reduce((t, m) => t + m.item.cents, 0);
   const unbilledCents = g.unbilled.reduce((t, m) => t + m.item.cents, 0);
-  const callsRoute: Route = { name: 'money', view: 'calls', ...(who ? { who } : {}) };
+  const callsRoute = (bill?: string): Route => ({ name: 'money', view: 'calls', ...(who ? { who } : {}), ...(bill ? { bill } : {}) });
 
   const hero = card(
     { class: 'money-hero' },
@@ -130,7 +149,7 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
       'p',
       null,
       ready.length ? `${count(ready.length, 'bill')}, each asking what its claim says you owe.` : 'No bill that matches its claim is waiting.',
-      check.length ? [' ', link(callsRoute, `${count(check.length, 'more bill')} ${check.length === 1 ? 'is' : 'are'} worth a call first.`)] : ready.length ? ' None asks for more than the claims say.' : null,
+      check.length ? [' ', link(callsRoute(), `${count(check.length, 'more bill')} ${check.length === 1 ? 'is' : 'are'} worth a call first.`)] : ready.length ? ' None asks for more than the claims say.' : null,
     ),
   );
 
@@ -142,7 +161,7 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
         h('p', { class: 'small muted' }, 'These ask for something other than what the claims say you owe, or no claim backs them.'),
         check.map((m) =>
           row({
-            route: callsRoute,
+            route: callsRoute(m.item.bill.doc.id),
             title: m.item.bill.provider ?? 'A provider',
             meta: [named ? m.person.name : null, m.item.event ? visitText(m.item.event) : null, `asks ${money(m.item.cents)}; ${saysText(m.item)}`].filter(Boolean).join(' · '),
             aside: [privateChip(m.item.private), num(m.item.cents)],
@@ -191,7 +210,7 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
     checkCard,
     unbilledCard,
     paidCard,
-    g.kept ? h('p', { class: 'small muted' }, `${count(g.kept, 'private item')} ${g.kept === 1 ? 'is' : 'are'} kept off this shared view. Each shows on its person’s own Bills.`) : null,
+    keptNote(g.hidden.open.length + g.hidden.unbilled + g.hidden.paid, 'Bills'),
     !g.open.length && !g.unbilled.length && !g.paid.length ? card({}, h('p', null, 'No bills, receipts or claim shares in these records yet.')) : null,
   );
 }
@@ -216,7 +235,7 @@ function callCard(ctx: Ctx, m: Mine<OpenBill>, named: boolean): HTMLElement {
   const over = b.claimSays !== undefined ? b.cents - b.claimSays : undefined;
   const s = b.bill.doc.statement;
   const shares = (e?.money.charges ?? []).filter((c) => (c.share ?? 0) > 0);
-  return card(
+  const el = card(
     { title: b.bill.provider ?? 'A provider', class: 'call', actions: privateChip(b.private) },
     h('p', { class: 'call-claim' }, b.claimSays === undefined ? `Asks ${money(b.cents)}. No claim in these records is for it.` : `Asks ${money(b.cents)}. The ${b.claimSaysVisit ? 'visit’s claims say' : 'claim says'} ${money(b.claimSays)}.`),
     over !== undefined && over > 0 ? h('p', { class: 'call-number' }, num(over), h('span', null, ' may not be owed')) : null,
@@ -232,79 +251,82 @@ function callCard(ctx: Ctx, m: Mine<OpenBill>, named: boolean): HTMLElement {
     h('p', { class: 'small muted' }, 'The bill’s phone number isn’t in these records yet; it is on the paper.'),
     h('div', { class: 'bill-links' }, link({ name: 'item', person: m.person.id, id: b.bill.doc.id }, 'The bill'), driveLink(ctx, b.bill.doc.path, 'Open the bill in Drive')),
   );
+  return forBill(el, b.bill.doc.id);
 }
 
 /** Worth a call: the bills to ask about, with the figures and the words; then those worth a look, and what the plan changed. */
 function callsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLElement {
   const g = gather(ctx, who);
   const named = !who;
-  const asksMore = g.open.filter((m) => m.item.verdict === 'no_claim' || (m.item.verdict === 'differs' && m.item.cents > m.item.claimSays!));
-  const asksLess = g.open.filter((m) => m.item.verdict === 'differs' && m.item.cents < m.item.claimSays!);
-  const over = asksMore.reduce((t, m) => t + Math.max(0, m.item.cents - (m.item.claimSays ?? m.item.cents)), 0);
-  const unbacked = asksMore.filter((m) => m.item.verdict === 'no_claim').length;
-  const providers = new Set(asksMore.map((m) => m.item.bill.provider)).size;
+  const sum = callsSummary(g.open, (m) => m.item);
+  // What this page would have shown on someone's own view: the bills that don't match, and what the plan changed.
+  const left = callsSummary(g.hidden.open, (b) => b);
+  const kept = left.asksMore.length + left.asksLess.length + g.hidden.explained;
 
-  const hero = asksMore.length
+  const hero = sum.asksMore.length
     ? card(
         { class: 'money-hero' },
         h('p', { class: 'money-hero-label' }, 'May not be owed'),
-        h('p', { class: 'money-hero-number num' }, money(over)),
+        h('p', { class: 'money-hero-number num' }, money(sum.overCents)),
         h(
           'p',
           null,
-          [`Across ${count(providers, 'provider')}.`, unbacked ? `${count(unbacked, 'bill')} no claim backs ${unbacked === 1 ? 'is' : 'are'} not counted in it.` : null, 'Each below has the dates and amounts to read out on the call.'].filter(Boolean).join(' '),
+          [`Across ${count(sum.providers, 'provider')}.`, sum.unbacked ? `${count(sum.unbacked, 'bill')} no claim backs ${sum.unbacked === 1 ? 'is' : 'are'} not counted in it.` : null, 'Each below has the dates and amounts to read out on the call.'].filter(Boolean).join(' '),
         ),
       )
     : card({}, h('p', null, 'No bill asks for more than the claims say you owe.'));
 
-  const look = asksLess.length
+  const look = sum.asksLess.length
     ? card(
         { title: 'Worth a look' },
-        asksLess.map((m) =>
+        sum.asksLess.map((m) =>
+          forBill(
+            row({
+              route: m.item.event ? eventRoute(m.person.id, m.item.event.event.id) : { name: 'item', person: m.person.id, id: m.item.bill.doc.id },
+              title: m.item.bill.provider ?? 'A provider',
+              meta: [named ? m.person.name : null, `The bill asks ${money(m.item.claimSays! - m.item.cents)} less than ${saysText(m.item)}. Ask for an itemized bill if you want to be sure.`].filter(Boolean).join(' · '),
+              aside: privateChip(m.item.private),
+            }),
+            m.item.bill.doc.id,
+          ),
+        ),
+      )
+    : null;
+
+  const explained = g.explained.length
+    ? card(
+        { title: 'Explained, nothing to do' },
+        g.explained.map(({ person, item: x }) =>
           row({
-            route: m.item.event ? eventRoute(m.person.id, m.item.event.event.id) : { name: 'item', person: m.person.id, id: m.item.bill.doc.id },
-            title: m.item.bill.provider ?? 'A provider',
-            meta: [named ? m.person.name : null, `The bill asks ${money(m.item.claimSays! - m.item.cents)} less than ${saysText(m.item)}. Ask for an itemized bill if you want to be sure.`].filter(Boolean).join(' · '),
-            aside: privateChip(m.item.private),
+            route: eventRoute(person.id, x.event.event.id),
+            title: `${x.provider ?? 'A provider'}, ${eventWhen(x.event.event)}`,
+            meta: [named ? person.name : null, `${x.insurer} left “${x.line.label}”${x.line.amounts.billed ? ` (${formatMoney(x.line.amounts.billed)})` : ''} out of the claim’s totals${x.share !== undefined ? `; you owe ${money(x.share)} for it all` : ''}.`].filter(Boolean).join(' · '),
+            aside: privateChip(x.private),
           }),
         ),
       )
     : null;
 
-  // Claims in the last year with a line the plan left out of its totals: explained, nothing to pay for it.
-  const since = new Date(Date.parse(`${g.today}T00:00:00Z`) - 365 * 86_400_000).toISOString().slice(0, 10);
-  const changed = g.all
-    .filter((x) => (!who ? !x.private : x.person.id === who) && x.event.start >= since)
-    .flatMap((x) => x.event.claims.flatMap((c) => claimLines(c.record).filter((l) => !l.counted).map((l) => ({ x, c, l }))));
-  const explained = changed.length
-    ? card(
-        { title: 'Explained, nothing to do' },
-        changed.map(({ x, c, l }) => {
-          const insurer = str(c.record.fields.insurer) ?? 'The plan';
-          const share = x.money.charges.find((ch) => ch.provider === c.provider)?.share;
-          return row({
-            route: eventRoute(x.person.id, x.event.id),
-            title: `${c.provider ?? 'A provider'}, ${eventWhen(x.event)}`,
-            meta: [named ? x.person.name : null, `${insurer} left “${l.label}”${l.amounts.billed ? ` (${formatMoney(l.amounts.billed)})` : ''} out of the claim’s totals${share !== undefined ? `; you owe ${money(share)} for it all` : ''}.`].filter(Boolean).join(' · '),
-            aside: privateChip(x.private),
-          });
-        }),
-      )
-    : null;
-
-  const back: Child = h('p', { class: 'small' }, link({ name: 'money', ...(who ? { who } : {}) }, 'All bills'));
-  return h(
+  const page = h(
     'div',
     { class: 'stack money' },
     ...head(ctx, route, 'Worth a call', 'Bills that don’t match what the claims say you owe.', who),
     g.loading ? h('p', { class: 'small muted' }, `Still loading the records of ${count(g.loading, 'person', 'people')}.`) : null,
     hero,
-    ...asksMore.map((m) => callCard(ctx, m, named)),
+    ...sum.asksMore.map((m) => callCard(ctx, m, named)),
     look,
     explained,
-    g.kept ? h('p', { class: 'small muted' }, `${count(g.kept, 'private item')} ${g.kept === 1 ? 'is' : 'are'} kept off this shared view. Each shows on its person’s own view.`) : null,
-    back,
+    keptNote(kept, 'view'),
+    h('p', { class: 'small' }, link({ name: 'money', ...(who ? { who } : {}) }, 'All bills')),
   );
+  // A row elsewhere named one bill: mark it, and take the reader and the keyboard to it once the page is in place.
+  const picked = route.bill ? page.querySelector<HTMLElement>(`[data-bill="${CSS.escape(route.bill)}"]`) : null;
+  if (picked) {
+    picked.classList.add('bill-picked');
+    picked.tabIndex = -1;
+    queueMicrotask(() => picked.focus());
+  }
+  return page;
 }
 
 export function moneyView(ctx: Ctx, route: MoneyRoute): HTMLElement {

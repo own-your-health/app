@@ -1,9 +1,10 @@
-// Money under ?next: the claim shares no paper accounts for yet, and the
-// bills a receipt paid.
+// Money under ?next: the claim shares no paper accounts for yet, the bills a
+// receipt paid, Worth a call's split and order, a bill's privacy, and the
+// lines the plan left out.
 import { describe, expect, it } from 'vitest';
 import type { PersonIndex } from '../src/model/types';
 import { householdEvents } from '../src/next/calendar';
-import { paidBills, unbilledShares } from '../src/next/money';
+import { billPrivateArea, byDue, callsSummary, explainedLines, openBills, paidBills, unbilledShares, type OpenBill } from '../src/next/money';
 import { demo, personNamed } from './demo-data';
 
 const TODAY = '2026-11-22';
@@ -37,5 +38,37 @@ describe('paid bills', () => {
   it('are those with a receipt from their provider filed after them', () => {
     expect(paidBills(index('Robin Example'), events('Robin Example')).map((p) => [p.bill.provider, p.cents, p.bill.receipt?.date, p.event?.event.start])).toEqual([['Example Health', 5118, '2025-04-20', '2025-03-10']]);
     expect(paidBills(index('Sam Example'), events('Sam Example'))).toEqual([]);
+  });
+});
+
+describe('worth a call', () => {
+  it('splits bills that ask more, or that no claim backs, from those that ask less', () => {
+    const sam = openBills(index('Sam Example'), events('Sam Example'), TODAY);
+    const billing = sam.find((b) => b.verdict === 'differs')!;
+    const less: OpenBill = { ...billing, cents: 3000 };
+    const unbacked: OpenBill = { ...billing, verdict: 'no_claim', claimSays: undefined, claimSaysVisit: false, cents: 9900 };
+    const sum = callsSummary([...sam, less, unbacked], (b) => b);
+    expect(sum.asksMore).toEqual([billing, unbacked]);
+    expect(sum.asksLess).toEqual([less]);
+    // $120.00 asked against $50.70; the unbacked bill's $99.00 is not counted.
+    expect([sum.overCents, sum.unbacked, sum.providers]).toEqual([6930, 1, 1]);
+  });
+
+  it('orders open bills overdue first, then by due date', () => {
+    const robin = openBills(index('Robin Example'), events('Robin Example'), TODAY);
+    expect([...robin].reverse().sort(byDue).map((b) => b.bill.due)).toEqual(['2026-11-19', '2026-11-27']);
+  });
+
+  it('takes a bill’s privacy from the bill, else from its visit', () => {
+    const doc = index('Robin Example').documents.find((d) => d.doc_type === 'bill')!;
+    const visit = events('Sam Example').find((x) => x.private)!;
+    expect([billPrivateArea(doc), billPrivateArea({ ...doc, private: true }), billPrivateArea({ ...doc, private: true, private_area: 'reproductive' }), billPrivateArea(doc, visit)]).toEqual([undefined, 'household', 'reproductive', 'mental_health']);
+  });
+});
+
+describe('what the plan changed', () => {
+  it('lists the left-out lines of the last year with what the visit’s provider is owed in all', () => {
+    expect(explainedLines(events('Sam Example'), TODAY).map((x) => [x.event.event.start, x.provider, x.insurer, x.line.label, x.share])).toEqual([['2026-09-12', 'Example General Hospital', 'Example Care Plan', 'Emergency visit, high severity', 25000]]);
+    expect(explainedLines(events('Sam Example'), '2027-09-13')).toEqual([]);
   });
 });

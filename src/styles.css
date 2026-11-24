@@ -2383,3 +2383,9 @@ a.cal-day:hover .cal-date {
   text-transform: uppercase;
   color: var(--muted);
 }
+
+/* The bill a row named, on Worth a call. */
+.bill-picked {
+  outline: 2px solid var(--attention);
+  outline-offset: 2px;
+}

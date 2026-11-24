@@ -48,7 +48,7 @@ function callRow(p: Person, b: OpenBill, own: boolean): HTMLElement {
       ? 'no claim in these records is for it'
       : `the ${b.claimSaysVisit ? 'visit’s claims say' : 'claim says'} you owe ${money(b.claimSays)}`;
   return needRow('Worth a call', 'attention', {
-    route: { name: 'money', view: 'calls', ...(own ? { who: p.id } : {}) },
+    route: { name: 'money', view: 'calls', bill: b.bill.doc.id, ...(own ? { who: p.id } : {}) },
     title: b.event ? visitText(b.event) : `Bill from ${b.bill.provider}`,
     meta: [own ? null : p.name, `${b.bill.provider} asks ${money(b.cents)}; ${says}`, dueText(b)].filter(Boolean).join(' · '),
     aside: h('span', { class: 'num' }, money(b.cents)),

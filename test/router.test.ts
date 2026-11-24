@@ -31,6 +31,7 @@ describe('routes', () => {
     { name: 'money' },
     { name: 'money', view: 'calls' },
     { name: 'money', view: 'calls', who: P },
+    { name: 'money', view: 'calls', who: P, bill: 'd_abcdefghijklmnopqrst' },
   ];
 
   it.each(routes.map((r) => [href(r), r]))('%s round-trips', (h, r) => {
@@ -63,6 +64,9 @@ describe('routes', () => {
     expect(href({ name: 'money', view: 'calls', who: P })).toBe(`#/money/calls?who=${P}`);
     expect(parseRoute('#/money/bills')).toEqual({ name: 'not_found' });
     expect(parseRoute('#/money?who=%3Cscript%3E')).toEqual({ name: 'money' });
+    // A bill is picked only on Worth a call.
+    expect(parseRoute('#/money?bill=d_abcdefghijklmnopqrst')).toEqual({ name: 'money' });
+    expect(parseRoute('#/money/calls?bill=%3Cb%3E')).toEqual({ name: 'money', view: 'calls' });
   });
 
   it('keep only the calendar choices they know', () => {
