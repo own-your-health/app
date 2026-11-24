@@ -473,7 +473,7 @@ test('every list of every person opens, and every old section address lands on i
       ['/claims', `#/money?who=${id}`],
     ]) {
       await page.goto(`./?demo#/p/${id}${old}`);
-      await expect(page).toHaveURL(new RegExp(`${now!.replace(/[?]/g, '\\?')}$`));
+      await expect(page).toHaveURL((u) => u.hash === now);
       await expect(page.locator('main h1, main h2').first()).toBeVisible();
     }
   }
