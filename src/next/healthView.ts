@@ -23,11 +23,12 @@ import { refillsDue, vaccineNeeds } from './needs';
 
 type HealthRoute = Extract<Route, { name: 'health' }>;
 
-// The doctor's sheet leaves private items off until someone includes them; that lasts until the sheet is left.
-let withPrivate = false;
+// The doctor's sheet leaves private items off until someone includes them, for that one person's sheet.
+// Any other page, another person's sheet included, leaves them off again.
+let includedFor: string | null = null;
 
-export function leaveOutPrivate(): void {
-  withPrivate = false;
+export function leaveOutPrivate(route: Route): void {
+  if (route.name !== 'health' || route.view !== 'doctor' || route.who !== includedFor) includedFor = null;
 }
 
 const privateChip = (area: string | undefined) => (area ? chip('Private', 'muted') : null);
@@ -40,7 +41,7 @@ function head(ctx: Ctx, title: string, lead: string, who: string | undefined, vi
     { class: 'chips', role: 'group', 'aria-label': 'Whose health' },
     [...(view ? [] : [{ id: '', name: 'Everyone' }]), ...ctx.store.household.people].map((p) => {
       const on = p.id ? who === p.id : !who;
-      return h('a', { class: ['filter', on ? 'filter-on' : null], href: href({ name: 'health', ...(view ? { view } : {}), ...(p.id ? { who: p.id } : {}) }), 'aria-current': on ? 'true' : false }, p.name);
+      return h('a', { class: ['filter', on ? 'filter-on' : null], href: href({ name: 'health', ...(view ? { view } : {}), ...(p.id ? { who: p.id } : {}) }), 'aria-current': on ? 'page' : false }, p.name);
     }),
   );
   const back = view && who ? h('p', { class: 'sheet-back' }, link({ name: 'health', who }, icon('back', 16), ' Health')) : null;
@@ -210,11 +211,11 @@ function everyonePage(ctx: Ctx): HTMLElement {
 }
 
 /** Hand to a doctor: the person's current picture in a clinician's terms, private items off unless included. */
-function doctorPage(ctx: Ctx, route: HealthRoute, p: Person, idx: PersonIndex): HTMLElement {
+function doctorPage(ctx: Ctx, p: Person, idx: PersonIndex): HTMLElement {
   const today = localDay(ctx.now());
-  const sheet = doctorSheet(idx, today, withPrivate);
   // How many private items the sheet leaves off when they are not included.
   const hidden = doctorSheet(idx, today, false).privateLeft;
+  const included = () => includedFor === p.id;
   const section = (title: string, body: Child) => h('section', { class: 'sheet-section' }, h('h2', null, title), body);
   const list = (items: Child[], none: string) => (items.length ? h('ul', { class: 'sheet-list' }, items.map((x) => h('li', null, x))) : h('p', { class: 'muted' }, none));
   const table = (rows: LatestResult[], none: string) =>
@@ -234,29 +235,9 @@ function doctorPage(ctx: Ctx, route: HealthRoute, p: Person, idx: PersonIndex): 
           ),
         )
       : h('p', { class: 'muted' }, none);
-  const toggle = hidden
-    ? button(withPrivate ? 'Leave private items off' : `Include ${count(hidden, 'private item')}`, () => {
-        withPrivate = !withPrivate;
-        const next = doctorPage(ctx, route, p, idx);
-        page.replaceWith(next);
-        next.querySelector<HTMLButtonElement>('.sheet-private button')?.focus();
-      })
-    : null;
-  const page = h(
-    'div',
-    { class: 'stack health doctor' },
-    ...head(ctx, `${p.name}`, 'Hand to a doctor: the current picture in a clinician’s terms.', p.id, 'doctor'),
-    h('p', { class: 'small' }, meta(p.birth_date ? `Born ${dateText(p.birth_date)} (${ageWords(p.birth_date, today)})` : null, `From ${coverageOf(idx).words.toLowerCase()}, as of ${dateText(today)}`)),
-    hidden
-      ? h(
-          'div',
-          { class: 'sheet-private', role: 'status' },
-          h('p', { class: 'small muted' }, withPrivate ? `${count(hidden, 'private item')} ${hidden === 1 ? 'is' : 'are'} included.` : `${count(hidden, 'private item')} ${hidden === 1 ? 'is' : 'are'} left off.`, ' This is discretion, not security: the files stay readable in the shared Drive folder.'),
-          toggle,
-        )
-      : null,
-    h('p', { class: 'sheet-print' }, button('Print', () => window.print(), { small: true })),
-    card(
+  const sheetCard = () => {
+    const sheet = doctorSheet(idx, today, included());
+    return card(
       { class: 'sheet' },
       section('Allergies', list(sheet.allergies.map((a) => meta(a.name, a.reactions.join(', ') || null, a.criticality ? `criticality ${a.criticality}` : null)), 'No known allergies in these records.')),
       section('Medicines', list(sheet.medicines.map((m) => meta(m.name, typeof m.latest.fields.dosage === 'string' ? m.latest.fields.dosage : null, m.prescriber ?? null, m.lastFill?.date ? `last filled ${dateText(m.lastFill.date)}` : null)), 'No current medicines in these records.')),
@@ -265,9 +246,30 @@ function doctorPage(ctx: Ctx, route: HealthRoute, p: Person, idx: PersonIndex): 
       section('Labs, last two years', table(sheet.labs, 'No lab results in the last two years.')),
       section('Vital signs, last two years', table(sheet.vitals, 'No vital signs in the last two years.')),
       section('Care team', list(sheet.careTeam.map((m) => meta(m.name, m.last ? `last seen ${dateText(m.last)}${m.place ? ` at ${m.place}` : ''}` : null, m.prescribes.length ? `prescribes ${m.prescribes.join(', ')}` : null)), 'No doctors named in the last two years.')),
-    ),
+    );
+  };
+  // The status and the button stay in place and change their words, so the change is announced; only the sheet is rebuilt.
+  const said = () => `${count(hidden, 'private item')} ${hidden === 1 ? 'is' : 'are'} ${included() ? 'included' : 'left off'}.`;
+  const label = () => (included() ? 'Leave private items off' : `Include ${count(hidden, 'private item')}`);
+  let shown = sheetCard();
+  const status = h('span', null, said());
+  const toggle = button(label(), () => {
+    includedFor = included() ? null : p.id;
+    status.textContent = said();
+    toggle.textContent = label();
+    const next = sheetCard();
+    shown.replaceWith(next);
+    shown = next;
+  });
+  return h(
+    'div',
+    { class: 'stack health doctor' },
+    ...head(ctx, `${p.name}’s health summary`, 'Hand this to a doctor: the current picture in a clinician’s terms.', p.id, 'doctor'),
+    h('p', { class: 'small' }, meta(p.birth_date ? `Born ${dateText(p.birth_date)} (${ageWords(p.birth_date, today)})` : null, `From ${coverageOf(idx).words.toLowerCase()}, as of ${dateText(today)}`)),
+    hidden ? h('div', { class: 'sheet-private' }, h('p', { class: 'small muted' }, h('span', { role: 'status' }, status), ' This is discretion, not security: the files stay readable in the shared Drive folder.'), toggle) : null,
+    h('p', { class: 'sheet-print' }, button('Print', () => window.print(), { small: true })),
+    shown,
   );
-  return page;
 }
 
 export function healthView(ctx: Ctx, route: HealthRoute): HTMLElement {
@@ -279,5 +281,5 @@ export function healthView(ctx: Ctx, route: HealthRoute): HTMLElement {
   }
   const idx = store.index(p.id);
   if (!idx) return h('div', { class: 'stack health' }, ...head(ctx, 'Health', store.indexErrors.has(p.id) ? 'Their records could not be read.' : 'Loading their records…', p.id, route.view));
-  return route.view === 'doctor' ? doctorPage(ctx, route, p, idx) : personPage(ctx, p, idx);
+  return route.view === 'doctor' ? doctorPage(ctx, p, idx) : personPage(ctx, p, idx);
 }

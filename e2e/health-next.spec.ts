@@ -70,7 +70,7 @@ test('the doctor’s sheet leaves private items off until they are included', as
   await open(page, `#/health?who=${SAM}`);
   await page.getByRole('link', { name: 'Hand to a doctor' }).click();
   await expect(page).toHaveURL(new RegExp(`#/health/doctor\\?who=${SAM}$`));
-  await expect(page.locator('main h1')).toHaveText('Sam Example');
+  await expect(page.locator('main h1')).toHaveText('Sam Example’s health summary');
   await expect(page.locator('.sheet h2')).toHaveText(['Allergies', 'Medicines', 'Problems', 'Vaccines', 'Labs, last two years', 'Vital signs, last two years', 'Care team']);
 
   const sheet = page.locator('.sheet');
@@ -83,10 +83,19 @@ test('the doctor’s sheet leaves private items off until they are included', as
 
   await page.getByRole('button', { name: 'Include 2 private items' }).click();
   await expect(page.getByRole('button', { name: 'Leave private items off' })).toBeFocused();
+  await expect(page.getByRole('status')).toHaveText('2 private items are included.');
   await expect(sheet.locator('.sheet-section', { hasText: 'Medicines' }).locator('li')).toHaveText([/^Sertraline 50 mg tablet/, /^Vitamin D3 2,000 unit capsule/]);
   await expect(sheet).toContainText('Dr. Morgan Placeholder');
 
+  // Another person's sheet never inherits it: back on Sam's, they are off again.
+  await page.getByRole('group', { name: 'Whose health' }).getByRole('link', { name: 'Robin Example' }).click();
+  await expect(page.locator('main h1')).toHaveText('Robin Example’s health summary');
+  await page.getByRole('group', { name: 'Whose health' }).getByRole('link', { name: 'Sam Example' }).click();
+  await expect(page.getByRole('button', { name: 'Include 2 private items' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Whose health' }).getByRole('link', { name: 'Sam Example' })).toHaveAttribute('aria-current', 'page');
+
   // Leaving the sheet leaves them off again.
+  await page.getByRole('button', { name: 'Include 2 private items' }).click();
   await page.getByRole('link', { name: 'Health', exact: true }).click();
   await page.getByRole('link', { name: 'Hand to a doctor' }).click();
   await expect(page.getByRole('button', { name: 'Include 2 private items' })).toBeVisible();

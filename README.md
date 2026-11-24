@@ -544,8 +544,8 @@ app without it is unchanged.
   that file will replace `src/next/money.ts`.
 - **Health** (`#/health`, from Where everyone stands on Home) gives each
   person a card: what the records can know about them (doctors' records and
-  claims, doctors' records only, or claims and papers only), what is due,
-  what is current and which results are worth a look. A person's page
+  claims, doctors' records only, claims and papers only, or no records
+  yet), what is due, what is current and which results are worth a look. A person's page
   (`#/health?who=`) runs in a fixed order: Due, then Current (conditions,
   medicines and allergies, each with when it was last recorded and where
   from), then Worth noticing (each test whose newest result is out of range

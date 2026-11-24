@@ -428,7 +428,7 @@ export class App {
     // Private events shown on the calendar, and private items on a doctor’s sheet, are left off again once the page is left.
     const now = parseRoute(location.hash);
     if (now.name !== 'calendar') hidePrivateEvents();
-    if (now.name !== 'health' || now.view !== 'doctor') leaveOutPrivate();
+    leaveOutPrivate(now);
     if (this.phase.name === 'ready') {
       this.render();
       window.scrollTo(0, 0);

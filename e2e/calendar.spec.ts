@@ -89,7 +89,7 @@ test('the list has every event by month, and a person’s overview opens theirs'
   await open(page, `#/p/${SAM}`);
   await card(page, /^What happened$/).getByRole('link', { name: 'In the calendar' }).click();
   await expect(page).toHaveURL(new RegExp(`#/calendar\\?view=list&who=${SAM}$`));
-  await expect(page.getByRole('group', { name: 'View' }).getByRole('link', { name: 'List' })).toHaveAttribute('aria-current', 'true');
+  await expect(page.getByRole('group', { name: 'View' }).getByRole('link', { name: 'List' })).toHaveAttribute('aria-current', 'page');
   await expect(page.locator('.calendar .card-head h2')).toHaveText(['October 2026', 'September 2026', 'July 2026', 'May 2026']);
   await expect(card(page, 'September 2026')).toContainText('1 visit · your share $346.40.');
 
