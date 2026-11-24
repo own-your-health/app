@@ -6,7 +6,7 @@
 
 import { CATEGORY_LABELS, claimAmounts, claimCategory, claimCents, claimTitle, countedLines, type Category } from '../model/claims';
 import { sameProvider } from '../model/providers';
-import { organizationName, str } from '../model/records';
+import { practiceName, str } from '../model/records';
 import type { MedrecRule, Sureness } from '../model/events';
 import type { Household, MedDocument, MedRecord } from '../model/types';
 import { isDescriptor, placeName, plainWords } from '../model/words';
@@ -276,7 +276,7 @@ const sameWords = (a: string, b: string) => {
  */
 export function nameEvent(e: CareEvent, household: Household, person: string, given: { title?: string; what?: string } = {}): void {
   const v = e.visits[0]?.record;
-  const org = v?.provenance.map((p) => p.source.organization_id).filter((x): x is string => !!x).map((o) => organizationName(household, person, o))[0];
+  const org = v?.provenance.map((p) => practiceName(household, person, p.source)).find(Boolean);
   const places = [e.place, str(v?.fields.location), str(v?.fields.service_provider), org, e.claims.find((c) => c.role === 'office')?.provider, ...e.claims.map((c) => c.provider)];
   e.place = places.map(placeName).find(Boolean);
   const first = e.claims[0]?.record;

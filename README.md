@@ -548,7 +548,9 @@ dropped from the address.
   Billing descriptors in capitals ("OFC VISIT, NEW PT, MOD MDM") are never
   a headline; they show only in the visit's Details (`src/model/words.ts`).
   A portal platform's name ("athenahealth (all practices)") is never a
-  place, and a store's number is said once. People go by their first name,
+  place; a visit that names no other is at its sign-in's practice
+  (`practiceName` in `src/model/records.ts`), and has no place when that is
+  not known. A store's number is said once. People go by their first name,
   or their full name where two share one, except in Settings and on the
   doctor's sheet (`src/model/people.ts`). An event is private when a record
   or paper in it is. medrec 0.9.1 writes its own marks (`private.json`), which the app does
