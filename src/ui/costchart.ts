@@ -68,12 +68,13 @@ type Month = { ym: string; label: string } & Stack;
 
 /**
  * Plan paid and your share for each month, stacked, with the months between
- * them. Each month is a link to its lines. Drawn at its box's width, so its
- * text keeps its size and stays inside the chart. Null with nothing to draw.
+ * them. Each month is a link (`linkFor`), and `linkText` ends its label,
+ * saying where the link goes. Drawn at its box's width, so its text keeps its
+ * size and stays inside the chart. Null with nothing to draw.
  */
-export function monthChart(months: Month[], linkFor: (ym: string) => Route): HTMLElement | null {
+export function monthChart(months: Month[], linkFor: (ym: string) => Route, linkText = 'Show its lines.'): HTMLElement | null {
   if (!months.length) return null;
-  return fitted((width) => monthSvg(months, linkFor, width), 360);
+  return fitted((width) => monthSvg(months, linkFor, width, linkText), 360);
 }
 
 export interface MonthLayout {
@@ -126,7 +127,7 @@ export function monthLayout(totals: number[], yms: string[], width: number): Mon
 }
 
 /** The month chart at one width, in CSS pixels. */
-function monthSvg(months: Month[], linkFor: (ym: string) => Route, width: number): SVGSVGElement {
+function monthSvg(months: Month[], linkFor: (ym: string) => Route, width: number, linkText: string): SVGSVGElement {
   const totalOf = (m: Stack) => Math.max(0, m.planPaid) + Math.max(0, m.share);
   const L = monthLayout(months.map(totalOf), months.map((m) => m.ym), width);
   const { pad, band, y } = L;
@@ -153,7 +154,7 @@ function monthSvg(months: Month[], linkFor: (ym: string) => Route, width: number
     const name = names.get(i);
     return s(
       'a',
-      { href: href(linkFor(m.ym)), 'aria-label': `${text}. Show its lines.`, class: 'cost-col' },
+      { href: href(linkFor(m.ym)), 'aria-label': `${text}. ${linkText}`, class: 'cost-col' },
       s('title', null, text),
       s('rect', { x: x0, y: pad.top, width: band, height: plotH, class: 'cost-hit' }),
       segs,
@@ -215,5 +216,18 @@ export function priceStrip(billed: number | undefined, allowed: number | undefin
     billed !== undefined && allowed !== undefined ? s('line', { x1: x(allowed), x2: x(billed), y1: cy, y2: cy, class: 'cost-span' }) : null,
     billed !== undefined ? s('circle', { cx: x(billed), cy, r, class: 'cost-billed' }, s('title', null, `Billed ${money(billed)}`)) : null,
     allowed !== undefined ? s('circle', { cx: x(allowed), cy, r, class: 'cost-allowed' }, s('title', null, `Allowed ${money(allowed)}`)) : null,
+  );
+}
+
+/** How much of a limit is used, as a bar on a track; full and square-ended when it is met. */
+export function limitMeter(used: number, limit: number): SVGSVGElement {
+  const W = 300;
+  const H = 8;
+  const w = limit > 0 ? Math.min(1, Math.max(0, used) / limit) * W : 0;
+  return s(
+    'svg',
+    { viewBox: `0 0 ${W} ${H}`, class: 'cost-strip limit-meter', 'aria-hidden': 'true', focusable: 'false' },
+    s('rect', { x: 0, y: 0, width: W, height: H, class: 'cost-track' }),
+    w > 0 ? s('path', { d: w >= W ? `M0,0 H${W} V${H} H0 Z` : rightRounded(0, 0, Math.max(w, 1), H), class: 'cost-share' }) : null,
   );
 }

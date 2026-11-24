@@ -1837,6 +1837,13 @@ mark {
   background: var(--series-share);
 }
 
+/* What the network took off: the empty track beside what was paid. */
+.swatch-track {
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  background: var(--sunken);
+}
+
 .swatch-dot {
   background: var(--series-plan);
   border-radius: 50%;
@@ -2388,4 +2395,35 @@ a.cal-day:hover .cal-date {
 .bill-picked {
   outline: 2px solid var(--attention);
   outline-offset: 2px;
+}
+
+/* Money's year (?next). */
+.money-steps .kv-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.money-steps dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.limit-line .chips,
+.cost-row-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.cost-row-strip .cost-strip {
+  flex: 1 1 200px;
+  margin-top: 0;
+}
+
+.limit-line p {
+  margin: 6px 0 0;
 }

@@ -518,18 +518,30 @@ app without it is unchanged.
   follows, a few lines a person: their age, their last visit, what is
   open to pay and what comes next. **Recently** closes it. A person's
   overview opens with their own Needs you.
-- **Bills** (`#/money`, from Home and each visit's bills): the open bills
-  that ask what their claims say you owe, due date first; those to check
-  before paying; the shares the claims say you owe with no bill or receipt
-  from the provider yet (a pharmacy's are paid at the counter); and the
-  bills a receipt paid. **Worth a call** (`#/money/calls`) gives each bill
-  that asks more than the claims, or that no claim backs, its figures and
-  the words to say on the phone. It then lists the bills that ask less, and
-  the lines the plan left out of a claim's totals in the last year, which
-  need nothing. Everyone's view leaves private bills off and counts them.
-  One person's view lists them, marked. medrec 0.9.1 will add Mark paid,
-  receipt amounts, the bill's phone number and `bills.json`. Reading that
-  file will replace `src/next/money.ts`.
+- **Money** (`#/money`, from Home's Money card) opens on the year: the
+  household's share of this plan year's care, with what the providers
+  charged, what the network took off and what the plans paid, from the
+  claims' own lines. Bills to act on come next, then each person's
+  deductible and out-of-pocket limit as their plan printed it on its newest
+  claim, a month chart whose months open the calendar, and the biggest
+  costs by visit. Any period the costs screen offers can be chosen;
+  deductibles show for a plan year only. **Where the money went**
+  (`#/money/events`) lists every visit of the period by network price or by
+  your share, with the pharmacy's fills as one line. Totals and months count
+  private care without naming it. The lists on everyone's view leave private
+  visits off and count them.
+- **Bills** (`#/money/bills`, from Home, Money and each visit's bills): the
+  open bills that ask what their claims say you owe, due date first; those
+  to check before paying; the shares the claims say you owe with no bill or
+  receipt from the provider yet (a pharmacy's are paid at the counter); and
+  the bills a receipt paid. **Worth a call** (`#/money/calls`) gives each
+  bill that asks more than the claims, or that no claim backs, its figures
+  and the words to say on the phone. It then lists the bills that ask less,
+  and the lines the plan left out of a claim's totals in the last year,
+  which need nothing. Everyone's view leaves private bills off and counts
+  them. One person's view lists them, marked. medrec 0.9.1 will add Mark
+  paid, receipt amounts, the bill's phone number and `bills.json`. Reading
+  that file will replace `src/next/money.ts`.
 - **Calendar** (`#/calendar`, and Recently on Home): the household's
   events a month at a time, with a lane per person (a dot for a visit or
   tests, a ring for a pharmacy trip or vaccine, a bar across the days of an
@@ -553,7 +565,8 @@ app without it is unchanged.
   four providers, a line the plan re-coded and left out of its totals, a
   bill that matches its claim and a doctor's bill not yet filed. Sam also
   has a private video counseling session, marked the way medrec marks one,
-  a private prescription that goes with it, and a vitamin D refill due.
+  with a private claim for it whose copay is not billed yet, a private
+  prescription that goes with it, and a vitamin D refill due.
 
 Unofficial. Not affiliated with or endorsed by Google.
 

@@ -556,7 +556,7 @@ export class App {
         return messageView('Page not found', 'Visit pages are part of the redesign. Add ?next to the address to try it.', [h('a', { class: 'button button-primary', href: '#/' }, 'Home')]);
       case 'money':
         if (ctx.next) return moneyView(ctx, r);
-        return messageView('Page not found', 'Bills are part of the redesign. Add ?next to the address to try them.', [h('a', { class: 'button button-primary', href: '#/' }, 'Home')]);
+        return messageView('Page not found', 'Money is part of the redesign. Add ?next to the address to try it.', [h('a', { class: 'button button-primary', href: '#/' }, 'Home')]);
       case 'calendar':
         if (ctx.next) return calendarView(ctx, r);
         return messageView('Page not found', 'The calendar is part of the redesign. Add ?next to the address to try it.', [h('a', { class: 'button button-primary', href: '#/' }, 'Home')]);

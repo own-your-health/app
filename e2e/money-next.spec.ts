@@ -1,7 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// Money under ?next, bills first: each bill beside its claim, the bills worth
-// a call with the words to say, and private bills kept off the shared view.
+// Money under ?next: the year (its four figures, bills to act on, each
+// person's deductible and out-of-pocket limit, the months, the biggest
+// costs), each bill beside its claim, the bills worth a call with the words
+// to say, where the money went, and private items kept off the shared view.
 
 const SAM = 'p_wwezzed7kml67hnp6s7n';
 
@@ -15,7 +17,7 @@ const card = (page: Page, title: string | RegExp) => page.locator('.card', { has
 test('bills sets each open bill beside its claim, then what is not billed yet and what is paid', async ({ page }) => {
   await open(page, '#/');
   await card(page, /^Needs you$/).getByRole('link', { name: 'Bills: each one beside its claim' }).click();
-  await expect(page).toHaveURL(/#\/money$/);
+  await expect(page).toHaveURL(/#\/money\/bills$/);
   await expect(page.locator('main h1')).toHaveText('Bills');
 
   const hero = page.locator('.money-hero');
@@ -32,16 +34,18 @@ test('bills sets each open bill beside its claim, then what is not billed yet an
   await expect(card(page, 'Not billed yet').locator('.card-head')).toContainText('$273.10');
   await expect(card(page, 'Not billed yet').locator('.row-title')).toHaveText(['Example Pediatrics', 'Example Health', 'Example Lab', 'Example Emergency Physicians', 'Example Health']);
   await expect(card(page, /^Paid$/).locator('.row-meta')).toHaveText('Robin Example · Office visit, Mar 10, 2025 · receipt Apr 20, 2025');
+  // Sam's private counseling copay is not billed yet: off the shared view, counted.
+  await expect(page.getByText('1 private item is kept off this shared view. Each shows on its person’s own Bills.')).toBeVisible();
 
   // One person's bills.
-  await page.getByRole('group', { name: 'Whose bills' }).getByRole('link', { name: 'Robin Example' }).click();
-  await expect(page).toHaveURL(/#\/money\?who=/);
+  await page.getByRole('group', { name: 'Whose money' }).getByRole('link', { name: 'Robin Example' }).click();
+  await expect(page).toHaveURL(/#\/money\/bills\?who=/);
   await expect(card(page, 'Due now').locator('.row-title')).toHaveText(['Example Health', 'Example Lab']);
   await expect(card(page, 'Check before paying')).toHaveCount(0);
 });
 
 test('worth a call gives each bill the figures and the words to say', async ({ page }) => {
-  await open(page, '#/money');
+  await open(page, '#/money/bills');
   await page.locator('.money-hero').getByRole('link', { name: /worth a call first/ }).click();
   await expect(page).toHaveURL(/#\/money\/calls$/);
   await expect(page.locator('.money-hero .money-hero-number')).toHaveText('$69.30');
@@ -63,20 +67,108 @@ test('worth a call gives each bill the figures and the words to say', async ({ p
   await call.getByRole('link', { name: 'Lab tests, Jul 9, 2026' }).click();
   await expect(page.locator('.event h1')).toHaveText('Lab tests');
   await page.locator('.card', { hasText: 'Bills and payments' }).getByRole('link', { name: 'All bills, beside their claims' }).click();
+  await expect(page).toHaveURL(new RegExp(`#/money/bills\\?who=${SAM}$`));
+  // On Sam's own Bills the private copay is listed, marked.
+  const counseling = card(page, 'Not billed yet').locator('.row', { hasText: 'Example Counseling' });
+  await expect(counseling.locator('.chip')).toHaveText('Private');
+  await page.getByRole('link', { name: 'Money', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`#/money\\?who=${SAM}$`));
 });
 
-test('bills fit a 360px phone in the dark theme', async ({ page }) => {
+test('the year: what care cost, the bills to act on, deductibles, the months and the biggest costs', async ({ page }) => {
+  await open(page, '#/');
+  const glance = card(page, /^Money$/);
+  await expect(glance.locator('.glance-answer')).toHaveText('$640.36 your share this plan year');
+  await glance.getByRole('link', { name: 'The year, the bills and the biggest costs' }).click();
+  await expect(page).toHaveURL(/#\/money$/);
+  await expect(page.locator('main h1')).toHaveText('Money');
+
+  const hero = page.locator('.money-hero');
+  await expect(hero.locator('.money-hero-label')).toHaveText('The household’s share of this plan year’s care');
+  await expect(hero.locator('.money-hero-number')).toHaveText('$640.36');
+  await expect(hero).toContainText('The plans’ figures, from 14 claims for care between Jul 9, 2026 and Nov 20, 2026.');
+  await expect(hero.locator('.kv-row')).toHaveText(['Providers charged$6,417.00', 'The network took off$4,181.40', 'The plans paid$1,595.24', 'Your share$640.36']);
+  await expect(hero.locator('.chip')).toHaveText('65% off what providers charged');
+  await expect(hero).toContainText('Example Health Plan and Example Pharmacy Benefits run by calendar year here');
+
+  const bills = card(page, /^Bills$/);
+  await expect(bills.locator('.row-title')).toHaveText(['3 bills ready to pay', '1 bill worth a call', 'Not billed yet']);
+  await expect(bills.locator('.row-aside')).toHaveText(['$322.96', '$69.30', '$273.10']);
+  await bills.getByRole('link', { name: /1 bill worth a call/ }).click();
+  await expect(page).toHaveURL(/#\/money\/calls$/);
+  await page.goBack();
+
+  const deductible = card(page, /^Deductible$/);
+  await expect(deductible.locator('.row-title')).toHaveText(['Robin Example', 'Sam Example', 'Alex Example', 'Jamie Example']);
+  await expect(deductible.locator('.row-aside')).toHaveText(['$1,120.40 of $1,500.00', '$217.40 of $750.00', '$0.00 of $750.00']);
+  await expect(deductible.locator('.row').first()).toContainText('$379.60 to go. As of the claim for Oct 1, 2026. None of it comes from claims in these records.');
+  await expect(deductible.locator('.row').last()).toContainText('No claims in this plan year yet.');
+  // Sam's plan printed its balances last on the private counseling's claim: the shared view neither dates nor links it.
+  await expect(deductible.locator('.row').nth(1)).toContainText('$532.60 to go. As of their plan’s newest claim.');
+  await expect(deductible.locator('.row').nth(1).getByRole('link')).toHaveCount(0);
+  await expect(card(page, /^Out-of-pocket limit$/).locator('.row-aside')).toHaveText(['$1,356.10 of $4,000.00', '$497.40 of $3,000.00', '$25.00 of $3,000.00']);
+
+  // Totals count the private counseling; the biggest costs leave it off, counted.
+  const biggest = card(page, /^Biggest costs$/);
+  await expect(biggest.locator('.row-title')).toHaveText(['Emergency room', 'Office visit', 'Sick visit', 'Office visit', 'Lab tests']);
+  await expect(biggest.locator('.row-aside').first()).toHaveText('$1,383.20');
+  await expect(page.getByText('Totals and months count everyone’s care without naming any. 1 private item is kept off the lists on this shared view.')).toBeVisible();
+
+  // A month of the chart opens it in the calendar.
+  await page.locator('.cost-col[aria-label^="Sep 2026"]').click();
+  await expect(page).toHaveURL(/#\/calendar\?month=2026-09$/);
+  await page.goBack();
+
+  await biggest.locator('a.row-main').first().click();
+  await expect(page.locator('.event h1')).toContainText('Emergency room');
+  await page.goBack();
+
+  // Last plan year: its own figures, and its own deductibles.
+  await page.getByRole('group', { name: 'Which year' }).getByRole('link', { name: 'Last plan year' }).click();
+  await expect(page).toHaveURL(/#\/money\?period=plan-1$/);
+  await expect(hero.locator('.money-hero-label')).toHaveText('The household’s share of last plan year’s care');
+  // A calendar year has no deductibles of its own.
+  await page.getByRole('group', { name: 'Which year' }).getByRole('link', { name: '2025' }).click();
+  await expect(card(page, /^Deductible$/)).toHaveCount(0);
+  await expect(page.getByText('Deductibles and out-of-pocket limits run by plan year.')).toBeVisible();
+
+  // On Sam's own year, the claim is dated and linked.
+  await open(page, `#/money?who=${SAM}`);
+  await expect(card(page, /^Deductible$/).getByRole('link', { name: 'the claim for Oct 27, 2026' })).toBeVisible();
+});
+
+test('where the money went lists every visit by price or by your share, fills as one line', async ({ page }) => {
+  await open(page, '#/money');
+  await page.getByRole('link', { name: 'Where the money went: all 9, by price or by your share' }).click();
+  await expect(page).toHaveURL(/#\/money\/events$/);
+  await expect(page.locator('main h1')).toHaveText('Where the money went');
+  const list = page.locator('.money-events');
+  await expect(list.locator('.row-title')).toHaveText(['Emergency room', 'Office visit', 'Sick visit', 'Office visit', 'Lab tests', 'Lab tests', 'Lab tests', '2 prescription fills']);
+  await expect(list.locator('.row').last().locator('.row-meta')).toHaveText('Example Pharmacy · paid at the counter');
+
+  await page.getByRole('group', { name: 'Order by' }).getByRole('link', { name: 'Your share' }).click();
+  await expect(page).toHaveURL(/#\/money\/events\?sort=share$/);
+  await expect(list.locator('.row-aside').first()).toHaveText('$346.40');
+
+  // Sam's own list has the private counseling, marked, and keeps the order.
+  await page.getByRole('group', { name: 'Whose money' }).getByRole('link', { name: 'Sam Example' }).click();
+  await expect(page).toHaveURL(new RegExp(`#/money/events\\?who=${SAM}&sort=share$`));
+  const counseling = list.locator('.row', { hasText: 'Counseling session' });
+  await expect(counseling.locator('.chip')).toHaveText('Private');
+  await expect(counseling.locator('.row-aside')).toHaveText('$30.00');
+});
+
+test('Money fits a 360px phone in the dark theme', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 780 });
   await page.emulateMedia({ colorScheme: 'dark' });
-  for (const path of ['#/money', '#/money/calls']) {
+  for (const path of ['#/money', '#/money/bills', '#/money/calls', '#/money/events']) {
     await open(page, path);
-    await expect(page.locator('.money-hero')).toBeVisible();
+    await expect(page.locator('main h1')).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
   }
 });
 
-test('without ?next there are no bills pages', async ({ page }) => {
+test('without ?next there are no Money pages', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
   await page.goto('./?demo#/money');
   await expect(page.locator('main .card-head h2')).toHaveText('Page not found');

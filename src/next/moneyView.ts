@@ -1,99 +1,20 @@
-// Money under ?next, bills first. Bills sets each open bill beside what the
-// claims say you owe, then the shares no bill has asked for yet and the
-// bills paid. Worth a call gives each bill that asks something else the
-// facts to read out on the phone. Everyone's view is a shared screen:
-// private bills stay off it, counted, and show on their person's own view.
+// Money under ?next. Its landing is the year (moneyYear.ts). Bills sets each
+// open bill beside what the claims say you owe, then the shares no bill has
+// asked for yet and the bills paid. Worth a call gives each bill that asks
+// something else the facts to read out on the phone. Everyone's view is a
+// shared screen: private bills stay off it, counted, and show on their
+// person's own view.
 
-import { formatMoney, fromCents } from '../model/records';
-import type { Person } from '../model/types';
+import { formatMoney } from '../model/records';
 import { card, chip, driveLink, kv, link, row, type Ctx } from '../ui/components';
 import { h } from '../ui/dom';
-import { count, dateText, localDay } from '../ui/format';
-import { href, type Route } from '../ui/router';
-import { householdEvents, type PersonEvent } from './calendar';
+import { count, dateText } from '../ui/format';
+import type { Route } from '../ui/router';
 import { daysBetween } from './needs';
 import { eventRoute, eventWhen } from './eventView';
-import { byDue, callsSummary, explainedLines, openBills, paidBills, unbilledShares, type Explained, type OpenBill, type PaidBill, type Unbilled } from './money';
-
-type MoneyRoute = Extract<Route, { name: 'money' }>;
-
-const money = (cents: number) => formatMoney(fromCents(cents)) ?? '';
-const num = (cents: number) => h('span', { class: 'num' }, money(cents));
-const visitText = (x: PersonEvent) => `${x.event.title}, ${eventWhen(x.event)}`;
-const privateChip = (area: string | undefined) => (area ? chip('Private', 'muted') : null);
-
-interface Mine<T> {
-  person: Person;
-  item: T;
-}
-
-/** Everyone's bills, or one person's: private ones kept off the shared view, and how many each part left off. */
-function gather(ctx: Ctx, who: string | undefined) {
-  const store = ctx.store;
-  const today = localDay(ctx.now());
-  const all = householdEvents(store.household, (id) => store.index(id), today);
-  const open: Mine<OpenBill>[] = [];
-  const unbilled: Mine<Unbilled>[] = [];
-  const paid: Mine<PaidBill>[] = [];
-  const explained: Mine<Explained>[] = [];
-  const hidden = { open: [] as OpenBill[], unbilled: 0, paid: 0, explained: 0 };
-  let loading = 0;
-  for (const p of store.household.people) {
-    if (who && p.id !== who) continue;
-    const idx = store.index(p.id);
-    if (!idx) {
-      if (!store.indexErrors.has(p.id)) loading++;
-      continue;
-    }
-    const mine = all.filter((x) => x.person.id === p.id);
-    const keep = <T extends { private?: string }>(xs: T[]): { shown: Mine<T>[]; left: T[] } => ({
-      shown: (who ? xs : xs.filter((x) => !x.private)).map((item) => ({ person: p, item })),
-      left: who ? [] : xs.filter((x) => x.private),
-    });
-    const o = keep(openBills(idx, mine, today));
-    const u = keep(unbilledShares(idx, mine));
-    const pd = keep(paidBills(idx, mine));
-    const ex = keep(explainedLines(mine, today));
-    open.push(...o.shown);
-    unbilled.push(...u.shown);
-    paid.push(...pd.shown);
-    explained.push(...ex.shown);
-    hidden.open.push(...o.left);
-    hidden.unbilled += u.left.length;
-    hidden.paid += pd.left.length;
-    hidden.explained += ex.left.length;
-  }
-  open.sort((a, b) => byDue(a.item, b.item));
-  unbilled.sort((a, b) => b.item.event.event.start.localeCompare(a.item.event.event.start));
-  paid.sort((a, b) => (b.item.bill.date ?? '').localeCompare(a.item.bill.date ?? ''));
-  explained.sort((a, b) => b.item.event.event.start.localeCompare(a.item.event.event.start));
-  return { today, open, unbilled, paid, explained, hidden, loading };
-}
-
-/** "2 private items are kept off this shared view. Each shows on its person's own view." */
-function keptNote(n: number, where: string): HTMLElement | null {
-  return n ? h('p', { class: 'small muted' }, `${count(n, 'private item')} ${n === 1 ? 'is' : 'are'} kept off this shared view. Each shows on its person’s own ${where}.`) : null;
-}
-
-/** A row or card for one bill, so Worth a call can find the one a row named. */
-function forBill<T extends HTMLElement>(el: T, id: string): T {
-  el.dataset.bill = id;
-  return el;
-}
-
-/** The view's heading, its choices and the line under them. */
-function head(ctx: Ctx, route: MoneyRoute, title: string, lead: string, who: string | undefined): HTMLElement[] {
-  const people = ctx.store.household.people;
-  const whose = h(
-    'div',
-    { class: 'chips', role: 'group', 'aria-label': 'Whose bills' },
-    [{ id: '', name: 'Everyone' }, ...people].map((p) => {
-      const on = p.id ? who === p.id : !who;
-      return h('a', { class: ['filter', on ? 'filter-on' : null], href: href({ name: 'money', ...(route.view ? { view: route.view } : {}), ...(p.id ? { who: p.id } : {}) }), 'aria-current': on ? 'true' : false }, p.name);
-    }),
-  );
-  return [h('h1', null, title), h('p', { class: 'lead' }, lead), whose];
-}
+import { callsSummary, type OpenBill, type PaidBill } from './money';
+import { forBill, gather, head, keptNote, money, num, privateChip, visitText, type Mine, type MoneyRoute } from './moneyParts';
+import { eventsPage, overviewPage } from './moneyYear';
 
 const billWhen = (b: OpenBill | PaidBill) => {
   const d = b.bill.doc.statement?.statement_date ?? b.bill.date;
@@ -210,7 +131,7 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
     checkCard,
     unbilledCard,
     paidCard,
-    keptNote(g.hidden.open.length + g.hidden.unbilled + g.hidden.paid, 'Bills'),
+    keptNote(g.hidden.open.length + g.hidden.unbilled.length + g.hidden.paid, 'Bills'),
     !g.open.length && !g.unbilled.length && !g.paid.length ? card({}, h('p', null, 'No bills, receipts or claim shares in these records yet.')) : null,
   );
 }
@@ -317,7 +238,7 @@ function callsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
     look,
     explained,
     keptNote(kept, 'view'),
-    h('p', { class: 'small' }, link({ name: 'money', ...(who ? { who } : {}) }, 'All bills')),
+    h('p', { class: 'small' }, link({ name: 'money', view: 'bills', ...(who ? { who } : {}) }, 'All bills')),
   );
   // A row elsewhere named one bill: mark it, and take the reader and the keyboard to it once the page is in place.
   const picked = route.bill ? page.querySelector<HTMLElement>(`[data-bill="${CSS.escape(route.bill)}"]`) : null;
@@ -331,5 +252,14 @@ function callsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
 
 export function moneyView(ctx: Ctx, route: MoneyRoute): HTMLElement {
   const who = route.who && ctx.store.household.people.some((p) => p.id === route.who) ? route.who : undefined;
-  return route.view === 'calls' ? callsPage(ctx, route, who) : billsPage(ctx, route, who);
+  switch (route.view) {
+    case 'bills':
+      return billsPage(ctx, route, who);
+    case 'calls':
+      return callsPage(ctx, route, who);
+    case 'events':
+      return eventsPage(ctx, route, who);
+    default:
+      return overviewPage(ctx, route, who);
+  }
 }
