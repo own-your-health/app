@@ -497,12 +497,26 @@ app without it is unchanged.
   page says which. Every screen reads events through `src/next/load.ts`:
   reading medrec's events changes the one call there, and `grouping.ts` is
   then deleted. What an event is and what it cost (`src/next/event.ts`) stay.
+- **Calendar** (`#/calendar`, and Recently on Home): the household's
+  events a month at a time, with a lane per person (a dot for a visit or
+  tests, a ring for a pharmacy trip or vaccine, a bar across the days of an
+  emergency room visit or a hospital stay) and the month's events listed
+  below with one number each; or every event as one list, by month. A day
+  opens its own list.
+- **Private events.** medrec marks a record or paper private from its codes
+  (`private: true`, with `private_area`). A private event shows on its
+  person's own pages and calendar, marked Private. The Everyone calendar
+  and Home leave it off and say how many they left off; Show them brings
+  them back until the page is left or reloaded, and nothing about it is
+  stored. The app says this is discretion, not security: everyone the Drive
+  folder is shared with can still read the files.
 - A visit's address names a record in it. Any record or paper of the visit
   opens it, so a saved address still works after records arrive and the
   visit is led by another one.
 - The sample's Sam spent a night in the emergency room: five claims from
   four providers, a line the plan re-coded and left out of its totals, a
-  bill that matches its claim and a doctor's bill not yet filed.
+  bill that matches its claim and a doctor's bill not yet filed. Sam also
+  has a private video counseling session, marked the way medrec marks one.
 
 Unofficial. Not affiliated with or endorsed by Google.
 

@@ -16,7 +16,9 @@ async function openSam(page: Page, next = true) {
 async function openEmergency(page: Page) {
   await openSam(page);
   const happened = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^What happened$/ }) });
-  await expect(happened.locator('.row-title')).toHaveText(['Lab tests', 'Emergency room · overnight', 'Lab tests', 'Sports medicine visit']);
+  await expect(happened.locator('.row-title')).toHaveText(['Counseling session', 'Lab tests', 'Emergency room · overnight', 'Lab tests', 'Sports medicine visit']);
+  // Sam's own page shows Sam's private visit, marked.
+  await expect(happened.locator('.row', { hasText: 'Counseling session' }).locator('.chip')).toHaveText('Private');
   const er = happened.locator('.row', { hasText: 'Emergency room · overnight' });
   await expect(er.locator('.row-meta')).toHaveText('Sep 12–13, 2026 · Example General Hospital');
   await expect(er.locator('.row-aside')).toHaveText('$346.40');

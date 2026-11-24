@@ -3474,6 +3474,45 @@
           "filed_by": "medrec 0.2.11"
         }
       ]
+    },
+    {
+      "id": "r_l2hawbmbuvibfaovzyjw",
+      "kind": "encounter",
+      "key": "encounter|counseling session|2026-10-27",
+      "date": "2026-10-27",
+      "display": "Counseling session",
+      "status": "finished",
+      "fields": {
+        "when": "2026-10-27",
+        "class": "virtual",
+        "practitioner": "Dr. Morgan Placeholder",
+        "location": "Example Counseling",
+        "reason": "Anxiety"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Encounter",
+            "id": "encounter-e9275cb5",
+            "last_updated": "2026-11-22T08:00:00Z"
+          },
+          "fetched_at": "2026-11-22T14:59:00Z",
+          "filed_at": "2026-11-22T14:59:00Z",
+          "raw_path": "Sam Example/Records/mychart-example-health/Encounter/encounter-e9275cb5.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ],
+      "private": true,
+      "private_area": "mental_health"
     }
   ],
   "studies": [

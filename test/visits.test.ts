@@ -55,7 +55,7 @@ describe('visits with their documents', () => {
   });
 
   it('takes imaging from the visit’s days', () => {
-    const v = timeline('Sam Example').visits[0]!;
+    const v = timeline('Sam Example').visits.find((x) => x.record.display === 'Sports medicine visit')!;
     expect(docTitles(v)).toEqual(['linked Sports medicine visit note']);
     expect(v.studies.map((s) => s.description)).toEqual(['XR ankle, 3 views']);
   });
