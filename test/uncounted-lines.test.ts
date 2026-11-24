@@ -48,7 +48,7 @@ describe('a line the claim’s totals leave out', () => {
       ['99284', false],
       ['99283', true],
     ]);
-    expect(claimLines(marked)[0]!.notes).toEqual(['C7 -- This service was paid under a different code than the one billed.']);
+    expect(claimLines(marked)[0]!.payerNotes).toEqual(['C7 -- This service was paid under a different code than the one billed.']);
     expect(claimNotes(marked)).toEqual(['N1 -- The deductible for this plan year has been met.']);
   });
 

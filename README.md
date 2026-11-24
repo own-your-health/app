@@ -191,8 +191,8 @@ A plan that recodes a service under its coding policy (an emergency visit's
 level, say) keeps the provider's line, marked not covered, beside the one it
 paid, and a plan that writes a line off keeps that too; its totals count
 neither. medrec 0.8.2 and later marks such a line (`items[].counted: false`)
-and keeps the payer's notes on it (`items[].notes`, and the claim's own in
-`notes`). For a claim medrec has not marked, the app finds them by medrec's
+and keeps the payer's notes on it (`items[].payer_notes`, and the claim's own
+in `payer_notes`). For a claim medrec has not marked, the app finds them by medrec's
 rule: it compares billed, plan paid and you owe, those the totals and a line
 both give, at least two of them, and takes the one smallest set of up to
 three lines whose removal makes every one agree; none when two sets tie. The

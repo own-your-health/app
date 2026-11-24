@@ -146,7 +146,7 @@ function linesCard(person: string, lines: readonly Readonly<ClaimLine>[], lineRe
       const amounts = LINE_AMOUNT_ORDER.filter((k) => l.amounts[k]).map((k) => `${AMOUNT_LABELS[k]} ${formatMoney(l.amounts[k])}`);
       const paidFor = telling ? (lineRecords[i] ?? []) : [];
       const lineMeta = [l.code, CATEGORY_LABELS[l.category].one, l.date ? dateText(l.date) : null].filter(Boolean).join(' · ');
-      const notes = l.notes.length ? h('p', { class: 'small muted claim-notes' }, `The plan’s ${l.notes.length === 1 ? 'note' : 'notes'}: ${l.notes.join(' · ')}`) : null;
+      const notes = l.payerNotes.length ? h('p', { class: 'small muted claim-notes' }, `The plan’s ${l.payerNotes.length === 1 ? 'note' : 'notes'}: ${l.payerNotes.join(' · ')}`) : null;
       // A line the plan replaced or wrote off: what was billed, never what it marked not covered, as none of it is owed.
       if (!l.counted) {
         return row({

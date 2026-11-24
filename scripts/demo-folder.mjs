@@ -942,7 +942,7 @@ function claimFields(P, { date, provider, type, lines, diagnoses, liability }) {
 // `replaced`: [code, what was done, billed], the provider's line the plan
 // recoded under its policy, kept as not covered just before the line that
 // replaced it. The claim's totals leave it out, as a plan's do, and medrec
-// 0.8.2 marks it so (`counted: false`), with the plan's note on it.
+// 0.8.2 marks it so (`counted: false`), with the plan's note on it (`payer_notes`).
 function claimOf(P, s, { date, provider, insurer, type = 'Professional', system = CPT, lines, balances, benefitPeriod, diagnoses = [], liability = true, replaced }) {
   for (const l of lines) if (cents(l[3]) !== cents(l[4]) + cents(l[5]) + cents(l[6]) + cents(l[7])) throw new Error(`allowed is not paid plus share: ${l}`);
   const share = (l) => cents(l[4]) + cents(l[5]) + cents(l[6]);
@@ -984,7 +984,7 @@ function claimOf(P, s, { date, provider, insurer, type = 'Professional', system 
       amounts: { billed: usd(billed), not_covered: usd(billed) },
       records: medrec.items[at].records,
       counted: false,
-      notes: ['C7 -- This service was paid under a different code than the one billed.'],
+      payer_notes: ['C7 -- This service was paid under a different code than the one billed.'],
     });
     items.forEach((it, i) => (it.sequence = i + 1));
   }

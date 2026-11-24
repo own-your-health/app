@@ -102,8 +102,8 @@ export interface ClaimLine {
    * with its own or wrote off: none of it is owed.
    */
   counted: boolean;
-  /** The payer's notes on this line, as medrec gives them ("XX -- …"). */
-  notes: string[];
+  /** The payer's notes on this line, as medrec gives them (`payer_notes`, "XX -- …"). */
+  payerNotes: string[];
 }
 
 const isCategory = (v: string | undefined): v is Category => !!v && Object.hasOwn(CATEGORY_LABELS, v);
@@ -320,7 +320,7 @@ function readLines(r: MedRecord): ClaimLine[] {
       amounts,
       records: ids(it.records),
       counted: it.counted !== false,
-      notes: texts(it.notes),
+      payerNotes: texts(it.payer_notes),
     });
   }
   // medrec 0.8.2 and later marks the lines left out; before, the same rule finds them here.
@@ -333,9 +333,9 @@ export function countedLines(r: MedRecord): readonly Readonly<ClaimLine>[] {
   return claimLines(r).filter((l) => l.counted);
 }
 
-/** The payer's notes on the claim that no line points at, as medrec gives them. */
+/** The payer's notes on the claim that no line points at, as medrec gives them (`payer_notes`). */
 export function claimNotes(r: MedRecord): string[] {
-  return texts(r.fields.notes);
+  return texts(r.fields.payer_notes);
 }
 
 /** A pharmacy claim: its type says so, or every line is a drug the pharmacy filled. */

@@ -603,7 +603,7 @@
             "currency": "USD"
           }
         },
-        "notes": [
+        "payer_notes": [
           "N1 -- The deductible for this plan year has been met."
         ],
         "items": [
@@ -627,7 +627,7 @@
               }
             },
             "counted": false,
-            "notes": [
+            "payer_notes": [
               "C7 -- This service was paid under a different code than the one billed."
             ]
           },
