@@ -53,6 +53,9 @@ export const REQUESTS_DIR = '_requests';
 export class DriveFolder implements RecordsFolder {
   readonly kind = 'drive' as const;
   private listings = new Map<string, Promise<Map<string, DriveFile>>>();
+  /** Files read since they were listed, and Drive's MD5 of each, asked again after the read. */
+  private served = new Set<string>();
+  private reread = new Map<string, Promise<string | undefined>>();
 
   constructor(
     private readonly drive: Drive,
@@ -98,17 +101,34 @@ export class DriveFolder implements RecordsFolder {
     const f = await this.resolve(path);
     if (!f || f.mimeType === FOLDER_MIME) return null;
     try {
-      return await this.drive.text(f.id);
+      const text = await this.drive.text(f.id);
+      this.served.add(splitPath(path).join('/'));
+      return text;
     } catch (e) {
       if (e instanceof DriveError && e.status === 404) return null;
       throw e;
     }
   }
 
+  /**
+   * A file read since it was listed may have changed in between, so its MD5
+   * is asked of Drive again, after the read: that one is of what was read or
+   * of a newer file, so a check against it never passes the wrong content.
+   */
   async md5(path: string): Promise<string | null | undefined> {
-    const f = await this.resolve(path);
+    const p = splitPath(path).join('/');
+    const f = await this.resolve(p);
     if (!f || f.mimeType === FOLDER_MIME) return null;
-    return f.md5Checksum?.toLowerCase();
+    if (!this.served.has(p)) return f.md5Checksum?.toLowerCase();
+    let m = this.reread.get(p);
+    if (!m) {
+      m = this.drive.get(f.id).then(
+        (x) => x.md5Checksum?.toLowerCase(),
+        () => undefined,
+      );
+      this.reread.set(p, m);
+    }
+    return m;
   }
 
   async list(path: string): Promise<Entry[] | null> {
@@ -144,9 +164,10 @@ export class DriveFolder implements RecordsFolder {
 
   forget(prefix: string): void {
     const p = splitPath(prefix).join('/');
-    for (const k of [...this.listings.keys()]) {
-      if (p === '' || k === p || k.startsWith(`${p}/`)) this.listings.delete(k);
-    }
+    const under = (k: string) => p === '' || k === p || k.startsWith(`${p}/`);
+    for (const k of [...this.listings.keys()]) if (under(k)) this.listings.delete(k);
+    for (const k of [...this.served]) if (under(k)) this.served.delete(k);
+    for (const k of [...this.reread.keys()]) if (under(k)) this.reread.delete(k);
   }
 }
 
