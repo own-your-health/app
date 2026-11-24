@@ -22,6 +22,7 @@ import { settingsView } from './views/settings';
 import { sourceView } from './views/source';
 import { sourcesView } from './views/sources';
 import { searchView } from './search';
+import { eventView } from '../next/eventView';
 
 /** What the app says when a renewal interrupted a write the person asked for. */
 const UNSENT_TEXT: Record<Unsent, string> = {
@@ -62,6 +63,7 @@ export class App {
   private store: Store | null = null;
   private drive: Drive | null = null;
   private demo: boolean;
+  private next: boolean;
   private demoMac: ((file: string) => void) | null = null;
   private main = h('main', { class: 'main', id: 'main' });
   private bar = h('header', { class: 'app-bar' });
@@ -75,6 +77,7 @@ export class App {
 
   constructor(private readonly root: HTMLElement) {
     this.demo = new URLSearchParams(location.search).has('demo');
+    this.next = new URLSearchParams(location.search).has('next');
     root.append(this.bar, this.banner, this.main, this.toastBox);
   }
 
@@ -341,6 +344,7 @@ export class App {
     return {
       store: this.store!,
       demo: this.demo,
+      next: this.next,
       user: this.user,
       canWrite: this.demo || this.scopes.includes(SCOPE_WRITE),
       version: VERSION,
@@ -543,6 +547,9 @@ export class App {
         return personView(ctx, r.person, r.section, r.sub, r.query, r.words);
       case 'item':
         return itemView(ctx, r.person, r.id);
+      case 'event':
+        if (ctx.next) return eventView(ctx, r.person, r.id);
+        return messageView('Page not found', 'Visit pages are part of the redesign. Add ?next to the address to try it.', [h('a', { class: 'button button-primary', href: '#/' }, 'Home')]);
       case 'huishouden': {
         const person = this.store!.personForHuishouden(r.hh);
         if (person) {

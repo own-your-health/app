@@ -436,7 +436,7 @@ test('a bill no claim matches is listed apart', async ({ page }) => {
   await page.goto('./?demo');
   await page.getByRole('link', { name: /^Sam Example/ }).first().click();
   await openSection(page, 'Claims and bills');
-  await expect(page.locator('.card', { hasText: 'Owed to each provider' }).locator('.glance-answer')).toHaveText('$120.00 due to Example Billing');
+  await expect(page.locator('.card', { hasText: 'Owed to each provider' }).locator('.glance-answer')).toHaveText('$370.00 due to 2 providers');
   const others = page.locator('.card', { hasText: 'Other bills and receipts' });
   await expect(others.locator('.row')).toHaveText([/Statement from Example Billing.*no claim in these records matches it.*\$120\.00/]);
 });

@@ -334,11 +334,11 @@
         "finished_at": "2026-11-21T14:00:00Z",
         "import": "i_svk5mgyh6ukqqgy3fyxi",
         "counts": {
-          "records_added": 4,
+          "records_added": 9,
           "records_updated": 0,
           "records_unchanged": 0,
           "records_older": 0,
-          "resources_written": 4,
+          "resources_written": 9,
           "resources_unchanged": 0,
           "documents_added": 0,
           "documents_duplicate": 0,

@@ -876,6 +876,7 @@ for (const s of [src.samPlan, src.alexPlan, src.robinRx]) FIRST_IMPORT.set(s.id,
 writeHousehold();
 
 const NDC = 'http://hl7.org/fhir/sid/ndc';
+const NUBC = 'https://www.nubc.org/CodeSystem/RevenueCodes';
 const cents = (x) => Math.round(Number(x) * 100);
 const dollars = (c) => usd((c / 100).toFixed(2));
 // A line: [code, what was done, billed, allowed, deductible, copay, coinsurance, plan paid].
@@ -893,7 +894,7 @@ function julyYear(date) {
 // links guessed by date and name. The plans' and the pharmacy benefit's
 // claims carry them; Robin's member-site plan keeps the earlier shape, so the
 // sample shows both.
-const LINE_CATEGORY = { 99213: 'visit', 99214: 'visit', 99215: 'visit', 73610: 'imaging', 84443: 'lab', 36415: 'lab', 85025: 'lab', 82306: 'lab', 87880: 'lab', 90686: 'vaccine', 90471: 'vaccine' };
+const LINE_CATEGORY = { 99213: 'visit', 99214: 'visit', 99215: 'visit', 99284: 'visit', 99285: 'visit', 71046: 'imaging', 80053: 'lab', 73610: 'imaging', 84443: 'lab', 36415: 'lab', 85025: 'lab', 82306: 'lab', 87880: 'lab', 90686: 'vaccine', 90471: 'vaccine' };
 const words = (...texts) => new Set(texts.filter(Boolean).join(' ').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 4));
 function claimFields(P, { date, provider, type, lines, diagnoses, liability }) {
   const pharmacy = type === 'Pharmacy';
@@ -943,7 +944,9 @@ function claimFields(P, { date, provider, type, lines, diagnoses, liability }) {
 // recoded under its policy, kept as not covered just before the line that
 // replaced it. The claim's totals leave it out, as a plan's do, and medrec
 // 0.8.2 marks it so (`counted: false`), with the plan's note on it (`payer_notes`).
-function claimOf(P, s, { date, provider, insurer, type = 'Professional', system = CPT, lines, balances, benefitPeriod, diagnoses = [], liability = true, replaced }) {
+// `end`: the last day of a stay, when it is not `date`. A line's ninth item
+// is a hospital's revenue code, [code, what it is], as medrec 0.8.2 gives it.
+function claimOf(P, s, { date, end = date, provider, insurer, type = 'Professional', system = CPT, lines, balances, benefitPeriod, diagnoses = [], liability = true, replaced }) {
   for (const l of lines) if (cents(l[3]) !== cents(l[4]) + cents(l[5]) + cents(l[6]) + cents(l[7])) throw new Error(`allowed is not paid plus share: ${l}`);
   const share = (l) => cents(l[4]) + cents(l[5]) + cents(l[6]);
   const amounts = (l) => [
@@ -967,6 +970,7 @@ function claimOf(P, s, { date, provider, insurer, type = 'Professional', system 
     net: usd(l[2]),
     adjudication: amounts(l).map(([category, amount]) => ({ category, amount, reason: null })),
     ...medrec.items[i],
+    ...(l[8] ? { revenue: { system: NUBC, code: l[8][0], display: l[8][1] } } : {}),
   }));
   if (replaced) {
     const [code, display, billed] = replaced;
@@ -997,7 +1001,7 @@ function claimOf(P, s, { date, provider, insurer, type = 'Professional', system 
       provider,
       insurer,
       outcome: 'complete',
-      billable_period: { start: date, end: date },
+      billable_period: { start: date, end },
       total: totals.map(([category, amount]) => ({ category, amount })),
       payment: usd(sumAt(7)),
       type,
@@ -1015,7 +1019,7 @@ function claimOf(P, s, { date, provider, insurer, type = 'Professional', system 
       status: 'active',
       type: { coding: [{ code: type.toLowerCase() }] },
       use: 'claim',
-      billablePeriod: { start: date, end: date },
+      billablePeriod: { start: date, end },
       ...(benefitPeriod ? { benefitPeriod } : {}),
       outcome: 'complete',
       item: items.map((it) => ({ sequence: it.sequence, productOrService: { coding: [{ system, code: it.service.code, display: it.service.display }] }, servicedDate: date, net: { value: Number(it.net.amount), currency: 'USD' } })),
@@ -1049,8 +1053,8 @@ const coverage = (P, s, display, relationship) =>
 coverage(S, src.samPlan, 'Example Care Plan HMO', 'self');
 claimOf(S, src.samPlan, { date: '2026-05-20', provider: 'Example Health', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-05-20'), diagnoses: [['S93.401A', 'Sprain of unspecified ligament of right ankle, initial encounter']], lines: [['99214', 'Office visit', '260.00', '168.00', '0.00', '40.00', '0.00', '128.00'], ['73610', 'X-ray of the ankle', '145.00', '82.00', '0.00', '0.00', '16.40', '65.60']] });
 claimOf(S, src.samPlan, { date: '2026-07-09', provider: 'Example Lab', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-07-09'), liability: false, diagnoses: [['Z13.29', 'Encounter for screening for other suspected endocrine disorder']], lines: [['84443', 'Thyroid test (TSH)', '95.00', '41.20', '41.20', '0.00', '0.00', '0.00'], ['36415', 'Blood draw', '25.00', '9.50', '9.50', '0.00', '0.00', '0.00']] });
-claimOf(S, src.samPlan, { date: '2026-10-12', provider: 'Example Lab', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-10-12'), diagnoses: [['E55.9', 'Vitamin D deficiency, unspecified']], lines: [['85025', 'Blood count', '98.00', '31.40', '31.40', '0.00', '0.00', '0.00'], ['82306', 'Vitamin D test', '150.00', '38.90', '38.90', '0.00', '0.00', '0.00']], balances: careBalance('121.00', '121.00') });
-S.importRun(src.samPlan, { importedAt: PLANS_LOAD, added: 4, updated: 0, unchanged: 0, cliVersion: '0.4.0' });
+claimOf(S, src.samPlan, { date: '2026-10-12', provider: 'Example Lab', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-10-12'), diagnoses: [['E55.9', 'Vitamin D deficiency, unspecified']], lines: [['85025', 'Blood count', '98.00', '31.40', '31.40', '0.00', '0.00', '0.00'], ['82306', 'Vitamin D test', '150.00', '38.90', '38.90', '0.00', '0.00', '0.00']], balances: careBalance('217.40', '467.40') });
+S.importRun(src.samPlan, { importedAt: PLANS_LOAD, added: 9, updated: 0, unchanged: 0, cliVersion: '0.4.0' });
 S.write();
 
 // Alex, on Sam's plan: a flu shot, and a sick visit at the pediatric practice.
@@ -1181,6 +1185,35 @@ for (const a of attempts) {
 for (const [m, lines] of byMonth) write(`_status/attempts/${m}.ndjson`, lines.map((l) => JSON.stringify(l)).join('\n') + '\n');
 
 write('README.md', '# Sample records\n\nA synthetic medrec records folder for the app’s demo mode and tests. Every person, organization and value in it is invented.\n');
+
+// ---- Sam's night in the emergency room ----
+
+// One visit, five claims from four billers: the hospital, its emergency
+// doctors, the radiologist who read the X-ray and the lab. The hospital billed
+// a higher level of emergency visit; the plan paid it as a lower one and kept
+// the hospital's line, not counted. Its bill is in the folder; the emergency
+// doctors' is not yet. Drawn last, so no other id moves.
+const erDay = '2026-09-12';
+const erPlan = { insurer: 'Example Care Plan', benefitPeriod: julyYear(erDay), diagnoses: [['R07.9', 'Chest pain, unspecified']] };
+claimOf(S, src.samPlan, { ...erPlan, date: erDay, end: '2026-09-13', provider: 'Example General Hospital', type: 'Institutional', replaced: ['99285', 'Emergency visit, high severity', '4200.00'], lines: [
+  ['99284', 'Emergency visit, moderate severity', '3100.00', '980.00', '0.00', '250.00', '0.00', '730.00', ['0450', 'Emergency room']],
+  ['71046', 'Chest X-ray, 2 views', '620.00', '140.00', '0.00', '0.00', '0.00', '140.00', ['0320', 'Radiology, diagnostic']],
+] });
+claimOf(S, src.samPlan, { ...erPlan, date: erDay, provider: 'Example Emergency Physicians', lines: [['99284', 'Emergency visit, moderate severity', '780.00', '210.00', '96.40', '0.00', '0.00', '113.60']] });
+claimOf(S, src.samPlan, { ...erPlan, date: erDay, provider: 'Example Radiology Associates', lines: [['71046', 'Chest X-ray, 2 views', '95.00', '31.00', '0.00', '0.00', '0.00', '31.00']] });
+claimOf(S, src.samPlan, { ...erPlan, date: erDay, provider: 'Example Lab', lines: [['85025', 'Blood count', '64.00', '9.80', '0.00', '0.00', '0.00', '9.80']] });
+claimOf(S, src.samPlan, { ...erPlan, date: erDay, provider: 'Example Lab', lines: [['80053', 'Comprehensive metabolic panel', '120.00', '12.40', '0.00', '0.00', '0.00', '12.40']] });
+S.document(null, {
+  date: erDay,
+  doc_type: 'bill',
+  title: 'Statement from Example General Hospital',
+  organization: 'Example General Hospital',
+  text: 'Emergency department visit 09/12/2026. Statement date 09/28/2026. Account ****2222. Amount due $250.00. Please pay by 10/28/2026.',
+  statement: { statement_date: '2026-09-28', amount_due: { amount: '250.00', currency: 'USD' }, due_date: '2026-10-28', account: '****2222' },
+  original: 'hospital_statement_sep.pdf',
+});
+S.document(null, { date: '2026-09-13', doc_type: 'discharge_summary', title: 'Emergency department discharge instructions', organization: 'Example General Hospital', pages: 2, text: 'Seen for chest pain. Chest X-ray and blood tests normal. Discharged home 09/13/2026. Follow up with your primary care doctor within one week.', original: 'er_discharge.pdf' });
+S.write();
 
 // ---- Write ----
 

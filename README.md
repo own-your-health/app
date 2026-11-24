@@ -479,6 +479,31 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
 - Tests use invented data only. Never commit a real record, account, client
   id or folder id.
 
+### The redesign, behind `?next`
+
+The app is being redesigned around what happened (a visit, an emergency
+room trip, a lab draw, a fill) rather than around kinds of record. Its
+screens are built behind `?next`, for example `/app/?demo&next`, and the
+app without it is unchanged.
+
+- A person's overview opens with **What happened**, one row per visit with
+  what it cost. Each row opens the visit's page: what happened, its results,
+  how the price came down from what providers charged to what you owe, what
+  the plan changed, who charged what, bills and payments, papers, how the
+  visit was put together, and the claims under Details.
+- Until medrec writes `views/<person>/events.json`, the app groups records
+  itself in `src/next/grouping.ts`, by medrec's matching rules for claims,
+  portal visits and papers. Each match is sure, likely or unsure, and the
+  page says which. Every screen reads events through `src/next/load.ts`:
+  reading medrec's events changes the one call there, and `grouping.ts` is
+  then deleted. What an event is and what it cost (`src/next/event.ts`) stay.
+- A visit's address names a record in it. Any record or paper of the visit
+  opens it, so a saved address still works after records arrive and the
+  visit is led by another one.
+- The sample's Sam spent a night in the emergency room: five claims from
+  four providers, a line the plan re-coded and left out of its totals, a
+  bill that matches its claim and a doctor's bill not yet filed.
+
 Unofficial. Not affiliated with or endorsed by Google.
 
 ## License

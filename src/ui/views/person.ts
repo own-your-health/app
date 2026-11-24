@@ -17,6 +17,7 @@ import {
   type TimelineEntry,
 } from '../../model/records';
 import { visitKind, visitTimeline, type Visit } from '../../model/visits';
+import { eventsCard } from '../../next/eventView';
 import { birthWords, coverageHistory, isChange, type CoverageSegment } from '../../model/coverage';
 import { claimTitle, isPharmacyClaim } from '../../model/claims';
 import { recordTitle } from '../../model/titles';
@@ -310,7 +311,9 @@ function overviewSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElemen
     all('timeline', 'Timeline'),
   );
 
-  return h('div', { class: 'overview' }, newCard, resultsCard, conditionsCard, medsCard, allergiesCard, immunizationsCard, visitsCard);
+  // The redesign leads with what happened (?next).
+  const events = ctx.next ? eventsCard(ctx, person.id, idx) : null;
+  return h('div', { class: 'overview' }, events, newCard, resultsCard, conditionsCard, medsCard, allergiesCard, immunizationsCard, visitsCard);
 }
 
 /** Visits or every record: the two ways to read the timeline. */

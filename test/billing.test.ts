@@ -105,8 +105,8 @@ describe('plan balances', () => {
       { label: 'Out-of-pocket limit', scope: 'in network, individual', used: usd('1356.10'), limit: usd('4000.00'), asOf: '2026-10-01' },
     ]);
     expect(planBalances(index('Sam Example'))).toMatchObject([
-      { label: 'Deductible', used: usd('121.00'), limit: usd('750.00'), asOf: '2026-10-12' },
-      { label: 'Out-of-pocket limit', used: usd('121.00'), limit: usd('3000.00'), asOf: '2026-10-12' },
+      { label: 'Deductible', used: usd('217.40'), limit: usd('750.00'), asOf: '2026-10-12' },
+      { label: 'Out-of-pocket limit', used: usd('467.40'), limit: usd('3000.00'), asOf: '2026-10-12' },
     ]);
     expect(planBalances(index('Jamie Example'))).toEqual([]);
   });
