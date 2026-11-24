@@ -56,7 +56,7 @@ export const CATEGORY_LABELS: Record<Category, { one: string; many: string }> = 
 export function categoryOf(code: string | undefined, system?: string, claimType?: string): Category {
   if (/pharmacy/i.test(claimType ?? '')) return 'pharmacy';
   if (system && /rxnorm|ndc/i.test(system)) return 'pharmacy';
-  if (system && /revenue|nubc/i.test(system)) return 'facility';
+  if (system && REVENUE_SYSTEM.test(system)) return 'facility';
   const c = (code ?? '').trim().toUpperCase();
   if (/^\d{5}$/.test(c)) {
     const n = Number(c);
@@ -85,6 +85,13 @@ export function isContractClaim(r: MedRecord): boolean {
   return r.fields.amounts !== undefined || r.fields.category !== undefined;
 }
 
+/** A code as medrec gives one: `{system, code, display}`. */
+export interface LineCode {
+  code: string;
+  system?: string;
+  display?: string;
+}
+
 export interface ClaimLine {
   sequence?: number;
   /** What was done, as the payer wrote it, or its code when it gave no words. */
@@ -104,6 +111,11 @@ export interface ClaimLine {
   counted: boolean;
   /** The payer's notes on this line, as medrec gives them (`payer_notes`, "XX -- …"). */
   payerNotes: string[];
+  /**
+   * A hospital's revenue code for the line (NUBC: 0450 is the emergency
+   * room), beside its service code or, on a line with none, as its code.
+   */
+  revenue?: LineCode;
 }
 
 const isCategory = (v: string | undefined): v is Category => !!v && Object.hasOwn(CATEGORY_LABELS, v);
@@ -274,6 +286,19 @@ function leftOut(lines: LineAmounts[], r: MedRecord): number[] {
   return [];
 }
 
+/** A hospital's revenue codes (NUBC), by their code system's address. */
+export const REVENUE_SYSTEM = /revenue|nubc/i;
+
+function lineCode(v: Json | undefined): LineCode | undefined {
+  const code = isObject(v) ? str(v.code) : undefined;
+  return code && isObject(v) ? { code, system: str(v.system), display: str(v.display) } : undefined;
+}
+
+/** A revenue code in words: "Emergency room, revenue code 0450". */
+export function revenueText(r: LineCode): string {
+  return r.display ? `${r.display}, revenue code ${r.code}` : `Revenue code ${r.code}`;
+}
+
 const texts = (v: Json | undefined): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x.trim() !== '') : []);
 
 function dayOf(v: Json | undefined): string | undefined {
@@ -303,9 +328,13 @@ function readLines(r: MedRecord): ClaimLine[] {
   for (const it of items) {
     if (!isObject(it)) continue;
     const service = isObject(it.service) ? it.service : undefined;
-    const code = str(service?.code);
-    const system = str(service?.system);
-    const label = str(service?.display) ?? str(service?.text) ?? code;
+    const named = str(service?.display) ?? str(service?.text) ?? str(service?.code);
+    // medrec 0.8.2 gives a facility line's revenue code on its own; an
+    // earlier medrec put it where the service code goes.
+    const revenue = lineCode(it.revenue) ?? (REVENUE_SYSTEM.test(str(service?.system) ?? '') ? lineCode(service) : undefined);
+    const code = named ? str(service?.code) : revenue?.code;
+    const system = named ? str(service?.system) : revenue?.system;
+    const label = named ?? revenue?.display ?? revenue?.code;
     if (!label) continue;
     const given = str(it.category);
     const amounts = { ...adjudicated(it.adjudication), ...namedAmounts(it.amounts) };
@@ -321,6 +350,7 @@ function readLines(r: MedRecord): ClaimLine[] {
       records: ids(it.records),
       counted: it.counted !== false,
       payerNotes: texts(it.payer_notes),
+      revenue,
     });
   }
   // medrec 0.8.2 and later marks the lines left out; before, the same rule finds them here.

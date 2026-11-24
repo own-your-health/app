@@ -3,7 +3,7 @@
 // reading of the payer's words where it does not.
 import { describe, expect, it } from 'vitest';
 import { claimAmounts, claimCategory, claimDiagnoses, claimLines, claimResultIds, claimTitle, claimVisitId, diagnosisText, isContractClaim } from '../src/model/claims';
-import { costLines } from '../src/model/costs';
+import { costLines, toCsv } from '../src/model/costs';
 import { formatMoney } from '../src/model/records';
 import { parseIndex } from '../src/model/parse';
 import { search } from '../src/model/search';
@@ -96,6 +96,16 @@ describe('a claim’s lines and kind of care', () => {
   it('read a hospital’s revenue code as a facility charge', () => {
     expect(claimLines(facility).map((l) => l.category)).toEqual(['facility']);
     expect(claimCategory(facility)).toBe('facility');
+  });
+
+  it('read a revenue code an earlier medrec put where the service code goes as the line’s revenue code too', () => {
+    const [line] = claimLines(facility);
+    expect([line!.code, line!.revenue?.code]).toEqual(['0450', '0450']);
+    const [, row] = toCsv(costLines(PERSON, index).filter((l) => l.claim === facility.id), new Map()).trimEnd().split('\r\n');
+    expect(row).toContain(',Emergency room,0450,Revenue code,Facility charge,');
+    expect(row!.split(',').slice(-3)).toEqual([facility.id, '', '0450']);
+    // Said once, as the line's code, never again beside it.
+    expect(search(index, null, 'emergency room').find((h) => h.id === facility.id)?.line).toBe('Emergency room (0450) · you owe $150.00');
   });
 
   it('name the claim’s kind of care: medrec’s, else its lines’ one kind, else mixed', () => {

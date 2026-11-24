@@ -4,7 +4,7 @@
 // Technical details, whole, for the data-minded.
 
 import { readJson } from '../../folder';
-import { CATEGORY_LABELS, claimAmounts, claimDiagnoses, claimLines, claimNotes, diagnosisText, type ClaimLine } from '../../model/claims';
+import { CATEGORY_LABELS, claimAmounts, claimDiagnoses, claimLines, claimNotes, diagnosisText, revenueText, type ClaimLine } from '../../model/claims';
 import { isOutOfRange, rangeFor, resultFlag } from '../../model/flags';
 import { labTest } from '../../model/labtests';
 import { learnMore } from '../../model/learn';
@@ -145,7 +145,9 @@ function linesCard(person: string, lines: readonly Readonly<ClaimLine>[], lineRe
     lines.map((l, i) => {
       const amounts = LINE_AMOUNT_ORDER.filter((k) => l.amounts[k]).map((k) => `${AMOUNT_LABELS[k]} ${formatMoney(l.amounts[k])}`);
       const paidFor = telling ? (lineRecords[i] ?? []) : [];
-      const lineMeta = [l.code, CATEGORY_LABELS[l.category].one, l.date ? dateText(l.date) : null].filter(Boolean).join(' · ');
+      // A revenue code beside the service code says which part of the hospital it was billed under.
+      const revenue = l.revenue && l.revenue.code !== l.code ? revenueText(l.revenue) : null;
+      const lineMeta = [l.code, CATEGORY_LABELS[l.category].one, revenue, l.date ? dateText(l.date) : null].filter(Boolean).join(' · ');
       const notes = l.payerNotes.length ? h('p', { class: 'small muted claim-notes' }, `The plan’s ${l.payerNotes.length === 1 ? 'note' : 'notes'}: ${l.payerNotes.join(' · ')}`) : null;
       // A line the plan replaced or wrote off: what was billed, never what it marked not covered, as none of it is owed.
       if (!l.counted) {

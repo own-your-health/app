@@ -185,7 +185,12 @@ deductible, copay, coinsurance and not covered it gives, added up, never a
 discount. Amounts are read to the nearest cent. The page names the diagnoses
 the claim gives, and under **Paid for** the visit and the results it paid
 for. Each line links the records it paid for, unless every line links the
-same ones.
+same ones. A hospital's line can carry a revenue code, which says the part
+of the hospital it was billed under (0450 is the emergency room): medrec
+0.8.2 and later gives it in `items[].revenue`, and the page shows it beside
+the line's service code ("Emergency room, revenue code 0450"). A line with
+a revenue code and no service code is named and coded by its revenue code,
+and counts as a facility charge.
 
 A plan that recodes a service under its coding policy (an emergency visit's
 level, say) keeps the provider's line, marked not covered, beside the one it
@@ -264,7 +269,8 @@ for every time it was billed, what the provider billed beside what the plan
 allowed. Download CSV saves the lines shown, built in the browser, with any
 cell that a spreadsheet would read as a formula prefixed with `'`. A line the
 totals leave out is a row with no amounts, so a column's sum is the claims',
-and "yes" in the last column, **Left out by the plan**. Bills and
+and "yes" under **Left out by the plan**. The last column, **Revenue
+code**, holds a hospital line's revenue code. Bills and
 receipts no claim covers are not counted. The rules are `src/model/costs.ts`.
 
 Results are grouped by panel (metabolic, lipid, A1c, liver, blood count,

@@ -1,0 +1,157 @@
+{
+  "schema": "medrec-index/v1",
+  "person": "p_fixturerevenueaaaaaa",
+  "rev": 1,
+  "documents": [],
+  "records": [
+    {
+      "id": "r_claimrevenueaaaaaaaa",
+      "kind": "claim",
+      "key": "claim|r_claimrevenueaaaaaaaa",
+      "date": "2026-05-09",
+      "display": "Institutional",
+      "fields": {
+        "when": "2026-05-09",
+        "provider": "Example Hospital",
+        "insurer": "Example Health Plan",
+        "outcome": "complete",
+        "type": "Institutional",
+        "billable_period": {
+          "start": "2026-05-09",
+          "end": "2026-05-09"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "1500.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "700.00",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "550.00",
+            "currency": "USD"
+          },
+          "copay": {
+            "amount": "150.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "150.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99284",
+              "display": "Emergency visit, moderate severity"
+            },
+            "revenue": {
+              "system": "https://www.nubc.org/CodeSystem/RevenueCodes",
+              "code": "0450",
+              "display": "Emergency room"
+            },
+            "serviced": "2026-05-09",
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "1200.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "600.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "450.00",
+                "currency": "USD"
+              },
+              "copay": {
+                "amount": "150.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "150.00",
+                "currency": "USD"
+              }
+            }
+          },
+          {
+            "sequence": 2,
+            "revenue": {
+              "system": "https://www.nubc.org/CodeSystem/RevenueCodes",
+              "code": "0300",
+              "display": "Laboratory"
+            },
+            "serviced": "2026-05-09",
+            "amounts": {
+              "billed": {
+                "amount": "90.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "30.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "30.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "0.00",
+                "currency": "USD"
+              }
+            }
+          },
+          {
+            "sequence": 3,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "71046",
+              "display": "Chest X-ray, 2 views"
+            },
+            "serviced": "2026-05-09",
+            "category": "imaging",
+            "amounts": {
+              "billed": {
+                "amount": "210.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "70.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "70.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "0.00",
+                "currency": "USD"
+              }
+            }
+          }
+        ]
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-05-12T08:00:00Z"
+        }
+      ]
+    }
+  ],
+  "studies": [],
+  "imports": []
+}

@@ -176,8 +176,8 @@ describe('the CSV', () => {
   it('has a row for each line, amounts in dollars', () => {
     const csv = toCsv([all.find((l) => l.code === '87880')!], names);
     const [head, row, end] = csv.split('\r\n');
-    expect(head).toBe('Date,Person,Provider,Insurer,Plan year,Service,Code,Code system,Kind of care,Billed,Allowed,Plan paid,Deductible,Copay,Coinsurance,Not covered,You owe,Claim,Left out by the plan');
-    expect(row).toMatch(/^2026-11-20,Alex Example,Example Pediatrics,Example Care Plan,2026-07-01 to 2027-06-30,Strep test,87880,CPT,Lab test,48\.00,21\.30,21\.30,0\.00,0\.00,0\.00,,0\.00,r_[a-z2-7]{20},$/);
+    expect(head).toBe('Date,Person,Provider,Insurer,Plan year,Service,Code,Code system,Kind of care,Billed,Allowed,Plan paid,Deductible,Copay,Coinsurance,Not covered,You owe,Claim,Left out by the plan,Revenue code');
+    expect(row).toMatch(/^2026-11-20,Alex Example,Example Pediatrics,Example Care Plan,2026-07-01 to 2027-06-30,Strep test,87880,CPT,Lab test,48\.00,21\.30,21\.30,0\.00,0\.00,0\.00,,0\.00,r_[a-z2-7]{20},,$/);
     expect(end).toBe('');
   });
 

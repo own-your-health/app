@@ -141,7 +141,7 @@ test('the lines download as CSV, without leaving the page', async ({ page }) => 
   await expect(page.getByRole('status')).toHaveText('Saved costs-plan.csv.');
   const text = (await readFile((await download.path())!, 'utf8')).replace(/^\uFEFF/, '');
   const rows = text.trimEnd().split('\r\n');
-  expect(rows[0]).toBe('Date,Person,Provider,Insurer,Plan year,Service,Code,Code system,Kind of care,Billed,Allowed,Plan paid,Deductible,Copay,Coinsurance,Not covered,You owe,Claim,Left out by the plan');
+  expect(rows[0]).toBe('Date,Person,Provider,Insurer,Plan year,Service,Code,Code system,Kind of care,Billed,Allowed,Plan paid,Deductible,Copay,Coinsurance,Not covered,You owe,Claim,Left out by the plan,Revenue code');
   expect(rows).toHaveLength(9);
   expect(rows[1]).toMatch(/^2026-11-18,Robin Example,Example Health,Example Health Plan,2026-01-01 to 2026-12-31,Office visit,99213,CPT,Visit,180\.00,112\.50,87\.50,/);
   await expect(page.locator('main h1')).toHaveText('Costs');
@@ -186,25 +186,28 @@ test('a plan year set in Settings applies to the plans whose claims do not give 
 });
 
 test('the month chart fills its card at 12px text, and no label crosses its edge, from 320px up', async ({ page }) => {
-  // Every text box of the chart within the chart's own box.
-  const outside = () =>
-    page.locator('svg.cost-chart').evaluate((svg) => {
+  // The chart on the page now: it is drawn again when its width changes, and
+  // the one drawn before is gone, so each look finds it afresh.
+  const measure = () =>
+    page.evaluate(() => {
+      const svg = document.querySelector<SVGSVGElement>('svg.cost-chart')!;
       const b = svg.getBoundingClientRect();
-      return [...svg.querySelectorAll('text')].filter((t) => {
+      // Every text box of the chart within the chart's own box.
+      const outside = [...svg.querySelectorAll('text')].filter((t) => {
         const r = t.getBoundingClientRect();
         return r.left < b.left - 0.5 || r.right > b.right + 0.5 || r.top < b.top - 0.5 || r.bottom > b.bottom + 0.5;
       }).map((t) => t.textContent);
+      // Drawn at its box's width, so a label is the size the stylesheet gives it, at any width.
+      const fits = Math.abs(b.width - svg.parentElement!.getBoundingClientRect().width) < 1;
+      const labelPx = Math.round(Number(getComputedStyle(svg.querySelector('text')!).fontSize.replace('px', '')) * (b.width / svg.viewBox.baseVal.width));
+      return { outside, fits, labelPx };
     });
   for (const width of [320, 390, 768, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('./?demo#/costs');
     const chart = page.locator('svg.cost-chart');
     await expect(chart).toBeVisible();
-    expect(await outside()).toEqual([]);
-    // Drawn at its box's width, so a label is the size the stylesheet gives it, at any width.
-    const [svgWidth, boxWidth, labelPx] = await chart.evaluate((svg) => [svg.getBoundingClientRect().width, svg.parentElement!.getBoundingClientRect().width, Number(getComputedStyle(svg.querySelector('text')!).fontSize.replace('px', '')) * (svg.getBoundingClientRect().width / (svg as SVGSVGElement).viewBox.baseVal.width)]);
-    expect(Math.abs(svgWidth - boxWidth)).toBeLessThan(1);
-    expect(labelPx).toBeCloseTo(12, 0);
+    await expect.poll(measure).toEqual({ outside: [], fits: true, labelPx: 12 });
     // Short amounts on the axis, and the year with the first month named.
     await expect(chart.locator('text', { hasText: /^\$\d[\d.]*[kM]?$/ }).first()).toBeVisible();
     await expect(chart.locator('text', { hasText: '’26' })).toHaveCount(1);

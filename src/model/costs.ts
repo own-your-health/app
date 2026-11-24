@@ -12,7 +12,7 @@
 // is the day a coverage took effect, which can fall mid-year (a new child, a
 // new job), not the day the plan's year begins.
 
-import { AMOUNTS, CATEGORY_LABELS, categoryOf, claimCategory, claimCents, claimLines, claimTitle, lineCents, type Category, type Cents } from './claims';
+import { AMOUNTS, CATEGORY_LABELS, categoryOf, claimCategory, claimCents, claimLines, claimTitle, lineCents, REVENUE_SYSTEM, type Category, type Cents } from './claims';
 import { providerKey, sameProvider } from './providers';
 import { asMoney, isWithdrawn, str, toCents, type AmountName } from './records';
 import type { Json, MedRecord, PersonIndex } from './types';
@@ -43,6 +43,8 @@ export interface CostLine {
   service: string;
   code?: string;
   system?: string;
+  /** A hospital's revenue code for the line, its own code or beside it. */
+  revenue?: string;
   cents: Cents;
   planYear: PlanYear;
   /** Where the plan year's start came from. */
@@ -153,7 +155,7 @@ export function costLines(person: string, index: PersonIndex, opts: CostOptions 
     for (const l of lines) {
       const cents = lineCents(l.amounts);
       const date = l.date ?? service;
-      const line = { ...base, date, category: l.category, service: l.label, code: l.code, system: l.system, planYear: planYearOf(anniversary, date), planBasis, split: true };
+      const line = { ...base, date, category: l.category, service: l.label, code: l.code, system: l.system, revenue: l.revenue?.code, planYear: planYearOf(anniversary, date), planBasis, split: true };
       if (!l.counted) {
         out.push({ ...line, cents: {}, uncounted: cents });
         continue;
@@ -384,6 +386,7 @@ const SYSTEM_NAMES: [RegExp, string][] = [
   [/rxnorm/i, 'RxNorm'],
   [/icd-10/i, 'ICD-10'],
   [/snomed/i, 'SNOMED CT'],
+  [REVENUE_SYSTEM, 'Revenue code'],
 ];
 
 /** A code system's short name: "CPT", "NDC"; the address itself when it is none of these. */
@@ -498,7 +501,7 @@ export function balances(lines: CostLine[], records: Map<string, MedRecord>): Ba
 
 // ---- CSV ----
 
-const CSV_HEAD = ['Date', 'Person', 'Provider', 'Insurer', 'Plan year', 'Service', 'Code', 'Code system', 'Kind of care', 'Billed', 'Allowed', 'Plan paid', 'Deductible', 'Copay', 'Coinsurance', 'Not covered', 'You owe', 'Claim', 'Left out by the plan'];
+const CSV_HEAD = ['Date', 'Person', 'Provider', 'Insurer', 'Plan year', 'Service', 'Code', 'Code system', 'Kind of care', 'Billed', 'Allowed', 'Plan paid', 'Deductible', 'Copay', 'Coinsurance', 'Not covered', 'You owe', 'Claim', 'Left out by the plan', 'Revenue code'];
 
 /** A text cell as a spreadsheet reads it safely: quoted when it must be, and never taken as a formula. */
 export function csvText(v: string | undefined): string {
@@ -511,8 +514,9 @@ const csvMoney = (c: number | undefined) => (c === undefined ? '' : `${c < 0 ? '
 
 /**
  * The lines as CSV, one row each, amounts in dollars. A line the claim's
- * totals leave out has its amounts empty, as it counts nothing, and "yes" in
- * the last column.
+ * totals leave out has its amounts empty, as it counts nothing, and "yes"
+ * under "Left out by the plan". A hospital line's revenue code is the last
+ * column, whether it is the line's code or beside it.
  */
 export function toCsv(lines: CostLine[], names: Map<string, string>): string {
   const rows = lines.map((l) =>
@@ -529,6 +533,7 @@ export function toCsv(lines: CostLine[], names: Map<string, string>): string {
       ...(['billed', 'allowed', 'planPaid', 'deductible', 'copay', 'coinsurance', 'notCovered', 'youOwe'] as Amount[]).map((k) => csvMoney(l.cents[k])),
       csvText(l.claim),
       l.uncounted ? 'yes' : '',
+      csvText(l.revenue),
     ].join(','),
   );
   return `${[CSV_HEAD.join(','), ...rows].join('\r\n')}\r\n`;
