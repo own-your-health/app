@@ -73,7 +73,7 @@ describe('the answer to a refresh request', () => {
     const lab = sourceOf(household, 'Sam Example', 'labcorp');
     const sam = household.people.find((p) => p.name === 'Sam Example')!;
     expect(requestAnswer(answered({ source: lab.id }, ['ok']), names, NOW)).toMatch(/^Last refresh request for .+ 2 minutes ago: loaded$/);
-    expect(requestAnswer(answered({ person: sam.id }, ['ok']), names, NOW)).toBe('Last refresh request for Sam Example 2 minutes ago: loaded');
+    expect(requestAnswer(answered({ person: sam.id }, ['ok']), names, NOW)).toBe('Last refresh request for Sam 2 minutes ago: loaded');
   });
 
   it('falls back to the Mac’s message when it lists no source', () => {
@@ -150,7 +150,7 @@ describe('home’s line for a sign-in that needs a person', () => {
 
   it('tells two people’s sources of the same name apart', () => {
     const twin = { ...ended(lab), name: peds.name };
-    expect(signInWords([peds, twin])?.text).toBe(`${peds.name} (Alex Example) and ${peds.name} (Sam Example) need a sign-in on the Mac`);
+    expect(signInWords([peds, twin])?.text).toBe(`${peds.name} (Alex) and ${peds.name} (Sam) need a sign-in on the Mac`);
   });
 
   it('leaves out a source that loads only after a sign-in', () => {

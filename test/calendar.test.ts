@@ -36,7 +36,7 @@ describe('the household’s events', () => {
     const kept = events.filter((x) => x.private);
     expect(kept.map((x) => [x.person.id, x.private, x.event.title, x.event.start])).toEqual([
       [sam, 'mental_health', 'Sertraline 50 mg tablet', '2026-10-28'],
-      [sam, 'mental_health', 'Counseling session', '2026-10-27'],
+      [sam, 'mental_health', 'Office visit', '2026-10-27'],
     ]);
     const counseling = kept[1]!;
 

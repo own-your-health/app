@@ -13,6 +13,7 @@ import { dayInPeriod, type CostLine, type PeriodId } from './costs';
 import { sameProvider } from './providers';
 import { day, isWithdrawn, organizationName, str } from './records';
 import type { Household, JsonObject, MedRecord, PersonIndex } from './types';
+import { called } from './people';
 
 export interface CoverageSegment {
   /** The insurer, as the insurer's own records spell it when they are here. */
@@ -30,7 +31,7 @@ export interface CoverageSegment {
   /** The person's earliest coverage in these records. */
   first: boolean;
   /** Someone in the household born the day this coverage started. */
-  born?: { id: string; name: string };
+  born?: { id: string; name: string; short?: string };
 }
 
 /** An insurer prints "runs on" as the end of time. */
@@ -77,7 +78,7 @@ export function coverageHistory(index: PersonIndex, household: Household, person
       records,
       organizations,
       first: false,
-      born: born ? { id: born.id, name: born.name } : undefined,
+      born: born ? { id: born.id, name: born.name, ...(born.short ? { short: born.short } : {}) } : undefined,
     };
   });
   segments.sort((a, b) => (b.start ?? '').localeCompare(a.start ?? ''));
@@ -91,12 +92,12 @@ export function isChange(s: CoverageSegment): s is CoverageSegment & { start: st
   return !!s.start && (!s.first || !!s.born);
 }
 
-/** "the day Jamie Example was born". Nothing when no one was born the day the coverage started. */
+/** "the day Jamie was born". Nothing when no one was born the day the coverage started. */
 export function bornClause(s: CoverageSegment): string | undefined {
-  return s.born && s.start ? `the day ${s.born.name} was born` : undefined;
+  return s.born && s.start ? `the day ${called(s.born)} was born` : undefined;
 }
 
-/** "Changed on Nov 8, 2026, the day Jamie Example was born." Nothing when no one was born that day. */
+/** "Changed on Nov 8, 2026, the day Jamie was born." Nothing when no one was born that day. */
 export function birthWords(s: CoverageSegment, dateText: (d: string) => string): string | undefined {
   const born = bornClause(s);
   return born ? `${s.first ? 'Started' : 'Changed'} on ${dateText(s.start!)}, ${born}.` : undefined;

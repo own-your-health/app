@@ -4,7 +4,7 @@
 // date of service, preferring one whose amount is the claim's share. Money
 // stays in whole cents, never floats.
 
-import { claimAmounts, isPharmacyClaim, type ClaimAmounts, type ClaimPart } from './claims';
+import { claimAmounts, type ClaimAmounts, type ClaimPart, claimProvider, isPharmacyClaim } from './claims';
 import { providerKey, sameProvider } from './providers';
 import { fromCents, isWithdrawn, sortByDateDesc, str, toCents, type Money } from './records';
 import type { MedDocument, MedRecord, PersonIndex } from './types';
@@ -110,7 +110,7 @@ export function claimsWithBills(index: PersonIndex): { claims: Claim[]; otherBil
     .map((record): Claim => {
       const period = record.fields.billable_period;
       const start = period && typeof period === 'object' && !Array.isArray(period) ? str(period.start) : undefined;
-      return { record, service: (start ?? record.date)?.slice(0, 10), provider: str(record.fields.provider), insurer: str(record.fields.insurer), ...claimAmounts(record) };
+      return { record, service: (start ?? record.date)?.slice(0, 10), provider: claimProvider(record), insurer: str(record.fields.insurer), ...claimAmounts(record) };
     })
     .sort((a, b) => (b.service ?? '').localeCompare(a.service ?? ''));
   for (const c of claims) {

@@ -22,7 +22,7 @@ test('Home leads to every paper, each with its visit or why it has none', async 
 
   // An explanation of benefits is with its claim's visit, and the link opens it.
   const eob = paper(page, 'Explanation of Benefits');
-  await expect(eob.locator('.paper-place')).toHaveText('With Office visit, Oct 1, 2026, through its claim.');
+  await expect(eob.locator('.paper-place')).toHaveText('With Office visit at Example Health Main Clinic, Oct 1, 2026, through its claim.');
   await eob.locator('.paper-place a').click();
   await expect(page.locator('.event h1')).toHaveText('Office visit');
   await page.goBack();
@@ -37,12 +37,12 @@ test('Home leads to every paper, each with its visit or why it has none', async 
 
 test('a person’s papers are theirs, and a receipt is with its bill’s visit', async ({ page }) => {
   await open(page, '#/papers');
-  await page.getByRole('group', { name: 'Whose papers' }).getByRole('link', { name: 'Robin Example' }).click();
+  await page.getByRole('group', { name: 'Whose papers' }).getByRole('link', { name: 'Robin' }).click();
   await expect(page).toHaveURL(new RegExp(`#/papers\\?who=${ROBIN}$`));
-  await expect(page.locator('main h1')).toHaveText('Robin Example’s papers');
-  await expect(page.getByRole('group', { name: 'Whose papers' }).getByRole('link', { name: 'Robin Example' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('main h1')).toHaveText('Robin’s papers');
+  await expect(page.getByRole('group', { name: 'Whose papers' }).getByRole('link', { name: 'Robin' })).toHaveAttribute('aria-current', 'page');
   await expect(page.locator('.papers-count')).toHaveText('9 papers: 8 with a visit, 1 with none.');
-  await expect(paper(page, 'Payment receipt from Example Health').locator('.paper-place')).toHaveText('With Office visit, Mar 10, 2025, as the receipt for its bill, likely.');
+  await expect(paper(page, 'Payment receipt from Example Health').locator('.paper-place')).toHaveText('With Office visit at Example Health Main Clinic, Mar 10, 2025, as the receipt for its bill, likely.');
   // A paper opens on its own page.
   await paper(page, 'Vaccination card').locator('a.row-main').click();
   await expect(page.locator('main h1')).toHaveText('Vaccination card');
@@ -54,7 +54,7 @@ test('a person’s Health and their old documents address open their Papers, whi
   await expect(page).toHaveURL(new RegExp(`#/papers\\?who=${ROBIN}$`));
   await page.goto(`./?demo#/p/${ROBIN}/documents`);
   await expect(page).toHaveURL(new RegExp(`#/papers\\?who=${ROBIN}$`));
-  await expect(page.locator('main h1')).toHaveText('Robin Example’s papers');
+  await expect(page.locator('main h1')).toHaveText('Robin’s papers');
 
   const kinds = page.getByRole('group', { name: 'Kind of paper' });
   await expect(kinds.getByRole('button')).toHaveText(['Every kind', 'Bill (3)', 'Explanation of benefits (1)', 'Immunization record (1)', 'Lab report (2)', 'Receipt (1)', 'Visit summary (1)']);

@@ -40,6 +40,7 @@ import { button, card, empty, link, row, type Ctx } from '../components';
 import { h } from '../dom';
 import { count, dateText, localDay } from '../format';
 import { href, type CostBy, type CostFilter, type CostFilterBy, type Route } from '../router';
+import { called } from '../../model/people';
 
 type CostsRoute = Extract<Route, { name: 'costs' }>;
 
@@ -168,7 +169,7 @@ function claimRow(c: ClaimCost, record: MedRecord | undefined, who: string | nul
 export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
   const store = ctx.store;
   const people = store.household.people;
-  const names = new Map(people.map((p) => [p.id, p.name]));
+  const names = new Map(people.map((p) => [p.id, called(p)]));
   const all = householdLines(
     people.map((p) => ({ id: p.id, index: store.index(p.id) })),
     { planStart: getPlanStart() ?? undefined },
@@ -241,7 +242,7 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
             { class: 'chips', role: 'group', 'aria-label': 'Whose costs' },
             [{ id: '', name: 'Everyone' }, ...withClaims].map((p) => {
               const on = p.id ? personFilter?.key === p.id : !personFilter;
-              return h('a', { class: ['filter', on ? 'filter-on' : null], href: href(p.id ? adding({ by: 'person', key: p.id }) : without('person')), 'aria-current': on ? 'true' : false }, p.name);
+              return h('a', { class: ['filter', on ? 'filter-on' : null], href: href(p.id ? adding({ by: 'person', key: p.id }) : without('person')), 'aria-current': on ? 'true' : false }, called(p));
             }),
           )
         : null;

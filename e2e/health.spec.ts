@@ -19,20 +19,20 @@ test('everyone’s Health gives each person’s standing and counts what it keep
   await page.getByRole('link', { name: 'Health: what each person has now and what is worth a look' }).click();
   await expect(page).toHaveURL(/#\/health$/);
   await expect(page.locator('main h1')).toHaveText('Health');
-  await expect(page.getByRole('group', { name: 'Whose health' }).getByRole('link')).toHaveText(['Everyone', 'Robin Example', 'Sam Example', 'Alex Example', 'Jamie Example']);
+  await expect(page.getByRole('group', { name: 'Whose health' }).getByRole('link')).toHaveText(['Everyone', 'Robin', 'Sam', 'Alex', 'Jamie']);
 
-  const sam = card(page, /^Sam Example$/);
+  const sam = card(page, /^Sam$/);
   await expect(sam.locator('.card-head')).toContainText('Doctors’ records and claims');
   // Sam's private medicine and its refill are one private item, kept off.
   await expect(sam.locator('dd')).toHaveText(['1 item: Vitamin D3 2,000 unit capsule refill', '1 condition, 1 medicine, 1 allergy', 'Hemoglobin']);
   await expect(page.getByText('1 private item is kept off this shared view. Each shows on its person’s own Health.')).toBeVisible();
   await expect(page.locator('main')).not.toContainText('Sertraline');
 
-  const jamie = card(page, /^Jamie Example$/);
+  const jamie = card(page, /^Jamie$/);
   await expect(jamie.locator('.card-head')).toContainText('Doctors’ records only');
   await expect(jamie.locator('dd').first()).toHaveText('Nothing now. Next: Hepatitis B, dose 2 from Dec 8, 2026');
 
-  await sam.getByRole('link', { name: 'Sam Example’s health' }).click();
+  await sam.getByRole('link', { name: 'Sam’s health' }).click();
   await expect(page).toHaveURL(new RegExp(`#/health\\?who=${SAM}$`));
 });
 
@@ -88,11 +88,11 @@ test('the doctor’s sheet leaves private items off until they are included', as
   await expect(sheet).toContainText('Dr. Morgan Placeholder');
 
   // Another person's sheet never inherits it: back on Sam's, they are off again.
-  await page.getByRole('group', { name: 'Whose health' }).getByRole('link', { name: 'Robin Example' }).click();
+  await page.getByRole('group', { name: 'Whose health' }).getByRole('link', { name: 'Robin' }).click();
   await expect(page.locator('main h1')).toHaveText('Robin Example’s health summary');
-  await page.getByRole('group', { name: 'Whose health' }).getByRole('link', { name: 'Sam Example' }).click();
+  await page.getByRole('group', { name: 'Whose health' }).getByRole('link', { name: 'Sam' }).click();
   await expect(page.getByRole('button', { name: 'Include 2 private items' })).toBeVisible();
-  await expect(page.getByRole('group', { name: 'Whose health' }).getByRole('link', { name: 'Sam Example' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('group', { name: 'Whose health' }).getByRole('link', { name: 'Sam' })).toHaveAttribute('aria-current', 'page');
 
   // Leaving the sheet leaves them off again.
   await page.getByRole('button', { name: 'Include 2 private items' }).click();

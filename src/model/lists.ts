@@ -5,6 +5,7 @@
 
 import { isDoseGiven, isWithdrawn, medicines, seriesKey, sortByDateDesc, str, type MedicineGroup } from './records';
 import type { MedRecord, PersonIndex, Provenance } from './types';
+import { placeName } from './words';
 
 /** FHIR status codes, in words. */
 export const STATUS_TEXT: Record<string, string> = {
@@ -162,7 +163,7 @@ export function medicineList(index: PersonIndex): { active: MedicineItem[]; past
         first: dated[dated.length - 1]?.date,
         known: [...new Set(rs.map((r) => KNOWN[str(r.fields.source) ?? ''] ?? '').filter(Boolean))],
         prescriber: rs.map((r) => str(r.fields.prescriber)).find(Boolean),
-        lastFill: fill ? { date: fill.date, pharmacy: str(fill.fields.pharmacy), daysSupply: typeof days === 'number' ? days : undefined } : undefined,
+        lastFill: fill ? { date: fill.date, pharmacy: placeName(str(fill.fields.pharmacy)), daysSupply: typeof days === 'number' ? days : undefined } : undefined,
         provenance: rs.flatMap((r) => r.provenance),
       };
     })

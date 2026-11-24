@@ -552,14 +552,16 @@ for (const [code, name, display, v, unit, range, interp] of [
     filed: ROBIN_CHART_LOAD,
   });
 }
-// The follow-up visit the November claim is for; its results came in a later load.
+// The follow-up visit the November claim is for; its results came in a later
+// load. The portal names it by its billing descriptor, in capitals, as many
+// do: the app shows its reason instead and keeps the descriptor for Details.
 R.record(src.robinChart, 'Encounter', 'encounter', {
   date: '2026-11-18',
-  code: { system: 'http://www.ama-assn.org/go/cpt', code: '99213', display: 'Office visit' },
-  display: 'Office visit',
+  code: { system: 'http://www.ama-assn.org/go/cpt', code: '99213', display: 'OFFICE VISIT EST PATIENT LEVEL 3' },
+  display: 'OFFICE VISIT EST PATIENT LEVEL 3',
   status: 'finished',
   fields: { class: 'ambulatory', practitioner: 'Dr. Jordan Sample', location: 'Example Health Main Clinic', reason: 'Blood pressure follow-up', period: { start: '2026-11-18T15:00:00Z', end: '2026-11-18T15:20:00Z' } },
-  resource: { status: 'finished', class: { code: 'AMB', display: 'ambulatory' }, type: [{ text: 'Office visit' }], period: { start: '2026-11-18T15:00:00Z', end: '2026-11-18T15:20:00Z' }, reasonCode: [{ text: 'Blood pressure follow-up' }] },
+  resource: { status: 'finished', class: { code: 'AMB', display: 'ambulatory' }, type: [{ text: 'OFFICE VISIT EST PATIENT LEVEL 3' }], period: { start: '2026-11-18T15:00:00Z', end: '2026-11-18T15:20:00Z' }, reasonCode: [{ text: 'Blood pressure follow-up' }] },
 });
 R.document(src.robinChart, { date: '2026-11-18', doc_type: 'lab_report', title: 'Basic metabolic panel', organization: 'Example Health', text: 'Basic metabolic panel. Potassium 5.4 mmol/L (high). Creatinine 0.9 mg/dL.', original: 'basic_metabolic_panel.pdf', filed: ROBIN_CHART_LOAD });
 const rChart = R.importRun(src.robinChart, { importedAt: ROBIN_CHART_LOAD, added: 2, updated: 0, unchanged: 41, docs: 1 });
@@ -1069,9 +1071,12 @@ claimOf(A, src.alexPlan, { date: '2026-11-20', provider: 'Example Pediatrics', i
 A.importRun(src.alexPlan, { importedAt: PLANS_LOAD, added: 3, updated: 0, unchanged: 0, cliVersion: '0.4.0' });
 A.write();
 
-// Robin's lisinopril fills, as the pharmacy benefit's claims.
+// Robin's lisinopril fills, as the pharmacy benefit's claims. The benefit
+// names the store with its number twice, and the November fill's drug only
+// as "Prescription drug", as some do: the app names that fill for the
+// pharmacy's record of it.
 for (const date of ['2026-08-14', '2026-11-12']) {
-  claimOf(R, src.robinRx, { date, provider: 'Example Pharmacy', insurer: 'Example Pharmacy Benefits', type: 'Pharmacy', system: NDC, diagnoses: [['I10', 'Essential (primary) hypertension']], lines: [['00000-1111-90', 'Lisinopril 10 mg tablet, 90 days', '32.50', '12.40', '0.00', '10.00', '0.00', '2.40']] });
+  claimOf(R, src.robinRx, { date, provider: 'Example Pharmacy #1234 1234', insurer: 'Example Pharmacy Benefits', type: 'Pharmacy', system: NDC, diagnoses: [['I10', 'Essential (primary) hypertension']], lines: [['00000-1111-90', date === '2026-11-12' ? 'Prescription drug' : 'Lisinopril 10 mg tablet, 90 days', '32.50', '12.40', '0.00', '10.00', '0.00', '2.40']] });
 }
 R.importRun(src.robinRx, { importedAt: PLANS_LOAD, added: 2, updated: 0, unchanged: 0, cliVersion: '1.2.0' });
 // Robin's professional claims as medrec 0.5.0 and later files them (`medrec
@@ -1314,8 +1319,10 @@ for (const path of list) {
 // not kept.
 const MEDREC = process.env.MEDREC ?? 'medrec';
 const medrecVersion = execFileSync(MEDREC, ['--version'], { encoding: 'utf8' }).trim().split(/\s+/).at(-1);
-const [major, minor] = medrecVersion.split('.').map(Number);
-if (major === 0 && minor < 9) throw new Error(`medrec ${medrecVersion} writes no events.json: set MEDREC to medrec 0.9.0 or later`);
+// 0.9.1 dates a portal stay across its days and makes a day's doses one
+// event; the sample's checks expect both.
+const [major, minor, patch] = medrecVersion.split('.').map(Number);
+if (major === 0 && (minor < 9 || (minor === 9 && patch < 1))) throw new Error(`medrec ${medrecVersion} writes the sample's events differently: set MEDREC to medrec 0.9.1 or later`);
 const medrecHome = mkdtempSync(join(tmpdir(), 'medrec-demo-'));
 try {
   const env = {

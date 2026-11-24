@@ -4,7 +4,7 @@
 // Technical details, whole, for the data-minded.
 
 import { readJson } from '../../folder';
-import { CATEGORY_LABELS, claimAmounts, claimDiagnoses, claimLines, claimNotes, diagnosisText, revenueText, type ClaimLine } from '../../model/claims';
+import { CATEGORY_LABELS, claimAmounts, claimDiagnoses, type ClaimLine, claimLines, claimNotes, claimProvider, diagnosisText, revenueText } from '../../model/claims';
 import { isOutOfRange, rangeFor, resultFlag } from '../../model/flags';
 import { labTest } from '../../model/labtests';
 import { learnMore } from '../../model/learn';
@@ -12,7 +12,7 @@ import { conditionList, CRITICALITY_TEXT, medicineList, statusText } from '../..
 import { isObject } from '../../model/parse';
 import { AMOUNT_LABELS, asMoney, docTypeLabel, documentTitle, findItem, formatMoney, importFor, isDoseGiven, KIND_LABELS, LINE_AMOUNT_ORDER, originNames, resultPoint, resultReading, str, studyTitle, toCents, valueText } from '../../model/records';
 import { resultContext, unitText, verdict } from '../../model/result';
-import { recordTitle } from '../../model/titles';
+import { recordTitle, visitTitle } from '../../model/titles';
 import type { ImagingStudy, Json, MedDocument, MedRecord, PersonIndex, Provenance } from '../../model/types';
 import { claimContext, visitKind, visitOf } from '../../model/visits';
 import { partOfEvent } from '../../next/eventView';
@@ -22,6 +22,7 @@ import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, dateTime, localDay } from '../format';
 import type { Route } from '../router';
 import { visitContents, visitWhen } from '../visit';
+import { called } from '../../model/people';
 
 const itemRoute = (person: string, id: string): Route => ({ name: 'item', person, id });
 
@@ -477,7 +478,7 @@ function claimView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
     head(
       recordTitle(r),
       null,
-      ['Claim', dateText(start ?? r.date), str(r.fields.provider), str(r.fields.insurer) ? `by ${str(r.fields.insurer)}` : null],
+      ['Claim', dateText(start ?? r.date), claimProvider(r), str(r.fields.insurer) ? `by ${str(r.fields.insurer)}` : null],
       // The payer's figure is what you owe; the parts added up are your share.
       a.yourShare ? h('p', { class: 'result-value' }, toCents(a.yourShare) === 0 ? 'Nothing for you to pay' : `${a.shareAdded ? 'Your share' : 'You owe'} ${formatMoney(a.yourShare)}`) : null,
       kv([
@@ -494,7 +495,7 @@ function claimView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
     c.visit || c.results.length
       ? card(
           { title: 'Paid for' },
-          c.visit ? row({ route: itemRoute(idx.person, c.visit.record.id), title: recordTitle(c.visit.record), meta: ['Visit', visitWhen(c.visit), str(c.visit.record.fields.location)].filter(Boolean).join(' · ') }) : null,
+          c.visit ? row({ route: itemRoute(idx.person, c.visit.record.id), title: visitTitle(c.visit.record), meta: ['Visit', visitWhen(c.visit), str(c.visit.record.fields.location)].filter(Boolean).join(' · ') }) : null,
           c.results.map((x) => {
             const reading = x.kind === 'result' ? resultReading(x.fields).text : undefined;
             return row({ route: itemRoute(idx.person, x.id), title: recordTitle(x), meta: [KIND_LABELS[x.kind] ?? x.kind, dateText(x.date), reading ? (unitText(reading) ?? reading) : null].filter(Boolean).join(' · '), aside: x.kind === 'result' ? flagChip(resultFlag(resultPoint(x))) : null });
@@ -659,7 +660,7 @@ function studyView(ctx: Ctx, idx: PersonIndex, st: ImagingStudy): Child[] {
 export function itemView(ctx: Ctx, personId: string, id: string): HTMLElement {
   const person = ctx.store.person(personId);
   const idx = ctx.store.index(personId);
-  const back = person ? h('p', null, link({ name: 'health', who: personId }, icon('back', 16), ` ${person.name}`)) : null;
+  const back = person ? h('p', null, link({ name: 'health', who: personId }, icon('back', 16), ` ${called(person)}`)) : null;
   if (!person || !idx) return card({}, empty('This person is not in the records folder.'));
   const item = findItem(idx, id);
   if (!item) return h('div', { class: 'stack' }, back, card({}, empty('This record is not in the index. It may have been merged or removed by medrec.')));
