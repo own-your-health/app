@@ -17,6 +17,10 @@ export const SECTIONS = [
   'search',
 ] as const;
 export type Section = (typeof SECTIONS)[number];
+/** The sections that are still pages: a person's full lists, reached from Health. The others moved (see `moved`). */
+export const LIST_SECTIONS = ['results', 'medicines', 'conditions', 'allergies', 'immunizations', 'imaging'] as const;
+export type ListSection = (typeof LIST_SECTIONS)[number];
+export const isListSection = (s: Section): s is ListSection => (LIST_SECTIONS as readonly string[]).includes(s);
 
 export const SECTION_LABELS: Record<Section, string> = {
   overview: 'Overview',
@@ -51,18 +55,19 @@ export type Route =
   | { name: 'settings' }
   | { name: 'sources' }
   // `words`: search every word as written, not the concept a word names (?words=1).
-  | { name: 'search'; query?: string; words?: true }
+  // `who`: the person the search's filter starts on, from a person's own search before the redesign.
+  | { name: 'search'; query?: string; words?: true; who?: string }
   | { name: 'source'; source: string }
   | { name: 'person'; person: string; section: Section; sub?: string; query?: string; words?: true }
   | { name: 'item'; person: string; id: string }
-  // An event: a visit, stay, test or fill, with its claims and papers (?next).
+  // An event: a visit, stay, test or fill, with its claims and papers.
   | { name: 'event'; person: string; id: string }
-  // The calendar (?next): a month (YYYY-MM) and a chosen day, or the list (from the newest month, or before one), for everyone or one person.
+  // The calendar: a month (YYYY-MM) and a chosen day, or the list (from the newest month, or before one), for everyone or one person.
   | { name: 'calendar'; view?: 'list'; month?: string; who?: string; day?: string; before?: string }
-  // Money (?next), for everyone or one person: the year (in a `period` as the costs screen's), the bills, those worth a
+  // Money, for everyone or one person: the year (in a `period` as the costs screen's), the bills, those worth a
   // call (and the bill a row named), or where the money went (by network price, by your share, or by network discount).
   | { name: 'money'; view?: MoneyView; who?: string; bill?: string; period?: string; sort?: 'share' | 'discount' }
-  // Health (?next): each person's standing, one person's page, or the sheet to hand their doctor.
+  // Health: each person's standing, one person's page, or the sheet to hand their doctor.
   | { name: 'health'; view?: 'doctor'; who?: string }
   | { name: 'papers'; who?: string }
   | { name: 'huishouden'; hh: string }
@@ -116,7 +121,8 @@ export function parseRoute(hash: string): Route {
   }
   if (head === 'search' && parts.length === 1) {
     const q = query.get('q') ?? undefined;
-    return { name: 'search', ...(q ? { query: q } : {}), ...(q && query.get('words') === '1' ? { words: true as const } : {}) };
+    const who = query.get('who') ?? '';
+    return { name: 'search', ...(q ? { query: q } : {}), ...(q && query.get('words') === '1' ? { words: true as const } : {}), ...(ID.test(who) ? { who } : {}) };
   }
   if (head === 's' && a && ID.test(a) && parts.length === 2) return { name: 'source', source: a };
   if (head === 'hh' && a && ID.test(a) && parts.length === 2) return { name: 'huishouden', hh: a };
@@ -204,8 +210,34 @@ function costsQuery(r: Extract<Route, { name: 'costs' }>): string {
   return t ? `?${t}` : '';
 }
 
-function searchQuery(q: string, words: true | undefined): string {
-  return new URLSearchParams({ q, ...(words ? { words: '1' } : {}) }).toString();
+function searchQuery(q: string | undefined, words: true | undefined, who?: string): string {
+  const t = new URLSearchParams({ ...(q ? { q } : {}), ...(q && words ? { words: '1' } : {}), ...(who ? { who } : {}) }).toString();
+  return t ? `?${t}` : '';
+}
+
+/**
+ * Where an address of the person page from before the redesign now lives, so
+ * links and bookmarks still open: the overview is the person's Health, the
+ * timeline their calendar's list, claims and bills their Money, and their
+ * search the search, its filter on them, and their documents their Papers.
+ * Undefined for an address that did not move.
+ */
+export function moved(r: Route): Route | undefined {
+  if (r.name !== 'person') return undefined;
+  switch (r.section) {
+    case 'overview':
+      return { name: 'health', who: r.person };
+    case 'timeline':
+      return { name: 'calendar', view: 'list', who: r.person };
+    case 'claims':
+      return { name: 'money', who: r.person };
+    case 'search':
+      return { name: 'search', ...(r.query ? { query: r.query } : {}), ...(r.query && r.words ? { words: true as const } : {}), who: r.person };
+    case 'documents':
+      return { name: 'papers', who: r.person };
+    default:
+      return undefined;
+  }
 }
 
 export function href(route: Route): string {
@@ -227,7 +259,7 @@ export function href(route: Route): string {
     case 'papers':
       return `#/papers${route.who ? `?${new URLSearchParams({ who: route.who })}` : ''}`;
     case 'search':
-      return route.query ? `#/search?${searchQuery(route.query, route.words)}` : '#/search';
+      return `#/search${searchQuery(route.query, route.words, route.who)}`;
     case 'source':
       return `#/s/${encodeURIComponent(route.source)}`;
     case 'huishouden':
@@ -240,7 +272,7 @@ export function href(route: Route): string {
       let h = `#/p/${encodeURIComponent(route.person)}`;
       if (route.section !== 'overview' || route.sub || route.query) h += `/${route.section}`;
       if (route.sub) h += `/${encodeURIComponent(route.sub)}`;
-      if (route.query) h += `?${searchQuery(route.query, route.words)}`;
+      if (route.query) h += searchQuery(route.query, route.words);
       return h;
     }
     case 'not_found':

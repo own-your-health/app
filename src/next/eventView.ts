@@ -1,4 +1,4 @@
-// The event page, the redesign's core screen (?next): what happened, when
+// The event page, the app's core screen: what happened, when
 // and where, what it cost and whether it is settled, then the evidence. In
 // order: the head with its sources, what happened, results with their
 // prices, how the price came down, what the plan changed, who charged what,
@@ -343,7 +343,7 @@ function detailsCard(idx: PersonIndex, e: CareEvent): HTMLElement {
 export function eventView(ctx: Ctx, personId: string, id: string): HTMLElement {
   const person = ctx.store.person(personId);
   const idx = ctx.store.index(personId);
-  const back = person ? h('p', null, link({ name: 'person', person: personId, section: 'overview' }, icon('back', 16), ` ${person.name}`)) : null;
+  const back = person ? h('p', null, link({ name: 'health', who: personId }, icon('back', 16), ` ${person.name}`)) : null;
   if (!person || !idx) return card({}, empty('This person is not in the records folder.'));
   // Any record or paper of the visit opens it, so a saved address still works
   // after the visit is regrouped and led by another record.
@@ -368,11 +368,11 @@ export function eventView(ctx: Ctx, personId: string, id: string): HTMLElement {
   );
 }
 
-/** A person's events, newest first, as cards with one number each: the overview's list under ?next. */
+/** A person's events, newest first, as cards with one number each: their Health's list. */
 export function eventsCard(ctx: Ctx, personId: string, idx: PersonIndex, shown = 8): HTMLElement {
   const events = personEvents(idx, ctx.store.household, localDay(ctx.now()));
   return card(
-    { title: 'What happened', class: 'overview-wide' },
+    { title: 'What happened' },
     events.length
       ? events.slice(0, shown).map((e) => {
           const n = eventNumber(eventMoney(e));
@@ -384,7 +384,7 @@ export function eventsCard(ctx: Ctx, personId: string, idx: PersonIndex, shown =
   );
 }
 
-/** Under ?next, a record's page says which visit it is part of. */
+/** A record's page says which visit it is part of. */
 export function partOfEvent(ctx: Ctx, personId: string, idx: PersonIndex, recordId: string): HTMLElement | null {
   const e = eventOf(personEvents(idx, ctx.store.household, localDay(ctx.now())), recordId);
   if (!e) return null;

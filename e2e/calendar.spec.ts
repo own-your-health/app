@@ -1,13 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// The calendar (?next): the household's events a month at a time with a lane
+// The calendar: the household's events a month at a time with a lane
 // per person, or as one list, and private events kept off the shared view.
 
 const SAM = 'p_wwezzed7kml67hnp6s7n';
 
 async function open(page: Page, path = '') {
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
-  await page.goto(`./?demo&next${path}`);
+  await page.goto(`./?demo${path}`);
 }
 
 const card = (page: Page, title: string | RegExp) => page.locator('.card', { has: page.locator('.card-head h2', { hasText: title }) });
@@ -67,8 +67,8 @@ test('a private event stays off the Everyone calendar until shown, and on its pe
 
   // Shown, then the calendar is left: back on it, they are hidden again.
   await page.getByRole('button', { name: 'Show them' }).click();
-  await page.goto('./?demo&next#/');
-  await page.goto('./?demo&next#/calendar?month=2026-10');
+  await page.goto('./?demo#/');
+  await page.goto('./?demo#/calendar?month=2026-10');
   await expect(page.locator('.cal-private')).toContainText('2 private events (mental health) are kept off this shared view.');
 
   // Sam's own calendar shows it, marked, with no notice.
@@ -81,13 +81,13 @@ test('a private event stays off the Everyone calendar until shown, and on its pe
   await expect(page.locator('.event-private')).toContainText('Mental health. Kept off Home and the Everyone calendar.');
 
   // Home's shared list leaves it off.
-  await page.goto('./?demo&next#/');
+  await page.goto('./?demo#/');
   await expect(card(page, /^Recently$/)).not.toContainText('Counseling session');
 });
 
-test('the list has every event by month, and a person’s overview opens theirs', async ({ page }) => {
-  await open(page, `#/p/${SAM}`);
-  await card(page, /^What happened$/).getByRole('link', { name: 'In the calendar' }).click();
+test('the list has every event by month, and a person’s Health opens theirs', async ({ page }) => {
+  await open(page, `#/health?who=${SAM}`);
+  await card(page, /^What happened$/).getByRole('link', { name: 'All 7 in the calendar' }).click();
   await expect(page).toHaveURL(new RegExp(`#/calendar\\?view=list&who=${SAM}$`));
   await expect(page.getByRole('group', { name: 'View' }).getByRole('link', { name: 'List' })).toHaveAttribute('aria-current', 'page');
   await expect(page.locator('.calendar .card-head h2')).toHaveText(['October 2026', 'September 2026', 'July 2026', 'May 2026']);
@@ -106,12 +106,4 @@ test('the month fits a 360px phone in the dark theme', async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
   const lane = await page.locator('.cal-lane.lane-3 .mark-bar').first().evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(lane).toBe('rgb(213, 81, 129)');
-});
-
-test('without ?next there is no calendar', async ({ page }) => {
-  await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
-  await page.goto('./?demo#/calendar');
-  await expect(page.locator('main .card-head h2')).toHaveText('Page not found');
-  await page.goto('./?demo#/');
-  await expect(card(page, /^Recently$/)).toHaveCount(0);
 });

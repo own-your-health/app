@@ -1,4 +1,4 @@
-// Bills against what the claims say (?next), for Home now and Money next.
+// Bills against what the claims say, for Home and Money.
 // A provider's newest statement with no receipt filed after it is open. It
 // is to pay when it asks what the claims say that provider is owed for the
 // visit, and worth a call when it asks something else or no claim in these

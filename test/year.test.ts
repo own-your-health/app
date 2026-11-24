@@ -1,4 +1,4 @@
-// Money's year under ?next: a period's four figures, the months, each
+// Money's year: a period's four figures, the months, each
 // person's deductible and out-of-pocket limit, and the visits by cost.
 import { describe, expect, it } from 'vitest';
 import { householdLines, inPeriod, type CostLine } from '../src/model/costs';

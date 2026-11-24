@@ -1,4 +1,4 @@
-// What happened, as the redesign (?next) shows it: an event is one visit,
+// What happened, as the app shows it: an event is one visit,
 // emergency room trip, stay, test day or fill, however many claims, portal
 // records and papers it produced. This module is the lasting half: the
 // event's shape, its kind in words, how sure it is, and what it cost from its

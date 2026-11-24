@@ -10,9 +10,11 @@ import { needsAttention } from '../model/sources';
 import type { RequestScope } from '../model/types';
 import { getAccount, getClientId, getFolder, setAccount, setClientId, setFolder } from '../settings';
 import { readSetupLink, setupLinkFor, withoutClient } from '../setup-link';
-import { button, type Ctx } from './components';
+import { button, sheet, type Ctx } from './components';
 import { clear, h, icon, s } from './dom';
-import { href, parseRoute, type Route } from './router';
+import { href, isListSection, moved, parseRoute, type Route } from './router';
+import { tabBar } from './tabs';
+import { buildOf, fetchAppPage, updateWatcher } from './update';
 import { costsView } from './views/costs';
 import { homeView } from './views/home';
 import { itemView } from './views/item';
@@ -26,7 +28,6 @@ import { calendarView, hidePrivateEvents } from '../next/calendarView';
 import { moneyView } from '../next/moneyView';
 import { healthView, leaveOutPrivate } from '../next/healthView';
 import { papersView } from '../next/papersView';
-import { hasTabs, tabBar } from '../next/tabs';
 import { eventView } from '../next/eventView';
 
 /** What the app says when a renewal interrupted a write the person asked for. */
@@ -68,12 +69,22 @@ export class App {
   private store: Store | null = null;
   private drive: Drive | null = null;
   private demo: boolean;
-  private next: boolean;
   private demoMac: ((file: string) => void) | null = null;
   private main = h('main', { class: 'main', id: 'main' });
   private bar = h('header', { class: 'app-bar' });
   private banner = h('div', { class: 'banner-slot', 'aria-live': 'polite' });
-  /** The redesign's tabs, under ?next once the folder is read. */
+  /** A newer build of the app is on the site: a line that stays until the page reloads. */
+  private update = h('div', { class: 'banner-slot', 'aria-live': 'polite' });
+  private lookForUpdate = updateWatcher({
+    current: buildOf(document.querySelector('script[type="module"][src]')?.getAttribute('src') ?? ''),
+    fetchPage: fetchAppPage,
+    now: () => Date.now(),
+    onNew: () =>
+      this.update.replaceChildren(
+        h('div', { class: 'banner banner-update', role: 'status' }, h('span', null, 'A new version of the app is ready.'), button('Reload', () => location.reload(), { small: true })),
+      ),
+  });
+  /** The tabs, once the folder is read. */
   private tabs = h('div', { class: 'tabs-slot' });
   private toastBox = h('div', { class: 'toast-slot', 'aria-live': 'polite' });
   private toastTimer: number | undefined;
@@ -84,8 +95,10 @@ export class App {
 
   constructor(private readonly root: HTMLElement) {
     this.demo = new URLSearchParams(location.search).has('demo');
-    this.next = new URLSearchParams(location.search).has('next');
-    root.append(this.bar, this.banner, this.tabs, this.main, this.toastBox);
+    // The redesign was behind ?next; it is the app now, so an old link's ?next is dropped from the address.
+    const kept = location.search.slice(1).split('&').filter((part) => part && part.split('=')[0] !== 'next');
+    if (kept.length !== location.search.slice(1).split('&').filter(Boolean).length) history.replaceState(null, '', `${location.pathname}${kept.length ? `?${kept.join('&')}` : ''}${location.hash}`);
+    root.append(this.bar, this.banner, this.update, this.tabs, this.main, this.toastBox);
   }
 
   async start(): Promise<void> {
@@ -104,6 +117,7 @@ export class App {
     for (const type of ['focusout', 'input']) this.main.addEventListener(type, () => window.setTimeout(() => this.drawIfStale(), 0));
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState !== 'visible') return;
+      void this.lookForUpdate();
       if (this.signInEnded()) return this.renew();
       void this.pollOnce();
     });
@@ -351,7 +365,6 @@ export class App {
     return {
       store: this.store!,
       demo: this.demo,
-      next: this.next,
       user: this.user,
       canWrite: this.demo || this.scopes.includes(SCOPE_WRITE),
       version: VERSION,
@@ -457,14 +470,12 @@ export class App {
               'nav',
               { class: 'bar-actions', 'aria-label': 'App' },
               h('a', { class: 'icon-button', href: '#/search', 'aria-label': 'Search' }, icon('search')),
-              this.sourcesButton(),
-              h('a', { class: 'icon-button', href: '#/settings', 'aria-label': 'Settings' }, icon('settings')),
+              this.menuButton(),
             )
           : null,
       ),
     );
-    const route = parseRoute(location.hash);
-    this.tabs.replaceChildren(...(ready && this.next && hasTabs(route) ? [tabBar(route)] : []));
+    this.tabs.replaceChildren(...(ready ? [tabBar(parseRoute(location.hash))] : []));
     if (this.demo && ready) {
       this.banner.replaceChildren(h('div', { class: 'banner banner-sample' }, h('span', { class: 'chip chip-attention' }, 'Sample data'), h('span', null, 'Invented records. Nothing is saved.')));
     }
@@ -475,19 +486,36 @@ export class App {
     return new Date();
   }
 
-  /** Sources, with a dot while a source needs attention at the Mac. */
-  private sourcesButton(): HTMLElement {
+  /** The menu: the sources and the settings, with a dot while a source needs attention at the Mac. */
+  private menuButton(): HTMLElement {
     const alert = this.store ? needsAttention(this.store.sources(this.now())).length > 0 : false;
-    return h(
-      'a',
-      { class: ['icon-button', alert ? 'icon-button-alert' : null], href: '#/sources', 'aria-label': alert ? 'Sources: a source needs attention' : 'Sources' },
-      icon('sources'),
+    const open = () => {
+      const close = () => panel.querySelector<HTMLElement>('.sheet-head .icon-button')?.click();
+      const item = (route: Route, text: string, extra?: string) => h('a', { class: 'menu-item', href: href(route), on: { click: close } }, text, extra ? h('span', { class: 'menu-note' }, extra) : null);
+      const body = h(
+        'div',
+        { class: 'menu-list' },
+        item({ name: 'sources' }, 'Sources', alert ? 'A source needs attention' : undefined),
+        item({ name: 'settings' }, 'Settings'),
+      );
+      const panel = sheet('Menu', body, () => menu.focus());
+      document.body.appendChild(panel);
+      panel.querySelector<HTMLElement>('.menu-item')?.focus();
+    };
+    const menu = h(
+      'button',
+      { type: 'button', class: ['icon-button', alert ? 'icon-button-alert' : null], 'aria-label': alert ? 'Menu: a source needs attention' : 'Menu', 'aria-haspopup': 'dialog', on: { click: open } },
+      icon('menu'),
     );
+    return menu;
   }
 
   render(): void {
     // Whatever the page held back, this draw shows the folder as it is now.
     this.stale = false;
+    // An address from before the redesign opens where its page lives now.
+    const to = moved(parseRoute(location.hash));
+    if (to) history.replaceState(null, '', href(to));
     this.renderBar();
     clear(this.main);
     const p = this.phase;
@@ -553,33 +581,30 @@ export class App {
       case 'costs':
         return costsView(ctx, r);
       case 'search':
-        return searchView(ctx, r.query, r.words);
+        return searchView(ctx, r.query, r.words, r.who);
       case 'source':
         return sourceView(ctx, r.source);
       case 'person':
-        return personView(ctx, r.person, r.section, r.sub, r.query, r.words);
+        return isListSection(r.section) ? personView(ctx, r.person, r.section, r.sub) : messageView('Page not found', 'That link does not match anything in the app.');
       case 'item':
         return itemView(ctx, r.person, r.id);
       case 'event':
-        if (ctx.next) return eventView(ctx, r.person, r.id);
-        return messageView('Page not found', 'Visit pages are part of the redesign. Add ?next to the address to try it.', [h('a', { class: 'button button-primary', href: '#/' }, 'Home')]);
+        return eventView(ctx, r.person, r.id);
       case 'health':
-        if (ctx.next) return healthView(ctx, r);
-        return messageView('Page not found', 'Health is part of the redesign. Add ?next to the address to try it.', [h('a', { class: 'button button-primary', href: '#/' }, 'Home')]);
+        return healthView(ctx, r);
       case 'papers':
-        if (ctx.next) return papersView(ctx, r);
-        return messageView('Page not found', 'Papers is part of the redesign. Add ?next to the address to try it.', [h('a', { class: 'button button-primary', href: '#/' }, 'Home')]);
+        return papersView(ctx, r);
       case 'money':
-        if (ctx.next) return moneyView(ctx, r);
-        return messageView('Page not found', 'Money is part of the redesign. Add ?next to the address to try it.', [h('a', { class: 'button button-primary', href: '#/' }, 'Home')]);
+        return moneyView(ctx, r);
       case 'calendar':
-        if (ctx.next) return calendarView(ctx, r);
-        return messageView('Page not found', 'The calendar is part of the redesign. Add ?next to the address to try it.', [h('a', { class: 'button button-primary', href: '#/' }, 'Home')]);
+        return calendarView(ctx, r);
       case 'huishouden': {
         const person = this.store!.personForHuishouden(r.hh);
         if (person) {
-          history.replaceState(null, '', href({ name: 'person', person: person.id, section: 'overview' }));
-          return personView(ctx, person.id, 'overview');
+          const to: Route = { name: 'health', who: person.id };
+          history.replaceState(null, '', href(to));
+          this.renderBar();
+          return healthView(ctx, to);
         }
         return messageView('Not linked yet', 'No one in this records folder is linked to that Huishouden Health person. Link them on the Mac with medrec.');
       }
