@@ -134,7 +134,7 @@ function recordLinks(person: string, rs: MedRecord[]): Child[] {
 }
 
 /** A claim's lines: what each paid for, its code, the amounts, and the records medrec linked to it. */
-function linesCard(person: string, lines: ClaimLine[], lineRecords: MedRecord[][]): HTMLElement {
+function linesCard(person: string, lines: readonly Readonly<ClaimLine>[], lineRecords: MedRecord[][]): HTMLElement {
   // medrec links every lab line to all of its day's results, so lines that
   // all link the same records say nothing the Paid for card does not. A line
   // the totals leave out paid for nothing.

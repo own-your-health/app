@@ -283,10 +283,10 @@ function dayOf(v: Json | undefined): string | undefined {
 }
 
 /** Each claim's lines, read once: finding the lines left out can try many sets on a long claim. */
-const linesRead = new WeakMap<MedRecord, ClaimLine[]>();
+const linesRead = new WeakMap<MedRecord, readonly Readonly<ClaimLine>[]>();
 
-/** A claim's lines, in their order. They are shared between callers, so never change one. */
-export function claimLines(r: MedRecord): ClaimLine[] {
+/** A claim's lines, in their order, shared between callers and so read-only. */
+export function claimLines(r: MedRecord): readonly Readonly<ClaimLine>[] {
   let out = linesRead.get(r);
   if (!out) {
     out = readLines(r);
@@ -329,7 +329,7 @@ function readLines(r: MedRecord): ClaimLine[] {
 }
 
 /** The lines a claim's totals count: never one they leave out. */
-export function countedLines(r: MedRecord): ClaimLine[] {
+export function countedLines(r: MedRecord): readonly Readonly<ClaimLine>[] {
   return claimLines(r).filter((l) => l.counted);
 }
 
