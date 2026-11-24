@@ -286,7 +286,8 @@ function leftOut(lines: LineAmounts[], r: MedRecord): number[] {
   return [];
 }
 
-const REVENUE_SYSTEM = /revenue|nubc/i;
+/** A hospital's revenue codes (NUBC), by their code system's address. */
+export const REVENUE_SYSTEM = /revenue|nubc/i;
 
 function lineCode(v: Json | undefined): LineCode | undefined {
   const code = isObject(v) ? str(v.code) : undefined;

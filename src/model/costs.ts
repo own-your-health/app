@@ -12,7 +12,7 @@
 // is the day a coverage took effect, which can fall mid-year (a new child, a
 // new job), not the day the plan's year begins.
 
-import { AMOUNTS, CATEGORY_LABELS, categoryOf, claimCategory, claimCents, claimLines, claimTitle, lineCents, type Category, type Cents } from './claims';
+import { AMOUNTS, CATEGORY_LABELS, categoryOf, claimCategory, claimCents, claimLines, claimTitle, lineCents, REVENUE_SYSTEM, type Category, type Cents } from './claims';
 import { providerKey, sameProvider } from './providers';
 import { asMoney, isWithdrawn, str, toCents, type AmountName } from './records';
 import type { Json, MedRecord, PersonIndex } from './types';
@@ -386,7 +386,7 @@ const SYSTEM_NAMES: [RegExp, string][] = [
   [/rxnorm/i, 'RxNorm'],
   [/icd-10/i, 'ICD-10'],
   [/snomed/i, 'SNOMED CT'],
-  [/revenue|nubc/i, 'Revenue code'],
+  [REVENUE_SYSTEM, 'Revenue code'],
 ];
 
 /** A code system's short name: "CPT", "NDC"; the address itself when it is none of these. */
