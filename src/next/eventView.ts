@@ -281,9 +281,9 @@ function papersCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
     e.papers.length
       ? e.papers.map((p) =>
           row({
-            route: itemRoute(idx.person, p.doc.id),
+            route: itemRoute(p.person ?? idx.person, p.doc.id),
             title: documentTitle(p.doc),
-            meta: [docTypeLabel(p.doc.doc_type), dateText(p.doc.date)].filter(Boolean).join(' · '),
+            meta: [docTypeLabel(p.doc.doc_type), dateText(p.doc.date), p.person ? `filed under ${ctx.store.person(p.person)?.name ?? 'someone else'}` : null].filter(Boolean).join(' · '),
             extra: driveLink(ctx, p.doc.path, 'Open in Drive'),
           }),
         )
@@ -293,7 +293,14 @@ function papersCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
 
 const sureWord = (c: string) => (c === 'sure' ? null : chip(c === 'likely' ? 'Likely' : 'Unsure', 'muted'));
 
-function assemblyCard(idx: PersonIndex, e: CareEvent): HTMLElement {
+/** Who grouped this person's visits, and why the app did when medrec wrote events for them. */
+function grouping(ctx: Ctx, idx: PersonIndex): string {
+  if (groupedByMedrec(idx)) return 'medrec grouped these by its matching rules.';
+  const why = ctx.store.eventsNotes.get(idx.person)?.text ?? ctx.store.viewsError;
+  return why ? `The app grouped these by medrec’s matching rules. ${why}` : 'The app groups these itself until medrec writes events.';
+}
+
+function assemblyCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
   const items: Child[] = [
     ...e.visits.map((v) => row({ route: itemRoute(idx.person, v.record.id), title: recordTitle(v.record), meta: `Portal visit · ${ruleText(v.rule)}`, aside: sureWord(v.confidence) })),
     ...e.claims.map((c) => row({ route: itemRoute(idx.person, c.record.id), title: c.provider ?? recordTitle(c.record), meta: `Claim · ${ruleText(c.rule)}`, aside: sureWord(c.confidence) })),
@@ -310,7 +317,7 @@ function assemblyCard(idx: PersonIndex, e: CareEvent): HTMLElement {
       // What medrec still expects, in its words. A missing bill is said under Bills, and a hospital's own claim just above.
       (e.expected ?? []).filter((x) => x.what !== 'bill' && !(x.what === 'facility_claim' && e.noFacility) && x.why).map((x) => h('p', { class: 'event-gap' }, x.why)),
       items,
-      h('p', { class: 'small muted' }, groupedByMedrec(idx) ? 'medrec grouped these by its matching rules.' : 'The app groups these itself until medrec writes events.', ' “Likely” means only the day and the kind of visit tie it in.'),
+      h('p', { class: 'small muted' }, grouping(ctx, idx), ' “Likely” means only the day and the kind of visit tie it in.'),
     ),
   );
 }
@@ -356,7 +363,7 @@ export function eventView(ctx: Ctx, personId: string, id: string): HTMLElement {
     chargesCard(e, m),
     billsCard(idx, e, m),
     papersCard(ctx, idx, e),
-    assemblyCard(idx, e),
+    assemblyCard(ctx, idx, e),
     detailsCard(idx, e),
   );
 }

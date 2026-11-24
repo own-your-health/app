@@ -157,4 +157,8 @@ test('a visit says what medrec still expects for it, and that medrec grouped it'
   await tech.locator('summary').first().click();
   await expect(tech.locator('.event-gap')).toHaveText('No insurer claim for this visit yet.');
   await expect(tech).toContainText('medrec grouped these by its matching rules.');
+
+  // Settings says who grouped everyone's visits.
+  await page.goto('./?demo&next#/settings');
+  await expect(page.locator('dt', { hasText: 'Visits' }).locator('+ dd')).toHaveText('Grouped by medrec');
 });

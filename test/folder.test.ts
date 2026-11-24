@@ -7,8 +7,10 @@ import { DEMO, demoFolder, fixture, json } from './helpers';
 
 function driveWith(tree: Record<string, DriveFile[]>, contents: Record<string, string> = {}) {
   const calls: string[] = [];
+  const fields: string[] = [];
   const fetchImpl = (async (input: RequestInfo | URL, init: RequestInit = {}) => {
     const url = new URL(String(input));
+    if (url.searchParams.has('fields')) fields.push(url.searchParams.get('fields')!);
     calls.push(`${init.method ?? 'GET'} ${url.pathname}${url.searchParams.get('alt') ? '?alt=media' : ''}`);
     const parent = url.searchParams.get('q')?.match(/^'([^']+)' in parents/)?.[1];
     if (parent) return json({ files: tree[parent] ?? [] });
@@ -18,7 +20,7 @@ function driveWith(tree: Record<string, DriveFile[]>, contents: Record<string, s
     if (id in contents) return new Response(contents[id]);
     return json({ error: { code: 404, message: 'File not found', errors: [{ reason: 'notFound' }] } }, 404);
   }) as typeof fetch;
-  return { drive: new Drive(() => 'tok', fetchImpl), calls };
+  return { drive: new Drive(() => 'tok', fetchImpl), calls, fields };
 }
 
 const ROOT: Record<string, DriveFile[]> = {
@@ -39,6 +41,17 @@ describe('DriveFolder', () => {
     const folder = new DriveFolder(drive, 'root', 'Medical Records');
     expect(await readJson(folder, 'Robin Example/index.json')).toEqual({ ok: true });
     expect(await folder.readText('Robin Example/index.json')).toBe('{"ok":true}');
+    expect(calls.filter((c) => c === 'GET /drive/v3/files')).toHaveLength(2);
+  });
+
+  it('gives a file’s MD5 from the listing it already read, null for a missing one, and nothing when Drive gave none', async () => {
+    const { drive, calls, fields } = driveWith(ROOT);
+    const folder = new DriveFolder(drive, 'root', 'x');
+    expect(await folder.md5('Robin Example/index.json')).toBe('5f2b8c1e9a7d4b3c6e0f1a2b3c4d5e6f');
+    expect(fields.every((f) => f.includes('md5Checksum'))).toBe(true);
+    expect(await folder.md5('household.json')).toBeUndefined();
+    expect(await folder.md5('Nobody/index.json')).toBeNull();
+    expect(await folder.md5('Robin Example')).toBeNull();
     expect(calls.filter((c) => c === 'GET /drive/v3/files')).toHaveLength(2);
   });
 

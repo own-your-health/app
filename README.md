@@ -468,9 +468,11 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   Run `node scripts/demo-folder.mjs` after changing it, and commit both. It
   ends by running medrec 0.9.0 or later over the folder to write its views
   (`MEDREC=<path to medrec>`, else `medrec` on the PATH), under a scratch
-  home and profile, so the machine's own medrec setup is never touched. Only
-  `views/views.json` and each person's `events.json` are kept: the app reads
-  no other view.
+  home and profile with only the variables it needs and the time zone set
+  to UTC, so the machine's own medrec setup is never touched and every
+  machine writes the same views. Only `views/views.json` and each person's
+  `events.json` are kept: the app reads no other view. `manifest.json`
+  gives each file's MD5, as Drive would, for the store's freshness check.
 - The PNG icons in `public/` (for the manifest and the iPhone Home Screen) are
   drawn from `public/icon.svg` by `npm run icons`. Run it after changing the
   icon, and commit them.
@@ -499,10 +501,17 @@ app without it is unchanged.
   visit was put together, and the claims under Details.
 - The events are medrec's (`views/<person id>/events.json`, medrec 0.9.0
   and later). The store finds each person's file through `views/views.json`
-  and `src/next/medrecEvents.ts` reads it: each member becomes one of the
-  visit's claims, portal visits, records or papers, with the rule that
-  placed it and how sure that is, and what medrec still expects (a bill,
-  the doctors' claims) comes along. An event's address is medrec's id
+  (`src/model/events.ts`) and uses it only when it is fresh: when the MD5s
+  Drive reports for `household.json`, the person's `index.json`,
+  `text.json` and `overrides.json`, those of the people linked to them, and
+  the events file itself are the ones views.json recorded. Otherwise, say
+  while an import's views are still reaching Drive, that person's visits
+  are the app's own grouping, and Settings and the visit page say why. The
+  store attaches fresh events to the index they were written from, and
+  `src/next/medrecEvents.ts` makes each member one of the visit's claims,
+  portal visits, records or papers, with the rule that placed it and how
+  sure that is. What medrec still expects (a bill, the doctors' claims)
+  comes along, and another person's paper (X2) opens under them. An event's address is medrec's id
   (`e_…`); any record or paper of it opens it too. For a folder whose
   medrec has not written events yet, the app groups the records itself in
   `src/next/grouping.ts`, by the same rules; that file goes once every

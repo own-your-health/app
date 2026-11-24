@@ -7,10 +7,11 @@
 import { CATEGORY_LABELS, claimAmounts, claimCategory, claimCents, claimTitle, type Category } from '../model/claims';
 import { sameProvider } from '../model/providers';
 import { organizationName, str } from '../model/records';
+import type { MedrecRule, Sureness } from '../model/events';
 import type { Household, MedDocument, MedRecord } from '../model/types';
 
 export type EventKind = 'er' | 'stay' | 'outpatient' | 'series' | 'office' | 'service' | 'tests' | 'dental' | 'vaccine' | 'fill';
-export type Confidence = 'sure' | 'likely' | 'unsure';
+export type Confidence = Sureness;
 /** What a claim was for, in its event: a hospital's own claim, a doctor there, a lab or imaging, a doctor's office, other care. */
 export type ClaimRole = 'facility' | 'hospital' | 'ancillary' | 'office' | 'service' | 'pharmacy' | 'dental';
 
@@ -27,6 +28,8 @@ export interface EventPaper {
   doc: MedDocument;
   rule: Rule;
   confidence: Confidence;
+  /** Filed under another person (medrec's X2): their paper, in this person's event. */
+  person?: string;
 }
 
 export interface CareEvent {
@@ -83,11 +86,12 @@ export const RULES = {
   X2: 'A paper filed under someone else, dated before their birth',
   N5: 'A clinician known to work at this practice',
 } as const;
-/** A rule's name, as the app or medrec wrote it; medrec may write one the app does not know yet. */
-export type Rule = keyof typeof RULES | (string & {});
+/** A rule's name, as the app or medrec wrote it. The app's own are checked by name; medrec's come only from its events file, and may be one the app does not know yet. */
+export type AppRule = keyof typeof RULES;
+export type Rule = AppRule | MedrecRule;
 
 /** A rule in words; one the app does not know yet is named as medrec's. */
-export const ruleText = (rule: Rule): string => (RULES as Record<string, string>)[rule] ?? `medrec’s rule ${rule}`;
+export const ruleText = (rule: Rule): string => (RULES as Record<string, string | undefined>)[rule] ?? `medrec’s rule ${rule}`;
 
 const CONFIDENCE_ORDER: Confidence[] = ['sure', 'likely', 'unsure'];
 const leastSure = (cs: Confidence[]): Confidence => CONFIDENCE_ORDER[Math.max(0, ...cs.map((c) => CONFIDENCE_ORDER.indexOf(c)))]!;
@@ -226,15 +230,17 @@ export const PRIVATE_AREAS: Record<string, string> = {
   household: 'Marked private',
 };
 
-
-
-/** Its title, and its place when its source gave none: the portal's words where there are some, else from the claims. */
-export function nameEvent(e: CareEvent, household: Household, person: string): void {
+/** Its title, and its place when its source gave none: the portal's words where there are some, else `title` (medrec's, for a kind the app does not know), else from the claims. */
+export function nameEvent(e: CareEvent, household: Household, person: string, title?: string): void {
   const v = e.visits[0]?.record;
   const vName = v ? str(v.fields.location) ?? str(v.fields.service_provider) ?? v.provenance.map((p) => p.source.organization_id).filter((x): x is string => !!x).map((o) => organizationName(household, person, o))[0] : undefined;
   e.place ??= vName ?? e.claims.find((c) => c.role === 'office')?.provider ?? e.claims[0]?.provider;
   if (v && v.display) {
     e.title = v.display;
+    return;
+  }
+  if (title) {
+    e.title = title;
     return;
   }
   const first = e.claims[0]?.record;

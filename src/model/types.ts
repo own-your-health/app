@@ -2,6 +2,8 @@
 // docs/data-contract.md). Only the fields the app reads are typed; every
 // object keeps the rest, which the Inspect view shows as it is.
 
+import type { MedrecEvents } from './events';
+
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 export type JsonObject = { [key: string]: Json };
 
@@ -206,6 +208,8 @@ export interface PersonIndex {
   records: MedRecord[];
   studies: ImagingStudy[];
   imports: ImportRun[];
+  /** medrec's events for this index (views/<person id>/events.json), when the store found them written from it. */
+  events?: MedrecEvents;
 }
 
 export interface PersonText {

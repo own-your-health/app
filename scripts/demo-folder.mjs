@@ -8,8 +8,9 @@
 // them (LOAD_TIMES in src/folder.ts), so the sample's loads always look
 // recent; times of care stay as written.
 
+import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -894,9 +895,9 @@ function julyYear(date) {
 // contract (docs/data-contract.md, "index.json", claims): a name from its
 // lines and provider, each line's category and the claim's, amounts under
 // fixed names (you_owe only when the payer gives it), the diagnoses, and
-// links guessed by date and name. The plans' and the pharmacy benefit's
-// claims carry them; Robin's member-site plan keeps the earlier shape, so the
-// sample shows both.
+// links guessed by date and name. Every claim in the sample carries them:
+// Robin's professional claims are drawn in the earlier shape and reshaped
+// further down, as `medrec reindex` would.
 const LINE_CATEGORY = { 99213: 'visit', 99214: 'visit', 99215: 'visit', 99284: 'visit', 99285: 'visit', 71046: 'imaging', 80053: 'lab', 73610: 'imaging', 84443: 'lab', 36415: 'lab', 85025: 'lab', 82306: 'lab', 87880: 'lab', 90686: 'vaccine', 90471: 'vaccine', 90834: 'visit', 80061: 'lab', 99396: 'visit' };
 const words = (...texts) => new Set(texts.filter(Boolean).join(' ').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 4));
 function claimFields(P, { date, provider, type, lines, diagnoses, liability }) {
@@ -1304,15 +1305,31 @@ for (const path of list) {
 // The app reads each person's events from medrec's views: views/views.json
 // and views/<person id>/events.<md5>.json (medrec 0.9.0 and later). medrec
 // writes them here itself, under a scratch home and profile, so this
-// machine's own medrec setup is never touched. MEDREC names the binary, else
-// `medrec` on the PATH. The app reads no other view, so the rest are not kept.
+// machine's own medrec setup is never touched: it gets only the variables
+// below, every config, data, cache and state directory inside the scratch
+// home, and no MEDREC_* setting of the shell's. The time zone is fixed, so a
+// visit's local days are the same on every machine. MEDREC names the binary,
+// else `medrec` on the PATH. The app reads no other view, so the rest are
+// not kept.
 const MEDREC = process.env.MEDREC ?? 'medrec';
 const medrecVersion = execFileSync(MEDREC, ['--version'], { encoding: 'utf8' }).trim().split(/\s+/).at(-1);
 const [major, minor] = medrecVersion.split('.').map(Number);
 if (major === 0 && minor < 9) throw new Error(`medrec ${medrecVersion} writes no events.json: set MEDREC to medrec 0.9.0 or later`);
 const medrecHome = mkdtempSync(join(tmpdir(), 'medrec-demo-'));
 try {
-  const env = { ...process.env, HOME: medrecHome, MEDREC_PROFILE: 'demo', NO_COLOR: '1' };
+  const env = {
+    PATH: process.env.PATH ?? '/usr/bin:/bin',
+    ...(process.env.TMPDIR ? { TMPDIR: process.env.TMPDIR } : {}),
+    HOME: medrecHome,
+    XDG_CONFIG_HOME: join(medrecHome, '.config'),
+    XDG_DATA_HOME: join(medrecHome, '.local', 'share'),
+    XDG_CACHE_HOME: join(medrecHome, '.cache'),
+    XDG_STATE_HOME: join(medrecHome, '.local', 'state'),
+    MEDREC_PROFILE: 'demo',
+    TZ: 'UTC',
+    LANG: 'C.UTF-8',
+    NO_COLOR: '1',
+  };
   for (const args of [['profiles', 'add', 'demo'], ['init', ROOT], ['views', 'write', '--all']]) execFileSync(MEDREC, ['-q', ...args], { env, stdio: ['ignore', 'ignore', 'inherit'] });
 } finally {
   rmSync(medrecHome, { recursive: true, force: true });
@@ -1325,5 +1342,7 @@ for (const person of readdirSync(join(ROOT, 'views'), { withFileTypes: true }).f
   }
 }
 list.sort();
-writeFileSync(join(ROOT, 'manifest.json'), `${JSON.stringify({ anchor: ANCHOR, files: list }, null, 2)}\n`);
+// Each file's MD5, as Drive reports it: the app checks medrec's events against them.
+const md5 = Object.fromEntries(list.map((f) => [f, createHash('md5').update(readFileSync(join(ROOT, f))).digest('hex')]));
+writeFileSync(join(ROOT, 'manifest.json'), `${JSON.stringify({ anchor: ANCHOR, files: list, md5 }, null, 2)}\n`);
 console.log(`wrote ${list.length} files under public/demo/`);
