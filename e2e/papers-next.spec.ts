@@ -30,6 +30,7 @@ test('Home leads to every paper, each with its visit or why it has none', async 
   // The ones with none, and why.
   await page.getByRole('button', { name: 'With none (1)' }).click();
   await expect(page.getByRole('button', { name: 'With none (1)' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.papers').getByRole('status')).toHaveText('1 paper with no visit.');
   await expect(page.locator('.papers .row-title')).toHaveText(['Vaccination card']);
   await expect(page.locator('.paper-none')).toHaveText('With no visit. A vaccine record covers many visits.');
 });

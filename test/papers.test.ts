@@ -43,6 +43,20 @@ describe('where each paper belongs', () => {
     const p = papersOf(robin, household, TODAY, new Map([...indexes, [robin.person, robin]])).find((x) => x.doc.id === card.id)!;
     expect(p.why).toBe('It fits 2 visits, so medrec puts it with none of them.');
     expect(p.could?.map((e) => e.id)).toEqual([a!.id, b!.id]);
+    expect(p.privateArea).toBeUndefined();
+  });
+
+  it('keeps a paper private when a visit it could be part of is, since its line names that visit', () => {
+    const sam = structuredClone(indexes.get(id('Sam Example'))!);
+    const counseling = sam.events!.events.find((e) => e.members.some((m) => m.record && sam.records.find((r) => r.id === m.record)?.private))!;
+    const other = sam.events!.events.find((e) => e.kind === 'er')!;
+    const doc = sam.documents.find((d) => d.title === 'Sports medicine visit note')!;
+    // The note fits the counseling session or the emergency room visit, and neither holds nor links it.
+    for (const e of sam.events!.events) e.members = e.members.filter((m) => m.document !== doc.id);
+    for (const r of sam.records) r.documents = r.documents.filter((d) => d !== doc.id);
+    sam.events!.pending.push({ document: doc.id, could_join: [other.id, counseling.id], rule: 'D4' as MedrecRule });
+    const p = papersOf(sam, household, TODAY, new Map([...indexes, [sam.person, sam]])).find((x) => x.doc.id === doc.id)!;
+    expect([p.with, p.could?.length, p.privateArea]).toEqual([undefined, 2, 'mental_health']);
   });
 
   it('says why a paper is with no visit: no date, none near its date, or a kind about no one visit', () => {

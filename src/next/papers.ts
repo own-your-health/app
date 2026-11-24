@@ -24,7 +24,7 @@ export interface Paper {
   why?: string;
   /** The visits a paper with none could be part of. */
   could?: CareEvent[];
-  /** Its private area, when it or its visit is private. */
+  /** Its private area, when it, its visit, or a visit it could be part of is private. */
   privateArea?: string;
 }
 
@@ -77,7 +77,11 @@ export function papersOf(index: PersonIndex, household: Household, today: string
       const bill = paidBill.get(doc.id);
       const billed = bill ? byDoc.get(bill) : undefined;
       if (billed) return place(billed.event, billed.person, 'bill', 'likely');
-      const loose = (why: string, could?: CareEvent[]): Paper => ({ doc, person, why, ...(could?.length ? { could } : {}), ...(own ? { privateArea: own } : {}) });
+      // A paper that could be part of a private visit is private too: its line names that visit.
+      const loose = (why: string, could?: CareEvent[]): Paper => {
+        const area = own ?? (could ?? []).map(privateArea).find(Boolean);
+        return { doc, person, why, ...(could?.length ? { could } : {}), ...(area ? { privateArea: area } : {}) };
+      };
       const could = pending.get(doc.id);
       if (could?.length) return loose(`It fits ${could.length} visits, so medrec puts it with none of them.`, could);
       const across = ACROSS[doc.doc_type ?? ''];

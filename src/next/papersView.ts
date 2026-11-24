@@ -89,9 +89,12 @@ export function papersView(ctx: Ctx, route: Extract<Route, { name: 'papers' }>):
 
   let show: Show = 'all';
   const list = h('div');
-  const draw = () => {
+  // A screen reader hears what a filter left, as the list changes.
+  const said = h('p', { class: 'sr-only', role: 'status', 'aria-live': 'polite' });
+  const draw = (announce = false) => {
     const items = kept.filter((p) => show === 'all' || (show === 'with') === !!p.with).map((p) => ({ date: p.doc.date, paper: p }));
     list.replaceChildren(items.length ? yearList(items, (x) => paperRow(ctx, x.paper, !who)) : empty(show === 'none' ? 'Every paper here is with its visit.' : 'No papers here yet.'));
+    if (announce) said.textContent = `${count(items.length, 'paper')} ${show === 'all' ? 'in all' : show === 'with' ? 'with a visit' : 'with no visit'}.`;
   };
   draw();
 
@@ -124,10 +127,11 @@ export function papersView(ctx: Ctx, route: Extract<Route, { name: 'papers' }>):
               ['none', `With none (${kept.length - withVisit})`],
             ],
             show,
-            (v) => ((show = v), draw()),
+            (v) => ((show = v), draw(true)),
             'Show papers',
           )
         : null,
+      said,
       list,
     ),
   );
