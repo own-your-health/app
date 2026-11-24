@@ -225,6 +225,13 @@ describe('naming an event', () => {
     expect(again.title).toBe(claimed.title);
   });
 
+  it('names a day of several doses for how many, and one dose for what it was', () => {
+    const day = events('Alex Example').find((e) => e.kind === 'vaccine' && e.start === '2022-01-10')!;
+    expect([day.title, day.recorded.map((r) => r.display)]).toEqual(['4 vaccines', ['DTaP', 'IPV', 'MMR', 'Varicella']]);
+    const one = events('Alex Example').find((e) => e.kind === 'vaccine' && e.start === '2024-10-14')!;
+    expect(one.title).toBe('Influenza, seasonal, injectable');
+  });
+
   it('never meets a claimless fill or vaccine in the app’s own grouping, which makes them only from claims', () => {
     for (const p of household.people) {
       const own = personEvents(parseIndex(demoJson(`${p.folder}/index.json`), p.id), household, TODAY);

@@ -10,7 +10,7 @@ import { formatMoney, fromCents } from '../model/records';
 import { count, dateText, localDay } from '../ui/format';
 import { href, type Route } from '../ui/router';
 import { barPart, householdEvents, inMonth, isMonth, listPage, markShape, monthOf, monthWeeks, onDay, shiftMonth, shown, type PersonEvent } from './calendar';
-import { PRIVATE_AREAS } from './event';
+import { doseCount, PRIVATE_AREAS } from './event';
 import { eventNumber, eventRoute, headline } from './eventView';
 
 type CalendarRoute = Extract<Route, { name: 'calendar' }>;
@@ -39,11 +39,12 @@ const money = (cents: number) => formatMoney(fromCents(cents)) ?? '';
 function kindsText(events: PersonEvent[]): string {
   const n = (kinds: string[]) => events.filter((x) => kinds.includes(x.event.kind)).length;
   const visits = events.length - n(['tests', 'fill', 'vaccine']);
+  const doses = events.filter((x) => x.event.kind === 'vaccine').reduce((sum, x) => sum + doseCount(x.event), 0);
   return [
     visits ? count(visits, 'visit') : null,
     n(['tests']) ? count(n(['tests']), 'day of tests', 'days of tests') : null,
     n(['fill']) ? count(n(['fill']), 'pharmacy trip') : null,
-    n(['vaccine']) ? count(n(['vaccine']), 'vaccine') : null,
+    doses ? count(doses, 'vaccine') : null,
   ]
     .filter(Boolean)
     .join(', ');
