@@ -10,6 +10,7 @@ import { allergyList, conditionList, medicineList, vaccineList, type AllergyItem
 import { latestResults, type LatestResult } from '../model/overview';
 import { isWithdrawn, str } from '../model/records';
 import type { MedRecord, PersonIndex } from '../model/types';
+import { placeName } from '../model/words';
 
 /** How long an out-of-range result stays worth noticing, and a result belongs on a doctor's sheet. */
 export const NOTICE_DAYS = 730;
@@ -143,7 +144,7 @@ export function careTeam(index: PersonIndex, today: string, include: (r: MedReco
     const m = member(who);
     if (!m.last || day > m.last) {
       m.last = day;
-      m.place = str(r.fields.service_provider) ?? str(r.fields.location);
+      m.place = placeName(str(r.fields.service_provider)) ?? placeName(str(r.fields.location));
     }
   }
   for (const med of medicineList(index).active) {

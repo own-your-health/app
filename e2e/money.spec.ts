@@ -27,18 +27,18 @@ test('bills sets each open bill beside its claim, then what is not billed yet an
   const due = card(page, 'Due now');
   await expect(due.locator('.row-title')).toHaveText(['Example General Hospital', 'Example Health', 'Example Lab']);
   await expect(due.locator('.row').first().locator('.chip')).toHaveText(['Was due Oct 28, 2026', 'Matches the claim']);
-  await expect(card(page, 'Check before paying').locator('.row-meta')).toHaveText('Sam Example · Lab tests, Jul 9, 2026 · asks $120.00; the visit’s claims say you owe $50.70');
+  await expect(card(page, 'Check before paying').locator('.row-meta')).toHaveText('Sam · Lab tests, Jul 9, 2026 · asks $120.00; the visit’s claims say you owe $50.70');
   await card(page, 'Check before paying').locator('a.row-main').click();
   await expect(page.locator('.call.bill-picked')).toBeFocused();
   await page.goBack();
   await expect(card(page, 'Not billed yet').locator('.card-head')).toContainText('$273.10');
   await expect(card(page, 'Not billed yet').locator('.row-title')).toHaveText(['Example Pediatrics', 'Example Health', 'Example Lab', 'Example Emergency Physicians', 'Example Health']);
-  await expect(card(page, /^Paid$/).locator('.row-meta')).toHaveText('Robin Example · Office visit, Mar 10, 2025 · receipt Apr 20, 2025');
+  await expect(card(page, /^Paid$/).locator('.row-meta')).toHaveText('Robin · Office visit, Mar 10, 2025 · receipt Apr 20, 2025');
   // Sam's private counseling copay is not billed yet: off the shared view, counted.
   await expect(page.getByText('1 private item is kept off this shared view. Each shows on its person’s own Bills.')).toBeVisible();
 
   // One person's bills.
-  await page.getByRole('group', { name: 'Whose money' }).getByRole('link', { name: 'Robin Example' }).click();
+  await page.getByRole('group', { name: 'Whose money' }).getByRole('link', { name: 'Robin' }).click();
   await expect(page).toHaveURL(/#\/money\/bills\?who=/);
   await expect(card(page, 'Due now').locator('.row-title')).toHaveText(['Example Health', 'Example Lab']);
   await expect(card(page, 'Check before paying')).toHaveCount(0);
@@ -53,7 +53,7 @@ test('worth a call gives each bill the figures and the words to say', async ({ p
   const call = card(page, 'Example Billing');
   await expect(call.locator('.call-claim')).toHaveText('Asks $120.00. The visit’s claims say $50.70.');
   await expect(call.locator('.kv-row')).toHaveText([
-    'WhoseSam Example',
+    'WhoseSam',
     'VisitLab tests, Jul 9, 2026',
     'StatementAug 1, 2026 · account EX-000000 · was due Aug 31, 2026',
     'The claims say$50.70 to Example Lab',
@@ -99,7 +99,7 @@ test('the year: what care cost, the bills to act on, deductibles, the months and
   await page.goBack();
 
   const deductible = card(page, /^Deductible$/);
-  await expect(deductible.locator('.row-title')).toHaveText(['Robin Example', 'Sam Example', 'Alex Example', 'Jamie Example']);
+  await expect(deductible.locator('.row-title')).toHaveText(['Robin', 'Sam', 'Alex', 'Jamie']);
   await expect(deductible.locator('.row-aside')).toHaveText(['$1,120.40 of $1,500.00', '$217.40 of $750.00', '$0.00 of $750.00']);
   await expect(deductible.locator('.row').first()).toContainText('$379.60 to go. As of the claim for Oct 1, 2026. None of it comes from claims in these records.');
   await expect(deductible.locator('.row').last()).toContainText('No claims in this plan year yet.');
@@ -110,7 +110,7 @@ test('the year: what care cost, the bills to act on, deductibles, the months and
 
   // Totals count the private counseling; the biggest costs leave it off, counted.
   const biggest = card(page, /^Biggest costs$/);
-  await expect(biggest.locator('.row-title')).toHaveText(['Emergency room', 'Office visit', 'Sick visit', 'Office visit', 'Lab tests']);
+  await expect(biggest.locator('.row-title')).toHaveText(['Emergency room · Example General Hospital', 'Office visit · Example Health Main Clinic', 'Office visit · Example Pediatrics', 'Office visit · Example Health Main Clinic', 'Lab tests · Example Lab']);
   await expect(biggest.locator('.row-aside').first()).toHaveText('$1,383.20');
   await expect(page.getByText('Totals and months count everyone’s care without naming any. 1 private item is kept off the lists on this shared view.')).toBeVisible();
 
@@ -143,15 +143,15 @@ test('where the money went lists every visit by price or by your share, fills as
   await expect(page).toHaveURL(/#\/money\/events$/);
   await expect(page.locator('main h1')).toHaveText('Where the money went');
   const list = page.locator('.money-events');
-  await expect(list.locator('.row-title')).toHaveText(['Emergency room', 'Office visit', 'Sick visit', 'Office visit', 'Lab tests', 'Lab tests', 'Lab tests', '2 prescription fills']);
-  await expect(list.locator('.row').last().locator('.row-meta')).toHaveText('Example Pharmacy · paid at the counter');
+  await expect(list.locator('.row-title')).toHaveText(['Emergency room · Example General Hospital', 'Office visit · Example Health Main Clinic', 'Office visit · Example Pediatrics', 'Office visit · Example Health Main Clinic', 'Lab tests · Example Lab', 'Lab tests · Example Lab', 'Lab tests · Example Lab', '2 prescription fills']);
+  await expect(list.locator('.row').last().locator('.row-meta')).toHaveText('Example Pharmacy #1234 · paid at the counter');
 
   await page.getByRole('group', { name: 'Order by' }).getByRole('link', { name: 'Your share' }).click();
   await expect(page).toHaveURL(/#\/money\/events\?sort=share$/);
   await expect(list.locator('.row-aside').first()).toHaveText('$346.40');
 
   // Sam's own list has the private counseling, marked, and keeps the order.
-  await page.getByRole('group', { name: 'Whose money' }).getByRole('link', { name: 'Sam Example' }).click();
+  await page.getByRole('group', { name: 'Whose money' }).getByRole('link', { name: 'Sam' }).click();
   await expect(page).toHaveURL(new RegExp(`#/money/events\\?who=${SAM}&sort=share$`));
   const counseling = list.locator('.row', { hasText: 'Counseling session' });
   await expect(counseling.locator('.chip')).toHaveText('Private');
