@@ -7,7 +7,7 @@
 import { billList, type Bill } from '../model/billing';
 import { claimDiagnoses, claimLines, diagnosisText } from '../model/claims';
 import { sameProvider } from '../model/providers';
-import { AMOUNT_LABELS, docTypeLabel, documentTitle, formatMoney, fromCents, KIND_LABELS, practiceName, resultPoint, resultReading, str, toCents } from '../model/records';
+import { AMOUNT_LABELS, docTypeLabel, documentTitle, formatMoney, fromCents, KIND_LABELS, portalCounts, resultPoint, resultReading, str, toCents } from '../model/records';
 import { isOutOfRange, resultFlag } from '../model/flags';
 import { unitText } from '../model/result';
 import { recordTitle, visitTitle } from '../model/titles';
@@ -52,12 +52,7 @@ export function eventNumber(m: EventMoney): string | undefined {
 
 function sourcesStrip(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
   const insurers = [...new Set(e.claims.map((c) => str(c.record.fields.insurer)).filter((x): x is string => !!x))];
-  // The records each clinic's or pharmacy's portal gave.
-  const portals = new Map<string, number>();
-  for (const r of [...e.visits.map((v) => v.record), ...e.recorded]) {
-    const name = r.provenance.map((p) => practiceName(ctx.store.household, idx.person, p.source)).find(Boolean) ?? 'Portal';
-    portals.set(name, (portals.get(name) ?? 0) + 1);
-  }
+  const portals = portalCounts([...e.visits.map((v) => v.record), ...e.recorded], ctx.store.household, idx.person);
   const part = (label: string, n: string) => h('span', { class: 'event-source' }, h('span', { class: 'event-source-label' }, label), ' ', h('strong', null, n));
   return h(
     'p',

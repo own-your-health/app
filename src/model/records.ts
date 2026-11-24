@@ -5,6 +5,7 @@ import type { Household, ImagingStudy, ImportRun, Json, JsonObject, MedDocument,
 import { parseRange, type Bound } from './flags';
 import { isObject } from './parse';
 import { resultName } from './labtests';
+import { placeName } from './words';
 
 export const KIND_LABELS: Record<string, string> = {
   encounter: 'Visit',
@@ -450,12 +451,39 @@ export function practiceName(household: Household, person: string, from: Pick<Pr
   return own?.organization_name?.trim() ?? household.organizations.find((o) => o.id === id || o.aliases?.includes(id))?.name;
 }
 
-/** A source's name as the household knows it: its organization, by slug. */
+/**
+ * A source's name as the household knows it: its organization, by slug, for a
+ * source that gives no more than that. Where a record's provenance is at hand,
+ * `practiceName` names its practice: one id can belong to two CLIs.
+ */
 export function organizationName(household: Household, person: string, slug: string): string {
-  return practiceName(household, person, { organization_id: slug }) ?? slug;
+  const own = household.sources.find((s) => s.person === person && s.organization === slug && s.organization_name);
+  if (own?.organization_name) return own.organization_name;
+  const org = household.organizations.find((o) => o.id === slug || o.aliases?.includes(slug));
+  return org?.name ?? slug;
 }
 
-/** The distinct names of the sources a record or document came from. A bare number is no name, so its CLI stands for it. */
+/**
+ * How many of these records each portal gave, by practice, in the order they
+ * come. A record through two sign-ins counts once, for the first practice
+ * they name; one that only names a records connection counts for that; one
+ * that names neither counts as "Portal".
+ */
+export function portalCounts(records: MedRecord[], household: Household, person: string): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const r of records) {
+    const names = r.provenance.map((p) => practiceName(household, person, p.source)).filter((x): x is string => !!x);
+    const name = names.find((x) => placeName(x)) ?? names[0] ?? 'Portal';
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
+  return counts;
+}
+
+/**
+ * The distinct names of the sources a record or document came from. A bare
+ * number is no name, so its CLI stands for it, once for all of its practices
+ * that nothing names.
+ */
 export function originNames(provenance: Provenance[], household: Household, person: string): string[] {
   const names = provenance.map(({ source: s }) => {
     if (!s.organization_id) return ORIGIN_KIND[s.kind] ?? s.kind;

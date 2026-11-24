@@ -276,8 +276,9 @@ const sameWords = (a: string, b: string) => {
  */
 export function nameEvent(e: CareEvent, household: Household, person: string, given: { title?: string; what?: string } = {}): void {
   const v = e.visits[0]?.record;
-  const org = v?.provenance.map((p) => practiceName(household, person, p.source)).find(Boolean);
-  const places = [e.place, str(v?.fields.location), str(v?.fields.service_provider), org, e.claims.find((c) => c.role === 'office')?.provider, ...e.claims.map((c) => c.provider)];
+  // Every practice the visit came through, so a connection's name does not hide one that is a place.
+  const orgs = (v?.provenance ?? []).map((p) => practiceName(household, person, p.source));
+  const places = [e.place, str(v?.fields.location), str(v?.fields.service_provider), ...orgs, e.claims.find((c) => c.role === 'office')?.provider, ...e.claims.map((c) => c.provider)];
   e.place = places.map(placeName).find(Boolean);
   const first = e.claims[0]?.record;
   const claimSaid = first ? claimTitle(first) : undefined;

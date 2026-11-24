@@ -1,7 +1,7 @@
 // The practice a record came through: its own sign-in's name, so that two
 // practices on one portal address are told apart, and never an id.
 import { describe, expect, it } from 'vitest';
-import { originNames, practiceName } from '../src/model/records';
+import { organizationName, originNames, portalCounts, practiceName } from '../src/model/records';
 import type { Household, MedRecord } from '../src/model/types';
 import { nameEvent, type CareEvent } from '../src/next/event';
 import { demo } from './demo-data';
@@ -11,10 +11,14 @@ const athena = fixture<Pick<Household, 'sources' | 'organizations'> & { encounte
 const household: Household = { ...demo().household, sources: athena.sources, organizations: athena.organizations };
 const CHILD = 'p_child';
 
-/** The fixture's visit, through another sign-in. */
-function visitThrough(organization_id: string): MedRecord {
+/** The fixture's visit, through other sign-ins, in order. */
+function visitThrough(...organizations: string[]): MedRecord {
   const r = structuredClone(athena.encounter);
-  r.provenance[0]!.source.organization_id = organization_id;
+  r.provenance = organizations.map((organization_id) => {
+    const p = structuredClone(athena.encounter.provenance[0]!);
+    p.source.organization_id = organization_id;
+    return p;
+  });
   return r;
 }
 
@@ -49,7 +53,37 @@ describe('a visit whose portal names every practice as one', () => {
     expect([placeOf(visitThrough('900003')), placeOf(visitThrough('900009')), placeOf(visitThrough('900004'))]).toEqual([undefined, undefined, undefined]);
   });
 
+  it('is at the practice any of its sign-ins names, in either order', () => {
+    expect([placeOf(visitThrough('900004', '900001')), placeOf(visitThrough('900001', '900004'))]).toEqual(['Example Pediatrics', 'Example Pediatrics']);
+  });
+
   it('says where a record came from without a bare id', () => {
     expect(['900001', '900003', '900009'].map((org) => originNames(visitThrough(org).provenance, household, CHILD))).toEqual([['Example Pediatrics'], ['athena'], ['athena']]);
+    // The CLI stands for all of its practices that nothing names.
+    expect(originNames(visitThrough('900003', '900009', '900001').provenance, household, CHILD)).toEqual(['athena', 'Example Pediatrics']);
+  });
+});
+
+describe('the records each portal gave', () => {
+  const counts = (...visits: MedRecord[]) => [...portalCounts(visits, household, CHILD)];
+
+  it('are counted by practice', () => {
+    expect(counts(visitThrough('900001'), visitThrough('900002'), visitThrough('900001'))).toEqual([['Example Pediatrics', 2], ['Example Family Medicine', 1]]);
+  });
+
+  it('count a record through two sign-ins once, for the practice and not the connection', () => {
+    expect(counts(visitThrough('900004', '900002'))).toEqual([['Example Family Medicine', 1]]);
+  });
+
+  it('count for the connection when no practice is named, and for a portal when nothing is', () => {
+    expect(counts(visitThrough('900004'), visitThrough('900003'))).toEqual([['athenahealth (all practices)', 1], ['Portal', 1]]);
+  });
+});
+
+describe('a source named by its organization alone', () => {
+  it('is this person’s own source’s name, else the household’s organization, else the id', () => {
+    // Another CLI's source with the same id is not this person's.
+    expect(organizationName(household, 'p_other', '900001')).toBe('900001');
+    expect([organizationName(household, CHILD, '900001'), organizationName(household, CHILD, '900005')]).toEqual(['Example Pediatrics', 'Example Orthopedics']);
   });
 });
