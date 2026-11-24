@@ -33,6 +33,8 @@ export interface Household {
 export interface Person {
   id: string;
   name: string;
+  /** What the screens call them: the first name, unless another person shares it (`model/people.ts`). */
+  short?: string;
   folder: string;
   birth_date?: string;
   adult?: boolean;

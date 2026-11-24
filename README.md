@@ -483,7 +483,7 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   moves it when another project's preview holds that port.
 - The sample folder in `public/demo/` comes from `scripts/demo-folder.mjs`.
   Run `node scripts/demo-folder.mjs` after changing it, and commit both. It
-  ends by running medrec 0.9.0 or later over the folder to write its views
+  ends by running medrec 0.9.1 or later over the folder to write its views
   (`MEDREC=<path to medrec>`, else `medrec` on the PATH), under a scratch
   home and profile with only the variables it needs and the time zone set
   to `America/New_York`, so the machine's own medrec setup is never touched and every
@@ -534,8 +534,20 @@ dropped from the address.
   `src/next/grouping.ts`, by the same rules; that file goes once every
   folder has them. Every screen reads events through `src/next/load.ts`.
   What an event is called and what it cost (`src/next/event.ts`) come from
-  its records either way. Until medrec 0.9.1 marks events private, an event
-  is private when a record or paper in it is.
+  its records either way. A visit leads with its kind and its place
+  ("Office visit · Example Pediatrics"). What it was, in plain words, goes
+  beneath: the portal's name for the visit, its reason, medrec's `what`, or
+  the claims' services. A fill is named for its drug, from the pharmacy's
+  record before a claim's word for any drug ("Prescription drug"). A
+  vaccine is named for its dose, and a day of several doses for how many.
+  Billing descriptors in capitals ("OFC VISIT, NEW PT, MOD MDM") are never
+  a headline; they show only in the visit's Details (`src/model/words.ts`).
+  A portal platform's name ("athenahealth (all practices)") is never a
+  place, and a store's number is said once. People go by their first name,
+  or their full name where two share one, except in Settings and on the
+  doctor's sheet (`src/model/people.ts`). An event is private when a record
+  or paper in it is. medrec 0.9.1 writes its own marks (`private.json`), which the app does
+  not read yet.
 - **Home** leads with **Needs you**, quiet when nothing does:
   - a bill worth a call: one that asks something other than what the
     claims say you owe, or that no claim in these records backs

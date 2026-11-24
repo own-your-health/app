@@ -82,7 +82,7 @@ describe('the sample household', () => {
       ['2026-09-12', '99285', {}, { billed: 420000, notCovered: 420000, youOwe: 420000 }],
     ]);
     expect(all.map((l) => l.date)).toEqual([...all.map((l) => l.date)].sort().reverse());
-    expect(all.find((l) => l.code === '00000-1111-90')).toMatchObject({ category: 'pharmacy', provider: 'Example Pharmacy', insurer: 'Example Pharmacy Benefits' });
+    expect(all.find((l) => l.code === '00000-1111-90')).toMatchObject({ category: 'pharmacy', provider: 'Example Pharmacy #1234', insurer: 'Example Pharmacy Benefits' });
   });
 
   it('offers this and last plan year, each calendar year, and every year', () => {
@@ -109,7 +109,7 @@ describe('the sample household', () => {
       ['Example Health', 7868, 2],
       ['Example Counseling', 3000, 1],
       ['Example Pediatrics', 2500, 1],
-      ['Example Pharmacy', 2000, 2],
+      ['Example Pharmacy #1234', 2000, 2],
       ['Example Radiology Associates', 0, 1],
     ]);
     expect(breakdown(inPlanYear, 'month', names).map((g) => g.key)).toEqual(['2026-07', '2026-08', '2026-09', '2026-10', '2026-11']);

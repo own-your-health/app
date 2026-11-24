@@ -11,6 +11,7 @@ import { href, type Route } from '../ui/router';
 import { householdEvents, type PersonEvent } from './calendar';
 import { eventWhen } from './eventView';
 import { byDue, explainedLines, openBills, paidBills, unbilledShares, type Explained, type OpenBill, type PaidBill, type Unbilled } from './money';
+import { called } from '../model/people';
 
 export type MoneyRoute = Extract<Route, { name: 'money' }>;
 
@@ -88,7 +89,7 @@ export function head(ctx: Ctx, route: MoneyRoute, title: string, lead: string, w
       const on = p.id ? who === p.id : !who;
       // The same page, year and order for someone else; a bill a row named stays behind.
       const to: Route = { name: 'money', ...(route.view ? { view: route.view } : {}), ...(route.period ? { period: route.period } : {}), ...(route.sort ? { sort: route.sort } : {}), ...(p.id ? { who: p.id } : {}) };
-      return h('a', { class: ['filter', on ? 'filter-on' : null], href: href(to), 'aria-current': on ? 'page' : false }, p.name);
+      return h('a', { class: ['filter', on ? 'filter-on' : null], href: href(to), 'aria-current': on ? 'page' : false }, called(p));
     }),
   );
   const back = route.view ? h('p', null, link({ name: 'money', ...(who ? { who } : {}) }, icon('back', 16), ' Money')) : null;

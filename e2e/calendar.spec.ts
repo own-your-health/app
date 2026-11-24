@@ -15,7 +15,9 @@ const card = (page: Page, title: string | RegExp) => page.locator('.card', { has
 test('home leads to the calendar, which opens on this month with a lane per person', async ({ page }) => {
   await open(page);
   const recent = card(page, /^Recently$/);
-  await expect(recent.locator('.row-title')).toHaveText(['Sick visit', 'Weight check', 'Office visit']);
+  // Each row leads with the kind and the place, and says what it was beneath: Robin's portal names the visit by its billing descriptor, so its reason says it.
+  await expect(recent.locator('.row-title')).toHaveText(['Office visit · Example Pediatrics', 'Office visit · Example Pediatrics', 'Office visit · Example Health Main Clinic']);
+  await expect(recent.locator('.row-meta')).toHaveText(['Alex · Sick visit', 'Jamie · Weight check', 'Robin · Blood pressure follow-up']);
   await recent.getByRole('link', { name: /^Calendar/ }).click();
   await expect(page).toHaveURL(/#\/calendar$/);
   await expect(page.locator('main h1')).toHaveText('Calendar');
@@ -23,26 +25,27 @@ test('home leads to the calendar, which opens on this month with a lane per pers
   const month = page.locator('.cal-month');
   await expect(month.locator('h2')).toHaveText('November 2026');
   await expect(month.locator('.cal-today .cal-date')).toHaveText('22');
-  await expect(month.locator('.cal-legend .cal-key')).toHaveText(['Visit or tests', 'Pharmacy or vaccine', 'Emergency room or hospital stay', 'Robin Example', 'Alex Example', 'Jamie Example']);
+  await expect(month.locator('.cal-legend .cal-key')).toHaveText(['Visit or tests', 'Pharmacy or vaccine', 'Emergency room or hospital stay', 'Robin', 'Alex', 'Jamie']);
   // The birth stay is one bar across its three days, in Jamie's lane.
   await expect(month.locator('.cal-lane.lane-3 .mark-bar')).toHaveCount(3);
 
   const list = card(page, 'What happened in November 2026');
   await expect(list).toContainText('5 visits, 1 pharmacy trip on 7 days · your share $60.00.');
-  await expect(list.locator('.row-title')).toHaveText(['Sick visit', 'Weight check', 'Office visit', 'Lisinopril 10 mg tablet, 90 days', 'Newborn visit', 'Birth hospital stay']);
+  await expect(list.locator('.row-title')).toHaveText(['Office visit · Example Pediatrics', 'Office visit · Example Pediatrics', 'Office visit · Example Health Main Clinic', 'Lisinopril 10 mg tablet · Example Pharmacy #1234', 'Office visit · Example Pediatrics', 'Hospital stay · 2 nights · Example Health Birth Center']);
 
   // A day opens its own list, and goes back to the month.
   await month.getByRole('link', { name: /^Thursday, November 12:/ }).click();
   await expect(page).toHaveURL(/#\/calendar\?month=2026-11&day=2026-11-12$/);
   await expect(month.getByRole('link', { name: /^Thursday, November 12:/ })).toHaveAttribute('aria-current', 'date');
   const day = card(page, 'Thursday, November 12');
-  await expect(day.locator('.row-title')).toHaveText(['Lisinopril 10 mg tablet, 90 days', 'Newborn visit']);
+  await expect(day.locator('.row-title')).toHaveText(['Lisinopril 10 mg tablet · Example Pharmacy #1234', 'Office visit · Example Pediatrics']);
   await day.getByRole('link', { name: 'All of November 2026' }).click();
   await expect(card(page, 'What happened in November 2026')).toBeVisible();
 
   // Each row opens the visit's page.
   await card(page, 'What happened in November 2026').locator('.row', { hasText: 'Birth hospital stay' }).locator('a.row-main').click();
-  await expect(page.locator('.event h1')).toHaveText('Birth hospital stay');
+  await expect(page.locator('.event h1')).toHaveText('Hospital stay · 2 nights');
+  await expect(page.locator('.event-what')).toHaveText('Birth hospital stay');
 });
 
 test('a private event stays off the Everyone calendar until shown, and on its person’s own', async ({ page }) => {
@@ -50,7 +53,7 @@ test('a private event stays off the Everyone calendar until shown, and on its pe
   await page.getByRole('link', { name: 'Previous month: October 2026' }).click();
   await expect(page).toHaveURL(/#\/calendar\?month=2026-10$/);
   const list = card(page, 'What happened in October 2026');
-  await expect(list.locator('.row-title')).toHaveText(['Vitamin D3 2,000 unit capsule', 'Lab tests', 'Lab tests', 'Office visit']);
+  await expect(list.locator('.row-title')).toHaveText(['Vitamin D3 2,000 unit capsule · Example Pharmacy', 'Lab tests · Example Lab', 'Lab tests · Example Lab', 'Office visit · Example Health Main Clinic']);
   const notice = page.locator('.cal-private');
   await expect(notice).toContainText('2 private events (mental health) are kept off this shared view.');
   await expect(notice).toContainText('This is discretion, not security');
@@ -72,11 +75,11 @@ test('a private event stays off the Everyone calendar until shown, and on its pe
   await expect(page.locator('.cal-private')).toContainText('2 private events (mental health) are kept off this shared view.');
 
   // Sam's own calendar shows it, marked, with no notice.
-  await page.getByRole('group', { name: 'Whose calendar' }).getByRole('link', { name: 'Sam Example' }).click();
+  await page.getByRole('group', { name: 'Whose calendar' }).getByRole('link', { name: 'Sam' }).click();
   await expect(page).toHaveURL(new RegExp(`#/calendar\\?month=2026-10&who=${SAM}$`));
   await expect(page.locator('.cal-private')).toHaveCount(0);
   const own = card(page, 'What happened in October 2026');
-  await expect(own.locator('.row-title')).toHaveText(['Vitamin D3 2,000 unit capsule', 'Sertraline 50 mg tablet', 'Counseling session', 'Lab tests']);
+  await expect(own.locator('.row-title')).toHaveText(['Vitamin D3 2,000 unit capsule · Example Pharmacy', 'Sertraline 50 mg tablet · Example Pharmacy', 'Office visit · Example Counseling', 'Lab tests · Example Lab']);
   await own.locator('.row', { hasText: 'Counseling session' }).locator('a.row-main').click();
   await expect(page.locator('.event-private')).toContainText('Mental health. Kept off Home and the Everyone calendar.');
 

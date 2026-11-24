@@ -12,7 +12,7 @@
 // is the day a coverage took effect, which can fall mid-year (a new child, a
 // new job), not the day the plan's year begins.
 
-import { AMOUNTS, CATEGORY_LABELS, categoryOf, claimCategory, claimCents, claimLines, claimTitle, lineCents, REVENUE_SYSTEM, type Category, type Cents } from './claims';
+import { AMOUNTS, type Category, CATEGORY_LABELS, categoryOf, type Cents, claimCategory, claimCents, claimLines, claimProvider, claimTitle, lineCents, REVENUE_SYSTEM } from './claims';
 import { providerKey, sameProvider } from './providers';
 import { asMoney, isWithdrawn, str, toCents, type AmountName } from './records';
 import type { Json, MedRecord, PersonIndex } from './types';
@@ -147,7 +147,7 @@ export function costLines(person: string, index: PersonIndex, opts: CostOptions 
       claim: r.id,
       claimTitle: claimTitle(r),
       claimDate: service,
-      provider: str(r.fields.provider) ?? UNKNOWN_PROVIDER,
+      provider: claimProvider(r) ?? UNKNOWN_PROVIDER,
       insurer,
     };
     const lines = claimLines(r);

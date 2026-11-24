@@ -4145,9 +4145,9 @@
       "code": {
         "system": "http://www.ama-assn.org/go/cpt",
         "code": "99213",
-        "display": "Office visit"
+        "display": "OFFICE VISIT EST PATIENT LEVEL 3"
       },
-      "display": "Office visit",
+      "display": "OFFICE VISIT EST PATIENT LEVEL 3",
       "status": "finished",
       "fields": {
         "when": "2026-11-18",
@@ -4193,11 +4193,11 @@
         "code": "pharmacy",
         "display": "Pharmacy"
       },
-      "display": "Lisinopril 10 mg tablet, 90 days · Example Pharmacy",
+      "display": "Lisinopril 10 mg tablet, 90 days · Example Pharmacy #1234 1234",
       "status": "active",
       "fields": {
         "when": "2026-08-14",
-        "provider": "Example Pharmacy",
+        "provider": "Example Pharmacy #1234 1234",
         "insurer": "Example Pharmacy Benefits",
         "outcome": "complete",
         "billable_period": {
@@ -4468,11 +4468,11 @@
         "code": "pharmacy",
         "display": "Pharmacy"
       },
-      "display": "Lisinopril 10 mg tablet, 90 days · Example Pharmacy",
+      "display": "Prescription drug · Example Pharmacy #1234 1234",
       "status": "active",
       "fields": {
         "when": "2026-11-12",
-        "provider": "Example Pharmacy",
+        "provider": "Example Pharmacy #1234 1234",
         "insurer": "Example Pharmacy Benefits",
         "outcome": "complete",
         "billable_period": {
@@ -4549,7 +4549,7 @@
             "service": {
               "system": "http://hl7.org/fhir/sid/ndc",
               "code": "00000-1111-90",
-              "display": "Lisinopril 10 mg tablet, 90 days"
+              "display": "Prescription drug"
             },
             "serviced": "2026-11-12",
             "quantity": {

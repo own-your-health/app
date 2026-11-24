@@ -15,6 +15,7 @@ import { eventRoute, eventWhen } from './eventView';
 import { callsSummary, type OpenBill, type PaidBill } from './money';
 import { forBill, gather, head, keptNote, money, num, privateChip, visitText, type Mine, type MoneyRoute } from './moneyParts';
 import { eventsPage, overviewPage } from './moneyYear';
+import { called } from '../model/people';
 
 const billWhen = (b: OpenBill | PaidBill) => {
   const d = b.bill.doc.statement?.statement_date ?? b.bill.date;
@@ -35,7 +36,7 @@ function openRow(ctx: Ctx, m: Mine<OpenBill>, today: string, named: boolean): HT
   return row({
     route: e ? eventRoute(m.person.id, e.event.id) : { name: 'item', person: m.person.id, id: b.bill.doc.id },
     title: b.bill.provider ?? 'A provider',
-    meta: [named ? m.person.name : null, e ? visitText(e) : null, billWhen(b)].filter(Boolean).join(' · '),
+    meta: [named ? called(m.person) : null, e ? visitText(e) : null, billWhen(b)].filter(Boolean).join(' · '),
     aside: num(b.cents),
     extra: h(
       'div',
@@ -84,7 +85,7 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
           row({
             route: callsRoute(m.item.bill.doc.id),
             title: m.item.bill.provider ?? 'A provider',
-            meta: [named ? m.person.name : null, m.item.event ? visitText(m.item.event) : null, `asks ${money(m.item.cents)}; ${saysText(m.item)}`].filter(Boolean).join(' · '),
+            meta: [named ? called(m.person) : null, m.item.event ? visitText(m.item.event) : null, `asks ${money(m.item.cents)}; ${saysText(m.item)}`].filter(Boolean).join(' · '),
             aside: [privateChip(m.item.private), num(m.item.cents)],
           }),
         ),
@@ -99,7 +100,7 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
           row({
             route: eventRoute(m.person.id, m.item.event.event.id),
             title: m.item.provider,
-            meta: [named ? m.person.name : null, visitText(m.item.event)].filter(Boolean).join(' · '),
+            meta: [named ? called(m.person) : null, visitText(m.item.event)].filter(Boolean).join(' · '),
             aside: [privateChip(m.item.private), num(m.item.cents)],
           }),
         ),
@@ -114,7 +115,7 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
           row({
             route: m.item.event ? eventRoute(m.person.id, m.item.event.event.id) : { name: 'item', person: m.person.id, id: m.item.bill.doc.id },
             title: m.item.bill.provider ?? 'A provider',
-            meta: [named ? m.person.name : null, m.item.event ? visitText(m.item.event) : billWhen(m.item), `receipt ${dateText(m.item.bill.receipt!.date)}`].filter(Boolean).join(' · '),
+            meta: [named ? called(m.person) : null, m.item.event ? visitText(m.item.event) : billWhen(m.item), `receipt ${dateText(m.item.bill.receipt!.date)}`].filter(Boolean).join(' · '),
             aside: [privateChip(m.item.private), m.item.cents !== undefined ? num(m.item.cents) : null],
           }),
         ),
@@ -162,7 +163,7 @@ function callCard(ctx: Ctx, m: Mine<OpenBill>, named: boolean): HTMLElement {
     over !== undefined && over > 0 ? h('p', { class: 'call-number' }, num(over), h('span', null, ' may not be owed')) : null,
     b.claimSays === undefined ? h('p', { class: 'small' }, 'If it went through insurance, its claim may not be in these records yet. If it didn’t, it may not be an insurance bill.') : null,
     kv([
-      ['Whose', named ? m.person.name : null],
+      ['Whose', named ? called(m.person) : null],
       ['Visit', e ? link(eventRoute(m.person.id, e.event.id), visitText(e)) : 'None in these records'],
       ['Statement', [dateText(s?.statement_date ?? b.bill.date), s?.account ? `account ${s.account}` : null, b.bill.due ? `${b.overdue ? 'was due' : 'due'} ${dateText(b.bill.due)}` : null].filter(Boolean).join(' · ')],
       ['The claims say', shares.length ? shares.map((c) => `${money(c.share!)} to ${c.provider}`).join(', ') : b.claimSays === undefined ? null : money(b.claimSays)],
@@ -205,7 +206,7 @@ function callsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
             row({
               route: m.item.event ? eventRoute(m.person.id, m.item.event.event.id) : { name: 'item', person: m.person.id, id: m.item.bill.doc.id },
               title: m.item.bill.provider ?? 'A provider',
-              meta: [named ? m.person.name : null, `The bill asks ${money(m.item.claimSays! - m.item.cents)} less than ${saysText(m.item)}. Ask for an itemized bill if you want to be sure.`].filter(Boolean).join(' · '),
+              meta: [named ? called(m.person) : null, `The bill asks ${money(m.item.claimSays! - m.item.cents)} less than ${saysText(m.item)}. Ask for an itemized bill if you want to be sure.`].filter(Boolean).join(' · '),
               aside: privateChip(m.item.private),
             }),
             m.item.bill.doc.id,
@@ -221,7 +222,7 @@ function callsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
           row({
             route: eventRoute(person.id, x.event.event.id),
             title: `${x.provider ?? 'A provider'}, ${eventWhen(x.event.event)}`,
-            meta: [named ? person.name : null, `${x.insurer} left “${x.line.label}”${x.line.amounts.billed ? ` (${formatMoney(x.line.amounts.billed)})` : ''} out of the claim’s totals${x.share !== undefined ? `; you owe ${money(x.share)} for it all` : ''}.`].filter(Boolean).join(' · '),
+            meta: [named ? called(person) : null, `${x.insurer} left “${x.line.label}”${x.line.amounts.billed ? ` (${formatMoney(x.line.amounts.billed)})` : ''} out of the claim’s totals${x.share !== undefined ? `; you owe ${money(x.share)} for it all` : ''}.`].filter(Boolean).join(' · '),
             aside: privateChip(x.private),
           }),
         ),

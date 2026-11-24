@@ -118,14 +118,14 @@ test('with no account stored, a browser with two Google accounts asks once', asy
 test('an hour later the sign-in renews itself, as the same account, on the same screen', async ({ page }) => {
   await page.clock.install();
   await signIn(page);
-  await page.locator('.stand-name').getByRole('link', { name: 'Robin Example' }).click();
+  await page.locator('.stand-name').getByRole('link', { name: 'Robin' }).click();
   const lead = page.locator('main .lead');
-  await expect(lead).toHaveText('Where Robin Example stands: what is due, what is current, and what is worth a look.');
+  await expect(lead).toHaveText('Where Robin stands: what is due, what is current, and what is worth a look.');
   const route = new URL(page.url()).hash;
   await page.clock.fastForward('01:00:00');
   await lookAgain(page);
   await expect(page).toHaveURL((u) => u.hash === route && google.signIns.length === 2);
-  await expect(lead).toHaveText('Where Robin Example stands: what is due, what is current, and what is worth a look.');
+  await expect(lead).toHaveText('Where Robin stands: what is due, what is current, and what is worth a look.');
   expect(google.signIns[1]).toMatchObject({ prompt: 'none', hint: USER.emailAddress });
   await expect(page.getByRole('button', { name: 'Sign in with Google' })).toHaveCount(0);
 });

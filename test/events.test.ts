@@ -75,7 +75,7 @@ describe('a portal visit', () => {
   it('joins the claims of its day, surely when a claim names its clinic, and takes what it recorded', () => {
     const [visit] = on('2026-04-10');
     expect(on('2026-04-10')).toHaveLength(1);
-    expect([visit!.title, visit!.visits.map((v) => [v.rule, v.confidence])]).toEqual(['Annual physical', [['E3n', 'sure']]]);
+    expect([visit!.title, visit!.what, visit!.visits.map((v) => [v.rule, v.confidence])]).toEqual(['Office visit', 'Annual physical', [['E3n', 'sure']]]);
     expect(providers(visit!)).toEqual([
       ['Example Clinic', 'office', 'C5', 'sure'],
       ['Example Lab', 'ancillary', 'C5j', 'likely'],
@@ -86,12 +86,12 @@ describe('a portal visit', () => {
 
   it('joins as likely when only the day ties it to a claim', () => {
     const [visit] = on('2026-04-20');
-    expect([visit!.title, visit!.visits[0]!.rule, visit!.visits[0]!.confidence, visit!.claims[0]!.provider]).toEqual(['Follow-up', 'E3', 'likely', 'A Sample']);
+    expect([visit!.title, visit!.what, visit!.visits[0]!.rule, visit!.visits[0]!.confidence, visit!.claims[0]!.provider]).toEqual(['Office visit', 'Follow-up', 'E3', 'likely', 'A Sample']);
   });
 
   it('stands alone when no claim is for it', () => {
     const [visit] = on('2026-04-25');
-    expect([visit!.title, visit!.kind, visit!.claims.length, visit!.visits[0]!.rule]).toEqual(['Video visit', 'office', 0, 'E0']);
+    expect([visit!.title, visit!.what, visit!.kind, visit!.claims.length, visit!.visits[0]!.rule]).toEqual(['Office visit', 'Video visit', 'office', 0, 'E0']);
     expect(eventMoney(visit!).share).toBeUndefined();
   });
 });

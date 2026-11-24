@@ -184,7 +184,7 @@ describe('medrec’s events as the app’s', () => {
 
   it('makes a portal stay with no claim a hospital stay', () => {
     const birth = events('Jamie Example').find((e) => e.visits.some((v) => v.record.display === 'Birth hospital stay'))!;
-    expect([birth.kind, birth.title, birth.place]).toEqual(['stay', 'Birth hospital stay', 'Example Health Birth Center']);
+    expect([birth.kind, birth.title, birth.what, birth.place]).toEqual(['stay', 'Hospital stay', 'Birth hospital stay', 'Example Health Birth Center']);
   });
 
   it('leaves out a member the index no longer has, names a kind it does not know by medrec’s title, and says why an unsure one is unsure', () => {
@@ -199,8 +199,8 @@ describe('medrec’s events as the app’s', () => {
     const file = parseMedrecEvents(fixture('events/odd.json'), ODD);
     file.papers.set('d_other', { person: 'p_bbbbbbbbbbbbbbbbbbbb', doc: { ...other, id: 'd_other' } });
     const [withVisit, papersOnly] = fromMedrec(file, index, household);
-    // The portal's own name for the visit comes first; medrec's title names a kind the app does not know.
-    expect([withVisit!.kind, withVisit!.title, withVisit!.place, withVisit!.visits.length, withVisit!.recorded.length]).toEqual(['service', visit.display, 'Example Clinic', 1, 0]);
+    // medrec's title names a kind the app does not know; the portal's name for the visit says what it was.
+    expect([withVisit!.kind, withVisit!.title, withVisit!.what, withVisit!.place, withVisit!.visits.length, withVisit!.recorded.length]).toEqual(['service', 'Video visit', visit.display, 'Example Clinic', 1, 0]);
     expect(withVisit!.papers.map((p) => [p.doc.id, p.person])).toEqual(expect.arrayContaining([['d_known', undefined], ['d_other', 'p_bbbbbbbbbbbbbbbbbbbb']]));
     expect(withVisit!.doubt).toBe('It could be part of any of 2 other visits');
     expect(ruleText(withVisit!.papers.find((p) => p.doc.id === 'd_known')!.rule)).toBe('medrec’s rule D9');
@@ -213,16 +213,36 @@ describe('naming an event', () => {
   const blank = (kind: CareEvent['kind']): CareEvent => ({ id: 'x', kind, start: '2026-01-01', end: '2026-01-01', title: '', claims: [], visits: [], recorded: [], papers: [] });
   const medication = () => sam().records.find((r): r is MedRecord => r.kind === 'medication' && !!r.display)!;
 
-  it('names a fill or a vaccine known only from the portal for what it was, and one with a claim from the claim', () => {
+  it('heads a visit with its kind, says what it was in plain words, and keeps a billing descriptor for Details', () => {
+    const visit = events('Robin Example').find((e) => e.start === '2026-11-18')!;
+    expect([visit.title, visit.what, visit.place, visit.descriptors]).toEqual(['Office visit', 'Blood pressure follow-up', 'Example Health Main Clinic', ['OFFICE VISIT EST PATIENT LEVEL 3']]);
+  });
+
+  it('never makes a portal platform’s name a place', () => {
+    const visit = structuredClone(events('Robin Example').find((e) => e.start === '2026-11-18')!);
+    visit.place = 'athenahealth (all practices)';
+    nameEvent(visit, household, id('Robin Example'));
+    expect(visit.place).toBe('Example Health Main Clinic');
+  });
+
+  it('names a fill for the pharmacy’s record of the drug, never a claim’s word for any drug, at its store with its number once', () => {
+    const fill = events('Robin Example').find((e) => e.kind === 'fill' && e.start === '2026-11-12')!;
+    expect([fill.title, fill.what, fill.place, fill.claims[0]!.provider]).toEqual(['Lisinopril 10 mg tablet', undefined, 'Example Pharmacy #1234', 'Example Pharmacy #1234']);
+    // A claim that says only "Prescription drug", with no record of the drug.
+    const claimOnly = { ...blank('fill'), claims: fill.claims };
+    nameEvent(claimOnly, household, id('Robin Example'));
+    expect(claimOnly.title).toBe('Pharmacy fill');
+    // A drug a pharmacy names in capitals.
+    const capitals = { ...blank('fill'), what: 'SERTRALINE 50 MG TABLET' };
+    nameEvent(capitals, household, id('Sam Example'));
+    expect(capitals.title).toBe('Sertraline 50 mg tablet');
+  });
+
+  it('names a fill or a vaccine known only from the portal for what it was', () => {
     const fill = blank('fill');
     fill.recorded.push(medication());
     nameEvent(fill, household, id('Sam Example'));
     expect(fill.title).toBe(medication().display);
-
-    const claimed = events('Robin Example').find((e) => e.kind === 'fill' && e.claims.length)!;
-    const again = { ...blank('fill'), claims: claimed.claims, recorded: [medication()] };
-    nameEvent(again, household, id('Robin Example'));
-    expect(again.title).toBe(claimed.title);
   });
 
   it('names a day of several doses for how many, and one dose for what it was', () => {

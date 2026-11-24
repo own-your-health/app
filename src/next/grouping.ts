@@ -6,7 +6,7 @@
 // its day; D2: a paper joins by provider and date). When medrec writes
 // events, load.ts reads those instead and this file is deleted.
 
-import { claimCategory, claimVisitId, countedLines, isPharmacyClaim } from '../model/claims';
+import { claimCategory, claimProvider, claimVisitId, countedLines, isPharmacyClaim } from '../model/claims';
 import { sameProvider } from '../model/providers';
 import { day, decimalCents, isWithdrawn, organizationName, sortByDateDesc, str } from '../model/records';
 import type { Household, MedRecord, PersonIndex } from '../model/types';
@@ -41,7 +41,7 @@ function period(r: MedRecord): { start?: string; end?: string } {
 function classify(r: MedRecord): Classified | undefined {
   const { start, end } = period(r);
   if (!start || !end) return undefined;
-  const base = { record: r, start, end, provider: str(r.fields.provider) };
+  const base = { record: r, start, end, provider: claimProvider(r) };
   const type = (str(r.fields.type) ?? r.code?.code ?? '').toLowerCase();
   const lines = countedLines(r);
   const category = claimCategory(r);

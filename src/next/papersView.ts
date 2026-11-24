@@ -11,6 +11,7 @@ import { href, type Route } from '../ui/router';
 import { yearList } from '../ui/views/person';
 import { eventRoute, eventWhen, headline } from './eventView';
 import { householdPapers, papersOf, type Paper, type PaperHow } from './papers';
+import { called } from '../model/people';
 
 type Show = 'all' | 'with' | 'none';
 
@@ -23,8 +24,8 @@ const HOW: Record<PaperHow, string> = {
 
 /** Where a paper belongs, in a line: its visit as a link, or why it has none. */
 function placeLine(ctx: Ctx, p: Paper): HTMLElement {
-  const name = (id: string) => ctx.store.person(id)?.name ?? 'someone else';
-  const visit = (e: NonNullable<Paper['with']>['event'], person: string) => link(eventRoute(person, e.id), `${headline(e).title}, ${eventWhen(e)}`);
+  const name = (id: string) => (ctx.store.person(id) ? called(ctx.store.person(id)!) : 'someone else');
+  const visit = (e: NonNullable<Paper['with']>['event'], person: string) => link(eventRoute(person, e.id), `${[headline(e).title, e.place].filter(Boolean).join(' at ')}, ${eventWhen(e)}`);
   if (p.with) {
     const w = p.with;
     return h(
@@ -51,7 +52,7 @@ function paperRow(ctx: Ctx, p: Paper, everyone: boolean): HTMLElement {
   return row({
     route: { name: 'item', person: p.person, id: p.doc.id },
     title: documentTitle(p.doc),
-    meta: [docTypeLabel(p.doc.doc_type), dateText(p.doc.date), everyone ? ctx.store.person(p.person)?.name : null, p.doc.organization, p.doc.pages ? count(p.doc.pages, 'page') : null].filter(Boolean).join(' · '),
+    meta: [docTypeLabel(p.doc.doc_type), dateText(p.doc.date), everyone && ctx.store.person(p.person) ? called(ctx.store.person(p.person)!) : null, p.doc.organization, p.doc.pages ? count(p.doc.pages, 'page') : null].filter(Boolean).join(' · '),
     aside: p.privateArea ? chip('Private', 'muted') : undefined,
     extra: h('div', null, placeLine(ctx, p), h('div', { class: 'row-actions' }, driveLink(ctx, p.doc.path))),
   });
@@ -65,11 +66,11 @@ function head(ctx: Ctx, who: string | undefined): HTMLElement[] {
     [{ id: '', name: 'Everyone' }, ...ctx.store.household.people].map((p) => {
       const on = p.id ? who === p.id : !who;
       const route: Route = { name: 'papers', ...(p.id ? { who: p.id } : {}) };
-      return h('a', { class: ['filter', on ? 'filter-on' : null], href: href(route), 'aria-current': on ? 'page' : false }, p.name);
+      return h('a', { class: ['filter', on ? 'filter-on' : null], href: href(route), 'aria-current': on ? 'page' : false }, called(p));
     }),
   );
   return [
-    h('h1', null, person ? `${person.name}’s papers` : 'Papers'),
+    h('h1', null, person ? `${called(person)}’s papers` : 'Papers'),
     h('p', { class: 'lead' }, person ? 'Each paper of theirs in the Drive folder, with the visit it belongs to.' : 'Every paper in the Drive folder, with the visit it belongs to.'),
     whose,
   ];
@@ -108,7 +109,7 @@ export function papersView(ctx: Ctx, route: Extract<Route, { name: 'papers' }>):
 
   const notes = [
     loading ? h('p', { class: 'small muted' }, `Loading ${count(loading, 'person’s', 'people’s')} papers…`) : null,
-    ...unreadable.map((p) => h('p', { class: 'small muted' }, `${p.name}’s records could not be read.`)),
+    ...unreadable.map((p) => h('p', { class: 'small muted' }, `${called(p)}’s records could not be read.`)),
     hidden
       ? h(
           'div',

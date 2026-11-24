@@ -14,6 +14,7 @@ import { button, card, chip, command, empty, flagChip, link, row, type Ctx } fro
 import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, localDay, yearOf } from '../format';
 import { SECTION_LABELS, type ListSection, type Route } from '../router';
+import { called } from '../../model/people';
 
 const PAGE = 200;
 
@@ -333,7 +334,7 @@ export function personView(ctx: Ctx, personId: string, section: ListSection, sub
   if (!person) return card({}, empty('This person is not in the records folder.', link({ name: 'home' }, 'Back to everyone')));
   const err = ctx.store.indexErrors.get(person.id);
   const idx = ctx.store.index(person.id);
-  if (err || !idx) return card({ title: person.name }, empty(err ?? 'Loading…'));
+  if (err || !idx) return card({ title: called(person) }, empty(err ?? 'Loading…'));
   let body: Child;
   switch (section) {
     case 'results':
@@ -358,8 +359,8 @@ export function personView(ctx: Ctx, personId: string, section: ListSection, sub
   return h(
     'div',
     { class: 'stack person' },
-    h('p', null, link({ name: 'health', who: person.id }, icon('back', 16), ` ${person.name}’s health`)),
-    h('h1', null, `${person.name}’s ${SECTION_LABELS[section].toLowerCase()}`),
+    h('p', null, link({ name: 'health', who: person.id }, icon('back', 16), ` ${called(person)}’s health`)),
+    h('h1', null, `${called(person)}’s ${SECTION_LABELS[section].toLowerCase()}`),
     body,
   );
 }

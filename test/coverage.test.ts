@@ -26,7 +26,7 @@ describe('a person’s coverage over time', () => {
 
   it('marks a coverage that started the day someone in the household was born, as a date, not a reason', () => {
     expect(segments.map((s) => s.born?.name)).toEqual(['Jamie Example', undefined, undefined, undefined]);
-    expect(birthWords(segments[0]!, dateText)).toBe('Changed on Nov 8, 2026, the day Jamie Example was born.');
+    expect(birthWords(segments[0]!, dateText)).toBe('Changed on Nov 8, 2026, the day Jamie was born.');
     expect(segments.slice(1).map((s) => birthWords(s, dateText))).toEqual([undefined, undefined, undefined]);
   });
 
@@ -35,13 +35,13 @@ describe('a person’s coverage over time', () => {
   });
 
   it('gives the birthday clause on its own, for a sentence of another shape', () => {
-    expect(segments.map(bornClause)).toEqual(['the day Jamie Example was born', undefined, undefined, undefined]);
+    expect(segments.map(bornClause)).toEqual(['the day Jamie was born', undefined, undefined, undefined]);
   });
 
   it('says a newborn’s own coverage started the day they were born', () => {
     const [own] = history('jamie', jamie.id);
     expect([own!.first, own!.relationship, isChange(own!)]).toEqual([true, 'child', true]);
-    expect(birthWords(own!, dateText)).toBe('Started on Nov 8, 2026, the day Jamie Example was born.');
+    expect(birthWords(own!, dateText)).toBe('Started on Nov 8, 2026, the day Jamie was born.');
   });
 });
 
