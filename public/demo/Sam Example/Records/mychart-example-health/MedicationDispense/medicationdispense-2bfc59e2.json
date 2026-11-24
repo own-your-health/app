@@ -1,0 +1,20 @@
+{
+  "resourceType": "MedicationDispense",
+  "id": "medicationdispense-2bfc59e2",
+  "meta": {
+    "lastUpdated": "2026-11-22T08:00:00Z"
+  },
+  "status": "completed",
+  "medicationCodeableConcept": {
+    "text": "Sertraline 50 mg tablet"
+  },
+  "whenHandedOver": "2026-10-28",
+  "quantity": {
+    "value": 30,
+    "unit": "tablet"
+  },
+  "daysSupply": {
+    "value": 30,
+    "unit": "days"
+  }
+}

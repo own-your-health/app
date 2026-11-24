@@ -18,6 +18,8 @@ import type { MedRecord } from './types';
 export const SCHEDULE_SOURCE = {
   title: 'CDC Child and Adolescent Immunization Schedule by Age, 2025',
   date: '2025-07-02',
+  /** Why this version: a court stayed CDC's January 2026 changes on this day, and CDC restored this one. The stay can be appealed. */
+  stayed: '2026-03-16',
   url: 'https://www.cdc.gov/vaccines/hcp/imz-schedules/child-adolescent-age-compliant.html',
 } as const;
 

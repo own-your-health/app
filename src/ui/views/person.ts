@@ -17,6 +17,7 @@ import {
   type TimelineEntry,
 } from '../../model/records';
 import { visitKind, visitTimeline, type Visit } from '../../model/visits';
+import { personNeedsCard } from '../../next/homeView';
 import { eventsCard } from '../../next/eventView';
 import { birthWords, coverageHistory, isChange, type CoverageSegment } from '../../model/coverage';
 import { claimTitle, isPharmacyClaim } from '../../model/claims';
@@ -156,7 +157,7 @@ function scheduleNote(): HTMLElement {
     { class: 'small muted schedule-note' },
     'By the ',
     h('a', { href: SCHEDULE_SOURCE.url, target: '_blank', rel: 'noopener noreferrer' }, 'CDC child and adolescent immunization schedule'),
-    ` of ${dateText(SCHEDULE_SOURCE.date)}, routine doses only. Doses given elsewhere may not be in these records, and the schedule’s catch-up timing and exceptions are not applied here.`,
+    ` of ${dateText(SCHEDULE_SOURCE.date)}, routine doses only. CDC restored this version after a court stayed its January 2026 changes on ${dateText(SCHEDULE_SOURCE.stayed)}; the stay can be appealed. Doses given elsewhere may not be in these records, and the schedule’s catch-up timing and exceptions are not applied here.`,
   );
 }
 
@@ -313,7 +314,8 @@ function overviewSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElemen
 
   // The redesign leads with what happened (?next).
   const events = ctx.next ? eventsCard(ctx, person.id, idx) : null;
-  return h('div', { class: 'overview' }, events, newCard, resultsCard, conditionsCard, medsCard, allergiesCard, immunizationsCard, visitsCard);
+  const needs = ctx.next ? personNeedsCard(ctx, person, idx) : null;
+  return h('div', { class: 'overview' }, needs, events, newCard, resultsCard, conditionsCard, medsCard, allergiesCard, immunizationsCard, visitsCard);
 }
 
 /** Visits or every record: the two ways to read the timeline. */

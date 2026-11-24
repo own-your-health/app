@@ -6,7 +6,7 @@ import { latestAnswered } from '../../model/sources';
 import { h, icon } from '../dom';
 import { card, empty, link, refreshControl, row, type Ctx } from '../components';
 import { count, relative } from '../format';
-import { recentCard } from '../../next/calendarView';
+import { nextHome } from '../../next/homeView';
 import { costsGlance } from './costs';
 import { macLine, requestAnswer, signInNotice } from './sources';
 
@@ -85,5 +85,7 @@ export function homeView(ctx: Ctx): HTMLElement {
       )
     : null;
 
-  return h('div', { class: 'stack' }, h('h1', { class: 'sr-only' }, 'Own Your Health'), peopleCard, ctx.next ? recentCard(ctx) : null, signInNotice(views), searchForm, costsGlance(ctx), freshness);
+  // The redesign (?next): what needs you, where everyone stands and what happened recently lead.
+  if (ctx.next) return h('div', { class: 'stack' }, h('h1', { class: 'sr-only' }, 'Own Your Health'), ...nextHome(ctx, signInNotice(views)), searchForm, costsGlance(ctx), freshness);
+  return h('div', { class: 'stack' }, h('h1', { class: 'sr-only' }, 'Own Your Health'), peopleCard, signInNotice(views), searchForm, costsGlance(ctx), freshness);
 }

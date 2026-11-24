@@ -2266,3 +2266,46 @@ a.cal-day:hover .cal-date {
   margin: 8px 0 0;
   color: var(--ink-soft);
 }
+
+/* ---- Home (?next): what needs you, and where everyone stands ---- */
+
+.need-kind {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.need-attention {
+  color: var(--attention-text);
+}
+
+.need-soon {
+  color: var(--muted);
+}
+
+.need .row-aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.stand + .stand {
+  border-top: 1px solid var(--line);
+  margin-top: 12px;
+  padding-top: 4px;
+}
+
+.stand > .small {
+  margin: 0 0 4px;
+}
+
+/* Two columns even on a phone: a short label beside its line. */
+.stand .kv-row {
+  grid-template-columns: 4.5em 1fr;
+  gap: 12px;
+  padding: 2px 0;
+  border-top: 0;
+}

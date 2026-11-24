@@ -3513,6 +3513,124 @@
       ],
       "private": true,
       "private_area": "mental_health"
+    },
+    {
+      "id": "r_x7kgkq2xdb3nnofipq3r",
+      "kind": "medication",
+      "key": "medication|vitamin d3 2,000 unit capsule|2026-10-29",
+      "date": "2026-10-29",
+      "display": "Vitamin D3 2,000 unit capsule",
+      "status": "completed",
+      "fields": {
+        "when": "2026-10-29",
+        "dosage": "Take 1 capsule by mouth once a day",
+        "quantity": "30 capsule",
+        "days_supply": 30,
+        "pharmacy": "Example Pharmacy",
+        "prescriber": "Dr. Casey Placeholder",
+        "source": "dispense"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "MedicationDispense",
+            "id": "medicationdispense-6ca33ae4",
+            "last_updated": "2026-11-22T08:00:00Z"
+          },
+          "fetched_at": "2026-11-22T14:59:00Z",
+          "filed_at": "2026-11-22T14:59:00Z",
+          "raw_path": "Sam Example/Records/mychart-example-health/MedicationDispense/medicationdispense-6ca33ae4.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ]
+    },
+    {
+      "id": "r_lb4q27vbooxofbabuls4",
+      "kind": "medication",
+      "key": "medication|sertraline 50 mg tablet|2026-10-27",
+      "date": "2026-10-27",
+      "display": "Sertraline 50 mg tablet",
+      "status": "active",
+      "fields": {
+        "when": "2026-10-27",
+        "dosage": "Take 1 tablet by mouth once a day",
+        "prescriber": "Dr. Morgan Placeholder",
+        "source": "request"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "MedicationRequest",
+            "id": "medicationrequest-a3ce81f0",
+            "last_updated": "2026-11-22T08:00:00Z"
+          },
+          "fetched_at": "2026-11-22T14:59:00Z",
+          "filed_at": "2026-11-22T14:59:00Z",
+          "raw_path": "Sam Example/Records/mychart-example-health/MedicationRequest/medicationrequest-a3ce81f0.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ],
+      "private": true,
+      "private_area": "mental_health"
+    },
+    {
+      "id": "r_4dy25xkew72toq7h45n5",
+      "kind": "medication",
+      "key": "medication|sertraline 50 mg tablet|2026-10-28",
+      "date": "2026-10-28",
+      "display": "Sertraline 50 mg tablet",
+      "status": "completed",
+      "fields": {
+        "when": "2026-10-28",
+        "dosage": "Take 1 tablet by mouth once a day",
+        "quantity": "30 tablet",
+        "days_supply": 30,
+        "pharmacy": "Example Pharmacy",
+        "prescriber": "Dr. Morgan Placeholder",
+        "source": "dispense"
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "MedicationDispense",
+            "id": "medicationdispense-2bfc59e2",
+            "last_updated": "2026-11-22T08:00:00Z"
+          },
+          "fetched_at": "2026-11-22T14:59:00Z",
+          "filed_at": "2026-11-22T14:59:00Z",
+          "raw_path": "Sam Example/Records/mychart-example-health/MedicationDispense/medicationdispense-2bfc59e2.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ],
+      "private": true,
+      "private_area": "mental_health"
     }
   ],
   "studies": [
