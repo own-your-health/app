@@ -11,6 +11,7 @@
 import { AMOUNT_LABELS, amountNames, asMoney, claimTotals, fromCents, SHARE_PARTS, str, toCents, type AmountName, type Money } from './records';
 import { isObject } from './parse';
 import type { Json, MedRecord } from './types';
+import { tidyName } from './words';
 
 export type LineAmounts = Partial<Record<AmountName, Money>>;
 
@@ -368,6 +369,11 @@ export function claimNotes(r: MedRecord): string[] {
   return texts(r.fields.payer_notes);
 }
 
+/** Who billed a claim, as the screens name them (`tidyName`). */
+export function claimProvider(r: MedRecord): string | undefined {
+  return tidyName(str(r.fields.provider));
+}
+
 /** A pharmacy claim: its type says so, or every line is a drug the pharmacy filled. */
 export function isPharmacyClaim(r: MedRecord): boolean {
   if (/pharmacy/i.test(str(r.fields.type) ?? r.code?.code ?? '')) return true;
@@ -409,7 +415,7 @@ export function claimTitle(r: MedRecord): string {
     return `${first}, ${later[0]} and ${later.length - 1} more`;
   }
   const type = str(r.fields.type) ?? r.code?.display;
-  const provider = str(r.fields.provider);
+  const provider = claimProvider(r);
   let display = str(r.display);
   if (display && provider && display.endsWith(` · ${provider}`)) display = display.slice(0, -` · ${provider}`.length).trim() || undefined;
   if (display && display.toLowerCase() !== type?.toLowerCase()) return display;

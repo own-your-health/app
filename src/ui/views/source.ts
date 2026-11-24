@@ -6,6 +6,7 @@ import { h, icon } from '../dom';
 import { button, card, chip, empty, kv, link, refreshControl, type Ctx } from '../components';
 import { count, dateTime, duration, relative } from '../format';
 import { canRefresh, errorDetails, HEALTH_TEXT, sourceDetail } from './sources';
+import { called } from '../../model/people';
 
 const OUTCOME_TONE: Record<string, 'ok' | 'error' | 'attention' | 'muted' | 'running'> = {
   ok: 'ok',
@@ -90,7 +91,7 @@ export function sourceView(ctx: Ctx, sourceId: string): HTMLElement {
       'section',
       { class: 'card' },
       h('div', { class: 'card-head' }, h('h1', null, v.name), chip(label, tone)),
-      h('p', { class: 'muted' }, [v.person?.name, v.source.cli].filter(Boolean).join(' · ')),
+      h('p', { class: 'muted' }, [v.person ? called(v.person) : null, v.source.cli].filter(Boolean).join(' · ')),
       h('div', { class: 'source-lines' }, sourceDetail(ctx, v)),
       canRefresh(v) ? h('div', { class: 'glance-action' }, refreshControl(ctx, { source: v.source.id }, v.name, { primary: true })) : null,
     ),

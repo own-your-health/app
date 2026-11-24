@@ -17,6 +17,12 @@ export interface RecordsFolder {
   readonly id: string;
   readonly name: string;
   readText(path: string): Promise<string | null>;
+  /**
+   * The file's MD5 as the folder holds it (Drive's `md5Checksum`), which
+   * medrec's views.json records: null when there is no such file, undefined
+   * when the folder cannot say.
+   */
+  md5(path: string): Promise<string | null | undefined>;
   list(path: string): Promise<Entry[] | null>;
   /** A link that opens the file or folder in Drive's own viewer. */
   link(path: string): Promise<string | null>;
@@ -47,6 +53,9 @@ export const REQUESTS_DIR = '_requests';
 export class DriveFolder implements RecordsFolder {
   readonly kind = 'drive' as const;
   private listings = new Map<string, Promise<Map<string, DriveFile>>>();
+  /** Files read since they were listed, and Drive's MD5 of each, asked again after the read. */
+  private served = new Set<string>();
+  private reread = new Map<string, Promise<string | undefined>>();
 
   constructor(
     private readonly drive: Drive,
@@ -92,11 +101,34 @@ export class DriveFolder implements RecordsFolder {
     const f = await this.resolve(path);
     if (!f || f.mimeType === FOLDER_MIME) return null;
     try {
-      return await this.drive.text(f.id);
+      const text = await this.drive.text(f.id);
+      this.served.add(splitPath(path).join('/'));
+      return text;
     } catch (e) {
       if (e instanceof DriveError && e.status === 404) return null;
       throw e;
     }
+  }
+
+  /**
+   * A file read since it was listed may have changed in between, so its MD5
+   * is asked of Drive again, after the read: that one is of what was read or
+   * of a newer file, so a check against it never passes the wrong content.
+   */
+  async md5(path: string): Promise<string | null | undefined> {
+    const p = splitPath(path).join('/');
+    const f = await this.resolve(p);
+    if (!f || f.mimeType === FOLDER_MIME) return null;
+    if (!this.served.has(p)) return f.md5Checksum?.toLowerCase();
+    let m = this.reread.get(p);
+    if (!m) {
+      m = this.drive.get(f.id).then(
+        (x) => x.md5Checksum?.toLowerCase(),
+        () => undefined,
+      );
+      this.reread.set(p, m);
+    }
+    return m;
   }
 
   async list(path: string): Promise<Entry[] | null> {
@@ -132,9 +164,10 @@ export class DriveFolder implements RecordsFolder {
 
   forget(prefix: string): void {
     const p = splitPath(prefix).join('/');
-    for (const k of [...this.listings.keys()]) {
-      if (p === '' || k === p || k.startsWith(`${p}/`)) this.listings.delete(k);
-    }
+    const under = (k: string) => p === '' || k === p || k.startsWith(`${p}/`);
+    for (const k of [...this.listings.keys()]) if (under(k)) this.listings.delete(k);
+    for (const k of [...this.served]) if (under(k)) this.served.delete(k);
+    for (const k of [...this.reread.keys()]) if (under(k)) this.reread.delete(k);
   }
 }
 
@@ -163,10 +196,12 @@ export const LOAD_TIMES = new Set([
   'requested_at',
   'picked_up_at',
   'next_allowed_at',
+  // views.json: a person's last import.
+  'last_import',
 ]);
 
-/** The sample's keys for times that stay as written: times of care, and a source's own. */
-export const KEPT_TIMES = new Set(['start', 'end', 'issued', 'lastUpdated', 'last_updated']);
+/** The sample's keys for times that stay as written: times of care (an event's `times` among them), and a source's own. */
+export const KEPT_TIMES = new Set(['start', 'end', 'issued', 'lastUpdated', 'last_updated', 'times[]']);
 
 /**
  * The synthetic records folder shipped with the app (public/demo/), read
@@ -178,6 +213,7 @@ export class DemoFolder implements RecordsFolder {
   readonly id = 'demo';
   readonly name = 'Sample records';
   private files: Promise<Set<string>>;
+  private md5s: Promise<Map<string, string>>;
   private written = new Map<string, string>();
   private deleted = new Set<string>();
   private mine = new Set<string>();
@@ -189,14 +225,15 @@ export class DemoFolder implements RecordsFolder {
     private readonly fetchImpl: typeof fetch = (...a) => fetch(...a),
     now: Date = new Date(),
   ) {
-    this.files = this.fetchImpl(`${base}manifest.json`)
-      .then((r) => r.json() as Promise<{ files: string[]; anchor?: string }>)
-      .then((m) => {
-        // The sample was written at its anchor time; move its timestamps to
-        // now, so its loads look as recent as when it was written.
-        if (m.anchor) this.shiftMs = now.getTime() - Date.parse(m.anchor);
-        return new Set(m.files);
-      });
+    const manifest = this.fetchImpl(`${base}manifest.json`).then((r) => r.json() as Promise<{ files: string[]; md5?: Record<string, string>; anchor?: string }>);
+    this.files = manifest.then((m) => {
+      // The sample was written at its anchor time; move its timestamps to
+      // now, so its loads look as recent as when it was written.
+      if (m.anchor) this.shiftMs = now.getTime() - Date.parse(m.anchor);
+      return new Set(m.files);
+    });
+    // Each file's MD5 as written, before the shift, as Drive would report it.
+    this.md5s = manifest.then((m) => new Map(Object.entries(m.md5 ?? {})));
   }
 
   private shift(text: string): string {
@@ -224,6 +261,12 @@ export class DemoFolder implements RecordsFolder {
     if (!(await this.exists(p))) return null;
     const res = await this.fetchImpl(this.url(p));
     return res.ok ? this.shift(await res.text()) : null;
+  }
+
+  async md5(path: string): Promise<string | null | undefined> {
+    const p = splitPath(path).join('/');
+    if (!(await this.exists(p))) return null;
+    return this.written.has(p) ? undefined : (await this.md5s).get(p);
   }
 
   async list(path: string): Promise<Entry[] | null> {

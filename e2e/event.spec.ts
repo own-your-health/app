@@ -1,7 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// What happened, one page per visit, over the sample. Sam's night in the emergency room is five claims from four
-// providers, a bill and a discharge paper.
+// What happened, one page per visit, over the sample. Sam's night in the
+// emergency room is five claims from four providers, a bill and a discharge
+// paper.
 
 const SAM = 'p_wwezzed7kml67hnp6s7n';
 const ROBIN = 'p_xo4em46i7yj3hphlpajo';
@@ -10,21 +11,25 @@ const ROBIN = 'p_xo4em46i7yj3hphlpajo';
 async function openSam(page: Page) {
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
   await page.goto('./?demo');
-  await page.locator('.stand-name').getByRole('link', { name: 'Sam Example' }).click();
+  await page.locator('.stand-name').getByRole('link', { name: 'Sam' }).click();
   await expect(page).toHaveURL(new RegExp(`#/health\\?who=${SAM}$`));
 }
 
 async function openEmergency(page: Page) {
   await openSam(page);
   const happened = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^What happened$/ }) });
-  await expect(happened.locator('.row-title')).toHaveText(['Counseling session', 'Lab tests', 'Emergency room · overnight']);
+  // medrec makes a pharmacy fill an event of its own, from the pharmacy's record even without a claim.
+  await expect(happened.locator('.row-title')).toHaveText(['Vitamin D3 2,000 unit capsule · Example Pharmacy', 'Sertraline 50 mg tablet · Example Pharmacy', 'Office visit · Example Counseling']);
   // Sam's own page shows Sam's private visit, marked.
   await expect(happened.locator('.row', { hasText: 'Counseling session' }).locator('.chip')).toHaveText('Private');
-  const er = happened.locator('.row', { hasText: 'Emergency room · overnight' });
-  await expect(er.locator('.row-meta')).toHaveText('Sep 12–13, 2026 · Example General Hospital');
+  // The rest are in Sam's calendar.
+  await happened.getByRole('link', { name: 'All 7 in the calendar' }).click();
+  const er = page.locator('.cal-row', { hasText: 'Emergency room · overnight' });
+  await expect(er.locator('.row-title')).toHaveText('Emergency room · overnight · Example General Hospital');
+  await expect(er.locator('.row-meta')).toHaveText('Emergency visit, moderate severity and Chest X-ray, 2 views · to Sep 13, 2026');
   await expect(er.locator('.row-aside')).toHaveText('$346.40');
   await er.locator('a.row-main').click();
-  await expect(page).toHaveURL(new RegExp(`#/p/${SAM}/e/r_[a-z2-7]{20}$`));
+  await expect(page).toHaveURL(new RegExp(`#/p/${SAM}/e/e_[a-z2-7]{20}$`));
 }
 
 const card = (page: Page, title: string | RegExp) => page.locator('.card', { has: page.locator('.card-head h2', { hasText: title }) });
@@ -34,7 +39,7 @@ test('a visit’s page says what happened, what it cost and whether it is paid, 
   const head = page.locator('.event > section.card').first();
   await expect(head.locator('h1')).toHaveText('Emergency room · overnight');
   await expect(page.locator('h1')).toHaveCount(1);
-  await expect(head).toContainText('Sep 12–13, 2026 · Example General Hospital · Sam Example');
+  await expect(head).toContainText('Sep 12–13, 2026 · Example General Hospital · Sam');
   await expect(head.locator('.event-sources')).toHaveText(/Example Care Plan\s*5 claims\s*Drive\s*2 papers/);
   await expect(head).toContainText('You owe $346.40');
   await expect(head.locator('.event-settled')).toHaveText('$250.00 billed, due Oct 28, 2026 · $96.40 not billed yet');
@@ -104,13 +109,28 @@ test('a visit the portal recorded leads with the portal’s own words and result
   await expect(page.locator('main h1')).toHaveText('LDL cholesterol');
 });
 
+test('a visit its portal names by a billing descriptor leads with its kind, says its reason, and keeps the descriptor for Details', async ({ page }) => {
+  await openRobinVisit(page, '2026-11-18');
+  await expect(page.locator('.event h1')).toHaveText('Office visit');
+  await expect(page.locator('.event-what')).toHaveText('Blood pressure follow-up');
+  const happened = card(page, /^What happened$/);
+  await expect(happened.locator('.row-title')).toHaveText(['Blood pressure follow-up']);
+  await expect(happened.locator('.row-meta')).toHaveText('with Dr. Jordan Sample · Example Health Main Clinic');
+  // Nowhere but Details.
+  await expect(page.locator('.event > :not(details.tech)', { hasText: 'OFFICE VISIT EST PATIENT LEVEL 3' })).toHaveCount(0);
+  const details = page.locator('details.tech', { has: page.locator('summary', { hasText: 'Details' }) });
+  await details.locator('summary').click();
+  await expect(details.locator('.event-descriptors li')).toHaveText(['OFFICE VISIT EST PATIENT LEVEL 3']);
+});
+
 test('a bill with a receipt after it is paid, and a fill is paid at pickup', async ({ page }) => {
   await openRobinVisit(page, '2025-03-10');
   await expect(page.locator('.event-settled')).toHaveText('Paid');
   await expect(card(page, 'Bills and payments').locator('.row-meta')).toHaveText('$51.18 due by May 2, 2025 · paid, receipt Apr 20, 2025');
 
   await openRobinVisit(page, '2026-11-12');
-  await expect(page.locator('.event h1')).toHaveText('Lisinopril 10 mg tablet, 90 days');
+  // The fill is named for the pharmacy's record of the drug: the claim says only "Prescription drug".
+  await expect(page.locator('.event h1')).toHaveText('Lisinopril 10 mg tablet');
   await expect(page.locator('.event-settled')).toHaveText('A pharmacy takes your share when you pick up.');
   await expect(card(page, 'Bills and payments')).toHaveCount(0);
 });
@@ -131,7 +151,8 @@ test('an address naming any record of a visit opens the visit, under the visit�
   // The radiologist's claim, one of five in Sam's emergency room visit.
   await page.goto(`./?demo#/p/${SAM}/e/r_fbhlexithgaohaghqvwc`);
   await expect(page.locator('.event h1')).toHaveText('Emergency room · overnight');
-  await expect(page).toHaveURL(new RegExp(`#/p/${SAM}/e/r_se4qctpgoqorqqvlkebf$`));
+  // The visit's own address is medrec's event id.
+  await expect(page).toHaveURL(new RegExp(`#/p/${SAM}/e/e_ouknsy76ppd33msuv5du$`));
 });
 
 test('a link from when the redesign was behind ?next opens the same page, without ?next', async ({ page }) => {
@@ -145,4 +166,21 @@ test('a link from when the redesign was behind ?next opens the same page, withou
   // An address no visit has says so.
   await page.goto(`./?demo#/p/${SAM}/e/r_aaaaaaaaaaaaaaaaaaaa`);
   await expect(page.locator('main')).toContainText('This visit is not in these records.');
+});
+
+test('a visit says what medrec still expects for it, and that medrec grouped it', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
+  // Alex's well-child visit: the portal's record, and no claim from the plan yet.
+  await page.goto('./?demo#/p/p_bjpnvyvnmxv74q335tk4/e/r_jlaqcmc74llvhvsjt635');
+  await expect(page.locator('.event h1')).toHaveText('Office visit');
+  await expect(page.locator('.event-what')).toHaveText('Well child visit, 8 years');
+  await expect(page).toHaveURL(/#\/p\/p_bjpnvyvnmxv74q335tk4\/e\/e_[a-z2-7]{20}$/);
+  const tech = page.locator('details.tech', { has: page.locator('summary', { hasText: 'How this visit was put together' }) });
+  await tech.locator('summary').first().click();
+  await expect(tech.locator('.event-gap')).toHaveText('No insurer claim for this visit yet.');
+  await expect(tech).toContainText('medrec grouped these by its matching rules.');
+
+  // Settings says who grouped everyone's visits.
+  await page.goto('./?demo#/settings');
+  await expect(page.locator('dt', { hasText: 'Visits' }).locator('+ dd')).toHaveText('Grouped by medrec');
 });

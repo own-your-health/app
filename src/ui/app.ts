@@ -28,6 +28,7 @@ import { calendarView, hidePrivateEvents } from '../next/calendarView';
 import { moneyView } from '../next/moneyView';
 import { healthView, leaveOutPrivate } from '../next/healthView';
 import { eventView } from '../next/eventView';
+import { called } from '../model/people';
 
 /** What the app says when a renewal interrupted a write the person asked for. */
 const UNSENT_TEXT: Record<Unsent, string> = {
@@ -496,7 +497,7 @@ export class App {
         'div',
         { class: 'menu-list' },
         h('h3', { class: 'menu-sub' }, 'Documents'),
-        people.map((p) => item({ name: 'person', person: p.id, section: 'documents' }, p.name)),
+        people.map((p) => item({ name: 'person', person: p.id, section: 'documents' }, called(p))),
         h('h3', { class: 'menu-sub' }, 'This app'),
         item({ name: 'sources' }, 'Sources', alert ? 'A source needs attention' : undefined),
         item({ name: 'settings' }, 'Settings'),

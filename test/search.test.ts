@@ -174,7 +174,8 @@ describe('concepts', () => {
     const bills = find(everyone, 'bills').hits;
     expect(new Set(bills.map((x) => x.kind))).toEqual(new Set(['claim', 'document']));
     expect(new Set(bills.filter((x) => x.kind === 'document').map((x) => x.docType))).toEqual(new Set(['Bill', 'Explanation of benefits', 'Receipt']));
-    expect(find(everyone, 'office visit').hits.every((x) => x.kind === 'encounter' && x.title === 'Office visit')).toBe(true);
+    // Robin's November visit is named by its billing descriptor, which holds the words too.
+    expect(find(everyone, 'office visit').hits.every((x) => x.kind === 'encounter' && (x.title === 'Office visit' || x.title === 'OFFICE VISIT EST PATIENT LEVEL 3'))).toBe(true);
     expect(find(everyone, 'meds').hits.every((x) => x.kind === 'medication')).toBe(true);
   });
 

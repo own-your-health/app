@@ -20,6 +20,7 @@ import { button, card, empty, filterChips, row, type Ctx } from './components';
 import { h, type Child } from './dom';
 import { count, dateText } from './format';
 import { href, type Route } from './router';
+import { called } from '../model/people';
 
 const PAGE = 50;
 
@@ -137,7 +138,7 @@ export interface SearchOptions {
 export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
   const { people } = opts;
   const many = people.length > 1;
-  const names = new Map(people.map((p) => [p.id, p.name]));
+  const names = new Map(people.map((p) => [p.id, called(p)]));
   const input = h('input', {
     type: 'search',
     class: 'input',
@@ -185,7 +186,7 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
 
     if (keep !== 'who') {
       // The person chosen keeps their chip with no matches of their own, so the page still says whose search it is.
-      const options: [string, string][] = [['all', 'Everyone'], ...people.filter((p) => p.id === who || whos.includes(p.id)).map((p): [string, string] => [p.id, p.name])];
+      const options: [string, string][] = [['all', 'Everyone'], ...people.filter((p) => p.id === who || whos.includes(p.id)).map((p): [string, string] => [p.id, called(p)])];
       const pick = (v: string) => {
         who = v;
         address();

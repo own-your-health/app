@@ -4,12 +4,15 @@
 // event's shape, its kind in words, how sure it is, and what it cost from its
 // claims' totals. Who makes the events is load.ts's choice.
 
-import { CATEGORY_LABELS, claimAmounts, claimCategory, claimCents, type Category } from '../model/claims';
+import { CATEGORY_LABELS, claimAmounts, claimCategory, claimCents, claimTitle, type Category } from '../model/claims';
 import { sameProvider } from '../model/providers';
-import type { MedDocument, MedRecord } from '../model/types';
+import { organizationName, str } from '../model/records';
+import type { MedrecRule, Sureness } from '../model/events';
+import type { Household, MedDocument, MedRecord } from '../model/types';
+import { isDescriptor, placeName, plainWords } from '../model/words';
 
 export type EventKind = 'er' | 'stay' | 'outpatient' | 'series' | 'office' | 'service' | 'tests' | 'dental' | 'vaccine' | 'fill';
-export type Confidence = 'sure' | 'likely' | 'unsure';
+export type Confidence = Sureness;
 /** What a claim was for, in its event: a hospital's own claim, a doctor there, a lab or imaging, a doctor's office, other care. */
 export type ClaimRole = 'facility' | 'hospital' | 'ancillary' | 'office' | 'service' | 'pharmacy' | 'dental';
 
@@ -26,6 +29,8 @@ export interface EventPaper {
   doc: MedDocument;
   rule: Rule;
   confidence: Confidence;
+  /** Filed under another person (medrec's X2): their paper, in this person's event. */
+  person?: string;
 }
 
 export interface CareEvent {
@@ -46,6 +51,12 @@ export interface CareEvent {
   noFacility?: boolean;
   /** Why it is not as sure as the rest: other events of the day that could own a part of it. */
   doubt?: string;
+  /** What it was, in plain words: the portal's name for the visit or its reason, medrec's `what`, else the claims' services (`nameEvent`). */
+  what?: string;
+  /** The billing descriptors the records name it by ("OFC VISIT, NEW PT, MOD MDM"), shown only in Details. */
+  descriptors?: string[];
+  /** What medrec still expects for it: the doctors' claims, the hospital's claim, a claim or a bill. */
+  expected?: { what: string; why: string; since?: string }[];
 }
 
 /** The rules, in words a person can follow. */
@@ -68,8 +79,22 @@ export const RULES = {
   D3: 'The only visit that day; the paper’s practice is on no claim',
   D3a: 'The only visit that day, and the paper’s amount is this visit’s share',
   D3s: 'A bill from a provider of this visit, for exactly what its claim says you owe',
+  // medrec's rules (events.json, 0.9.0), where the app's had none.
+  E1: 'A call, message or order from the same practice within 3 days',
+  E5: 'A vaccine given the day of a vaccine claim',
+  D2b: 'The paper names a clinician of this visit',
+  D4: 'A note or summary from the portal’s visit, dated 0 to 3 days after it',
+  D5: 'A prescription filled at this pharmacy 0 to 1 day later',
+  X1: 'Care of a newborn during a parent’s hospital stay',
+  X2: 'A paper filed under someone else, dated before their birth',
+  N5: 'A clinician known to work at this practice',
 } as const;
-export type Rule = keyof typeof RULES;
+/** A rule's name, as the app or medrec wrote it. The app's own are checked by name; medrec's come only from its events file, and may be one the app does not know yet. */
+export type AppRule = keyof typeof RULES;
+export type Rule = AppRule | MedrecRule;
+
+/** A rule in words; one the app does not know yet is named as medrec's. */
+export const ruleText = (rule: Rule): string => (RULES as Record<string, string | undefined>)[rule] ?? `medrec’s rule ${rule}`;
 
 const CONFIDENCE_ORDER: Confidence[] = ['sure', 'likely', 'unsure'];
 const leastSure = (cs: Confidence[]): Confidence => CONFIDENCE_ORDER[Math.max(0, ...cs.map((c) => CONFIDENCE_ORDER.indexOf(c)))]!;
@@ -207,3 +232,63 @@ export const PRIVATE_AREAS: Record<string, string> = {
   substance_use: 'Substance use',
   household: 'Marked private',
 };
+
+/** How many vaccines a vaccine event gave: its doses from the portal, else one. */
+export function doseCount(e: CareEvent): number {
+  return Math.max(1, e.recorded.filter((r) => r.kind === 'immunization').length);
+}
+
+// A pharmacy claim's word for any drug.
+const ANY_DRUG = /^(prescription( drugs?)?|drugs?|pharmacy( claim| fill)?|rx|medications?|medicines?)$/i;
+
+/** A drug's name, in sentence case where a pharmacy gave it in capitals; never a claim's word for any drug. */
+function drugName(text: string | undefined): string | undefined {
+  if (!text) return undefined;
+  const name = isDescriptor(text) ? text[0]! + text.slice(1).toLowerCase() : text;
+  return ANY_DRUG.test(name.trim()) ? undefined : name;
+}
+
+/** "Emergency room visit" says no more than "Emergency room". */
+const sameWords = (a: string, b: string) => {
+  const words = (x: string) => x.toLowerCase().replace(/\bvisits?\b/g, '').replace(/\s+/g, ' ').trim();
+  return words(a) === words(b);
+};
+
+/**
+ * Its title, its place and what it was. The title is the kind in plain words
+ * ("Office visit"), or `title`, medrec's, for a kind the app does not know: a
+ * fill is named for its drug and a vaccine for its dose, or "2 vaccines" for
+ * a day of several, whose names hold commas ("Influenza, seasonal,
+ * injectable") that would muddle a list. `what` is the first of the portal's
+ * name for the visit, its reason, medrec's `what` and the claims' services
+ * that is in plain words; the billing descriptors among them go to
+ * `descriptors`, for Details. The place is the first of medrec's, the visit's
+ * and the claims' that names a place.
+ */
+export function nameEvent(e: CareEvent, household: Household, person: string, title?: string): void {
+  const v = e.visits[0]?.record;
+  const org = v?.provenance.map((p) => p.source.organization_id).filter((x): x is string => !!x).map((o) => organizationName(household, person, o))[0];
+  const places = [e.place, str(v?.fields.location), str(v?.fields.service_provider), org, e.claims.find((c) => c.role === 'office')?.provider, ...e.claims.map((c) => c.provider)];
+  e.place = places.map(placeName).find(Boolean);
+  const first = e.claims[0]?.record;
+  const claimSaid = first ? claimTitle(first) : undefined;
+  const said = [v?.display, str(v?.fields.reason), e.what, claimSaid].filter((x): x is string => !!x);
+  e.title = title ?? kindTitle(e, claimSaid);
+  // A fill or a vaccine says what it was in its title.
+  const what = e.kind === 'fill' || e.kind === 'vaccine' ? undefined : said.find((x) => !isDescriptor(x));
+  if (what && !sameWords(what, e.title)) e.what = what;
+  else delete e.what;
+  const descriptors = [...new Set(said.filter(isDescriptor))];
+  if (descriptors.length) e.descriptors = descriptors;
+  else delete e.descriptors;
+}
+
+function kindTitle(e: CareEvent, claimSaid: string | undefined): string {
+  if (e.kind === 'tests' && e.claims.length) {
+    const cats = new Set(e.claims.map((c) => claimCategory(c.record)));
+    return cats.size === 1 && cats.has('imaging') ? 'Imaging' : cats.size === 1 && cats.has('lab') ? 'Lab tests' : 'Tests';
+  }
+  if (e.kind === 'fill') return drugName(e.recorded.find((r) => r.kind === 'medication')?.display) ?? drugName(claimSaid) ?? drugName(e.what) ?? 'Pharmacy fill';
+  if (e.kind === 'vaccine') return doseCount(e) > 1 ? `${doseCount(e)} vaccines` : (plainWords(e.recorded.find((r) => r.kind === 'immunization')?.display) ?? plainWords(claimSaid) ?? 'Vaccine');
+  return KIND_TITLES[e.kind];
+}

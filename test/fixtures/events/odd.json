@@ -1,0 +1,38 @@
+{
+  "schema": "medrec-events/v1",
+  "person": "p_aaaaaaaaaaaaaaaaaaaa",
+  "events": [
+    { "id": "e_noday", "kind": "office", "start": "soon", "end": "2026-01-02", "title": "Office visit", "members": [] },
+    { "kind": "office", "start": "2026-01-02", "end": "2026-01-02", "title": "No id", "members": [] },
+    {
+      "id": "e_aaaaaaaaaaaaaaaaaaaa",
+      "kind": "teleconsult",
+      "start": "2026-01-05",
+      "end": "2026-01-05",
+      "title": "Video visit",
+      "what": "Follow-up",
+      "place": "Example Clinic",
+      "confidence": "unsure",
+      "status": "unsure",
+      "a_field_from_later": true,
+      "members": [
+        { "record": "r_known", "kind": "encounter", "role": "portal", "rule": "E3", "confidence": "unsure" },
+        { "record": "r_gone", "kind": "result", "role": "satellite", "rule": "E4", "confidence": "sure" },
+        { "record": "r_both", "document": "d_both", "kind": "bill", "role": "paper", "rule": "D2", "confidence": "sure" },
+        { "document": "d_known", "kind": "bill", "role": "paper", "rule": "D9", "confidence": "maybe" },
+        { "document": "d_other", "person": "p_bbbbbbbbbbbbbbbbbbbb", "kind": "visit_summary", "role": "paper", "rule": "X2", "confidence": "likely" }
+      ],
+      "expected": [{ "what": "claim", "why": "No claim filed yet.", "since": "2026-01-05" }, { "why": "no what" }],
+      "could_join": ["e_bbbbbbbbbbbbbbbbbbbb", "e_cccccccccccccccccccc", 7]
+    },
+    {
+      "id": "e_cccccccccccccccccccc",
+      "kind": "teleconsult",
+      "start": "2026-01-04",
+      "end": "2026-01-04",
+      "title": "Video visit",
+      "confidence": "sure",
+      "members": [{ "document": "d_paper", "kind": "visit_summary", "role": "paper", "rule": "D2", "confidence": "sure" }]
+    }
+  ]
+}

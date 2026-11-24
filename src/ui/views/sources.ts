@@ -8,6 +8,7 @@ import { card, chip, command, empty, link, refreshControl, row, type Ctx, type T
 import { clock, dateTime, duration, relative } from '../format';
 import type { ErrorInfo, Handled, Person } from '../../model/types';
 import type { Route } from '../router';
+import { called } from '../../model/people';
 
 export const HEALTH_TEXT: Record<SourceView['health'], [string, Tone]> = {
   needs_person: ['Needs a person', 'attention'],
@@ -215,7 +216,7 @@ function waitsFor(v: SourceView): string {
 export function signInWords(views: SourceView[]): { text: string; route: Route } | undefined {
   const needs = needsPerson(views);
   if (needs.length === 0) return undefined;
-  const label = (v: SourceView) => (v.person && needs.some((x) => x !== v && x.name === v.name) ? `${v.name} (${v.person.name})` : v.name);
+  const label = (v: SourceView) => (v.person && needs.some((x) => x !== v && x.name === v.name) ? `${v.name} (${called(v.person)})` : v.name);
   const what = needs.every((v) => waitsFor(v) === 'a sign-in') ? 'a sign-in' : needs.length === 1 ? waitsFor(needs[0]!) : 'a person';
   const text =
     needs.length === 1
@@ -258,7 +259,7 @@ export function requestAnswer(r: AnsweredRequest, names: { sources: SourceView[]
     'source' in scope
       ? ` for ${names.sources.find((v) => v.source.id === scope.source)?.name ?? 'a source'}`
       : 'person' in scope
-        ? ` for ${names.people.find((p) => p.id === scope.person)?.name ?? 'a person'}`
+        ? ` for ${(names.people.find((p) => p.id === scope.person) ? called(names.people.find((p) => p.id === scope.person)!) : 'a person')}`
         : '';
   const counts = new Map<string, number>();
   for (const s of handled.sources ?? []) {
@@ -284,7 +285,7 @@ export function sourceRow(ctx: Ctx, v: SourceView, opts: { showPerson: boolean }
   return row({
     route: { name: 'source', source: v.source.id },
     title: h('span', null, v.name),
-    meta: [opts.showPerson && v.person ? `${v.person.name} · ` : '', v.source.cli ?? v.source.kind],
+    meta: [opts.showPerson && v.person ? `${called(v.person)} · ` : '', v.source.cli ?? v.source.kind],
     aside: chip(label, tone),
     extra: h(
       'div',

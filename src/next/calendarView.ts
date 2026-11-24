@@ -10,8 +10,9 @@ import { formatMoney, fromCents } from '../model/records';
 import { count, dateText, localDay } from '../ui/format';
 import { href, type Route } from '../ui/router';
 import { barPart, householdEvents, inMonth, isMonth, listPage, markShape, monthOf, monthWeeks, onDay, shiftMonth, shown, type PersonEvent } from './calendar';
-import { PRIVATE_AREAS } from './event';
+import { doseCount, PRIVATE_AREAS } from './event';
 import { eventNumber, eventRoute, headline } from './eventView';
+import { called } from '../model/people';
 
 type CalendarRoute = Extract<Route, { name: 'calendar' }>;
 
@@ -39,11 +40,12 @@ const money = (cents: number) => formatMoney(fromCents(cents)) ?? '';
 function kindsText(events: PersonEvent[]): string {
   const n = (kinds: string[]) => events.filter((x) => kinds.includes(x.event.kind)).length;
   const visits = events.length - n(['tests', 'fill', 'vaccine']);
+  const doses = events.filter((x) => x.event.kind === 'vaccine').reduce((sum, x) => sum + doseCount(x.event), 0);
   return [
     visits ? count(visits, 'visit') : null,
     n(['tests']) ? count(n(['tests']), 'day of tests', 'days of tests') : null,
     n(['fill']) ? count(n(['fill']), 'pharmacy trip') : null,
-    n(['vaccine']) ? count(n(['vaccine']), 'vaccine') : null,
+    doses ? count(doses, 'vaccine') : null,
   ]
     .filter(Boolean)
     .join(', ');
@@ -55,7 +57,7 @@ function shareText(events: PersonEvent[]): string | null {
   return shares.length ? `your share ${money(shares.reduce((a, b) => a + b, 0))}` : null;
 }
 
-/** One event as a row: its day, whose it is, what it was and its one number. */
+/** One event as a row: its day, what it was and where ("Office visit · Example Pediatrics"), whose it is and its one number. */
 function eventRow(x: PersonEvent, opts: { person: boolean; month?: string }): HTMLElement {
   const e = x.event;
   const { title, kind } = headline(e);
@@ -75,8 +77,8 @@ function eventRow(x: PersonEvent, opts: { person: boolean; month?: string }): HT
         h(
           'div',
           { class: 'row-body' },
-          h('div', { class: 'row-title' }, title),
-          h('div', { class: 'row-meta' }, [opts.person ? x.person.name : null, kind, e.end > e.start ? `to ${dateText(e.end)}` : null, e.place].filter(Boolean).join(' · ')),
+          h('div', { class: 'row-title' }, [title, e.place].filter(Boolean).join(' · ')),
+          h('div', { class: 'row-meta' }, [opts.person ? called(x.person) : null, kind, e.what, e.end > e.start ? `to ${dateText(e.end)}` : null].filter(Boolean).join(' · ')),
         ),
         h('span', { class: 'row-chevron' }, icon('next', 18)),
       ),
@@ -111,7 +113,7 @@ function monthGrid(route: CalendarRoute, month: string, events: PersonEvent[], l
         );
         const classes = ['cal-day', day === today ? 'cal-today' : null, day === route.day ? 'cal-selected' : null];
         if (!those.length) return h('td', null, h('span', { class: classes }, date, laneEls));
-        const said = those.map((x) => `${lanes.length > 1 ? `${x.person.name}, ` : ''}${headline(x.event).title}`).join('; ');
+        const said = those.map((x) => `${lanes.length > 1 ? `${called(x.person)}, ` : ''}${headline(x.event).title}`).join('; ');
         return h(
           'td',
           null,
@@ -140,7 +142,7 @@ function legend(lanes: Person[], laneOf: Map<string, number>): HTMLElement {
           'p',
           { class: 'cal-keys' },
           h('span', { class: 'muted' }, 'Lanes, top to bottom:'),
-          lanes.map((p) => h('span', { class: ['cal-key', laneClass(laneOf.get(p.id)!)] }, h('span', { class: 'mark mark-dot', 'aria-hidden': 'true' }), p.name)),
+          lanes.map((p) => h('span', { class: ['cal-key', laneClass(laneOf.get(p.id)!)] }, h('span', { class: 'mark mark-dot', 'aria-hidden': 'true' }), called(p))),
         )
       : null,
   );
@@ -223,7 +225,7 @@ export function calendarView(ctx: Ctx, route: CalendarRoute): HTMLElement {
     { class: 'chips', role: 'group', 'aria-label': 'Whose calendar' },
     [{ id: '', name: 'Everyone' }, ...people].map((p) => {
       const on = p.id ? who === p.id : !who;
-      return h('a', { class: ['filter', on ? 'filter-on' : null], href: href({ name: 'calendar', ...(r.view ? { view: r.view } : { month: r.month }), ...(p.id ? { who: p.id } : {}) }), 'aria-current': on ? 'page' : false }, p.name);
+      return h('a', { class: ['filter', on ? 'filter-on' : null], href: href({ name: 'calendar', ...(r.view ? { view: r.view } : { month: r.month }), ...(p.id ? { who: p.id } : {}) }), 'aria-current': on ? 'page' : false }, called(p));
     }),
   );
 

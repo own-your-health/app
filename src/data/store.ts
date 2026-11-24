@@ -6,6 +6,7 @@ import { readJson, REQUESTS_DIR, type RecordsFolder } from '../folder';
 import { FolderError, parseAttempts, parseHousehold, parseIndex, parseRefused, parseRequest, parseStatus, parseText } from '../model/parse';
 import { buildRequest, requestFileName, sameScope } from '../model/requests';
 import { macState, sourceViews, type MacState, type SourceView } from '../model/sources';
+import { eventsView, parseMedrecEvents, type EventsView } from '../model/events';
 import type { AttemptLine, Household, Person, PersonIndex, PersonText, RefreshRequest, RefreshStatus, RefusedRequest, RequestScope } from '../model/types';
 
 export type StatusRead =
@@ -13,6 +14,19 @@ export type StatusRead =
   | { kind: 'newer_format'; format: number }
   | { kind: 'malformed' }
   | { kind: 'ok'; status: RefreshStatus };
+
+/**
+ * Why a person's visits are the app's own grouping although medrec's views
+ * name events for them. `behind`: written from other files than the folder
+ * holds now; `arriving`: the pass that wrote views.json is still uploading;
+ * `unchecked`: the folder gave no MD5 to compare.
+ */
+export interface EventsNote {
+  kind: 'behind' | 'arriving' | 'unchecked' | 'newer_format' | 'unreadable';
+  text: string;
+}
+
+const OWN = 'The app groups them itself.';
 
 export interface PendingRequest {
   file: string;
@@ -26,6 +40,10 @@ export class Store {
   status: StatusRead = { kind: 'missing' };
   indexes = new Map<string, PersonIndex>();
   indexErrors = new Map<string, string>();
+  /** views/views.json could not be read: every person's visits are the app's own grouping. */
+  viewsError: string | null = null;
+  /** Each person whose visits are the app's own grouping although medrec wrote events for them, and why. */
+  eventsNotes = new Map<string, EventsNote>();
   pending: PendingRequest[] = [];
   done: RefreshRequest[] = [];
   /** Requests medrec refused as invalid, which keep no scope. */
@@ -44,8 +62,19 @@ export class Store {
     const raw = await readJson(this.folder, 'household.json');
     if (raw === null) throw new FolderError('not_household', 'This folder has no household.json. Choose the records folder medrec writes.');
     this.household = parseHousehold(raw);
-    await Promise.all([this.loadIndexes(), this.loadRefreshState()]);
+    const [views] = await Promise.all([this.readViews(), this.loadIndexes(), this.loadRefreshState()]);
+    await this.loadEvents(views);
     this.loadedAt = Date.now();
+  }
+
+  /** medrec's views.json (0.8.0 and later). A folder without it, or one where it cannot be read, still loads. */
+  private async readViews(): Promise<unknown> {
+    try {
+      return await readJson(this.folder, 'views/views.json');
+    } catch (e) {
+      this.viewsError = `medrec’s views could not be read (${e instanceof Error ? e.message : 'unknown error'}). The app groups each person’s visits itself.`;
+      return null;
+    }
   }
 
   private async loadIndexes(): Promise<void> {
@@ -64,6 +93,64 @@ export class Store {
         }
       }),
     );
+  }
+
+  /**
+   * medrec's events (0.9.0 and later), attached to each index they were
+   * written from. Events written from other files than the folder holds now
+   * (an import whose views have not reached Drive yet, say) would leave the
+   * newer records out, so that person's visits stay the app's own grouping,
+   * and eventsNotes says why.
+   */
+  private async loadEvents(views: unknown): Promise<void> {
+    if (views === null) return;
+    const household = this.folder.md5('household.json');
+    await Promise.all(
+      this.household.people.map(async (p) => {
+        const index = this.indexes.get(p.id);
+        const view = eventsView(views, p.id);
+        if (!index || !view) return;
+        try {
+          const note = await this.freshness(p, view, household);
+          if (note) return void this.eventsNotes.set(p.id, note);
+          const raw = await readJson(this.folder, `views/${p.id}/${view.name}`);
+          if (raw === null) return void this.eventsNotes.set(p.id, { kind: 'arriving', text: `medrec is still writing the grouping of these visits. ${OWN}` });
+          index.events = parseMedrecEvents(raw, p.id);
+          this.eventsNotes.delete(p.id);
+        } catch (e) {
+          const newer = e instanceof FolderError && e.kind === 'newer_format';
+          this.eventsNotes.set(p.id, { kind: newer ? 'newer_format' : 'unreadable', text: `medrec’s grouping of these visits could not be read: ${e instanceof Error ? e.message : 'unknown error'} ${OWN}` });
+        }
+      }),
+    );
+    // Another person's paper in someone's events (X2) comes from that person's index.
+    for (const index of this.indexes.values()) {
+      for (const m of index.events?.events.flatMap((e) => e.members) ?? []) {
+        const doc = m.person && m.document ? this.indexes.get(m.person)?.documents.find((d) => d.id === m.document) : undefined;
+        if (doc) index.events!.papers.set(doc.id, { person: m.person!, doc });
+      }
+    }
+  }
+
+  /** Null when the folder holds the files medrec wrote a person's events from, and the events file it names; else why not. */
+  private async freshness(p: Person, view: EventsView, household: Promise<string | null | undefined>): Promise<EventsNote | null> {
+    const folderOf = (id: string) => this.household.people.find((x) => x.id === id)?.folder;
+    const read: [Promise<string | null | undefined>, string | null][] = [
+      [household, view.household],
+      [this.folder.md5(`${p.folder}/index.json`), view.index],
+      [this.folder.md5(`${p.folder}/text.json`), view.text],
+      [this.folder.md5(`${p.folder}/overrides.json`), view.overrides],
+    ];
+    for (const [id, l] of view.linked) {
+      const f = folderOf(id);
+      if (!f) return { kind: 'behind', text: `medrec’s grouping of these visits is older than the household. ${OWN}` };
+      read.push([this.folder.md5(`${f}/index.json`), l.index], [this.folder.md5(`${f}/text.json`), l.text]);
+    }
+    const [events, ...held] = await Promise.all([this.folder.md5(`views/${p.id}/${view.name}`), ...read.map(([m]) => m)]);
+    if (held.some((m) => m === undefined) || events === undefined) return { kind: 'unchecked', text: `medrec’s grouping of these visits could not be checked against their records. ${OWN}` };
+    if (held.some((m, i) => m !== read[i]![1])) return { kind: 'behind', text: `medrec’s grouping of these visits is older than their records. ${OWN} medrec writes it again after its next import or refresh.` };
+    if (events !== view.md5) return { kind: 'arriving', text: `medrec is still writing the grouping of these visits. ${OWN}` };
+    return null;
   }
 
   /** Reads `_status/status.json` and `_requests/` again. */

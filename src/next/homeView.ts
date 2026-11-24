@@ -17,6 +17,7 @@ import { recentCard } from './calendarView';
 import { eventRoute, eventWhen } from './eventView';
 import { openBills, type OpenBill } from './money';
 import { daysBetween, refillsDue, vaccineNeeds, type DoseVisit, type Refill, type VaccineNeeds } from './needs';
+import { called } from '../model/people';
 
 const money = (cents: number) => formatMoney(fromCents(cents)) ?? '';
 
@@ -51,7 +52,7 @@ function callRow(p: Person, b: OpenBill, own: boolean): HTMLElement {
   return needRow('Worth a call', 'attention', {
     route: { name: 'money', view: 'calls', bill: b.bill.doc.id, ...(own ? { who: p.id } : {}) },
     title: b.event ? visitText(b.event) : `Bill from ${b.bill.provider}`,
-    meta: [own ? null : p.name, `${b.bill.provider} asks ${money(b.cents)}; ${says}`, dueText(b)].filter(Boolean).join(' · '),
+    meta: [own ? null : called(p), `${b.bill.provider} asks ${money(b.cents)}; ${says}`, dueText(b)].filter(Boolean).join(' · '),
     aside: h('span', { class: 'num' }, money(b.cents)),
     ...(b.private ? { private: b.private } : {}),
   });
@@ -72,7 +73,7 @@ function payRows(p: Person, bills: OpenBill[], own: boolean): Dated[] {
       route: first.event ? eventRoute(p.id, first.event.event.id) : { name: 'item', person: p.id, id: first.bill.doc.id },
       title: first.event ? visitText(first.event) : `Bill from ${first.bill.provider}`,
       meta: [
-        own ? null : p.name,
+        own ? null : called(p),
         ...bs.map((b) => `${b.bill.provider} ${money(b.cents)}`),
         bs.length === 1 && first.verdict === 'matches' ? 'matches the claim' : null,
         dues[0] ? `${overdue ? 'was due' : 'due'} ${dateText(dues[0])}` : null,
@@ -94,7 +95,7 @@ export function vaccinesDueRow(p: Person, v: VaccineNeeds, own: boolean): HTMLEl
   return needRow(names.length > 1 ? 'Vaccines due' : 'Vaccine due', 'attention', {
     route: { name: 'person', person: p.id, section: 'immunizations' },
     title: names.length > 1 ? count(names.length, 'dose') : names[0]!,
-    meta: [...(own ? [] : [p.name]), ...(names.length > 1 ? [names.join(', '), 'the schedule places them by now, and these records don’t show them'] : ['the schedule places it by now, and these records don’t show it'])].join(' · '),
+    meta: [...(own ? [] : [called(p)]), ...(names.length > 1 ? [names.join(', '), 'the schedule places them by now, and these records don’t show them'] : ['the schedule places it by now, and these records don’t show it'])].join(' · '),
   });
 }
 
@@ -103,7 +104,7 @@ export function visitRow(p: Person, v: DoseVisit, own: boolean): HTMLElement {
   return needRow('Coming up', 'soon', {
     route: { name: 'person', person: p.id, section: 'immunizations' },
     title: one ? `${one.name}, dose ${one.next.dose}` : v.months !== undefined ? `${v.months}-month vaccines` : count(v.doses.length, 'vaccine dose'),
-    meta: [own ? null : p.name, `from ${dateText(v.from)}`, one ? one.next.when : v.doses.map((d) => d.name.replace(/ \(.*\)$/, '')).join(', ')].filter(Boolean).join(' · '),
+    meta: [own ? null : called(p), `from ${dateText(v.from)}`, one ? one.next.when : v.doses.map((d) => d.name.replace(/ \(.*\)$/, '')).join(', ')].filter(Boolean).join(' · '),
     aside: chip(inDays(v.days), 'muted'),
   });
 }
@@ -113,7 +114,7 @@ export function refillRow(p: Person, r: Refill, own: boolean): HTMLElement {
   return needRow('Refill', r.days < 0 ? 'attention' : 'soon', {
     route: { name: 'item', person: p.id, id: r.medicine.latest.id },
     title: r.medicine.name,
-    meta: [own ? null : p.name, `${r.days < 0 ? 'ran' : 'runs'} out about ${dateText(r.runsOut)}`, `${f.daysSupply} days filled ${dateText(f.date)}${f.pharmacy ? ` at ${f.pharmacy}` : ''}`].filter(Boolean).join(' · '),
+    meta: [own ? null : called(p), `${r.days < 0 ? 'ran' : 'runs'} out about ${dateText(r.runsOut)}`, `${f.daysSupply} days filled ${dateText(f.date)}${f.pharmacy ? ` at ${f.pharmacy}` : ''}`].filter(Boolean).join(' · '),
     aside: chip(inDays(r.days), r.days < 0 ? 'attention' : 'muted'),
     ...(r.private ? { private: r.private } : {}),
   });
@@ -143,7 +144,7 @@ interface Standing {
 /** One person's lines: open bills, what comes next, current medicines, the latest visit. */
 function standing(s: Standing, today: string, error?: string): HTMLElement {
   const p = s.person;
-  const head = h('h3', { class: 'card-sub stand-name' }, link({ name: 'health', who: p.id }, p.name));
+  const head = h('h3', { class: 'card-sub stand-name' }, link({ name: 'health', who: p.id }, called(p)));
   if (!s.idx) return h('div', { class: 'stand' }, head, h('p', { class: 'small muted' }, error ?? 'Loading…'));
   const calls = s.bills.filter((b) => b.verdict !== 'matches').length;
   const owed = s.bills.reduce((t, b) => t + b.cents, 0);
@@ -204,7 +205,8 @@ function personNeeds(p: Person, idx: PersonIndex, mine: PersonEvent[], today: st
     refills: refills.map((r) => refillRow(p, r, own)),
     soon: (vaccines?.visits ?? []).map((v) => visitRow(p, v, own)),
     kept: allBills.length - bills.length + allRefills.length - refills.length,
-    standing: { person: p, idx, latest: mine.find((x) => own || !x.private), bills, refills, ...(vaccines ? { vaccines } : {}) },
+    // A pharmacy fill is not a visit.
+    standing: { person: p, idx, latest: mine.find((x) => x.event.kind !== 'fill' && (own || !x.private)), bills, refills, ...(vaccines ? { vaccines } : {}) },
   };
 }
 

@@ -1,13 +1,25 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { DEMO, demoJson, filesUnder } from './helpers';
 
 describe('the sample folder', () => {
-  const manifest = demoJson<{ anchor: string; files: string[] }>('manifest.json');
+  const manifest = demoJson<{ anchor: string; files: string[]; md5: Record<string, string> }>('manifest.json');
 
   it('lists exactly the files it ships', () => {
     expect([...manifest.files].sort()).toEqual(filesUnder(DEMO).filter((f) => f !== 'manifest.json'));
+  });
+
+  it('gives each file’s MD5 as Drive would, which medrec’s views.json records for the files it read', () => {
+    expect(Object.keys(manifest.md5)).toEqual(manifest.files);
+    for (const f of manifest.files) expect(manifest.md5[f], f).toBe(createHash('md5').update(readFileSync(join(DEMO, f))).digest('hex'));
+    const views = demoJson<{ household: string; people: Record<string, { index: string; files: Record<string, string> }> }>('views/views.json');
+    expect(views.household).toBe(manifest.md5['household.json']);
+    for (const [pid, p] of Object.entries(views.people)) {
+      const events = manifest.files.find((f) => f.startsWith(`views/${pid}/events.`))!;
+      expect(manifest.md5[events]).toBe(p.files['events.json']);
+    }
   });
 
   it('holds well-formed JSON and NDJSON', () => {

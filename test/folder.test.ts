@@ -5,20 +5,23 @@ import { Drive, type DriveFile } from '../src/drive';
 import { DriveFolder, KEPT_TIMES, LOAD_TIMES, readJson, splitPath } from '../src/folder';
 import { DEMO, demoFolder, fixture, json } from './helpers';
 
-function driveWith(tree: Record<string, DriveFile[]>, contents: Record<string, string> = {}) {
+function driveWith(tree: Record<string, DriveFile[]>, contents: Record<string, string> = {}, meta: Record<string, DriveFile> = {}) {
   const calls: string[] = [];
+  const fields: string[] = [];
   const fetchImpl = (async (input: RequestInfo | URL, init: RequestInit = {}) => {
     const url = new URL(String(input));
+    if (url.searchParams.has('fields')) fields.push(url.searchParams.get('fields')!);
     calls.push(`${init.method ?? 'GET'} ${url.pathname}${url.searchParams.get('alt') ? '?alt=media' : ''}`);
     const parent = url.searchParams.get('q')?.match(/^'([^']+)' in parents/)?.[1];
     if (parent) return json({ files: tree[parent] ?? [] });
     const id = url.pathname.split('/').pop()!;
     if (init.method === 'DELETE') return new Response(null, { status: 204 });
     if (init.method === 'POST') return json(fixture('drive/created.json'));
+    if (!url.searchParams.get('alt') && id in meta) return json(meta[id]);
     if (id in contents) return new Response(contents[id]);
     return json({ error: { code: 404, message: 'File not found', errors: [{ reason: 'notFound' }] } }, 404);
   }) as typeof fetch;
-  return { drive: new Drive(() => 'tok', fetchImpl), calls };
+  return { drive: new Drive(() => 'tok', fetchImpl), calls, fields };
 }
 
 const ROOT: Record<string, DriveFile[]> = {
@@ -40,6 +43,30 @@ describe('DriveFolder', () => {
     expect(await readJson(folder, 'Robin Example/index.json')).toEqual({ ok: true });
     expect(await folder.readText('Robin Example/index.json')).toBe('{"ok":true}');
     expect(calls.filter((c) => c === 'GET /drive/v3/files')).toHaveLength(2);
+  });
+
+  it('gives a file’s MD5 from the listing it already read, null for a missing one, and nothing when Drive gave none', async () => {
+    const { drive, calls, fields } = driveWith(ROOT);
+    const folder = new DriveFolder(drive, 'root', 'x');
+    expect(await folder.md5('Robin Example/index.json')).toBe('5f2b8c1e9a7d4b3c6e0f1a2b3c4d5e6f');
+    expect(fields.every((f) => f.includes('md5Checksum'))).toBe(true);
+    expect(await folder.md5('household.json')).toBeUndefined();
+    expect(await folder.md5('Nobody/index.json')).toBeNull();
+    expect(await folder.md5('Robin Example')).toBeNull();
+    expect(calls.filter((c) => c === 'GET /drive/v3/files')).toHaveLength(2);
+  });
+
+  it('asks Drive for a read file’s MD5 again after the read, once, so an upload between the listing and the read is seen', async () => {
+    const listed = ROOT['folder-robin']![0]!;
+    const { drive, calls } = driveWith(ROOT, { 'file-robin-index': '{"rev":2}' }, { 'file-robin-index': { ...listed, md5Checksum: 'ABCDEF0123456789ABCDEF0123456789' } });
+    const folder = new DriveFolder(drive, 'root', 'x');
+    expect(await folder.readText('Robin Example/index.json')).toBe('{"rev":2}');
+    expect(await folder.md5('Robin Example/index.json')).toBe('abcdef0123456789abcdef0123456789');
+    expect(await folder.md5('Robin Example/index.json')).toBe('abcdef0123456789abcdef0123456789');
+    expect(calls.filter((c) => c === 'GET /drive/v3/files/file-robin-index')).toHaveLength(1);
+    // Forgotten, it is as listed again.
+    folder.forget('Robin Example');
+    expect(await folder.md5('Robin Example/index.json')).toBe('5f2b8c1e9a7d4b3c6e0f1a2b3c4d5e6f');
   });
 
   it('takes the newer of two files with one name', async () => {

@@ -482,7 +482,15 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
 - The browser tests serve the build on port 4317. `E2E_PORT=<port> npm run e2e`
   moves it when another project's preview holds that port.
 - The sample folder in `public/demo/` comes from `scripts/demo-folder.mjs`.
-  Run `node scripts/demo-folder.mjs` after changing it, and commit both.
+  Run `node scripts/demo-folder.mjs` after changing it, and commit both. It
+  ends by running medrec 0.9.1 or later over the folder to write its views
+  (`MEDREC=<path to medrec>`, else `medrec` on the PATH), under a scratch
+  home and profile with only the variables it needs and the time zone set
+  to `America/New_York`, so the machine's own medrec setup is never touched and every
+  machine writes the same views. CI runs medrec 0.9.1's Linux build,
+  checked against its SHA-256. Only `views/views.json` and each person's
+  `events.json` are kept: the app reads no other view. `manifest.json`
+  gives each file's MD5, as Drive would, for the store's freshness check.
 - The PNG icons in `public/` (for the manifest and the iPhone Home Screen) are
   drawn from `public/icon.svg` by `npm run icons`. Run it after changing the
   icon, and commit them.
@@ -509,12 +517,38 @@ dropped from the address.
   how the price came down from what providers charged to what you owe, what
   the plan changed, who charged what, bills and payments, papers, how the
   visit was put together, and the claims under Details.
-- Until medrec writes `views/<person>/events.json`, the app groups records
-  itself in `src/next/grouping.ts`, by medrec's matching rules for claims,
-  portal visits and papers. Each match is sure, likely or unsure, and the
-  page says which. Every screen reads events through `src/next/load.ts`:
-  reading medrec's events changes the one call there, and `grouping.ts` is
-  then deleted. What an event is and what it cost (`src/next/event.ts`) stay.
+- The events are medrec's (`views/<person id>/events.json`, medrec 0.9.0
+  and later). The store finds each person's file through `views/views.json`
+  (`src/model/events.ts`) and uses it only when it is fresh: when the MD5s
+  Drive reports for `household.json`, the person's `index.json`,
+  `text.json` and `overrides.json`, those of the people linked to them, and
+  the events file itself are the ones views.json recorded. Otherwise, say
+  while an import's views are still reaching Drive, that person's visits
+  are the app's own grouping, and Settings and the visit page say why. The
+  store attaches fresh events to the index they were written from, and
+  `src/next/medrecEvents.ts` makes each member one of the visit's claims,
+  portal visits, records or papers, with the rule that placed it and how
+  sure that is. What medrec still expects (a bill, the doctors' claims)
+  comes along, and another person's paper (X2) opens under them. An event's address is medrec's id
+  (`e_…`); any record or paper of it opens it too. For a folder whose
+  medrec has not written events yet, the app groups the records itself in
+  `src/next/grouping.ts`, by the same rules; that file goes once every
+  folder has them. Every screen reads events through `src/next/load.ts`.
+  What an event is called and what it cost (`src/next/event.ts`) come from
+  its records either way. A visit leads with its kind and its place
+  ("Office visit · Example Pediatrics"). What it was, in plain words, goes
+  beneath: the portal's name for the visit, its reason, medrec's `what`, or
+  the claims' services. A fill is named for its drug, from the pharmacy's
+  record before a claim's word for any drug ("Prescription drug"). A
+  vaccine is named for its dose, and a day of several doses for how many.
+  Billing descriptors in capitals ("OFC VISIT, NEW PT, MOD MDM") are never
+  a headline; they show only in the visit's Details (`src/model/words.ts`).
+  A portal platform's name ("athenahealth (all practices)") is never a
+  place, and a store's number is said once. People go by their first name,
+  or their full name where two share one, except in Settings and on the
+  doctor's sheet (`src/model/people.ts`). An event is private when a record
+  or paper in it is. medrec 0.9.1 writes its own marks (`private.json`), which the app does
+  not read yet.
 - **Home** leads with **Needs you**, quiet when nothing does:
   - a bill worth a call: one that asks something other than what the
     claims say you owe, or that no claim in these records backs

@@ -37,11 +37,11 @@ test('home leads with what needs you, in order, and keeps private items off it',
 
   // Where everyone stands: one block per person.
   const stands = card(page, 'Where everyone stands');
-  await expect(stands.locator('.stand-name')).toHaveText(['Robin Example', 'Sam Example', 'Alex Example', 'Jamie Example']);
-  const sam = stands.locator('.stand', { hasText: 'Sam Example' });
+  await expect(stands.locator('.stand-name')).toHaveText(['Robin', 'Sam', 'Alex', 'Jamie']);
+  const sam = stands.locator('.stand', { hasText: 'Sam' });
   await expect(sam).toContainText('46 years old · last visit Oct 12, 2026 at Example Lab');
   await expect(sam.locator('.kv-row')).toHaveText(['To pay$370.00 in 2 bills, 1 worth a call', 'NextVitamin D3 2,000 unit capsule runs out about Nov 28, 2026']);
-  await expect(stands.locator('.stand', { hasText: 'Jamie Example' })).toContainText('2 weeks old');
+  await expect(stands.locator('.stand', { hasText: 'Jamie' })).toContainText('2 weeks old');
 
   // A bill worth a call opens Worth a call; a bill to pay opens its visit.
   await needs.locator('.row').first().locator('a.row-main').click();
@@ -63,14 +63,14 @@ test('a person’s own pages list their needs, private ones marked: refills on H
   await expect(page.locator('main')).not.toContainText('kept off Home');
 
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Money' }).click();
-  await page.getByRole('group', { name: 'Whose money' }).getByRole('link', { name: 'Sam Example' }).click();
+  await page.getByRole('group', { name: 'Whose money' }).getByRole('link', { name: 'Sam' }).click();
   await expect(page).toHaveURL(new RegExp(`#/money\\?who=${SAM}$`));
   await expect(page.locator('main')).toContainText('1 bill ready to pay');
   await expect(page.locator('main')).toContainText('1 bill worth a call');
 
   // From Home, Jamie's Health lists the doses coming up.
   await open(page, '#/');
-  await card(page, 'Where everyone stands').getByRole('link', { name: 'Jamie Example' }).click();
+  await card(page, 'Where everyone stands').getByRole('link', { name: 'Jamie' }).click();
   await expect(card(page, /^Due$/).locator('.need-title')).toHaveText(['Hepatitis B, dose 2', '2-month vaccines']);
 });
 

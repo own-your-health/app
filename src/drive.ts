@@ -11,6 +11,8 @@ export interface DriveFile {
   mimeType: string;
   modifiedTime?: string;
   size?: string;
+  /** The content's MD5 (hex), for a file with content; medrec's views record the same. */
+  md5Checksum?: string;
   parents?: string[];
   /** Whether this token may change the file (drive.file reaches only the app's own). */
   capabilities?: { canEdit?: boolean; canDelete?: boolean; canAddChildren?: boolean };
@@ -27,7 +29,7 @@ export class DriveError extends Error {
   }
 }
 
-const FILE_FIELDS = 'id,name,mimeType,modifiedTime,size,parents,capabilities(canEdit,canDelete,canAddChildren)';
+const FILE_FIELDS = 'id,name,mimeType,modifiedTime,size,md5Checksum,parents,capabilities(canEdit,canDelete,canAddChildren)';
 
 /** A string inside a Drive query, quoted, with `'` and `\` escaped. Never quote it again. */
 export function q(s: string): string {

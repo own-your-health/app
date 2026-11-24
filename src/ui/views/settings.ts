@@ -9,6 +9,27 @@ import { PRIVACY_URL, REGISTRATION_URL, REPO_URL } from './setup';
 import { getPlanStart, getTheme, setPlanStart, setTheme, type Theme } from '../../settings';
 import { applyTheme } from '../../theme';
 
+/** Who grouped the records into visits: medrec's events (0.9.0 and later), else the app. */
+function visitsText(ctx: Ctx): string {
+  const { store } = ctx;
+  if (store.viewsError) return 'Grouped by this app';
+  const people = store.household.people;
+  const byMedrec = people.filter((p) => store.index(p.id)?.events).length;
+  if (byMedrec === people.length && people.length) return 'Grouped by medrec';
+  if (byMedrec === 0 && store.eventsNotes.size === 0) return 'Grouped by this app: medrec groups them itself from 0.9.0';
+  return `Grouped by medrec for ${byMedrec} of ${people.length} people`;
+}
+
+/** Why the app groups anyone's visits itself when medrec wrote them, one line each. */
+function visitsNotes(ctx: Ctx): HTMLElement[] {
+  const { store } = ctx;
+  if (store.viewsError) return [h('p', { class: 'small muted' }, store.viewsError)];
+  return store.household.people.flatMap((p) => {
+    const note = store.eventsNotes.get(p.id);
+    return note ? [h('p', { class: 'small muted' }, `${p.name}: ${note.text}`)] : [];
+  });
+}
+
 export function settingsView(
   ctx: Ctx,
   opts: { clientId: string | null; setupLink: string | null; scopes: string[]; onChangeFolder: () => void; onChangeClient: () => void },
@@ -26,7 +47,9 @@ export function settingsView(
         ['Layout', `household.json format ${ctx.store.household.format}`],
         ['Read', dateTime(new Date(ctx.store.loadedAt).toISOString())],
         ['Refresh on the Mac', status.kind === 'ok' ? `medrec ${refresher?.medrec_version ?? ''}`.trim() : status.kind === 'missing' ? 'Not set up' : 'Unreadable status'],
+        ['Visits', visitsText(ctx)],
       ]),
+      ...visitsNotes(ctx),
       ctx.demo ? h('a', { class: 'button button-outline', href: './' }, 'Leave the sample records') : h('div', { class: 'actions' }, button('Choose another folder', opts.onChangeFolder)),
     ),
     ctx.demo

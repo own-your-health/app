@@ -35,8 +35,21 @@ jobs:
       # Installing the app needs the manifest linked and every icon present.
       - name: Production build carries the manifest and its icons
         run: node scripts/check-install.mjs dist
+      # The sample's views are medrec's own: its generator runs medrec 0.9.1,
+      # this exact build.
+      - name: Install medrec 0.9.1
+        env:
+          MEDREC_URL: https://github.com/own-your-health/medrec-cli/releases/download/v0.9.1/medrec-x86_64-unknown-linux-gnu.tar.gz
+          MEDREC_SHA256: ae40df3ed71d0bd47a30aad756fd4353249bdfbe42def308c218e2f946a37c9c
+        run: |
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/medrec.tar.gz" "$MEDREC_URL"
+          echo "$MEDREC_SHA256  $RUNNER_TEMP/medrec.tar.gz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/medrec"
+          tar xzf "$RUNNER_TEMP/medrec.tar.gz" -C "$RUNNER_TEMP/medrec"
       # The sample folder is generated; it must match its generator.
       - name: Sample folder matches its generator
+        env:
+          MEDREC: ${{ runner.temp }}/medrec/medrec
         run: |
           node scripts/demo-folder.mjs
           git diff --exit-code -- public/demo

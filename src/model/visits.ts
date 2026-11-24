@@ -6,7 +6,7 @@
 // visit medrec linked it to, else to one of its days from a provider
 // matching the visit.
 
-import { claimLines, claimResultIds, claimVisitId, isContractClaim } from './claims';
+import { claimLines, claimProvider, claimResultIds, claimVisitId, isContractClaim } from './claims';
 import { sameProvider } from './providers';
 import { day, isWithdrawn, organizationName, sortByDateDesc, str } from './records';
 import type { Household, ImagingStudy, MedDocument, MedRecord, PersonIndex } from './types';
@@ -124,7 +124,7 @@ export function visitTimeline(index: PersonIndex, household: Household, person: 
     v.claims = claims.filter((r) => {
       if (isContractClaim(r)) return linkedVisit(r) === v.record.id;
       if (!mine.includes(r)) return false;
-      const provider = str(r.fields.provider);
+      const provider = claimProvider(r);
       return names(v).some((n) => sameProvider(n, provider));
     });
     v.studies = index.studies.filter((s) => within(day(s.date), v));
