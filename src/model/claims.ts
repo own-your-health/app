@@ -5,8 +5,8 @@
 // are. A medrec that writes the claim fields of its data
 // contract also gives fixed amount names, each line's category, the claim's
 // diagnoses and links to what it paid for; where it does, those win. A line
-// the plan replaced with one of its own, which the totals leave out, is
-// marked, and is never owed.
+// the claim's totals leave out (one the plan replaced with its own, or wrote
+// off) is not counted, and is never owed.
 
 import { AMOUNT_LABELS, amountNames, asMoney, claimTotals, fromCents, SHARE_PARTS, str, toCents, type AmountName, type Money } from './records';
 import { isObject } from './parse';
@@ -97,8 +97,13 @@ export interface ClaimLine {
   amounts: LineAmounts;
   /** The records this line paid for, as medrec linked them. */
   records: string[];
-  /** The plan replaced this line with one of its own, and the claim's totals leave it out: none of it is owed. */
-  replaced?: boolean;
+  /**
+   * False for a line the claim's totals leave out, one the plan replaced
+   * with its own or wrote off: none of it is owed.
+   */
+  counted: boolean;
+  /** The payer's notes on this line, as medrec gives them ("XX -- …"). */
+  notes: string[];
 }
 
 const isCategory = (v: string | undefined): v is Category => !!v && Object.hasOwn(CATEGORY_LABELS, v);
@@ -224,21 +229,52 @@ export function claimCents(r: MedRecord): Cents {
   return out;
 }
 
-/**
- * The line a plan replaced with one of its own. A plan that recodes a
- * service under its coding policy (an emergency visit's level) keeps the
- * provider's line, not covered, beside the one it paid, and its totals
- * count only its own. That is the one line without which the lines add up
- * to the totals, on every amount both give. None when they add up already,
- * when no one line does it, or when more than one would.
- */
-function replacedLine(lines: Cents[], totals: Cents): number | undefined {
-  const keys = AMOUNTS.filter((k) => totals[k] !== undefined && lines.some((l) => l[k] !== undefined));
-  const addsUp = (skip: number) => keys.every((k) => lines.reduce((t, l, i) => (i === skip ? t : t + (l[k] ?? 0)), 0) === totals[k]);
-  if (lines.length < 2 || !keys.length || addsUp(-1)) return undefined;
-  const found = lines.flatMap((_, i) => (addsUp(i) ? [i] : []));
-  return found.length === 1 ? found[0] : undefined;
+/** The amounts compared to find the lines a claim's totals leave out, as medrec 0.8.2 compares them. */
+const COMPARED = ['billed', 'planPaid', 'youOwe'] as const;
+
+/** The sets of `size` lines that hold exactly `over` on each key, in index order; it stops at two, as two are a tie. */
+function setsHolding(given: Cents[], keys: readonly AmountName[], over: number[], size: number): number[][] {
+  const found: number[][] = [];
+  const walk = (from: number, set: number[], left: number[]) => {
+    if (found.length > 1) return;
+    if (set.length === size) {
+      if (left.every((d) => d === 0)) found.push(set);
+      return;
+    }
+    for (let i = from; i <= given.length - (size - set.length); i += 1) walk(i + 1, [...set, i], left.map((d, j) => d - (given[i]![keys[j]!] ?? 0)));
+  };
+  walk(0, [], over);
+  return found;
 }
+
+/**
+ * The lines a claim's totals leave out, found as medrec 0.8.2 finds them
+ * when it writes `counted: false`. A plan that recodes a service keeps the
+ * provider's line, not covered, beside the one it paid, and a plan that
+ * writes a line off keeps that too; its totals count neither. Only billed,
+ * plan paid and you owe are compared, as the payer wrote them, and only
+ * those the totals and some line both give, at least two. The lines left
+ * out are the one smallest set of up to three whose removal makes every
+ * compared sum agree. None when the sums agree already, when no such set
+ * exists, or when two sets of the smallest size would do.
+ */
+function leftOut(lines: LineAmounts[], r: MedRecord): number[] {
+  const a = claimAmounts(r);
+  const totals: Cents = { billed: toCents(a.billed), planPaid: toCents(a.planPaid), youOwe: a.shareAdded ? undefined : toCents(a.yourShare) };
+  const given = lines.map((l) => Object.fromEntries(COMPARED.map((k) => [k, toCents(l[k])])) as Cents);
+  const keys = COMPARED.filter((k) => totals[k] !== undefined && given.some((l) => l[k] !== undefined));
+  if (keys.length < 2) return [];
+  // What the lines hold beyond the totals; a set is left out when it holds exactly that.
+  const over = keys.map((k) => given.reduce((t, l) => t + (l[k] ?? 0), 0) - totals[k]!);
+  if (over.every((d) => d === 0)) return [];
+  for (let size = 1; size <= 3 && size < lines.length; size += 1) {
+    const found = setsHolding(given, keys, over, size);
+    if (found.length) return found.length === 1 ? found[0]! : [];
+  }
+  return [];
+}
+
+const texts = (v: Json | undefined): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x.trim() !== '') : []);
 
 function dayOf(v: Json | undefined): string | undefined {
   if (typeof v === 'string') return v.slice(0, 10);
@@ -246,8 +282,20 @@ function dayOf(v: Json | undefined): string | undefined {
   return undefined;
 }
 
-/** A claim's lines, in their order. */
+/** Each claim's lines, read once: finding the lines left out can try many sets on a long claim. */
+const linesRead = new WeakMap<MedRecord, ClaimLine[]>();
+
+/** A claim's lines, in their order. They are shared between callers, so never change one. */
 export function claimLines(r: MedRecord): ClaimLine[] {
+  let out = linesRead.get(r);
+  if (!out) {
+    out = readLines(r);
+    linesRead.set(r, out);
+  }
+  return out;
+}
+
+function readLines(r: MedRecord): ClaimLine[] {
   const items = r.fields.items;
   if (!Array.isArray(items)) return [];
   const type = str(r.fields.type) ?? r.code?.code;
@@ -271,25 +319,37 @@ export function claimLines(r: MedRecord): ClaimLine[] {
       category: isCategory(given) ? given : categoryOf(code, system, type),
       amounts,
       records: ids(it.records),
+      counted: it.counted !== false,
+      notes: texts(it.notes),
     });
   }
-  const replaced = replacedLine(out.map((l) => lineCents(l.amounts)), claimCents(r));
-  if (replaced !== undefined) out[replaced]!.replaced = true;
+  // medrec 0.8.2 and later marks the lines left out; before, the same rule finds them here.
+  if (out.every((l) => l.counted)) for (const i of leftOut(out.map((l) => l.amounts), r)) out[i]!.counted = false;
   return out;
+}
+
+/** The lines a claim's totals count: never one they leave out. */
+export function countedLines(r: MedRecord): ClaimLine[] {
+  return claimLines(r).filter((l) => l.counted);
+}
+
+/** The payer's notes on the claim that no line points at, as medrec gives them. */
+export function claimNotes(r: MedRecord): string[] {
+  return texts(r.fields.notes);
 }
 
 /** A pharmacy claim: its type says so, or every line is a drug the pharmacy filled. */
 export function isPharmacyClaim(r: MedRecord): boolean {
   if (/pharmacy/i.test(str(r.fields.type) ?? r.code?.code ?? '')) return true;
-  const lines = claimLines(r).filter((l) => !l.replaced);
+  const lines = countedLines(r);
   return lines.length > 0 && lines.every((l) => l.category === 'pharmacy');
 }
 
-/** What a claim paid for, each service once, in line order; never a line the plan replaced. */
+/** What a claim paid for, each service once, in line order; never a line its totals leave out. */
 export function claimServices(r: MedRecord): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
-  for (const l of claimLines(r).filter((x) => !x.replaced)) {
+  for (const l of countedLines(r)) {
     const k = l.label.toLowerCase();
     if (!seen.has(k)) {
       seen.add(k);
@@ -334,7 +394,7 @@ export function claimTitle(r: MedRecord): string {
 export function claimCategory(r: MedRecord): Category | 'mixed' | undefined {
   const given = str(r.fields.category);
   if (given === 'mixed' || isCategory(given)) return given;
-  const kinds = new Set(claimLines(r).filter((l) => !l.replaced).map((l) => l.category));
+  const kinds = new Set(countedLines(r).map((l) => l.category));
   if (kinds.size === 0) return undefined;
   return kinds.size === 1 ? [...kinds][0] : 'mixed';
 }

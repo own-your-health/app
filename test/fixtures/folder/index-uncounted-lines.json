@@ -1,6 +1,6 @@
 {
   "schema": "medrec-index/v1",
-  "person": "p_fixturereplacedaaaaa",
+  "person": "p_fixtureuncountedaaaa",
   "rev": 1,
   "documents": [],
   "records": [
@@ -434,6 +434,219 @@
               },
               "you_owe": {
                 "amount": "30.00",
+                "currency": "USD"
+              }
+            }
+          }
+        ]
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-04-02T08:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "r_claimwrittenoffaaaaa",
+      "kind": "claim",
+      "key": "claim|r_claimwrittenoffaaaaa",
+      "date": "2026-03-30",
+      "display": "Office visit and 2 more \u00b7 Example Clinic",
+      "fields": {
+        "when": "2026-03-30",
+        "provider": "Example Clinic",
+        "insurer": "Example Health Plan",
+        "outcome": "complete",
+        "type": "Institutional",
+        "billable_period": {
+          "start": "2026-03-30",
+          "end": "2026-03-30"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "300.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "200.00",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "90.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "30.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99214",
+              "display": "Office visit"
+            },
+            "serviced": "2026-03-30",
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "300.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "120.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "90.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "30.00",
+                "currency": "USD"
+              }
+            }
+          },
+          {
+            "sequence": 2,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99072",
+              "display": "Supplies"
+            },
+            "serviced": "2026-03-30",
+            "category": "supply",
+            "amounts": {
+              "billed": {
+                "amount": "80.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "40.00",
+                "currency": "USD"
+              },
+              "not_covered": {
+                "amount": "80.00",
+                "currency": "USD"
+              }
+            }
+          },
+          {
+            "sequence": 3,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99050",
+              "display": "After-hours care"
+            },
+            "serviced": "2026-03-30",
+            "category": "other",
+            "amounts": {
+              "billed": {
+                "amount": "60.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "30.00",
+                "currency": "USD"
+              },
+              "not_covered": {
+                "amount": "60.00",
+                "currency": "USD"
+              }
+            }
+          }
+        ]
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-04-02T08:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "r_claimmarkedaaaaaaaaa",
+      "kind": "claim",
+      "key": "claim|r_claimmarkedaaaaaaaaa",
+      "date": "2026-04-01",
+      "display": "Institutional",
+      "fields": {
+        "when": "2026-04-01",
+        "provider": "Example Hospital",
+        "insurer": "Example Health Plan",
+        "outcome": "complete",
+        "type": "Institutional",
+        "billable_period": {
+          "start": "2026-04-01",
+          "end": "2026-04-01"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "200.00",
+            "currency": "USD"
+          }
+        },
+        "notes": [
+          "N1 -- The deductible for this plan year has been met."
+        ],
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99284",
+              "display": "Emergency visit, moderate severity"
+            },
+            "serviced": "2026-04-01",
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "500.00",
+                "currency": "USD"
+              },
+              "not_covered": {
+                "amount": "500.00",
+                "currency": "USD"
+              }
+            },
+            "counted": false,
+            "notes": [
+              "C7 -- This service was paid under a different code than the one billed."
+            ]
+          },
+          {
+            "sequence": 2,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99283",
+              "display": "Emergency visit, low severity"
+            },
+            "serviced": "2026-04-01",
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "200.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "25.00",
                 "currency": "USD"
               }
             }

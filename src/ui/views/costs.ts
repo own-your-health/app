@@ -53,7 +53,7 @@ const CLAIMS_SHOWN = 25;
 const FILTER_LABELS: Record<CostFilterBy, string> = { person: 'Person', provider: 'Provider', category: 'Kind of care', month: 'Month', code: 'Code' };
 
 function matches(l: CostLine, f: CostFilter, names: Map<string, string>): boolean {
-  if (f.by === 'code') return !!l.code && l.split && !l.replaced && codeKey(l) === f.key;
+  if (f.by === 'code') return !!l.code && l.split && !l.uncounted && codeKey(l) === f.key;
   return keyOf(l, f.by, names).key === f.key;
 }
 
@@ -131,11 +131,11 @@ function legend(items: [string, string][]): HTMLElement {
   return h('p', { class: 'cost-legend small' }, items.map(([cls, text]) => h('span', { class: 'cost-key' }, h('span', { class: ['swatch', cls], 'aria-hidden': 'true' }), text)));
 }
 
-/** One of a claim's lines: what was done and your share of it; a replaced line, that it is not owed. */
+/** One of a claim's lines: what was done and your share of it; a line the totals leave out, that it is not owed. */
 function claimLine(l: CostLine): HTMLElement {
   const code = l.code ? `${systemName(l.system)} ${l.code}`.trim() : null;
   const what = h('span', { class: 'claim-line-what' }, l.service, code ? h('span', { class: 'muted' }, ` · ${code}`) : null);
-  if (l.replaced) return h('li', { class: 'claim-line-replaced' }, what, h('span', { class: 'muted' }, 'Replaced by the plan, not owed'));
+  if (l.uncounted) return h('li', null, what, h('span', { class: 'muted' }, 'Left out by the plan, not owed'));
   const share = l.cents.youOwe;
   return h('li', null, what, share !== undefined ? h('span', { class: 'num' }, h('span', { class: 'sr-only' }, 'your share '), money(share)) : null);
 }
@@ -483,7 +483,7 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
     showClaims(CLAIMS_SHOWN);
     const claimsCard = card(
       { title: count(claims.length, 'claim') },
-      h('p', { class: 'small muted' }, 'Newest first, each with what it says you owe and the lines it paid for. A line the plan replaced with one of its own is listed, not owed. Amounts a claim gave only in total are a line of their own, “Not split by line”.'),
+      h('p', { class: 'small muted' }, 'Newest first, each with what it says you owe and the lines it paid for. A line the plan left out of its totals, one it replaced with its own or wrote off, is listed, not owed. Amounts a claim gave only in total are a line of their own, “Not split by line”. The CSV download has a row for each line.'),
       list,
     );
 

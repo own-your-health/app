@@ -1938,6 +1938,10 @@
             "records": [
               "r_hh2prly7o3vxhre55eph"
             ],
+            "counted": false,
+            "notes": [
+              "C7 -- This service was paid under a different code than the one billed."
+            ],
             "sequence": 1
           },
           {

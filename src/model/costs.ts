@@ -4,10 +4,9 @@
 //
 // Money is whole cents. A claim's totals are the record: where its lines do
 // not add up to them, the difference is a line of its own ("Not split by
-// line"), so a year's totals always equal its claims'. A line the plan
-// replaced with one of its own, which those totals leave out, counts
-// nothing, and the claims' totals are never moved to make up for it. A
-// plan year starts on
+// line"), so a year's totals always equal its claims'. A line those totals
+// leave out (one the plan replaced or wrote off) counts nothing, and leaves
+// no such difference. A plan year starts on
 // the day the plan's claims give for it (their benefit period), else on the
 // day set in Settings, else on January 1. Never on a coverage's start: that
 // is the day a coverage took effect, which can fall mid-year (a new child, a
@@ -51,10 +50,10 @@ export interface CostLine {
   /** False for the part of a claim's totals its lines do not account for. */
   split: boolean;
   /**
-   * A line the plan replaced with one of its own, which the claim's totals
-   * leave out: what it carried. Its `cents` are empty, so it counts nothing.
+   * A line the claim's totals leave out (one the plan replaced or wrote
+   * off): what it carried. Its `cents` are empty, so it counts nothing.
    */
-  replaced?: Cents;
+  uncounted?: Cents;
 }
 
 const UNKNOWN_PROVIDER = 'Provider not named';
@@ -155,8 +154,8 @@ export function costLines(person: string, index: PersonIndex, opts: CostOptions 
       const cents = lineCents(l.amounts);
       const date = l.date ?? service;
       const line = { ...base, date, category: l.category, service: l.label, code: l.code, system: l.system, planYear: planYearOf(anniversary, date), planBasis, split: true };
-      if (l.replaced) {
-        out.push({ ...line, cents: {}, replaced: cents });
+      if (!l.counted) {
+        out.push({ ...line, cents: {}, uncounted: cents });
         continue;
       }
       for (const k of AMOUNTS) if (cents[k] !== undefined) sums[k] = (sums[k] ?? 0) + cents[k]!;
@@ -244,12 +243,12 @@ export interface Totals {
   lines: number;
 }
 
-/** What some lines add up to, and how many claims and lines count; a replaced line is not one. */
+/** What some lines add up to, and how many claims and lines count; a line the totals leave out is not one. */
 export function totals(lines: CostLine[]): Totals {
-  const counted = lines.filter((l) => !l.replaced);
+  const counted = lines.filter((l) => !l.uncounted);
   const cents: Cents = {};
   for (const l of counted) for (const k of AMOUNTS) if (l.cents[k] !== undefined) cents[k] = (cents[k] ?? 0) + l.cents[k]!;
-  return { cents, claims: new Set(counted.map((l) => `${l.person}|${l.claim}`)).size, lines: counted.length };
+  return { cents, claims: new Set(counted.map((l) => l.claim)).size, lines: counted.length };
 }
 
 /** A claim among some lines: what the whole claim counts, and its lines among them. */
@@ -263,9 +262,9 @@ export interface ClaimCost {
   insurer?: string;
   /** What the whole claim counts: its own totals where it gives them, else its lines added up. */
   cents: Cents;
-  /** Its lines among those asked about, a replaced one too, in their order. */
+  /** Its lines among those asked about, a left-out one too, in their order. */
   lines: CostLine[];
-  /** How many lines the claim has in all, counting a replaced one and the part not split by line. */
+  /** How many lines the claim has in all, counting a left-out one and the part not split by line. */
   of: number;
 }
 
@@ -273,10 +272,10 @@ export interface ClaimCost {
  * The claims some lines are from, newest first, each with what the whole
  * claim counts, so a claim leads with what it says you owe even when a
  * choice shows only some of its lines. A claim whose only lines among them
- * were replaced is left out, as nothing of it is counted there.
+ * are ones its totals leave out is not listed, as nothing of it counts there.
  */
 export function claimsOf(lines: CostLine[], all: CostLine[]): ClaimCost[] {
-  const key = (l: CostLine) => `${l.person}|${l.claim}`;
+  const key = (l: CostLine) => l.claim;
   const shown = new Map<string, CostLine[]>();
   for (const l of lines) {
     const ls = shown.get(key(l));
@@ -291,7 +290,7 @@ export function claimsOf(lines: CostLine[], all: CostLine[]): ClaimCost[] {
     else whole.set(key(l), [l]);
   }
   return [...shown.entries()]
-    .filter(([, ls]) => ls.some((l) => !l.replaced))
+    .filter(([, ls]) => ls.some((l) => !l.uncounted))
     .map(([k, ls]): ClaimCost => {
       const l = ls[0]!;
       const every = whole.get(k) ?? ls;
@@ -330,7 +329,7 @@ export interface Group extends Totals {
 export function breakdown(lines: CostLine[], by: Dimension, names: Map<string, string>): Group[] {
   const groups = new Map<string, { label: string; lines: CostLine[] }>();
   for (const l of lines) {
-    if (l.replaced) continue;
+    if (l.uncounted) continue;
     const { key, label } = keyOf(l, by, names);
     const g = groups.get(key);
     if (g) g.lines.push(l);
@@ -414,7 +413,7 @@ export const codeKey = (l: Pick<CostLine, 'code' | 'system'>) => `${systemName(l
 export function comparableCodes(lines: CostLine[]): CodeSummary[] {
   const byCode = new Map<string, CostLine[]>();
   for (const l of lines) {
-    if (!l.code || !l.split || l.replaced) continue;
+    if (!l.code || !l.split || l.uncounted) continue;
     const k = codeKey(l);
     byCode.set(k, [...(byCode.get(k) ?? []), l]);
   }
@@ -440,7 +439,7 @@ export function comparableCodes(lines: CostLine[]): CodeSummary[] {
 
 /** Every line for one code, newest first. */
 export function codeLines(lines: CostLine[], key: string): CostLine[] {
-  return lines.filter((l) => l.code && l.split && !l.replaced && codeKey(l) === key);
+  return lines.filter((l) => l.code && l.split && !l.uncounted && codeKey(l) === key);
 }
 
 // ---- Plan balances in a period ----
@@ -499,7 +498,7 @@ export function balances(lines: CostLine[], records: Map<string, MedRecord>): Ba
 
 // ---- CSV ----
 
-const CSV_HEAD = ['Date', 'Person', 'Provider', 'Insurer', 'Plan year', 'Service', 'Code', 'Code system', 'Kind of care', 'Billed', 'Allowed', 'Plan paid', 'Deductible', 'Copay', 'Coinsurance', 'Not covered', 'You owe', 'Claim'];
+const CSV_HEAD = ['Date', 'Person', 'Provider', 'Insurer', 'Plan year', 'Service', 'Code', 'Code system', 'Kind of care', 'Billed', 'Allowed', 'Plan paid', 'Deductible', 'Copay', 'Coinsurance', 'Not covered', 'You owe', 'Claim', 'Left out by the plan'];
 
 /** A text cell as a spreadsheet reads it safely: quoted when it must be, and never taken as a formula. */
 export function csvText(v: string | undefined): string {
@@ -510,7 +509,11 @@ export function csvText(v: string | undefined): string {
 
 const csvMoney = (c: number | undefined) => (c === undefined ? '' : `${c < 0 ? '-' : ''}${Math.floor(Math.abs(c) / 100)}.${pad(Math.abs(c) % 100)}`);
 
-/** The lines as CSV, one row each, amounts in dollars; a replaced line's are left empty, as it counts nothing. */
+/**
+ * The lines as CSV, one row each, amounts in dollars. A line the claim's
+ * totals leave out has its amounts empty, as it counts nothing, and "yes" in
+ * the last column.
+ */
 export function toCsv(lines: CostLine[], names: Map<string, string>): string {
   const rows = lines.map((l) =>
     [
@@ -519,12 +522,13 @@ export function toCsv(lines: CostLine[], names: Map<string, string>): string {
       csvText(l.provider),
       csvText(l.insurer),
       csvText(`${l.planYear.start} to ${l.planYear.end}`),
-      csvText(l.replaced ? `${l.service} (replaced by the plan, not owed)` : l.service),
+      csvText(l.service),
       csvText(l.code),
       csvText(systemName(l.system)),
       csvText(CATEGORY_LABELS[l.category].one),
       ...(['billed', 'allowed', 'planPaid', 'deductible', 'copay', 'coinsurance', 'notCovered', 'youOwe'] as Amount[]).map((k) => csvMoney(l.cents[k])),
       csvText(l.claim),
+      l.uncounted ? 'yes' : '',
     ].join(','),
   );
   return `${[CSV_HEAD.join(','), ...rows].join('\r\n')}\r\n`;

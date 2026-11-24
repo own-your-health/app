@@ -253,7 +253,7 @@ const CLAIM_PARTS = ['items', 'diagnoses', 'amounts', 'visit', 'results'];
 function lineFields(r: MedRecord): [string, string, true][] {
   return claimLines(r).map((l): [string, string, true] => {
     const amount = l.amounts.youOwe ?? l.amounts.billed;
-    const said = amount ? `${l.amounts.youOwe ? 'you owe' : 'billed'} ${formatMoney(amount)}` : '';
+    const said = !l.counted ? 'left out by the plan, not owed' : amount ? `${l.amounts.youOwe ? 'you owe' : 'billed'} ${formatMoney(amount)}` : '';
     return ['Line', [`${l.label}${l.code && l.code !== l.label ? ` (${l.code})` : ''}`, said].filter(Boolean).join(' · '), true];
   });
 }

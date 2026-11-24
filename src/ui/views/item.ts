@@ -4,7 +4,7 @@
 // Technical details, whole, for the data-minded.
 
 import { readJson } from '../../folder';
-import { CATEGORY_LABELS, claimAmounts, claimDiagnoses, claimLines, diagnosisText, type ClaimLine } from '../../model/claims';
+import { CATEGORY_LABELS, claimAmounts, claimDiagnoses, claimLines, claimNotes, diagnosisText, type ClaimLine } from '../../model/claims';
 import { isOutOfRange, rangeFor, resultFlag } from '../../model/flags';
 import { labTest } from '../../model/labtests';
 import { learnMore } from '../../model/learn';
@@ -137,8 +137,8 @@ function recordLinks(person: string, rs: MedRecord[]): Child[] {
 function linesCard(person: string, lines: ClaimLine[], lineRecords: MedRecord[][]): HTMLElement {
   // medrec links every lab line to all of its day's results, so lines that
   // all link the same records say nothing the Paid for card does not. A line
-  // the plan replaced paid for nothing.
-  const linked = lineRecords.filter((rs, i) => rs.length && !lines[i]?.replaced).map((rs) => rs.map((r) => r.id).join(' '));
+  // the totals leave out paid for nothing.
+  const linked = lineRecords.filter((rs, i) => rs.length && lines[i]?.counted).map((rs) => rs.map((r) => r.id).join(' '));
   const telling = linked.length < 2 || new Set(linked).size > 1;
   return card(
     { title: lines.length === 1 ? 'Line' : `${lines.length} lines` },
@@ -146,13 +146,14 @@ function linesCard(person: string, lines: ClaimLine[], lineRecords: MedRecord[][
       const amounts = LINE_AMOUNT_ORDER.filter((k) => l.amounts[k]).map((k) => `${AMOUNT_LABELS[k]} ${formatMoney(l.amounts[k])}`);
       const paidFor = telling ? (lineRecords[i] ?? []) : [];
       const lineMeta = [l.code, CATEGORY_LABELS[l.category].one, l.date ? dateText(l.date) : null].filter(Boolean).join(' · ');
-      // The provider's line the plan recoded: what it billed, never what it marked not covered, as none of it is owed.
-      if (l.replaced) {
+      const notes = l.notes.length ? h('p', { class: 'small muted claim-notes' }, `The plan’s ${l.notes.length === 1 ? 'note' : 'notes'}: ${l.notes.join(' · ')}`) : null;
+      // A line the plan replaced or wrote off: what was billed, never what it marked not covered, as none of it is owed.
+      if (!l.counted) {
         return row({
           title: l.label,
           meta: lineMeta,
-          aside: chip('Replaced'),
-          extra: h('p', { class: 'small claim-amounts' }, `Replaced by the plan, not owed: the claim’s totals leave this line out.${l.amounts.billed ? ` Billed ${formatMoney(l.amounts.billed)}.` : ''}`),
+          aside: chip('Left out'),
+          extra: [h('p', { class: 'small claim-amounts' }, `Left out by the plan, not owed: the claim’s totals do not count this line.${l.amounts.billed ? ` Billed ${formatMoney(l.amounts.billed)}.` : ''}`), notes],
         });
       }
       return row({
@@ -160,6 +161,7 @@ function linesCard(person: string, lines: ClaimLine[], lineRecords: MedRecord[][
         meta: lineMeta,
         extra: [
           h('p', { class: ['small', 'claim-amounts', amounts.length ? null : 'muted'] }, amounts.length ? amounts.join(' · ') : 'The claim gives no amounts for this line.'),
+          notes,
           paidFor.length ? h('p', { class: 'small claim-paid-for' }, 'Paid for: ', ...recordLinks(person, paidFor)) : null,
         ],
       });
@@ -483,6 +485,7 @@ function claimView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
         ['Your share comes from', a.parts.length ? sentence(a.parts.map((p) => `${p.label.toLowerCase()} ${formatMoney(p.amount)}`).join(', ')) : undefined],
         [diagnoses.length > 1 ? 'Diagnoses' : 'Diagnosis', diagnoses.length ? diagnoses.join(', ') : undefined],
         ['Outcome', str(r.fields.outcome) && r.fields.outcome !== 'complete' ? str(r.fields.outcome) : undefined],
+        ['The plan’s notes', claimNotes(r).join(' · ') || undefined],
       ]),
     ),
     c.visit || c.results.length

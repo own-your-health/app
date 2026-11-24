@@ -189,12 +189,16 @@ same ones.
 
 A plan that recodes a service under its coding policy (an emergency visit's
 level, say) keeps the provider's line, marked not covered, beside the one it
-paid, and its totals count only its own. The app marks that line **Replaced**,
-"Replaced by the plan, not owed", shows only what was billed for it, and
-leaves it out of the claim's title, its kind of care and every sum. It is the
-one line without which the lines add up to the claim's totals, on every
-amount both give; when no one line does that, or more than one would, no line
-is marked.
+paid, and a plan that writes a line off keeps that too; its totals count
+neither. medrec 0.8.2 and later marks such a line (`items[].counted: false`)
+and keeps the payer's notes on it (`items[].notes`, and the claim's own in
+`notes`). For a claim medrec has not marked, the app finds them by medrec's
+rule: it compares billed, plan paid and you owe, those the totals and a line
+both give, at least two of them, and takes the one smallest set of up to
+three lines whose removal makes every one agree; none when two sets tie. The
+app marks such a line **Left out**, "Left out by the plan, not owed", shows
+only what was billed for it and the plan's notes, and leaves it out of the
+claim's title, its kind of care and every sum.
 
 medrec 0.5.0 and later files a claim in the shape of its data contract
 (`docs/data-contract.md` in medrec-cli, "index.json", claims): fixed amount
@@ -231,7 +235,7 @@ claim line in the folder: what was billed, what the plan allowed and paid,
 and your share, with its deductible, copay and coinsurance. A claim whose
 lines do not add up to its totals keeps the difference as a line of its own,
 "Not split by line", so a period's totals are always its claims'; a line the
-plan replaced counts nothing, and leaves no such line. It narrows to:
+totals leave out counts nothing, and leaves no such line. It narrows to:
 - a period: this or last plan year, a calendar year, or every year. A plan
   year starts on the day the plan's claims give for it (the benefit period an
   ExplanationOfBenefit prints, `fields.benefit_period` in the index, when it
@@ -258,8 +262,9 @@ claim's. A code billed more than
 once is listed under "Same service, different prices"; opening one shows,
 for every time it was billed, what the provider billed beside what the plan
 allowed. Download CSV saves the lines shown, built in the browser, with any
-cell that a spreadsheet would read as a formula prefixed with `'`; a replaced
-line is a row with no amounts, so a column's sum is the claims'. Bills and
+cell that a spreadsheet would read as a formula prefixed with `'`. A line the
+totals leave out is a row with no amounts, so a column's sum is the claims',
+and "yes" in the last column, **Left out by the plan**. Bills and
 receipts no claim covers are not counted. The rules are `src/model/costs.ts`.
 
 Results are grouped by panel (metabolic, lipid, A1c, liver, blood count,

@@ -81,7 +81,7 @@ test('costs this plan year across everyone, broken down, and down to one month a
   await expect(page.getByRole('group', { name: 'Plan paid and your share by month' }).getByRole('link')).toHaveCount(12);
 });
 
-test('each claim leads with what it says you owe, and a line the plan replaced is listed, not owed', async ({ page }) => {
+test('each claim leads with what it says you owe, and a line the plan left out is listed, not owed', async ({ page }) => {
   await page.goto('./?demo#/costs');
   const claims = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^8 claims$/ }) });
   // Alex's sick visit: the practice billed a longer visit, and the plan paid it as a routine one.
@@ -89,7 +89,7 @@ test('each claim leads with what it says you owe, and a line the plan replaced i
   await expect(visit.locator('.row-meta')).toHaveText('Nov 20, 2026 · Alex Example · Example Pediatrics');
   await expect(visit.locator('.row-aside')).toHaveText('$25.00');
   await expect(visit.locator('.totals')).toHaveText('Billed $213.00; Plan allowed $119.30; Plan paid $94.30; You owe $25.00');
-  await expect(visit.locator('.claim-lines li')).toHaveText(['Office visit, extended · CPT 99215Replaced by the plan, not owed', 'Office visit · CPT 99213your share $25.00', 'Strep test · CPT 87880your share $0.00']);
+  await expect(visit.locator('.claim-lines li')).toHaveText(['Office visit, extended · CPT 99215Left out by the plan, not owed', 'Office visit · CPT 99213your share $25.00', 'Strep test · CPT 87880your share $0.00']);
   const listed = (await claims.locator('.row').allTextContents()).join('\n');
   expect(listed).not.toContain('$240.00');
   expect(listed).not.toContain('Not split by line');
@@ -101,9 +101,10 @@ test('each claim leads with what it says you owe, and a line the plan replaced i
   await expect(page.locator('main h1')).toHaveText('Office visit and strep test');
   await expect(page.locator('.result-value')).toHaveText('You owe $25.00');
   const lines = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^3 lines$/ }) });
-  const replaced = lines.locator('.row', { has: page.locator('.row-title', { hasText: /^Office visit, extended$/ }) });
-  await expect(replaced.locator('.chip')).toHaveText('Replaced');
-  await expect(replaced.locator('.claim-amounts')).toHaveText('Replaced by the plan, not owed: the claim’s totals leave this line out. Billed $240.00.');
+  const left = lines.locator('.row', { has: page.locator('.row-title', { hasText: /^Office visit, extended$/ }) });
+  await expect(left.locator('.chip')).toHaveText('Left out');
+  await expect(left.locator('.claim-amounts')).toHaveText('Left out by the plan, not owed: the claim’s totals do not count this line. Billed $240.00.');
+  await expect(left.locator('.claim-notes')).toHaveText('The plan’s note: C7 -- This service was paid under a different code than the one billed.');
   await expect(lines).not.toContainText('Not covered $240.00');
 });
 
@@ -140,7 +141,7 @@ test('the lines download as CSV, without leaving the page', async ({ page }) => 
   await expect(page.getByRole('status')).toHaveText('Saved costs-plan.csv.');
   const text = (await readFile((await download.path())!, 'utf8')).replace(/^\uFEFF/, '');
   const rows = text.trimEnd().split('\r\n');
-  expect(rows[0]).toBe('Date,Person,Provider,Insurer,Plan year,Service,Code,Code system,Kind of care,Billed,Allowed,Plan paid,Deductible,Copay,Coinsurance,Not covered,You owe,Claim');
+  expect(rows[0]).toBe('Date,Person,Provider,Insurer,Plan year,Service,Code,Code system,Kind of care,Billed,Allowed,Plan paid,Deductible,Copay,Coinsurance,Not covered,You owe,Claim,Left out by the plan');
   expect(rows).toHaveLength(9);
   expect(rows[1]).toMatch(/^2026-11-18,Robin Example,Example Health,Example Health Plan,2026-01-01 to 2026-12-31,Office visit,99213,CPT,Visit,180\.00,112\.50,87\.50,/);
   await expect(page.locator('main h1')).toHaveText('Costs');
