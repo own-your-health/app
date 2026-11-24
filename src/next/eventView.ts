@@ -15,8 +15,9 @@ import type { MedDocument, PersonIndex } from '../model/types';
 import { card, chip, driveLink, empty, flagChip, link, row, type Ctx } from '../ui/components';
 import { h, icon, type Child } from '../ui/dom';
 import { count, dateText, localDay } from '../ui/format';
-import type { Route } from '../ui/router';
-import { careEvents, eventConfidence, eventMoney, eventOf, kindText, RULES, type CareEvent, type EventMoney } from './events';
+import { href, type Route } from '../ui/router';
+import { eventConfidence, eventMoney, eventOf, kindText, RULES, type CareEvent, type EventMoney } from './event';
+import { personEvents } from './load';
 
 const money = (c: number | undefined) => (c === undefined ? '' : formatMoney(fromCents(c)) ?? '');
 const itemRoute = (person: string, id: string): Route => ({ name: 'item', person, id });
@@ -323,8 +324,11 @@ export function eventView(ctx: Ctx, personId: string, id: string): HTMLElement {
   const idx = ctx.store.index(personId);
   const back = person ? h('p', null, link({ name: 'person', person: personId, section: 'overview' }, icon('back', 16), ` ${person.name}`)) : null;
   if (!person || !idx) return card({}, empty('This person is not in the records folder.'));
-  const e = careEvents(idx, ctx.store.household, localDay(ctx.now())).find((x) => x.id === id);
-  if (!e) return h('div', { class: 'stack' }, back, card({}, empty('This visit is not in these records. It may have been regrouped as records arrived.')));
+  // Any record or paper of the visit opens it, so a saved address still works
+  // after the visit is regrouped and led by another record.
+  const e = eventOf(personEvents(idx, ctx.store.household, localDay(ctx.now())), id);
+  if (!e) return h('div', { class: 'stack' }, back, card({}, empty('This visit is not in these records.')));
+  if (e.id !== id) history.replaceState(null, '', `${location.pathname}${location.search}${href(eventRoute(personId, e.id))}`);
   const m = eventMoney(e);
   return h(
     'div',
@@ -345,7 +349,7 @@ export function eventView(ctx: Ctx, personId: string, id: string): HTMLElement {
 
 /** A person's events, newest first, as cards with one number each: the overview's list under ?next. */
 export function eventsCard(ctx: Ctx, personId: string, idx: PersonIndex, shown = 8): HTMLElement {
-  const events = careEvents(idx, ctx.store.household, localDay(ctx.now()));
+  const events = personEvents(idx, ctx.store.household, localDay(ctx.now()));
   return card(
     { title: 'What happened', class: 'overview-wide' },
     events.length
@@ -361,7 +365,7 @@ export function eventsCard(ctx: Ctx, personId: string, idx: PersonIndex, shown =
 
 /** Under ?next, a record's page says which visit it is part of. */
 export function partOfEvent(ctx: Ctx, personId: string, idx: PersonIndex, recordId: string): HTMLElement | null {
-  const e = eventOf(careEvents(idx, ctx.store.household, localDay(ctx.now())), recordId);
+  const e = eventOf(personEvents(idx, ctx.store.household, localDay(ctx.now())), recordId);
   if (!e) return null;
   return h('p', { class: 'event-part' }, 'Part of ', link(eventRoute(personId, e.id), `${headline(e).title}, ${eventWhen(e)}`));
 }

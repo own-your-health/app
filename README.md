@@ -492,9 +492,14 @@ app without it is unchanged.
   the plan changed, who charged what, bills and payments, papers, how the
   visit was put together, and the claims under Details.
 - Until medrec writes `views/<person>/events.json`, the app groups records
-  itself in `src/next/events.ts`, by medrec's matching rules for claims,
+  itself in `src/next/grouping.ts`, by medrec's matching rules for claims,
   portal visits and papers. Each match is sure, likely or unsure, and the
-  page says which. Delete that file when the app reads medrec's events.
+  page says which. Every screen reads events through `src/next/load.ts`:
+  reading medrec's events changes the one call there, and `grouping.ts` is
+  then deleted. What an event is and what it cost (`src/next/event.ts`) stay.
+- A visit's address names a record in it. Any record or paper of the visit
+  opens it, so a saved address still works after records arrive and the
+  visit is led by another one.
 - The sample's Sam spent a night in the emergency room: five claims from
   four providers, a line the plan re-coded and left out of its totals, a
   bill that matches its claim and a doctor's bill not yet filed.

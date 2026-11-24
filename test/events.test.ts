@@ -3,7 +3,8 @@
 // medrec writes events. Over an invented person whose records give each rule
 // a case of its own.
 import { describe, expect, it } from 'vitest';
-import { careEvents, eventConfidence, eventMoney, eventOf, kindText, type CareEvent } from '../src/next/events';
+import { eventConfidence, eventMoney, eventOf, kindText, type CareEvent } from '../src/next/event';
+import { careEvents } from '../src/next/grouping';
 import { parseIndex } from '../src/model/parse';
 import type { Household } from '../src/model/types';
 import { demo, personNamed } from './demo-data';

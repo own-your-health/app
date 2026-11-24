@@ -123,6 +123,14 @@ test('the page fits a 360px phone in the dark theme', async ({ page }) => {
   expect(colors[1]).not.toBe('rgb(255, 255, 255)');
 });
 
+test('an address naming any record of a visit opens the visit, under the visit’s own address', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
+  // The radiologist's claim, one of five in Sam's emergency room visit.
+  await page.goto(`./?demo&next#/p/${SAM}/e/r_fbhlexithgaohaghqvwc`);
+  await expect(page.locator('.event h1')).toHaveText('Emergency room · overnight');
+  await expect(page).toHaveURL(new RegExp(`#/p/${SAM}/e/r_se4qctpgoqorqqvlkebf$`));
+});
+
 test('without ?next the app is as it was, and a visit’s address says how to see it', async ({ page }) => {
   await openSam(page, false);
   await expect(page.locator('.card-head h2', { hasText: /^What happened$/ })).toHaveCount(0);
