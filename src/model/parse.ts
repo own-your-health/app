@@ -27,6 +27,7 @@ import {
   type Source,
   type SourceStatus,
 } from './types';
+import { firstNames } from './people';
 
 export class FolderError extends Error {
   constructor(
@@ -87,6 +88,7 @@ export function parseHousehold(json: unknown): Household {
           }
         : undefined,
     }));
+  firstNames(people).forEach((short, i) => (people[i]!.short = short));
   const sources: Source[] = arr(json.sources)
     .filter(isObject)
     .filter((s) => isStr(s.id) && isStr(s.person) && isStr(s.kind))

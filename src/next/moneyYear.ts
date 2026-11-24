@@ -20,6 +20,7 @@ import { coverageCard } from './coverageCard';
 import { callsSummary } from './money';
 import { gather, head, money, num, privateChip, type MoneyRoute } from './moneyParts';
 import { eventCosts, monthMoney, planLimits, yearMoney, type CostOrder, type EventCost, type Limit, type LimitKind } from './year';
+import { called } from '../model/people';
 
 /** How many visits the year lists before linking to them all. */
 export const BIGGEST = 5;
@@ -94,7 +95,7 @@ function heroCard(d: YearData, who: string | undefined): HTMLElement {
   const words = periodWords(d.chosen);
   const y = yearMoney(d.lines);
   if (!y.claims) return card({ class: 'money-hero' }, h('p', null, `No claims in ${words} yet.`));
-  const whose = who ? `${d.people[0]?.name ?? 'Their'}’s` : 'The household’s';
+  const whose = who ? `${d.people[0] ? called(d.people[0]) : 'Their'}’s` : 'The household’s';
   const step = (swatch: string | null, label: string, cents: number | undefined) =>
     cents === undefined ? null : h('div', { class: 'kv-row' }, h('dt', null, swatch ? h('span', { class: ['swatch', swatch], 'aria-hidden': 'true' }) : null, label), h('dd', { class: 'num' }, money(cents)));
   const off = y.charged && y.discount && y.discount > 0 ? Math.round((y.discount / y.charged) * 100) : 0;
@@ -158,7 +159,7 @@ function limitRow(l: Limit, p: Person, who: string | undefined, scoped: boolean,
   const metText = l.metOn && !(l.metClaim && quiet.has(l.metClaim)) ? `Met with the claim for ${dateText(l.metOn)}` : 'Met';
   const claims = l.fromClaims === undefined || l.fromClaims === l.used ? '' : l.fromClaims ? ` Claims in these records account for ${money(l.fromClaims)} of it.` : ' None of it comes from claims in these records.';
   return row({
-    title: who ? capital(l.scope || 'Your plan') : p.name,
+    title: who ? capital(l.scope || 'Your plan') : called(p),
     meta: !who && scoped ? capital(l.scope) : null,
     aside: h('span', { class: 'num' }, `${money(l.used)} of ${money(l.limit)}`),
     extra: h(
@@ -188,7 +189,7 @@ function limitCard(kind: LimitKind, d: YearData, limits: Limit[], who: string | 
       const meta = lines.length
         ? `${who ? 'The' : 'Their'} plan’s limit isn’t in these records yet.${toward ? ` ${who ? 'The' : 'Their'} claims put ${money(toward)} toward a deductible.` : ''}`
         : `No claims in ${words} yet.`;
-      return [row({ title: who ? 'Not in these records yet' : p.name, meta })];
+      return [row({ title: who ? 'Not in these records yet' : called(p), meta })];
     }),
   );
 }
@@ -237,8 +238,8 @@ function costRow(c: EventCost, max: number, who: string | undefined, order: Cost
   const x = c.event;
   return row({
     route: eventRoute(x.person.id, x.event.id),
-    title: x.event.title,
-    meta: [eventWhen(x.event), x.event.place, who ? null : x.person.name].filter(Boolean).join(' · '),
+    title: [x.event.title, x.event.place].filter(Boolean).join(' · '),
+    meta: [eventWhen(x.event), x.event.what, who ? null : called(x.person)].filter(Boolean).join(' · '),
     aside: num(order === 'share' ? c.share : c.price),
     extra: h('div', { class: 'cost-row-strip' }, stackStrip({ planPaid: c.planPaid, share: c.share }, max), privateChip(x.private)),
   });

@@ -20,7 +20,7 @@ test('the menu opens each person’s documents, the sources and the settings', a
   await expect(button).toHaveAttribute('aria-haspopup', 'dialog');
   await openMenu(page);
   await expect(menu(page).locator('h3')).toHaveText(['Documents', 'This app']);
-  await expect(menu(page).locator('.menu-item')).toHaveText(['Robin Example', 'Sam Example', 'Alex Example', 'Jamie Example', 'SourcesA source needs attention', 'Settings']);
+  await expect(menu(page).locator('.menu-item')).toHaveText(['Robin', 'Sam', 'Alex', 'Jamie', 'SourcesA source needs attention', 'Settings']);
   // The first choice takes focus, and Escape gives it back to the button.
   await expect(menu(page).locator('.menu-item').first()).toBeFocused();
   await page.keyboard.press('Escape');
@@ -28,10 +28,10 @@ test('the menu opens each person’s documents, the sources and the settings', a
   await expect(button).toBeFocused();
 
   await openMenu(page);
-  await menu(page).getByRole('link', { name: 'Robin Example' }).click();
+  await menu(page).getByRole('link', { name: 'Robin' }).click();
   await expect(menu(page)).toHaveCount(0);
   await expect(page).toHaveURL(new RegExp(`#/p/${ROBIN}/documents$`));
-  await expect(page.locator('main h1')).toHaveText('Robin Example’s documents');
+  await expect(page.locator('main h1')).toHaveText('Robin’s documents');
 
   await openMenu(page);
   await menu(page).getByRole('link', { name: 'Settings' }).click();

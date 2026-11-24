@@ -10,7 +10,7 @@ import { sameProvider } from '../model/providers';
 import { AMOUNT_LABELS, docTypeLabel, documentTitle, formatMoney, fromCents, KIND_LABELS, organizationName, resultPoint, resultReading, str, toCents } from '../model/records';
 import { isOutOfRange, resultFlag } from '../model/flags';
 import { unitText } from '../model/result';
-import { recordTitle } from '../model/titles';
+import { recordTitle, visitTitle } from '../model/titles';
 import type { MedDocument, PersonIndex } from '../model/types';
 import { card, chip, driveLink, empty, flagChip, link, row, type Ctx } from '../ui/components';
 import { h, icon, type Child } from '../ui/dom';
@@ -18,6 +18,8 @@ import { count, dateText, localDay } from '../ui/format';
 import { href, type Route } from '../ui/router';
 import { eventConfidence, eventMoney, eventOf, kindText, paidAtCounter, privateArea, PRIVATE_AREAS, ruleText, type CareEvent, type EventMoney } from './event';
 import { groupedByMedrec, personEvents } from './load';
+import { called } from '../model/people';
+import { plainWords } from '../model/words';
 
 const money = (c: number | undefined) => (c === undefined ? '' : formatMoney(fromCents(c)) ?? '');
 const itemRoute = (person: string, id: string): Route => ({ name: 'item', person, id });
@@ -74,7 +76,8 @@ function headCard(ctx: Ctx, idx: PersonIndex, e: CareEvent, m: EventMoney): HTML
     { class: 'card' },
     kind ? h('p', { class: 'event-kind small muted' }, kind) : null,
     h('div', { class: 'card-head' }, h('h1', null, title), confidence !== 'sure' ? chip(confidence === 'likely' ? 'Likely' : 'Unsure', 'muted') : null),
-    h('p', { class: 'muted' }, [eventWhen(e), e.place, person?.name].filter(Boolean).join(' · ')),
+    e.what ? h('p', { class: 'event-what' }, e.what) : null,
+    h('p', { class: 'muted' }, [eventWhen(e), e.place, person ? called(person) : null].filter(Boolean).join(' · ')),
     sourcesStrip(ctx, idx, e),
     number ? h('p', { class: 'result-value' }, m.share === 0 ? 'Nothing for you to pay' : `${m.shareAdded ? 'Your share' : 'You owe'} ${number}`) : null,
     settledLine(idx, e, m),
@@ -131,14 +134,15 @@ function settledLine(idx: PersonIndex, e: CareEvent, m: EventMoney): HTMLElement
 function happenedCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
   if (e.visits.length) {
     const conditions = e.recorded.filter((r) => r.kind === 'condition').map(recordTitle);
-    const done = e.recorded.filter((r) => r.kind === 'procedure' || r.kind === 'immunization' || r.kind === 'medication');
+    const done = e.recorded.filter((r) => (r.kind === 'procedure' || r.kind === 'immunization' || r.kind === 'medication') && plainWords(recordTitle(r)));
     return card(
       { title: 'What happened' },
       e.visits.map(({ record: v }) =>
         row({
           route: itemRoute(idx.person, v.id),
-          title: recordTitle(v),
-          meta: [str(v.fields.reason), str(v.fields.practitioner) ? `with ${str(v.fields.practitioner)}` : null, str(v.fields.location)].filter(Boolean).join(' · '),
+          title: visitTitle(v),
+          // The reason, unless it already names the row.
+          meta: [plainWords(str(v.fields.reason)) === visitTitle(v) ? null : plainWords(str(v.fields.reason)), str(v.fields.practitioner) ? `with ${str(v.fields.practitioner)}` : null, str(v.fields.location)].filter(Boolean).join(' · '),
         }),
       ),
       conditions.length ? h('p', null, h('span', { class: 'muted' }, conditions.length === 1 ? 'Diagnosis: ' : 'Diagnoses: '), conditions.join(', ')) : null,
@@ -149,7 +153,7 @@ function happenedCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
   // A fill or a vaccine the portal knows with no visit (medrec makes one of each, and of a day's doses).
   const recorded = e.recorded.filter((r) => r.kind === 'procedure' || r.kind === 'immunization' || r.kind === 'medication');
   const summaries = e.papers.filter((p) => p.doc.doc_type === 'discharge_summary' || p.doc.doc_type === 'visit_summary');
-  const services = [...new Set(e.claims.flatMap((c) => claimLines(c.record).filter((l) => l.counted).map((l) => l.label)))];
+  const services = [...new Set(e.claims.flatMap((c) => claimLines(c.record).filter((l) => l.counted && plainWords(l.label)).map((l) => l.label)))];
   const diagnoses = [...new Set(e.claims.flatMap((c) => claimDiagnoses(c.record).map(diagnosisText)))];
   const from = recorded.length
     ? e.claims.length
@@ -160,10 +164,10 @@ function happenedCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
       : 'From the papers.';
   return card(
     { title: 'What happened' },
-    recorded.map((r) => row({ route: itemRoute(idx.person, r.id), title: recordTitle(r), meta: [KIND_LABELS[r.kind] ?? r.kind, str(r.fields.dosage)].filter(Boolean).join(' · ') })),
+    recorded.map((r) => row({ route: itemRoute(idx.person, r.id), title: plainWords(recordTitle(r)) ?? (KIND_LABELS[r.kind] ?? r.kind), meta: [KIND_LABELS[r.kind] ?? r.kind, str(r.fields.dosage)].filter(Boolean).join(' · ') })),
     services.length ? h('p', null, h('span', { class: 'muted' }, 'Billed for: '), services.join(', ')) : null,
     diagnoses.length ? h('p', null, h('span', { class: 'muted' }, diagnoses.length === 1 ? 'Diagnosis: ' : 'Diagnoses: '), diagnoses.join(', ')) : null,
-    summaries.length ? h('p', null, h('span', { class: 'muted' }, 'Read more in: '), ...summaries.flatMap((p, i) => [i ? ', ' : null, link(itemRoute(idx.person, p.doc.id), documentTitle(p.doc))])) : null,
+    summaries.length ? h('p', null, h('span', { class: 'muted' }, 'Read more in: '), ...summaries.flatMap((p, i) => [i ? ', ' : null, link(itemRoute(p.person ?? idx.person, p.doc.id), documentTitle(p.doc))])) : null,
     h('p', { class: 'small muted' }, from),
   );
 }
@@ -294,7 +298,7 @@ function papersCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
           row({
             route: itemRoute(p.person ?? idx.person, p.doc.id),
             title: documentTitle(p.doc),
-            meta: [docTypeLabel(p.doc.doc_type), dateText(p.doc.date), p.person ? `filed under ${ctx.store.person(p.person)?.name ?? 'someone else'}` : null].filter(Boolean).join(' · '),
+            meta: [docTypeLabel(p.doc.doc_type), dateText(p.doc.date), p.person ? `filed under ${ctx.store.person(p.person) ? called(ctx.store.person(p.person)!) : 'someone else'}` : null].filter(Boolean).join(' · '),
             extra: driveLink(ctx, p.doc.path, 'Open in Drive'),
           }),
         )
@@ -313,9 +317,9 @@ function grouping(ctx: Ctx, idx: PersonIndex): string {
 
 function assemblyCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
   const items: Child[] = [
-    ...e.visits.map((v) => row({ route: itemRoute(idx.person, v.record.id), title: recordTitle(v.record), meta: `Portal visit · ${ruleText(v.rule)}`, aside: sureWord(v.confidence) })),
+    ...e.visits.map((v) => row({ route: itemRoute(idx.person, v.record.id), title: visitTitle(v.record), meta: `Portal visit · ${ruleText(v.rule)}`, aside: sureWord(v.confidence) })),
     ...e.claims.map((c) => row({ route: itemRoute(idx.person, c.record.id), title: c.provider ?? recordTitle(c.record), meta: `Claim · ${ruleText(c.rule)}`, aside: sureWord(c.confidence) })),
-    ...e.papers.map((p) => row({ route: itemRoute(idx.person, p.doc.id), title: documentTitle(p.doc), meta: `Paper · ${ruleText(p.rule)}`, aside: sureWord(p.confidence) })),
+    ...e.papers.map((p) => row({ route: itemRoute(p.person ?? idx.person, p.doc.id), title: documentTitle(p.doc), meta: `Paper · ${ruleText(p.rule)}`, aside: sureWord(p.confidence) })),
   ];
   return h(
     'details',
@@ -346,6 +350,8 @@ function detailsCard(idx: PersonIndex, e: CareEvent): HTMLElement {
       claimRows,
       recorded.length ? h('h3', { class: 'card-sub' }, 'Recorded at the visit') : null,
       recorded,
+      e.descriptors ? h('h3', { class: 'card-sub' }, 'In the records’ billing words') : null,
+      e.descriptors ? h('ul', { class: 'event-descriptors small' }, e.descriptors.map((d) => h('li', null, d))) : null,
       h('p', { class: 'small muted' }, `Each claim’s page has its lines, codes, ${AMOUNT_LABELS.allowed.toLowerCase()} amounts and the raw data.`),
     ),
   );
@@ -354,7 +360,7 @@ function detailsCard(idx: PersonIndex, e: CareEvent): HTMLElement {
 export function eventView(ctx: Ctx, personId: string, id: string): HTMLElement {
   const person = ctx.store.person(personId);
   const idx = ctx.store.index(personId);
-  const back = person ? h('p', null, link({ name: 'health', who: personId }, icon('back', 16), ` ${person.name}`)) : null;
+  const back = person ? h('p', null, link({ name: 'health', who: personId }, icon('back', 16), ` ${called(person)}`)) : null;
   if (!person || !idx) return card({}, empty('This person is not in the records folder.'));
   // Any record or paper of the visit opens it, so a saved address still works
   // after the visit is regrouped and led by another record.
@@ -388,7 +394,7 @@ export function eventsCard(ctx: Ctx, personId: string, idx: PersonIndex, shown =
       ? events.slice(0, shown).map((e) => {
           const n = eventNumber(eventMoney(e));
           const { title, kind } = headline(e);
-          return row({ route: eventRoute(personId, e.id), title, meta: [kind, eventWhen(e), e.place].filter(Boolean).join(' · '), aside: [privateArea(e) ? chip('Private', 'muted') : null, n ? h('span', { class: 'num' }, n) : null] });
+          return row({ route: eventRoute(personId, e.id), title: [title, e.place].filter(Boolean).join(' · '), meta: [kind, eventWhen(e), e.what].filter(Boolean).join(' · '), aside: [privateArea(e) ? chip('Private', 'muted') : null, n ? h('span', { class: 'num' }, n) : null] });
         })
       : empty('No visits, claims or papers yet.'),
     events.length ? h('p', { class: 'small' }, link({ name: 'calendar', view: 'list', who: personId }, events.length > shown ? `All ${events.length} in the calendar` : 'In the calendar')) : null,

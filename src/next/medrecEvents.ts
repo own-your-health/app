@@ -5,6 +5,7 @@
 import type { MedrecEvent, MedrecEvents } from '../model/events';
 import type { Household, MedDocument, MedRecord, PersonIndex } from '../model/types';
 import { nameEvent, type CareEvent, type ClaimRole, type EventKind } from './event';
+import { tidyName } from '../model/words';
 
 const KINDS: Record<string, EventKind> = {
   er: 'er',
@@ -56,7 +57,7 @@ export function fromMedrec(file: MedrecEvents, index: PersonIndex, household: Ho
       }
       const record = records.get(x.record!);
       if (!record) continue;
-      if (record.kind === 'claim') e.claims.push({ record, role: ROLES[x.role] ?? 'service', ...(x.provider ? { provider: x.provider } : {}), rule: x.rule, confidence: x.confidence });
+      if (record.kind === 'claim') e.claims.push({ record, role: ROLES[x.role] ?? 'service', ...(x.provider ? { provider: tidyName(x.provider) } : {}), rule: x.rule, confidence: x.confidence });
       else if (x.role === 'portal' || x.role === 'contact') e.visits.push({ record, rule: x.rule, confidence: x.confidence });
       else e.recorded.push(record);
     }

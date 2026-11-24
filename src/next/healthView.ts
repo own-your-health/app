@@ -20,6 +20,7 @@ import { eventsCard } from './eventView';
 import { ageWords, refillRow, vaccinesDueRow, visitRow } from './homeView';
 import { coverageOf, doctorSheet, healthOf, icdOf, privateOf, resultPrivate, trendOf, type HealthItems } from './health';
 import { refillsDue, vaccineNeeds } from './needs';
+import { called } from '../model/people';
 
 type HealthRoute = Extract<Route, { name: 'health' }>;
 
@@ -41,7 +42,7 @@ function head(ctx: Ctx, title: string, lead: string, who: string | undefined, vi
     { class: 'chips', role: 'group', 'aria-label': 'Whose health' },
     [...(view ? [] : [{ id: '', name: 'Everyone' }]), ...ctx.store.household.people].map((p) => {
       const on = p.id ? who === p.id : !who;
-      return h('a', { class: ['filter', on ? 'filter-on' : null], href: href({ name: 'health', ...(view ? { view } : {}), ...(p.id ? { who: p.id } : {}) }), 'aria-current': on ? 'page' : false }, p.name);
+      return h('a', { class: ['filter', on ? 'filter-on' : null], href: href({ name: 'health', ...(view ? { view } : {}), ...(p.id ? { who: p.id } : {}) }), 'aria-current': on ? 'page' : false }, called(p));
     }),
   );
   const back = view && who ? h('p', { class: 'sheet-back' }, link({ name: 'health', who }, icon('back', 16), ' Health')) : null;
@@ -147,7 +148,7 @@ function personPage(ctx: Ctx, p: Person, idx: PersonIndex): HTMLElement {
   return h(
     'div',
     { class: 'stack health' },
-    ...head(ctx, 'Health', `Where ${p.name} stands: what is due, what is current, and what is worth a look.`, p.id),
+    ...head(ctx, 'Health', `Where ${called(p)} stands: what is due, what is current, and what is worth a look.`, p.id),
     card(
       { class: 'health-standing' },
       h('div', { class: 'chips' }, p.birth_date ? chip(ageWords(p.birth_date, today) ?? '', 'muted') : null, chip(cov.words, cov.kind === 'records_and_claims' ? 'ok' : 'attention')),
@@ -170,7 +171,7 @@ function everyonePage(ctx: Ctx): HTMLElement {
   const kept = new Set<string>();
   const cards = store.household.people.map((p) => {
     const idx = store.index(p.id);
-    if (!idx) return card({ title: p.name }, h('p', { class: 'small muted' }, store.indexErrors.has(p.id) ? 'Their records could not be read.' : 'Loading their records…'));
+    if (!idx) return card({ title: called(p) }, h('p', { class: 'small muted' }, store.indexErrors.has(p.id) ? 'Their records could not be read.' : 'Loading their records…'));
     const h0 = healthOf(idx, today);
     const cov = coverageOf(idx);
     const shared = <T>(xs: T[], priv: (x: T) => string | undefined, key: (x: T) => string) =>
@@ -196,9 +197,9 @@ function everyonePage(ctx: Ctx): HTMLElement {
       ['Worth noticing', noticing.length ? noticing.map((x) => x.series.name).join(', ') : 'Nothing out of range'],
     ];
     return card(
-      { title: p.name, actions: chip(cov.words, cov.kind === 'records_and_claims' ? 'ok' : 'attention') },
+      { title: called(p), actions: chip(cov.words, cov.kind === 'records_and_claims' ? 'ok' : 'attention') },
       h('dl', { class: 'kv health-kv' }, lines.map(([k, val]) => h('div', { class: 'kv-row' }, h('dt', null, k), h('dd', null, val)))),
-      h('p', { class: 'small' }, link({ name: 'health', who: p.id }, `${p.name}’s health`)),
+      h('p', { class: 'small' }, link({ name: 'health', who: p.id }, `${called(p)}’s health`)),
     );
   });
   return h(
