@@ -1,4 +1,4 @@
-// Health under ?next. Everyone's view gives each person a card: what the
+// Health. Everyone's view gives each person a card: what the
 // records can know about them, what is due, what is current and what is
 // worth a look. A person's page runs in a fixed order: Due, Current, Worth
 // noticing, Recently, then Quiet, which counts what is not news and links to

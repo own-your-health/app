@@ -21,11 +21,14 @@ test.afterEach(() => {
 });
 
 test('costs this plan year across everyone, broken down, and down to one month and back', async ({ page }) => {
+  // Home's Money card, then Money's way to every claim.
   await page.goto('./?demo');
-  const glance = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Costs$/ }) });
+  const glance = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Money$/ }) });
   await expect(glance.locator('.glance-answer')).toHaveText('$640.36 your share this plan year');
-  await glance.getByRole('link', { name: 'Costs by provider, kind of care and month' }).click();
+  await glance.getByRole('link', { name: 'The year, the bills and the biggest costs' }).click();
+  await page.getByRole('link', { name: 'Every claim, by provider, kind of care and month' }).click();
   await expect(page).toHaveURL(/#\/costs$/);
+  await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Money' })).toHaveAttribute('aria-current', 'page');
   await expect(page.locator('main h1')).toHaveText('Costs');
 
   const summary = page.locator('.card', { has: page.locator('.card-head h2', { hasText: 'This plan year, everyone' }) });
@@ -149,8 +152,10 @@ test('the lines download as CSV, without leaving the page', async ({ page }) => 
 });
 
 test('a person’s costs, from their claims', async ({ page }) => {
+  // Sam's old claims address opens Sam's Money, which leads to every claim of Sam's.
   await page.goto('./?demo#/p/p_wwezzed7kml67hnp6s7n/claims');
-  await page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Claims$/ }) }).getByRole('link', { name: 'Costs over time' }).click();
+  await expect(page).toHaveURL(/#\/money\?who=p_wwezzed7kml67hnp6s7n$/);
+  await page.getByRole('link', { name: 'Every claim, by provider, kind of care and month' }).click();
   await expect(page).toHaveURL(/#\/costs\?only=person%3Ap_wwezzed7kml67hnp6s7n$/);
   await expect(page.getByRole('group', { name: 'Whose costs' }).getByRole('link', { name: 'Sam Example' })).toHaveAttribute('aria-current', 'true');
   await expect(page.locator('.card', { has: page.locator('.card-head h2', { hasText: 'This plan year, Sam Example' }) }).locator('.glance-answer')).toHaveText('$497.40 your share');

@@ -17,6 +17,10 @@ export const SECTIONS = [
   'search',
 ] as const;
 export type Section = (typeof SECTIONS)[number];
+/** The sections that are still pages: a person's full lists, reached from Health, and their documents. The others moved (see `moved`). */
+export const LIST_SECTIONS = ['results', 'medicines', 'conditions', 'allergies', 'immunizations', 'documents', 'imaging'] as const;
+export type ListSection = (typeof LIST_SECTIONS)[number];
+export const isListSection = (s: Section): s is ListSection => (LIST_SECTIONS as readonly string[]).includes(s);
 
 export const SECTION_LABELS: Record<Section, string> = {
   overview: 'Overview',
@@ -55,14 +59,14 @@ export type Route =
   | { name: 'source'; source: string }
   | { name: 'person'; person: string; section: Section; sub?: string; query?: string; words?: true }
   | { name: 'item'; person: string; id: string }
-  // An event: a visit, stay, test or fill, with its claims and papers (?next).
+  // An event: a visit, stay, test or fill, with its claims and papers.
   | { name: 'event'; person: string; id: string }
-  // The calendar (?next): a month (YYYY-MM) and a chosen day, or the list (from the newest month, or before one), for everyone or one person.
+  // The calendar: a month (YYYY-MM) and a chosen day, or the list (from the newest month, or before one), for everyone or one person.
   | { name: 'calendar'; view?: 'list'; month?: string; who?: string; day?: string; before?: string }
-  // Money (?next), for everyone or one person: the year (in a `period` as the costs screen's), the bills, those worth a
+  // Money, for everyone or one person: the year (in a `period` as the costs screen's), the bills, those worth a
   // call (and the bill a row named), or where the money went (by network price, or by your share).
   | { name: 'money'; view?: MoneyView; who?: string; bill?: string; period?: string; sort?: 'share' }
-  // Health (?next): each person's standing, one person's page, or the sheet to hand their doctor.
+  // Health: each person's standing, one person's page, or the sheet to hand their doctor.
   | { name: 'health'; view?: 'doctor'; who?: string }
   | { name: 'huishouden'; hh: string }
   | { name: 'not_found' };
@@ -201,6 +205,28 @@ function costsQuery(r: Extract<Route, { name: 'costs' }>): string {
 
 function searchQuery(q: string, words: true | undefined): string {
   return new URLSearchParams({ q, ...(words ? { words: '1' } : {}) }).toString();
+}
+
+/**
+ * Where an address of the person page from before the redesign now lives, so
+ * links and bookmarks still open: the overview is the person's Health, the
+ * timeline their calendar's list, claims and bills their Money, and their
+ * search the search. Undefined for an address that did not move.
+ */
+export function moved(r: Route): Route | undefined {
+  if (r.name !== 'person') return undefined;
+  switch (r.section) {
+    case 'overview':
+      return { name: 'health', who: r.person };
+    case 'timeline':
+      return { name: 'calendar', view: 'list', who: r.person };
+    case 'claims':
+      return { name: 'money', who: r.person };
+    case 'search':
+      return { name: 'search', ...(r.query ? { query: r.query } : {}), ...(r.query && r.words ? { words: true as const } : {}) };
+    default:
+      return undefined;
+  }
 }
 
 export function href(route: Route): string {

@@ -1,4 +1,4 @@
-// The Calendar (?next): the household's events on the calendar people think
+// The Calendar: the household's events on the calendar people think
 // in, a month at a time or as one list. A mark is an event, never a bill
 // line: a dot for a visit or a test, a ring for a pharmacy trip or a vaccine,
 // a bar across the days of an emergency room visit or a hospital stay.

@@ -1,8 +1,9 @@
-// Home under ?next: quiet until something needs you. First what needs you
+// Home: quiet until something needs you. First what needs you
 // (bills worth a call, bills to pay, vaccine doses, refills, doses coming
 // up), then where everyone stands, then what happened recently. Home is a
 // shared screen: anything private stays off it, counted and not named. A
-// person's own overview lists the same needs, private ones marked.
+// person's own Health (vaccines and refills) and Money (bills) list the same
+// needs, private ones marked.
 
 import { formatMoney, fromCents } from '../model/records';
 import { SCHEDULE_SOURCE } from '../model/schedule';
@@ -142,7 +143,7 @@ interface Standing {
 /** One person's lines: open bills, what comes next, current medicines, the latest visit. */
 function standing(s: Standing, today: string, error?: string): HTMLElement {
   const p = s.person;
-  const head = h('h3', { class: 'card-sub stand-name' }, link({ name: 'person', person: p.id, section: 'overview' }, p.name));
+  const head = h('h3', { class: 'card-sub stand-name' }, link({ name: 'health', who: p.id }, p.name));
   if (!s.idx) return h('div', { class: 'stand' }, head, h('p', { class: 'small muted' }, error ?? 'Loading…'));
   const calls = s.bills.filter((b) => b.verdict !== 'matches').length;
   const owed = s.bills.reduce((t, b) => t + b.cents, 0);
@@ -230,18 +231,11 @@ function needsCard(all: PersonNeeds[], own?: string): HTMLElement | null {
     calls.length || pay.length
       ? h('p', { class: 'small muted' }, 'A bill stays here until a receipt from its provider is filed after it. ', link({ name: 'money', view: 'bills', ...(own ? { who: own } : {}) }, 'Bills: each one beside its claim'))
       : null,
-    kept ? h('p', { class: 'small muted' }, `${count(kept, 'private item')} ${kept === 1 ? 'is' : 'are'} kept off Home. Each shows on its person’s own overview.`) : null,
+    kept ? h('p', { class: 'small muted' }, `${count(kept, 'private item')} ${kept === 1 ? 'is' : 'are'} kept off Home. Each shows on its person’s own Health or Money.`) : null,
   );
 }
 
-/** Under ?next, what needs this person, private items included and marked; nothing when nothing does. */
-export function personNeedsCard(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement | null {
-  const today = localDay(ctx.now());
-  const mine = householdEvents(ctx.store.household, (id) => (id === person.id ? idx : undefined), today);
-  return needsCard([personNeeds(person, idx, mine, today, true)], person.id);
-}
-
-/** Home's first sections under ?next: what needs you, where everyone stands, and what happened recently. */
+/** Home's first sections: what needs you, where everyone stands, and what happened recently. */
 export function nextHome(ctx: Ctx, signIn: HTMLElement | null): HTMLElement[] {
   const store = ctx.store;
   const today = localDay(ctx.now());

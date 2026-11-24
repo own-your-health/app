@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { href, parseRoute, SECTIONS, type Route } from '../src/ui/router';
+import { href, LIST_SECTIONS, moved, parseRoute, SECTIONS, type Route } from '../src/ui/router';
 
 const P = 'p_aaaaaaaaaaaaaaaaaaaa';
 
@@ -97,5 +97,32 @@ describe('routes', () => {
       expect(parseRoute(h)).toEqual({ name: 'not_found' });
     }
     expect(parseRoute('')).toEqual({ name: 'home' });
+  });
+});
+
+describe('addresses from before the redesign', () => {
+  const to = (hash: string) => {
+    const r = moved(parseRoute(hash));
+    return r ? href(r) : undefined;
+  };
+
+  it('open where their page lives now', () => {
+    expect(to(`#/p/${P}`)).toBe(`#/health?who=${P}`);
+    expect(to(`#/p/${P}/overview`)).toBe(`#/health?who=${P}`);
+    expect(to(`#/p/${P}/timeline`)).toBe(`#/calendar?view=list&who=${P}`);
+    expect(to(`#/p/${P}/timeline/all`)).toBe(`#/calendar?view=list&who=${P}`);
+    expect(to(`#/p/${P}/claims`)).toBe(`#/money?who=${P}`);
+    expect(to(`#/p/${P}/search?q=flu&words=1`)).toBe('#/search?q=flu&words=1');
+    expect(to(`#/p/${P}/search`)).toBe('#/search');
+  });
+
+  it('leave a person’s lists, their documents and every other page where they are', () => {
+    for (const section of LIST_SECTIONS) expect(to(`#/p/${P}/${section}`)).toBeUndefined();
+    expect(to(`#/p/${P}/results/2345-7`)).toBeUndefined();
+    for (const hash of ['#/', '#/money', `#/p/${P}/r/r_aaaaaaaaaaaaaaaaaaaa`, `#/p/${P}/e/r_aaaaaaaaaaaaaaaaaaaa`, '#/settings']) expect(to(hash)).toBeUndefined();
+  });
+
+  it('cover every section: each moved, or still a page', () => {
+    for (const section of SECTIONS) expect(!!to(`#/p/${P}/${section}`) !== (LIST_SECTIONS as readonly string[]).includes(section)).toBe(true);
   });
 });

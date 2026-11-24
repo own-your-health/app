@@ -4,20 +4,24 @@ A web page that shows a household's medical records from the household's own
 Google Drive. It reads the records folder that
 [medrec](https://github.com/own-your-health/medrec-cli) keeps, and shows:
 
-- each person's overview: what the latest loads added, the newest result of
-  each test with those out of range first, active conditions, current
-  medicines, allergies, immunizations and recent visits, each naming the
-  source it came from;
-- each person's records: a timeline, results by panel and over time against
-  their reference range, medicines,
-  conditions, allergies, immunizations, claims and bills, coverage over
-  time, documents and imaging studies;
-- what care cost across the household, from the plans' claims: by plan year
-  or calendar year, by person, provider, kind of care and month, one
-  service's prices across providers and dates, and a CSV of the lines;
+- **Home**: what needs someone (bills worth a call, bills to pay, vaccine
+  doses, refills), where everyone stands, and what happened recently;
+- **Calendar**: the household's visits, stays, tests and fills, a month at a
+  time with a lane per person, or as one list;
+- each **visit**: what happened, its results, how the price came down to
+  what you owe, who charged what, bills, papers and the claims;
+- **Money**: what care cost by plan year or calendar year, bills beside their
+  claims, the ones worth a call, deductibles and out-of-pocket limits,
+  coverage over time, and every claim by provider, kind of care and month,
+  with a CSV of the lines;
+- **Health**: each person's page (what is due, current, worth noticing and
+  recent), their full lists of results against their reference range,
+  medicines, conditions, allergies, immunizations and imaging, and a sheet to
+  hand a doctor;
+- each person's documents;
 - one search over everyone's records, documents and imaging, and the text
-  medrec extracted from documents, from the home screen or the search
-  button in the bar, or within one person;
+  medrec extracted from documents, from Home or the search button in the
+  bar;
 - for any record, the raw FHIR the source served, where it came from, and the
   import that brought it in;
 - each source's last load (when, and how many records were new, changed and
@@ -74,11 +78,13 @@ the app and Refresh.
 3. Choose the records folder. The app lists the folders with a
    `household.json` that the account can see; you can also paste a folder link.
 
-Home leads with the household's people and their records, then one line for
-a sign-in that needs a person ("Example Pediatrics needs a sign-in on the
-Mac"), which opens the source, then search, when the records last loaded and
-**Refresh everything**. **Sources** (`#/sources`, the stack icon in the bar,
-which carries a dot while a source needs attention) has every source: its
+Home, Calendar, Money and Health are tabs: at the bottom of a phone's
+screen, and a row above the page from 640px wide. The bar's menu holds each
+person's documents, Sources and Settings. Home closes with one line for a
+sign-in that needs a person ("Example Pediatrics needs a sign-in on the
+Mac"), which opens the source, then when the records last loaded and
+**Refresh everything**. **Sources** (`#/sources`, in the bar's menu, which
+carries a dot while a source needs attention) has every source: its
 sign-in, its last load and attempt, and when the Mac loads it next. A
 source's page says in one sentence what happened and gives the medrec
 command to run; what the provider's own tool reported, which can name that
@@ -86,7 +92,7 @@ tool's commands, is folded under **Error details**. When the Mac skips a
 source because it loaded or tried it too recently, the answer says when it
 may load again.
 
-For a child under 19, the overview and the Immunizations section set the
+For a child under 19, Home, Health and the Immunizations list set the
 recorded doses beside the routine rows of the CDC's child and adolescent
 immunization schedule (the July 2, 2025 version, which CDC restored after a
 court stayed its January 2026 changes on March 16, 2026; the page says so):
@@ -112,7 +118,7 @@ many dates the records hold them on, by the newest record's status in words
 every source that recorded it. A medicine joins its prescription to its
 fills: who prescribed it and the last fill and pharmacy. One only reported
 says so. A vaccine lists every dose, and a dose recorded as not given stands
-apart. The rules are `src/model/lists.ts`, which the overview's cards use too.
+apart. The rules are `src/model/lists.ts`, which Health uses too.
 
 Search needs every word, or "a quoted phrase", somewhere in an item's name,
 its fields (a visit's reason, a medicine's dosage or prescriber, each of a
@@ -302,12 +308,16 @@ visit and a claim each lead with what a person would ask first. Codes, every
 field, where a record came from, the import that brought it in, its
 identifiers and its raw FHIR stay whole under one folded Technical details.
 
-Every person and record has its own address, such as `#/p/<person id>` (the
-person's overview; `#/p/<person id>/timeline` is the visits timeline and
-`#/p/<person id>/timeline/all` every record in date order) and
-`#/p/<person id>/r/<record id>`, so a bookmark or another app can link
-straight to it. `#/hh/<id>` opens the person whose
-`links.huishouden_health_person` is that id.
+Every person, visit and record has its own address, such as
+`#/health?who=<person id>` (the person's Health), `#/p/<person id>/e/<record
+id>` (a visit) and `#/p/<person id>/r/<record id>` (a record), so a bookmark
+or another app can link straight to it. `#/hh/<id>` opens the Health of the
+person whose `links.huishouden_health_person` is that id. Addresses from
+before the redesign still open, where their page lives now:
+`#/p/<person id>` on the person's Health, `/timeline` on their calendar's
+list, `/claims` on their Money and `/search` on the search. The person's
+lists (`/results`, `/medicines` and so on) and `/documents` keep their
+addresses.
 
 A link from Huishouden Health, or any other app, can carry the setup link's
 `?client=<client id>` before the route:
@@ -340,7 +350,13 @@ the browser:
 
 The app opens at its start page; nothing about the household is in the
 installed shortcut. It has no service worker, so it needs a connection, as it
-does in the browser.
+does in the browser, and each launch loads the version on the site (GitHub
+Pages lets a browser keep the page for up to 10 minutes; the rest of the
+app's files are named by their contents, so a new version never mixes with an
+old one). An installed app that comes back from the background keeps the
+version it opened with, so when it comes to the front it asks the site for
+its page, at most every 5 minutes, and says **A new version of the app is
+ready** with a **Reload** button when the site has another.
 
 ### Refresh, and sign-ins that need a person
 
@@ -480,14 +496,14 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
 - Tests use invented data only. Never commit a real record, account, client
   id or folder id.
 
-### The redesign, behind `?next`
+### The screens
 
-The app is being redesigned around what happened (a visit, an emergency
-room trip, a lab draw, a fill) rather than around kinds of record. Its
-screens are built behind `?next`, for example `/app/?demo&next`, and the
-app without it is unchanged.
+The app is built around what happened (a visit, an emergency room trip, a
+lab draw, a fill) rather than around kinds of record. The redesign was
+built behind `?next`. It is the app now, and an old link's `?next` is
+dropped from the address.
 
-- A person's overview opens with **What happened**, one row per visit with
+- Each person's Health lists **What happened**, one row per visit with
   what it cost. Each row opens the visit's page: what happened, its results,
   how the price came down from what providers charged to what you owe, what
   the plan changed, who charged what, bills and payments, papers, how the
@@ -516,8 +532,9 @@ app without it is unchanged.
   stayed its January 2026 changes on March 16, 2026; Home and the
   person's page name that version and date. **Where everyone stands**
   follows, a few lines a person: their age, their last visit, what is
-  open to pay and what comes next. **Recently** closes it. A person's
-  overview opens with their own Needs you.
+  open to pay and what comes next. **Recently** closes it. A person's own
+  Health (vaccines and refills) and Money (bills) list the same needs,
+  private ones marked.
 - **Money** (`#/money`, from Home's Money card) opens on the year: the
   household's share of this plan year's care, with what the providers
   charged, what the network took off and what the plans paid, from the
@@ -572,7 +589,7 @@ app without it is unchanged.
   which area, and Show them brings them back there until the calendar is
   left or the page reloaded; nothing about it is stored. Home counts the
   private items it leaves off, bills and refills included, without naming
-  them; the person's own overview lists them, marked. Health does the
+  them; the person's own Health and Money list them, marked. Health does the
   same, and its doctor's sheet leaves them off until included. The app says this is
   discretion, not security: everyone the Drive folder is shared with can
   still read the files.

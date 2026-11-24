@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// Money under ?next: the year (its four figures, bills to act on, each
+// Money: the year (its four figures, bills to act on, each
 // person's deductible and out-of-pocket limit, the months, the biggest
 // costs), each bill beside its claim, the bills worth a call with the words
 // to say, where the money went, and private items kept off the shared view.
@@ -9,7 +9,7 @@ const SAM = 'p_wwezzed7kml67hnp6s7n';
 
 async function open(page: Page, path: string) {
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
-  await page.goto(`./?demo&next${path}`);
+  await page.goto(`./?demo${path}`);
 }
 
 const card = (page: Page, title: string | RegExp) => page.locator('.card', { has: page.locator('.card-head h2', { hasText: title }) });
@@ -71,7 +71,7 @@ test('worth a call gives each bill the figures and the words to say', async ({ p
   // On Sam's own Bills the private copay is listed, marked.
   const counseling = card(page, 'Not billed yet').locator('.row', { hasText: 'Example Counseling' });
   await expect(counseling.locator('.chip')).toHaveText('Private');
-  await page.getByRole('link', { name: 'Money', exact: true }).click();
+  await page.locator('main').getByRole('link', { name: 'Money', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`#/money\\?who=${SAM}$`));
 });
 
@@ -166,10 +166,4 @@ test('Money fits a 360px phone in the dark theme', async ({ page }) => {
     await expect(page.locator('main h1')).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
   }
-});
-
-test('without ?next there are no Money pages', async ({ page }) => {
-  await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
-  await page.goto('./?demo#/money');
-  await expect(page.locator('main .card-head h2')).toHaveText('Page not found');
 });

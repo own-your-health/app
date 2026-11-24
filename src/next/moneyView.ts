@@ -1,4 +1,4 @@
-// Money under ?next. Its landing is the year (moneyYear.ts). Bills sets each
+// Money. Its landing is the year (moneyYear.ts). Bills sets each
 // open bill beside what the claims say you owe, then the shares no bill has
 // asked for yet and the bills paid. Worth a call gives each bill that asks
 // something else the facts to read out on the phone. Everyone's view is a
