@@ -69,7 +69,7 @@ test('a setup link signs in, finds the records folder and reads it', async ({ pa
   expect(page.url()).toBe(`${baseURL}#/`);
   await page.locator('.row', { hasText: FOLDER_NAME }).getByRole('button', { name: 'Open' }).click();
   await expect(page.locator('.signin-notice')).toHaveText(NOTICE);
-  await expect(page.locator('.card', { hasText: 'People' }).locator('.row')).toHaveCount(4);
+  await expect(page.locator('.stand-name')).toHaveCount(4);
 
   const kept = await page.evaluate(() => ({ local: { ...localStorage }, session: { ...sessionStorage } }));
   expect(Object.keys(kept.local).sort()).toEqual(['own-your-health-app.account', 'own-your-health-app.client_id', 'own-your-health-app.folder']);
@@ -118,13 +118,14 @@ test('with no account stored, a browser with two Google accounts asks once', asy
 test('an hour later the sign-in renews itself, as the same account, on the same screen', async ({ page }) => {
   await page.clock.install();
   await signIn(page);
-  await page.getByRole('link', { name: /^Robin Example/ }).first().click();
-  await expect(page.locator('.person-head h1')).toHaveText('Robin Example');
+  await page.locator('.stand-name').getByRole('link', { name: 'Robin Example' }).click();
+  const lead = page.locator('main .lead');
+  await expect(lead).toHaveText('Where Robin Example stands: what is due, what is current, and what is worth a look.');
   const route = new URL(page.url()).hash;
   await page.clock.fastForward('01:00:00');
   await lookAgain(page);
   await expect(page).toHaveURL((u) => u.hash === route && google.signIns.length === 2);
-  await expect(page.locator('.person-head h1')).toHaveText('Robin Example');
+  await expect(lead).toHaveText('Where Robin Example stands: what is due, what is current, and what is worth a look.');
   expect(google.signIns[1]).toMatchObject({ prompt: 'none', hint: USER.emailAddress });
   await expect(page.getByRole('button', { name: 'Sign in with Google' })).toHaveCount(0);
 });

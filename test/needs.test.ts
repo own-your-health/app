@@ -1,4 +1,4 @@
-// What Home lists under ?next: open bills against the claims, refills by
+// What Home lists: open bills against the claims, refills by
 // days' supply, and a child's vaccine doses grouped into visits.
 import { describe, expect, it } from 'vitest';
 import { householdEvents } from '../src/next/calendar';

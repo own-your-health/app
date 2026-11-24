@@ -1,4 +1,4 @@
-// The calendar (?next): the month's weeks, the household's events in order,
+// The calendar: the month's weeks, the household's events in order,
 // and private events kept off the shared view.
 import { describe, expect, it } from 'vitest';
 import { barPart, householdEvents, inMonth, listPage, markShape, monthWeeks, onDay, shiftMonth, shown } from '../src/next/calendar';

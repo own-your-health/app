@@ -1,4 +1,4 @@
-// The Calendar screen (?next): a month with a lane per person and the
+// The Calendar screen: a month with a lane per person and the
 // month's events listed below it, or every event as one list. A person's
 // own calendar shows their private events; the Everyone calendar leaves
 // them off unless the household turns that on for this visit to the page.
@@ -276,7 +276,7 @@ export function calendarView(ctx: Ctx, route: CalendarRoute): HTMLElement {
   );
 }
 
-/** Under ?next, Home's way into the calendar: the household's latest events, private ones left off. */
+/** Home's way into the calendar: the household's latest events, private ones left off. */
 export function recentCard(ctx: Ctx, shownCount = 3): HTMLElement {
   const all = householdEvents(ctx.store.household, (id) => ctx.store.index(id), localDay(ctx.now()));
   const { events } = shown(all, undefined, false);

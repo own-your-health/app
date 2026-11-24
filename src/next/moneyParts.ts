@@ -1,4 +1,4 @@
-// The parts every Money page under ?next shares: the bills gathered for
+// The parts every Money page shares: the bills gathered for
 // everyone or one person (private ones kept off the shared view, counted),
 // the heading with its Whose choices, and the money formats.
 
