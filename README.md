@@ -469,7 +469,7 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   ends by running medrec 0.9.0 or later over the folder to write its views
   (`MEDREC=<path to medrec>`, else `medrec` on the PATH), under a scratch
   home and profile with only the variables it needs and the time zone set
-  to UTC, so the machine's own medrec setup is never touched and every
+  to `America/New_York`, so the machine's own medrec setup is never touched and every
   machine writes the same views. Only `views/views.json` and each person's
   `events.json` are kept: the app reads no other view. `manifest.json`
   gives each file's MD5, as Drive would, for the store's freshness check.

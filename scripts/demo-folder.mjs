@@ -1307,7 +1307,8 @@ for (const path of list) {
 // writes them here itself, under a scratch home and profile, so this
 // machine's own medrec setup is never touched: it gets only the variables
 // below, every config, data, cache and state directory inside the scratch
-// home, and no MEDREC_* setting of the shell's. The time zone is fixed, so a
+// home, and no MEDREC_* setting of the shell's. The time zone is fixed (a US
+// one, as medrec reads a UTC time's day in the writing machine's zone), so a
 // visit's local days are the same on every machine. MEDREC names the binary,
 // else `medrec` on the PATH. The app reads no other view, so the rest are
 // not kept.
@@ -1326,7 +1327,7 @@ try {
     XDG_CACHE_HOME: join(medrecHome, '.cache'),
     XDG_STATE_HOME: join(medrecHome, '.local', 'state'),
     MEDREC_PROFILE: 'demo',
-    TZ: 'UTC',
+    TZ: 'America/New_York',
     LANG: 'C.UTF-8',
     NO_COLOR: '1',
   };
