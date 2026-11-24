@@ -893,7 +893,7 @@ function julyYear(date) {
 // links guessed by date and name. The plans' and the pharmacy benefit's
 // claims carry them; Robin's member-site plan keeps the earlier shape, so the
 // sample shows both.
-const LINE_CATEGORY = { 99213: 'visit', 99214: 'visit', 73610: 'imaging', 84443: 'lab', 36415: 'lab', 85025: 'lab', 82306: 'lab', 87880: 'lab', 90686: 'vaccine', 90471: 'vaccine' };
+const LINE_CATEGORY = { 99213: 'visit', 99214: 'visit', 99215: 'visit', 73610: 'imaging', 84443: 'lab', 36415: 'lab', 85025: 'lab', 82306: 'lab', 87880: 'lab', 90686: 'vaccine', 90471: 'vaccine' };
 const words = (...texts) => new Set(texts.filter(Boolean).join(' ').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 4));
 function claimFields(P, { date, provider, type, lines, diagnoses, liability }) {
   const pharmacy = type === 'Pharmacy';
@@ -939,7 +939,11 @@ function claimFields(P, { date, provider, type, lines, diagnoses, liability }) {
 }
 
 // `liability: false`: the payer gives no figure for what the member owes, only its parts.
-function claimOf(P, s, { date, provider, insurer, type = 'Professional', system = CPT, lines, balances, benefitPeriod, diagnoses = [], liability = true }) {
+// `replaced`: [code, what was done, billed], the provider's line the plan
+// recoded under its policy, kept as not covered just before the line that
+// replaced it. The claim's totals leave it out, as a plan's do, and medrec
+// 0.8.2 marks it so (`counted: false`), with the plan's note on it (`payer_notes`).
+function claimOf(P, s, { date, provider, insurer, type = 'Professional', system = CPT, lines, balances, benefitPeriod, diagnoses = [], liability = true, replaced }) {
   for (const l of lines) if (cents(l[3]) !== cents(l[4]) + cents(l[5]) + cents(l[6]) + cents(l[7])) throw new Error(`allowed is not paid plus share: ${l}`);
   const share = (l) => cents(l[4]) + cents(l[5]) + cents(l[6]);
   const amounts = (l) => [
@@ -955,6 +959,35 @@ function claimOf(P, s, { date, provider, insurer, type = 'Professional', system 
   const sumAt = (i) => (lines.reduce((t, l) => t + cents(l[i]), 0) / 100).toFixed(2);
   const totals = amounts(['', '', sumAt(2), sumAt(3), sumAt(4), sumAt(5), sumAt(6), sumAt(7)]);
   const medrec = claimFields(P, { date, provider, type, lines, diagnoses, liability });
+  const items = lines.map((l, i) => ({
+    sequence: i + 1,
+    service: { system, code: l[0], display: l[1] },
+    serviced: date,
+    quantity: { value: 1, unit: null },
+    net: usd(l[2]),
+    adjudication: amounts(l).map(([category, amount]) => ({ category, amount, reason: null })),
+    ...medrec.items[i],
+  }));
+  if (replaced) {
+    const [code, display, billed] = replaced;
+    const at = lines.findIndex((l) => LINE_CATEGORY[l[0]] === LINE_CATEGORY[code]);
+    items.splice(at, 0, {
+      service: { system, code, display },
+      serviced: date,
+      quantity: { value: 1, unit: null },
+      net: usd(billed),
+      adjudication: [
+        { category: 'Submitted Amount', amount: usd(billed), reason: null },
+        { category: 'Not covered', amount: usd(billed), reason: { text: 'Replaced under the plan’s coding policy' } },
+      ],
+      category: LINE_CATEGORY[code],
+      amounts: { billed: usd(billed), not_covered: usd(billed) },
+      records: medrec.items[at].records,
+      counted: false,
+      payer_notes: ['C7 -- This service was paid under a different code than the one billed.'],
+    });
+    items.forEach((it, i) => (it.sequence = i + 1));
+  }
   P.record(s, 'ExplanationOfBenefit', 'claim', {
     date,
     code: { system: 'http://terminology.hl7.org/CodeSystem/claim-type', code: type.toLowerCase(), display: type },
@@ -969,15 +1002,7 @@ function claimOf(P, s, { date, provider, insurer, type = 'Professional', system 
       payment: usd(sumAt(7)),
       type,
       use: 'claim',
-      items: lines.map((l, i) => ({
-        sequence: i + 1,
-        service: { system, code: l[0], display: l[1] },
-        serviced: date,
-        quantity: { value: 1, unit: null },
-        net: usd(l[2]),
-        adjudication: amounts(l).map(([category, amount]) => ({ category, amount, reason: null })),
-        ...medrec.items[i],
-      })),
+      items,
       ...(balances ? { benefit_balance: balances } : {}),
       ...(benefitPeriod ? { benefit_period: benefitPeriod } : {}),
       category: medrec.category,
@@ -993,7 +1018,7 @@ function claimOf(P, s, { date, provider, insurer, type = 'Professional', system 
       billablePeriod: { start: date, end: date },
       ...(benefitPeriod ? { benefitPeriod } : {}),
       outcome: 'complete',
-      item: lines.map(([code, display, b], i) => ({ sequence: i + 1, productOrService: { coding: [{ system, code, display }] }, servicedDate: date, net: { value: Number(b), currency: 'USD' } })),
+      item: items.map((it) => ({ sequence: it.sequence, productOrService: { coding: [{ system, code: it.service.code, display: it.service.display }] }, servicedDate: date, net: { value: Number(it.net.amount), currency: 'USD' } })),
     },
   });
 }
@@ -1031,7 +1056,8 @@ S.write();
 // Alex, on Sam's plan: a flu shot, and a sick visit at the pediatric practice.
 coverage(A, src.alexPlan, 'Example Care Plan HMO (dependent)', 'child');
 claimOf(A, src.alexPlan, { date: '2025-10-20', provider: 'Example Pediatrics', insurer: 'Example Care Plan', benefitPeriod: julyYear('2025-10-20'), diagnoses: [['Z23', 'Encounter for immunization']], lines: [['90686', 'Flu vaccine', '55.00', '32.00', '0.00', '0.00', '0.00', '32.00'], ['90471', 'Vaccine given', '28.00', '18.00', '0.00', '0.00', '0.00', '18.00']] });
-claimOf(A, src.alexPlan, { date: '2026-11-20', provider: 'Example Pediatrics', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-11-20'), diagnoses: [['H66.90', 'Otitis media, unspecified, unspecified ear']], lines: [['99213', 'Office visit', '165.00', '98.00', '0.00', '25.00', '0.00', '73.00'], ['87880', 'Strep test', '48.00', '21.30', '0.00', '0.00', '0.00', '21.30']], balances: careBalance('0.00', '25.00') });
+// The practice billed a longer visit; the plan paid it as a routine one.
+claimOf(A, src.alexPlan, { date: '2026-11-20', provider: 'Example Pediatrics', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-11-20'), diagnoses: [['H66.90', 'Otitis media, unspecified, unspecified ear']], replaced: ['99215', 'Office visit, extended', '240.00'], lines: [['99213', 'Office visit', '165.00', '98.00', '0.00', '25.00', '0.00', '73.00'], ['87880', 'Strep test', '48.00', '21.30', '0.00', '0.00', '0.00', '21.30']], balances: careBalance('0.00', '25.00') });
 A.importRun(src.alexPlan, { importedAt: PLANS_LOAD, added: 3, updated: 0, unchanged: 0, cliVersion: '0.4.0' });
 A.write();
 

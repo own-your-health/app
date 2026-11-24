@@ -12,10 +12,9 @@
 // `{ words: true }` searches every word as written instead, and so does a
 // concept with nothing that has the other words ("Example Lab").
 
-import { claimAmounts, toCents } from './billing';
-import { claimDiagnoses, claimLines, diagnosisText } from './claims';
+import { claimAmounts, claimDiagnoses, claimLines, diagnosisText } from './claims';
 import { panelFor } from './panels';
-import { KIND_LABELS, asMoney, docTypeLabel, documentTitle, formatMoney, resultReading, seriesKey, str, studyTitle, valueText } from './records';
+import { KIND_LABELS, asMoney, docTypeLabel, documentTitle, formatMoney, resultReading, seriesKey, str, studyTitle, toCents, valueText } from './records';
 import { unitText } from './result';
 import { statusText } from './lists';
 import { recordTitle } from './titles';
@@ -254,7 +253,7 @@ const CLAIM_PARTS = ['items', 'diagnoses', 'amounts', 'visit', 'results'];
 function lineFields(r: MedRecord): [string, string, true][] {
   return claimLines(r).map((l): [string, string, true] => {
     const amount = l.amounts.youOwe ?? l.amounts.billed;
-    const said = amount ? `${l.amounts.youOwe ? 'you owe' : 'billed'} ${formatMoney(amount)}` : '';
+    const said = !l.counted ? 'left out by the plan, not owed' : amount ? `${l.amounts.youOwe ? 'you owe' : 'billed'} ${formatMoney(amount)}` : '';
     return ['Line', [`${l.label}${l.code && l.code !== l.label ? ` (${l.code})` : ''}`, said].filter(Boolean).join(' · '), true];
   });
 }

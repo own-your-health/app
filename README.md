@@ -187,6 +187,19 @@ the claim gives, and under **Paid for** the visit and the results it paid
 for. Each line links the records it paid for, unless every line links the
 same ones.
 
+A plan that recodes a service under its coding policy (an emergency visit's
+level, say) keeps the provider's line, marked not covered, beside the one it
+paid, and a plan that writes a line off keeps that too; its totals count
+neither. medrec 0.8.2 and later marks such a line (`items[].counted: false`)
+and keeps the payer's notes on it (`items[].payer_notes`, and the claim's own
+in `payer_notes`). For a claim medrec has not marked, the app finds them by medrec's
+rule: it compares billed, plan paid and you owe, those the totals and a line
+both give, at least two of them, and takes the one smallest set of up to
+three lines whose removal makes every one agree; none when two sets tie. The
+app marks such a line **Left out**, "Left out by the plan, not owed", shows
+only what was billed for it and the plan's notes, and leaves it out of the
+claim's title, its kind of care and every sum.
+
 medrec 0.5.0 and later files a claim in the shape of its data contract
 (`docs/data-contract.md` in medrec-cli, "index.json", claims): fixed amount
 names (`amounts`, on the claim and each line), each line's `category` by a
@@ -221,7 +234,8 @@ Costs (`#/costs`, from the home screen or a person's claims) adds up every
 claim line in the folder: what was billed, what the plan allowed and paid,
 and your share, with its deductible, copay and coinsurance. A claim whose
 lines do not add up to its totals keeps the difference as a line of its own,
-so a period's totals are always its claims'. It narrows to:
+"Not split by line", so a period's totals are always its claims'; a line the
+totals leave out counts nothing, and leaves no such line. It narrows to:
 - a period: this or last plan year, a calendar year, or every year. A plan
   year starts on the day the plan's claims give for it (the benefit period an
   ExplanationOfBenefit prints, `fields.benefit_period` in the index, when it
@@ -241,11 +255,16 @@ The address keeps every choice: `period=` is `plan`, `plan-1`, a year
 
 The screen shows the plan balances each plan printed with its newest claim
 in the period, plan paid and your share month by month, where it went by
-person, provider or kind of care, and every line. A code billed more than
+person, provider or kind of care, and every claim, newest first. Each claim
+leads with what it says you owe, then its lines with your share of each; a
+choice that shows only some of a claim's lines still leads with the whole
+claim's. A code billed more than
 once is listed under "Same service, different prices"; opening one shows,
 for every time it was billed, what the provider billed beside what the plan
 allowed. Download CSV saves the lines shown, built in the browser, with any
-cell that a spreadsheet would read as a formula prefixed with `'`. Bills and
+cell that a spreadsheet would read as a formula prefixed with `'`. A line the
+totals leave out is a row with no amounts, so a column's sum is the claims',
+and "yes" in the last column, **Left out by the plan**. Bills and
 receipts no claim covers are not counted. The rules are `src/model/costs.ts`.
 
 Results are grouped by panel (metabolic, lipid, A1c, liver, blood count,

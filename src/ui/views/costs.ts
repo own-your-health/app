@@ -2,13 +2,14 @@
 // sent. A period (this or last plan year, a calendar year, every year), a
 // person, and any drill-down (a provider, a kind of care, a month, one code)
 // narrow it; each is in the address. The totals, plan balances, months,
-// breakdown, prices and lines below all count the same lines.
+// breakdown, prices and claims below all count the same lines. Each claim
+// leads with what it says you owe, its lines under it.
 
-import { fromCents } from '../../model/billing';
-import { CATEGORY_LABELS, type Category } from '../../model/claims';
+import { CATEGORY_LABELS, claimAmounts, type Category, type Cents } from '../../model/claims';
 import {
   balances,
   breakdown,
+  claimsOf,
   codeKey,
   codeLines,
   comparableCodes,
@@ -23,7 +24,7 @@ import {
   systemName,
   toCsv,
   totals,
-  type Cents,
+  type ClaimCost,
   type CostLine,
   type Group,
   type Period,
@@ -31,7 +32,7 @@ import {
   type PlanYear,
 } from '../../model/costs';
 import { bornClause, coverageChangesIn } from '../../model/coverage';
-import { AMOUNT_LABELS, formatMoney } from '../../model/records';
+import { AMOUNT_LABELS, formatMoney, fromCents } from '../../model/records';
 import { getPlanStart } from '../../settings';
 import type { MedRecord } from '../../model/types';
 import { monthChart, priceStrip, stackStrip } from '../costchart';
@@ -46,13 +47,13 @@ const money = (c: number | undefined) => (c === undefined ? '' : (formatMoney(fr
 const meta = (...parts: (string | null | undefined | false)[]) => parts.filter(Boolean).join(' · ');
 const itemRoute = (person: string, id: string): Route => ({ name: 'item', person, id });
 
-/** How many lines show before "Show all". */
-const LINES_SHOWN = 25;
+/** How many claims show before "Show all". */
+const CLAIMS_SHOWN = 25;
 
 const FILTER_LABELS: Record<CostFilterBy, string> = { person: 'Person', provider: 'Provider', category: 'Kind of care', month: 'Month', code: 'Code' };
 
 function matches(l: CostLine, f: CostFilter, names: Map<string, string>): boolean {
-  if (f.by === 'code') return !!l.code && l.split && codeKey(l) === f.key;
+  if (f.by === 'code') return !!l.code && l.split && !l.uncounted && codeKey(l) === f.key;
   return keyOf(l, f.by, names).key === f.key;
 }
 
@@ -69,9 +70,9 @@ function filterLabel(f: CostFilter, lines: CostLine[], names: Map<string, string
 }
 
 /** The totals as a line of label and amount pairs, with a hidden "; " between them for screen readers. */
-function totalsLine(c: Cents): HTMLElement {
+function totalsLine(c: Cents, owe = 'Your share'): HTMLElement {
   const shown = (['billed', 'allowed', 'planPaid', 'youOwe'] as const).filter((k) => c[k] !== undefined);
-  const label: Record<(typeof shown)[number], string> = { billed: 'Billed', allowed: 'Plan allowed', planPaid: 'Plan paid', youOwe: 'Your share' };
+  const label: Record<(typeof shown)[number], string> = { billed: 'Billed', allowed: 'Plan allowed', planPaid: 'Plan paid', youOwe: owe };
   return h(
     'div',
     { class: 'totals' },
@@ -128,6 +129,40 @@ function download(name: string, text: string): void {
 
 function legend(items: [string, string][]): HTMLElement {
   return h('p', { class: 'cost-legend small' }, items.map(([cls, text]) => h('span', { class: 'cost-key' }, h('span', { class: ['swatch', cls], 'aria-hidden': 'true' }), text)));
+}
+
+/** One of a claim's lines: what was done and your share of it; a line the totals leave out, that it is not owed. */
+function claimLine(l: CostLine): HTMLElement {
+  const code = l.code ? `${systemName(l.system)} ${l.code}`.trim() : null;
+  const what = h('span', { class: 'claim-line-what' }, l.service, code ? h('span', { class: 'muted' }, ` · ${code}`) : null);
+  if (l.uncounted) return h('li', null, what, h('span', { class: 'muted' }, 'Left out by the plan, not owed'));
+  const share = l.cents.youOwe;
+  return h('li', null, what, share !== undefined ? h('span', { class: 'num' }, h('span', { class: 'sr-only' }, 'your share '), money(share)) : null);
+}
+
+/**
+ * A claim: what it says you owe, then its lines. "You owe" is the payer's
+ * own figure; without one, the parts it gives added up are "your share".
+ */
+function claimRow(c: ClaimCost, record: MedRecord | undefined, who: string | null): HTMLElement {
+  const said = record ? claimAmounts(record) : undefined;
+  const owe = said?.yourShare && !said.shareAdded ? 'You owe' : 'Your share';
+  // A claim of one line is that line: its code goes beside the claim, with nothing to list under it.
+  const only = c.of === 1 ? c.lines[0]! : undefined;
+  const lines = only ? [] : c.lines;
+  return row({
+    route: itemRoute(c.person, c.claim),
+    title: c.title,
+    meta: meta(dateText(c.date), who, c.provider, only?.code ? `${systemName(only.system)} ${only.code}`.trim() : null),
+    aside: h('span', { class: 'num strong' }, money(c.cents.youOwe ?? 0)),
+    extra: h(
+      'div',
+      { class: 'claim-extra' },
+      totalsLine(c.cents, owe),
+      lines.length ? h('ul', { class: 'claim-lines small' }, lines.map(claimLine)) : null,
+      c.lines.length < c.of ? h('p', { class: 'small muted' }, `${c.lines.length} of its ${c.of} lines match these choices.`) : null,
+    ),
+  });
 }
 
 export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
@@ -428,34 +463,31 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
       }
     }
 
-    // The lines themselves, each opening its claim.
+    // The claims, each opening its own page: what the claim says you owe first, then its lines.
+    const claims = claimsOf(lines, all);
     const list = h('div', null);
-    const showLines = (n: number) =>
+    const showClaims = (n: number) =>
       list.replaceChildren(
-        ...lines.slice(0, n).map((l) =>
-          row({
-            route: itemRoute(l.person, l.claim),
-            title: l.service,
-            meta: meta(dateText(l.date), personFilter ? null : names.get(l.person), l.provider, l.code ? `${systemName(l.system)} ${l.code}`.trim() : null, CATEGORY_LABELS[l.category].one),
-            aside: h('span', { class: 'num strong' }, money(l.cents.youOwe ?? 0)),
-            extra: totalsLine(l.cents),
-          }),
-        ),
-        lines.length > n
+        ...claims.slice(0, n).map((c) => claimRow(c, records.get(c.claim), personFilter ? null : (names.get(c.person) ?? 'Someone'))),
+        claims.length > n
           ? h(
               'div',
               { class: 'cost-actions' },
-              button(`Show all ${lines.length} lines`, () => {
-                showLines(lines.length);
+              button(`Show all ${claims.length} claims`, () => {
+                showClaims(claims.length);
                 list.querySelectorAll<HTMLElement>('.row')[n]?.querySelector<HTMLElement>('a')?.focus();
               }, { small: true }),
             )
           : '',
       );
-    showLines(LINES_SHOWN);
-    const linesCard = card({ title: count(lines.length, 'line') }, h('p', { class: 'small muted' }, 'Each thing a claim paid for, newest first. Amounts a claim gave only in total are a line of their own, “Not split by line”.'), list);
+    showClaims(CLAIMS_SHOWN);
+    const claimsCard = card(
+      { title: count(claims.length, 'claim') },
+      h('p', { class: 'small muted' }, 'Newest first, each with what it says you owe and the lines it paid for. A line the plan left out of its totals, one it replaced with its own or wrote off, is listed, not owed. Amounts a claim gave only in total are a line of their own, “Not split by line”. The CSV download has a row for each line.'),
+      list,
+    );
 
-    body.replaceChildren(controls, summary, balanceCard ?? '', monthCard ?? '', breakdownCard ?? '', priceCard ?? '', linesCard);
+    body.replaceChildren(controls, summary, balanceCard ?? '', monthCard ?? '', breakdownCard ?? '', priceCard ?? '', claimsCard);
     refocus(focus);
   };
 

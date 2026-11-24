@@ -391,9 +391,9 @@ test('a claim medrec linked says what it paid for: the visit, the diagnosis and 
   await expect(field(page, 'Diagnosis')).toHaveText('Otitis media, unspecified, unspecified ear (H66.90)');
   await expect(paidFor(page).locator('.row-title')).toHaveText(['Sick visit']);
   await expect(paidFor(page).locator('.row-meta').first()).toContainText('Visit · Nov 20, 2026');
-  const lines = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^2 lines$/ }) });
-  await expect(lines.locator('.row-meta')).toHaveText(['99213 · Visit · Nov 20, 2026', '87880 · Lab test · Nov 20, 2026']);
-  // The strep test's result is not in these records, so only the visit line links.
+  const lines = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^3 lines$/ }) });
+  await expect(lines.locator('.row-meta')).toHaveText(['99215 · Visit · Nov 20, 2026', '99213 · Visit · Nov 20, 2026', '87880 · Lab test · Nov 20, 2026']);
+  // The strep test's result is not in these records, so only the visit line links; the line the plan left out paid for nothing.
   await expect(lines.locator('.claim-paid-for')).toHaveText(['Paid for: Sick visit']);
   await lines.locator('.claim-paid-for').getByRole('link', { name: 'Sick visit' }).click();
   await expect(page.locator('main h1')).toHaveText('Sick visit');

@@ -29,6 +29,23 @@
         "coding": [
           {
             "system": "http://www.ama-assn.org/go/cpt",
+            "code": "99215",
+            "display": "Office visit, extended"
+          }
+        ]
+      },
+      "servicedDate": "2026-11-20",
+      "net": {
+        "value": 240,
+        "currency": "USD"
+      }
+    },
+    {
+      "sequence": 2,
+      "productOrService": {
+        "coding": [
+          {
+            "system": "http://www.ama-assn.org/go/cpt",
             "code": "99213",
             "display": "Office visit"
           }
@@ -41,7 +58,7 @@
       }
     },
     {
-      "sequence": 2,
+      "sequence": 3,
       "productOrService": {
         "coding": [
           {

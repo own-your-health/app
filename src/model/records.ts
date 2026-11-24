@@ -309,6 +309,16 @@ export function decimalCents(amount: string): number | undefined {
   return t.startsWith('-') && c !== 0 ? -c : c;
 }
 
+/** Whole cents from a decimal string; undefined when it is not one. */
+export function toCents(m: Money | undefined): number | undefined {
+  return m ? decimalCents(m.amount) : undefined;
+}
+
+export function fromCents(cents: number, currency = 'USD'): Money {
+  const a = Math.abs(cents);
+  return { amount: `${cents < 0 ? '-' : ''}${Math.floor(a / 100)}.${String(a % 100).padStart(2, '0')}`, currency };
+}
+
 /** "$1,234.56"; money stays a decimal string, never a float sum. */
 export function formatMoney(m: Money | undefined): string | undefined {
   if (!m) return undefined;

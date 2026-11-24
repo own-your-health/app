@@ -3,8 +3,7 @@
 // code, what each provider billed beside what the plan allowed. The text
 // beside each picture, and the table under the months, carry every amount.
 
-import { fromCents } from '../model/billing';
-import { formatMoney } from '../model/records';
+import { formatMoney, fromCents } from '../model/records';
 import { fitted, niceTicks, textWidth } from './chart';
 import { s, type Child } from './dom';
 import { href, type Route } from './router';
