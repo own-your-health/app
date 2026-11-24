@@ -1,13 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// Papers under ?next: the Drive folder, each paper with the visit it belongs
-// to, or with none and why.
+// Papers: the Drive folder, each paper with the visit it belongs to, or with
+// none and why. It took the place of each person's list of documents.
 
 const ROBIN = 'p_xo4em46i7yj3hphlpajo';
 
 async function open(page: Page, path: string) {
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
-  await page.goto(`./?demo&next${path}`);
+  await page.goto(`./?demo${path}`);
 }
 
 const paper = (page: Page, title: string) => page.locator('.papers .row', { has: page.locator('.row-title', { hasText: new RegExp(`^${title}$`) }) });
@@ -48,9 +48,24 @@ test('a person’s papers are theirs, and a receipt is with its bill’s visit',
   await expect(page.locator('main h1')).toHaveText('Vaccination card');
 });
 
-test('Papers asks for ?next', async ({ page }) => {
-  await page.goto('./?demo#/papers');
-  await expect(page.getByText('Papers is part of the redesign. Add ?next to the address to try it.')).toBeVisible();
+test('a person’s Health and their old documents address open their Papers, which narrows by kind and counts pages', async ({ page }) => {
+  await open(page, `#/health?who=${ROBIN}`);
+  await page.locator('.health-actions').getByRole('link', { name: 'Papers' }).click();
+  await expect(page).toHaveURL(new RegExp(`#/papers\\?who=${ROBIN}$`));
+  await page.goto(`./?demo#/p/${ROBIN}/documents`);
+  await expect(page).toHaveURL(new RegExp(`#/papers\\?who=${ROBIN}$`));
+  await expect(page.locator('main h1')).toHaveText('Robin Example’s papers');
+
+  const kinds = page.getByRole('group', { name: 'Kind of paper' });
+  await expect(kinds.getByRole('button')).toHaveText(['Every kind', 'Bill (3)', 'Explanation of benefits (1)', 'Immunization record (1)', 'Lab report (2)', 'Receipt (1)', 'Visit summary (1)']);
+  await expect(paper(page, 'Explanation of Benefits').locator('.row-meta')).toHaveText('Explanation of benefits · Oct 20, 2026 · Example Health Plan · 2 pages');
+  await kinds.getByRole('button', { name: 'Bill (3)' }).click();
+  await expect(kinds.getByRole('button', { name: 'Bill (3)' })).toBeFocused();
+  await expect(page.locator('.papers').getByRole('status')).toHaveText('3 papers in all, bill.');
+  await expect(page.locator('.papers .row-meta')).toHaveText([/^Bill · /, /^Bill · /, /^Bill · /]);
+  // With the visit filter: none of the bills is without one.
+  await page.getByRole('button', { name: 'With none (1)' }).click();
+  await expect(page.locator('.papers')).toContainText('Every bill here is with its visit.');
 });
 
 test('Papers fits a 360px phone in the dark theme', async ({ page }) => {

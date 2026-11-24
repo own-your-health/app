@@ -1,4 +1,4 @@
-// Health under ?next: what the records can know about each person, their
+// Health: what the records can know about each person, their
 // current picture, what is worth noticing and what is quiet, and the doctor's
 // sheet with private items off unless included.
 import { describe, expect, it } from 'vitest';

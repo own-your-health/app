@@ -1,13 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// Home under ?next: what needs you, where everyone stands and what happened
-// recently, with private items kept off it and shown on the person's own page.
+// Home: what needs you, where everyone stands and what happened recently,
+// with private items kept off it and shown on the person's own pages.
 
 const SAM = 'p_wwezzed7kml67hnp6s7n';
 
 async function open(page: Page, path = '') {
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
-  await page.goto(`./?demo&next${path}`);
+  await page.goto(`./?demo${path}`);
 }
 
 const card = (page: Page, title: string | RegExp) => page.locator('.card', { has: page.locator('.card-head h2', { hasText: title }) });
@@ -31,7 +31,7 @@ test('home leads with what needs you, in order, and keeps private items off it',
 
   // The schedule's version and the court's stay are named; the private refill is counted, not named.
   await expect(needs).toContainText('CDC child schedule of Jul 2, 2025, restored after a court stayed the January 2026 changes on Mar 16, 2026.');
-  await expect(needs).toContainText('1 private item is kept off Home. Each shows on its person’s own overview.');
+  await expect(needs).toContainText('1 private item is kept off Home. Each shows on its person’s own Health or Money.');
   await expect(page.locator('main')).not.toContainText('Sertraline');
   await expect(page.locator('main')).not.toContainText('Counseling');
 
@@ -53,19 +53,25 @@ test('home leads with what needs you, in order, and keeps private items off it',
   await expect(page.locator('.event h1')).toHaveText('Emergency room · overnight');
 });
 
-test('a person’s overview lists their own needs, private ones marked', async ({ page }) => {
-  await open(page, `#/p/${SAM}`);
-  const needs = card(page, /^Needs you$/);
-  await expect(needs.locator('.need-title')).toHaveText(['Lab tests, Jul 9, 2026', 'Emergency room, Sep 12–13, 2026', 'Sertraline 50 mg tablet', 'Vitamin D3 2,000 unit capsule']);
-  const refill = needs.locator('.row', { hasText: 'Sertraline' });
+test('a person’s own pages list their needs, private ones marked: refills on Health, bills on Money', async ({ page }) => {
+  await open(page, `#/health?who=${SAM}`);
+  const due = card(page, /^Due$/);
+  await expect(due.locator('.need-title')).toHaveText(['Sertraline 50 mg tablet', 'Vitamin D3 2,000 unit capsule']);
+  const refill = due.locator('.row', { hasText: 'Sertraline' });
   await expect(refill.locator('.row-meta')).toHaveText('Runs out about Nov 27, 2026 · 30 days filled Oct 28, 2026 at Example Pharmacy');
   await expect(refill.locator('.chip').first()).toHaveText('Private');
-  await expect(needs).not.toContainText('kept off Home');
+  await expect(page.locator('main')).not.toContainText('kept off Home');
 
-  // From Home, Jamie's overview lists the doses coming up.
-  await page.goto('./?demo&next#/');
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Money' }).click();
+  await page.getByRole('group', { name: 'Whose money' }).getByRole('link', { name: 'Sam Example' }).click();
+  await expect(page).toHaveURL(new RegExp(`#/money\\?who=${SAM}$`));
+  await expect(page.locator('main')).toContainText('1 bill ready to pay');
+  await expect(page.locator('main')).toContainText('1 bill worth a call');
+
+  // From Home, Jamie's Health lists the doses coming up.
+  await open(page, '#/');
   await card(page, 'Where everyone stands').getByRole('link', { name: 'Jamie Example' }).click();
-  await expect(card(page, /^Needs you$/).locator('.need-title')).toHaveText(['Hepatitis B, dose 2', '2-month vaccines']);
+  await expect(card(page, /^Due$/).locator('.need-title')).toHaveText(['Hepatitis B, dose 2', '2-month vaccines']);
 });
 
 test('home fits a 360px phone in the dark theme', async ({ page }) => {
@@ -74,13 +80,4 @@ test('home fits a 360px phone in the dark theme', async ({ page }) => {
   await open(page);
   await expect(card(page, /^Needs you$/)).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
-});
-
-test('without ?next home has no Needs you', async ({ page }) => {
-  await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
-  await page.goto('./?demo#/');
-  await expect(card(page, /^Needs you$/)).toHaveCount(0);
-  await expect(card(page, 'Where everyone stands')).toHaveCount(0);
-  await page.goto(`./?demo#/p/${SAM}`);
-  await expect(card(page, /^Needs you$/)).toHaveCount(0);
 });

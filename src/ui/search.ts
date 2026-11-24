@@ -126,8 +126,10 @@ export interface SearchOptions {
   query?: string;
   /** Search the words as written, not the concept a word names. */
   words?: true;
-  /** The page's address for a query, kept current while typing. */
-  route: (query: string | undefined, words: boolean) => Route;
+  /** The person the filter starts on. */
+  who?: string;
+  /** The page's address for a query and the person chosen, kept current while typing and choosing. */
+  route: (query: string | undefined, words: boolean, who: string | undefined) => Route;
   title: string;
   intro: string;
 }
@@ -155,7 +157,8 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
   let texts: Map<string, PersonText | null> | undefined;
   let run = 0;
   let kind = 'all';
-  let who = 'all';
+  let who = opts.who && people.some((p) => p.id === opts.who) ? opts.who : 'all';
+  const address = () => history.replaceState(null, '', href(opts.route(lastQuery || undefined, words, who === 'all' ? undefined : who)));
 
   const loadTexts = async (): Promise<Map<string, PersonText | null>> => {
     if (texts) return texts;
@@ -173,7 +176,6 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
 
   const draw = (hits: Hit[], ts: string[], untexted: string[], keep?: 'who' | 'kind') => {
     const whos = [...new Set(hits.map((x) => x.person))];
-    if (!whos.includes(who)) who = 'all';
     const groups = entriesByKind(hits.filter((x) => who === 'all' || x.person === who));
     // Kinds come from the chosen person's hits, so a kind they have none of falls back to All.
     if (!groups.some((g) => g.kind === kind)) kind = 'all';
@@ -182,8 +184,14 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
     const all = groups.reduce((n, g) => n + g.entries.length, 0);
 
     if (keep !== 'who') {
-      const options: [string, string][] = [['all', 'Everyone'], ...people.filter((p) => whos.includes(p.id)).map((p): [string, string] => [p.id, p.name])];
-      whoRow.replaceChildren(...(many && whos.length > 1 ? [filterChips<string>(options, who, (v) => ((who = v), draw(hits, ts, untexted, 'who')), 'Filter by person')] : []));
+      // The person chosen keeps their chip with no matches of their own, so the page still says whose search it is.
+      const options: [string, string][] = [['all', 'Everyone'], ...people.filter((p) => p.id === who || whos.includes(p.id)).map((p): [string, string] => [p.id, p.name])];
+      const pick = (v: string) => {
+        who = v;
+        address();
+        draw(hits, ts, untexted, 'who');
+      };
+      whoRow.replaceChildren(...(many && (whos.length > 1 || who !== 'all') ? [filterChips<string>(options, who, pick, 'Filter by person')] : []));
     }
     if (keep !== 'kind') {
       const options: [string, string][] = [['all', `All ${all}`], ...groups.map((g): [string, string] => [g.kind, `${plural(g.kind)} ${g.entries.length}`])];
@@ -244,7 +252,8 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
       if (at < lines.length) list.appendChild(more);
     };
     page();
-    results.replaceChildren(shown ? list : empty(ts.length ? 'Nothing matches every word.' : 'Nothing of this kind in these records.'));
+    const none = who !== 'all' && !all && hits.length ? `No matches for ${names.get(who) ?? 'this person'}; ${count(hits.length, 'match', 'matches')} for everyone.` : ts.length ? 'Nothing matches every word.' : 'Nothing of this kind in these records.';
+    results.replaceChildren(shown ? list : empty(none));
   };
 
   const search = async () => {
@@ -254,7 +263,7 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
       words = false;
       lastQuery = q;
     }
-    history.replaceState(null, '', href(opts.route(q || undefined, words)));
+    address();
     if (!conceptOf(q) && terms(q).length === 0) {
       results.replaceChildren();
       whoRow.replaceChildren();
@@ -306,7 +315,7 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
 }
 
 /** #/search: one search over everyone in the folder. */
-export function searchView(ctx: Ctx, query: string | undefined, words?: true): HTMLElement {
+export function searchView(ctx: Ctx, query: string | undefined, words?: true, who?: string): HTMLElement {
   const people = ctx.store.household.people;
   return h(
     'div',
@@ -316,7 +325,8 @@ export function searchView(ctx: Ctx, query: string | undefined, words?: true): H
           people,
           query,
           words,
-          route: (q, w) => ({ name: 'search', ...(q ? { query: q } : {}), ...(q && w ? { words: true as const } : {}) }),
+          who,
+          route: (q, w, p) => ({ name: 'search', ...(q ? { query: q } : {}), ...(q && w ? { words: true as const } : {}), ...(p ? { who: p } : {}) }),
           title: 'Search',
           intro: `Searches ${people.length === 1 ? 'the' : 'everyone’s'} records, documents and imaging, and the text medrec extracted from documents. The search runs here in the browser; nothing is sent anywhere.`,
         })

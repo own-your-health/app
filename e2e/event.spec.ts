@@ -1,28 +1,31 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// The redesign, behind ?next: what happened, one page per visit, over the
-// sample. Sam's night in the emergency room is five claims from four
-// providers, a bill and a discharge paper.
+// What happened, one page per visit, over the sample. Sam's night in the
+// emergency room is five claims from four providers, a bill and a discharge
+// paper.
 
-const ROBIN = 'p_xo4em46i7yj3hphlpajo';
 const SAM = 'p_wwezzed7kml67hnp6s7n';
+const ROBIN = 'p_xo4em46i7yj3hphlpajo';
 
-async function openSam(page: Page, next = true) {
+/** Sam's Health, from Where everyone stands on Home. */
+async function openSam(page: Page) {
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
-  await page.goto(next ? './?demo&next' : './?demo');
-  await page.getByRole('link', { name: /^Sam Example/ }).first().click();
-  await expect(page.locator('.person-head h1')).toHaveText('Sam Example');
+  await page.goto('./?demo');
+  await page.locator('.stand-name').getByRole('link', { name: 'Sam Example' }).click();
+  await expect(page).toHaveURL(new RegExp(`#/health\\?who=${SAM}$`));
 }
 
 async function openEmergency(page: Page) {
   await openSam(page);
   const happened = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^What happened$/ }) });
   // medrec makes a pharmacy fill an event of its own, from the pharmacy's record even without a claim.
-  await expect(happened.locator('.row-title')).toHaveText(['Vitamin D3 2,000 unit capsule', 'Sertraline 50 mg tablet', 'Counseling session', 'Lab tests', 'Emergency room · overnight', 'Lab tests', 'Sports medicine visit']);
+  await expect(happened.locator('.row-title')).toHaveText(['Vitamin D3 2,000 unit capsule', 'Sertraline 50 mg tablet', 'Counseling session']);
   // Sam's own page shows Sam's private visit, marked.
   await expect(happened.locator('.row', { hasText: 'Counseling session' }).locator('.chip')).toHaveText('Private');
-  const er = happened.locator('.row', { hasText: 'Emergency room · overnight' });
-  await expect(er.locator('.row-meta')).toHaveText('Sep 12–13, 2026 · Example General Hospital');
+  // The rest are in Sam's calendar.
+  await happened.getByRole('link', { name: 'All 7 in the calendar' }).click();
+  const er = page.locator('.cal-row', { hasText: 'Emergency room · overnight' });
+  await expect(er.locator('.row-meta')).toHaveText('to Sep 13, 2026 · Example General Hospital');
   await expect(er.locator('.row-aside')).toHaveText('$346.40');
   await er.locator('a.row-main').click();
   await expect(page).toHaveURL(new RegExp(`#/p/${SAM}/e/e_[a-z2-7]{20}$`));
@@ -84,16 +87,16 @@ test('a visit’s page says what happened, what it cost and whether it is paid, 
   await expect(page.locator('.event h1')).toHaveText('Emergency room · overnight');
 });
 
-async function openRobinVisit(page: Page, when: string) {
+/** Robin's visit of a day (YYYY-MM-DD), from that day on Robin's calendar. */
+async function openRobinVisit(page: Page, day: string) {
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
-  await page.goto('./?demo&next');
-  await page.getByRole('link', { name: /^Robin Example/ }).first().click();
-  await card(page, /^What happened$/).locator('.row', { hasText: when }).first().locator('a.row-main').click();
+  await page.goto(`./?demo#/calendar?month=${day.slice(0, 7)}&day=${day}&who=${ROBIN}`);
+  await page.locator('.cal-row a.row-main').first().click();
   await expect(page.locator('.event')).toBeVisible();
 }
 
 test('a visit the portal recorded leads with the portal’s own words and results, one line each', async ({ page }) => {
-  await openRobinVisit(page, 'Oct 1, 2026');
+  await openRobinVisit(page, '2026-10-01');
   await expect(page.locator('.event h1')).toHaveText('Office visit');
   await expect(page.locator('.event-settled')).toHaveText('$53.68 billed, due Nov 19, 2026');
   await expect(card(page, /^What happened$/)).toContainText('Annual physical');
@@ -106,14 +109,11 @@ test('a visit the portal recorded leads with the portal’s own words and result
 });
 
 test('a bill with a receipt after it is paid, and a fill is paid at pickup', async ({ page }) => {
-  // March 2025 is past the overview's eight newest: open it by its claim's address.
-  await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
-  await page.goto(`./?demo&next#/p/${ROBIN}/e/r_tporkmvaajfc6fw3xpbc`);
-  await expect(page.locator('.event h1')).toHaveText('Office visit');
+  await openRobinVisit(page, '2025-03-10');
   await expect(page.locator('.event-settled')).toHaveText('Paid');
   await expect(card(page, 'Bills and payments').locator('.row-meta')).toHaveText('$51.18 due by May 2, 2025 · paid, receipt Apr 20, 2025');
 
-  await openRobinVisit(page, 'Nov 12, 2026');
+  await openRobinVisit(page, '2026-11-12');
   await expect(page.locator('.event h1')).toHaveText('Lisinopril 10 mg tablet, 90 days');
   await expect(page.locator('.event-settled')).toHaveText('A pharmacy takes your share when you pick up.');
   await expect(card(page, 'Bills and payments')).toHaveCount(0);
@@ -133,24 +133,29 @@ test('the page fits a 360px phone in the dark theme', async ({ page }) => {
 test('an address naming any record of a visit opens the visit, under the visit’s own address', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
   // The radiologist's claim, one of five in Sam's emergency room visit.
-  await page.goto(`./?demo&next#/p/${SAM}/e/r_fbhlexithgaohaghqvwc`);
+  await page.goto(`./?demo#/p/${SAM}/e/r_fbhlexithgaohaghqvwc`);
   await expect(page.locator('.event h1')).toHaveText('Emergency room · overnight');
   // The visit's own address is medrec's event id.
   await expect(page).toHaveURL(new RegExp(`#/p/${SAM}/e/e_ouknsy76ppd33msuv5du$`));
 });
 
-test('without ?next the app is as it was, and a visit’s address says how to see it', async ({ page }) => {
-  await openSam(page, false);
-  await expect(page.locator('.card-head h2', { hasText: /^What happened$/ })).toHaveCount(0);
+test('a link from when the redesign was behind ?next opens the same page, without ?next', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
+  await page.goto(`./?demo&next#/p/${SAM}/e/r_se4qctpgoqorqqvlkebf`);
+  await expect(page.locator('.event h1')).toHaveText('Emergency room · overnight');
+  expect(new URL(page.url()).search).toBe('?demo');
+  await page.goto(`./?next&demo#/health`);
+  await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Health' })).toHaveAttribute('aria-current', 'page');
+  expect(new URL(page.url()).search).toBe('?demo');
+  // An address no visit has says so.
   await page.goto(`./?demo#/p/${SAM}/e/r_aaaaaaaaaaaaaaaaaaaa`);
-  await expect(page.locator('main .card-head h2')).toHaveText('Page not found');
-  await expect(page.locator('main')).toContainText('Visit pages are part of the redesign. Add ?next to the address to try it.');
+  await expect(page.locator('main')).toContainText('This visit is not in these records.');
 });
 
 test('a visit says what medrec still expects for it, and that medrec grouped it', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
   // Alex's well-child visit: the portal's record, and no claim from the plan yet.
-  await page.goto('./?demo&next#/p/p_bjpnvyvnmxv74q335tk4/e/r_jlaqcmc74llvhvsjt635');
+  await page.goto('./?demo#/p/p_bjpnvyvnmxv74q335tk4/e/r_jlaqcmc74llvhvsjt635');
   await expect(page.locator('.event h1')).toHaveText('Well child visit, 8 years');
   await expect(page).toHaveURL(/#\/p\/p_bjpnvyvnmxv74q335tk4\/e\/e_[a-z2-7]{20}$/);
   const tech = page.locator('details.tech', { has: page.locator('summary', { hasText: 'How this visit was put together' }) });
@@ -159,6 +164,6 @@ test('a visit says what medrec still expects for it, and that medrec grouped it'
   await expect(tech).toContainText('medrec grouped these by its matching rules.');
 
   // Settings says who grouped everyone's visits.
-  await page.goto('./?demo&next#/settings');
+  await page.goto('./?demo#/settings');
   await expect(page.locator('dt', { hasText: 'Visits' }).locator('+ dd')).toHaveText('Grouped by medrec');
 });

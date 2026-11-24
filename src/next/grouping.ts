@@ -1,7 +1,7 @@
 // The app's stand-in for medrec's events view (`views/<person>/events.json`),
 // which is not released yet. It groups a person's index into events by the
-// household's matching rules, so the redesign behind ?next can be built and
-// tried on the sample. Each grouping names its rule as the rules do (C1: a
+// household's matching rules, so the app's visits can be built and tried
+// on the sample. Each grouping names its rule as the rules do (C1: a
 // hospital's claim opens an event; E3: a portal visit joins the claims of
 // its day; D2: a paper joins by provider and date). When medrec writes
 // events, load.ts reads those instead and this file is deleted.

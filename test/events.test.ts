@@ -1,4 +1,4 @@
-// Events, the redesign's unit (?next): claims, the portal's visits and papers
+// Events, the app's unit of care: claims, the portal's visits and papers
 // grouped into what happened, by the rules the events stand-in follows until
 // medrec writes events. Over an invented person whose records give each rule
 // a case of its own.

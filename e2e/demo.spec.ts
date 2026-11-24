@@ -17,42 +17,46 @@ test.afterEach(() => {
   expect(problems).toEqual([]);
 });
 
-const isPhone = (page: Page) => (page.viewportSize()?.width ?? 0) < 640;
+const PEOPLE: Record<string, string> = {
+  'Robin Example': 'p_xo4em46i7yj3hphlpajo',
+  'Sam Example': 'p_wwezzed7kml67hnp6s7n',
+  'Alex Example': 'p_bjpnvyvnmxv74q335tk4',
+  'Jamie Example': 'p_skrlw3od3nik2hkngezu',
+};
 
-async function openSection(page: Page, name: string) {
-  if (isPhone(page)) {
-    const nav = page.locator('.bottom-nav');
-    await expect(nav).toBeVisible();
-    if (BOTTOM.includes(name)) await nav.getByText(name, { exact: true }).click();
-    else {
-      await nav.getByText('More', { exact: true }).click();
-      await page.locator('.sheet').getByText(name, { exact: true }).click();
-      await expect(page.locator('.sheet')).toHaveCount(0);
-    }
-  } else {
-    await page.locator('.section-tabs').getByText(name, { exact: true }).click();
-  }
-  const slug = SLUGS[name] ?? name.toLowerCase();
-  await expect(page).toHaveURL(slug === 'overview' ? /#\/p\/[^/]+$/ : new RegExp(`#/p/[^/]+/${slug}(\\?.*)?$`));
-  // The tabs are in the page at every size (hidden on phones); the current
-  // one changes only once the section has rendered.
-  await expect(page.locator('.section-tabs .tab-current')).toHaveText(name);
+/** One of a person's full lists (results, medicines…), at the address Health's links open. */
+async function openList(page: Page, person: string, list: string) {
+  await page.goto(`./?demo#/p/${PEOPLE[person]}/${list}`);
+  await expect(page.locator('main h1')).toHaveText(`${person}’s ${list}`);
 }
 
-/** The sections the phone's bottom bar shows; the rest are under More. */
-const BOTTOM = ['Overview', 'Results', 'Medicines', 'Timeline'];
-const SLUGS: Record<string, string> = { 'Claims and bills': 'claims' };
+/** A claim's page, from every claim of the person's on the claims screen. */
+async function openClaim(page: Page, person: string, title: string) {
+  await page.goto(`./?demo#/costs?period=all&only=person:${PEOPLE[person]}`);
+  await claimRow(page, title).locator('a.row-main').click();
+  await expect(page.locator('main h1')).toHaveText(title);
+}
 
-test('home leads with the people, and one line for the sign-in that needs a person', async ({ page }) => {
+/** A claim's row in the claims screen's list of claims, newest first. */
+const claimRow = (page: Page, title: string) =>
+  page
+    .locator('.card', { has: page.locator('.card-head h2', { hasText: /^\d+ claims?$/ }) })
+    .locator('.row')
+    .filter({ has: page.locator('.row-title').getByText(title, { exact: true }) })
+    .first();
+
+/** Opens the bar's menu. */
+async function openMenu(page: Page) {
+  await page.getByRole('button', { name: /^Menu/ }).click();
+  await expect(page.getByRole('dialog', { name: 'Menu' })).toBeVisible();
+}
+
+test('home says which sign-in needs a person, in one line that opens the source', async ({ page }) => {
   await page.goto('./?demo');
   await expect(page.locator('.banner')).toContainText('Invented records');
-  const people = page.locator('.card', { hasText: 'People' });
-  await expect(people.locator('.row')).toHaveCount(4);
-  await expect(people).toBeInViewport();
-  // The people come first, then the one line, which carries no command or provider error.
+  // The line carries no command or provider error.
   const notice = page.locator('.signin-notice');
   await expect(notice).toHaveText('Example Pediatrics needs a sign-in on the Mac');
-  expect(await people.evaluate((el) => el.nextElementSibling?.classList.contains('signin-notice'))).toBe(true);
   await expect(page.locator('main .command')).toHaveCount(0);
   await expect(page.locator('main')).not.toContainText('auth login');
   const strip = page.locator('.status-strip');
@@ -61,9 +65,8 @@ test('home leads with the people, and one line for the sign-in that needs a pers
   // The failed load retries on its own, so home only counts it.
   await expect(strip).toContainText('1 source failed to load; the Mac tries again on its own.');
   await expect(page.getByRole('button', { name: 'Refresh everything' })).toBeVisible();
-  // Only the people: every source is on Sources.
-  await expect(page.locator('main .row')).toHaveCount(4);
-  await expect(page.getByRole('link', { name: 'Sources: a source needs attention' })).toBeVisible();
+  // The bar's menu carries the dot.
+  await expect(page.getByRole('button', { name: 'Menu: a source needs attention' })).toBeVisible();
 
   // The line opens the source: a plain sentence and medrec's command, the provider's words folded away.
   await notice.getByRole('link').click();
@@ -129,109 +132,61 @@ test('the Sources screen lists every source and sign-in, and opens one', async (
   await expect(page.locator('.card', { hasText: 'Attempts' })).toBeVisible();
   await page.getByRole('link', { name: 'All sources' }).click();
   await expect(page).toHaveURL(/#\/sources$/);
-  // The app bar reaches it from anywhere.
+  // The bar's menu reaches it from anywhere.
   await page.goto('./?demo#/settings');
-  await page.getByRole('link', { name: /^Sources/ }).first().click();
+  await openMenu(page);
+  await page.getByRole('dialog', { name: 'Menu' }).getByRole('link', { name: /^Sources/ }).click();
   await expect(page).toHaveURL(/#\/sources$/);
+  await expect(page.getByRole('dialog', { name: 'Menu' })).toHaveCount(0);
 });
 
-test('a person opens on what is current: new loads, results out of range first, and the rest', async ({ page }) => {
-  await page.goto('./?demo');
-  await page.getByRole('link', { name: /^Robin Example/ }).first().click();
-  await expect(page).toHaveURL(/#\/p\/p_[a-z2-7]{20}$/);
-  await expect(page.locator('.section-tabs .tab-current')).toHaveText('Overview');
-
-  const fresh = page.locator('.card', { hasText: 'New in the latest loads' });
-  await expect(fresh.locator('.load-head')).toHaveText(/^Example Health, 3 hours ago: 2 records and 1 document$/);
-  await expect(fresh.locator('.row')).toHaveCount(3);
-
-  const results = page.locator('.card', { hasText: 'Latest results' });
-  await expect(results).toContainText('The newest result of 1 test is out of its range.');
-  await expect(results.locator('.row').first()).toContainText('Potassium');
-  await expect(results.locator('.row').first().locator('.chip')).toHaveText('High');
-  await expect(results.locator('.row').first()).toContainText('5.4 mmol/L');
-  await expect(results.locator('.row').first()).toContainText('range 3.5-5.1 mmol/L');
-  await expect(results.locator('.row .chip')).toHaveCount(1);
-
-  const conditions = page.locator('.card', { hasText: 'Active conditions' });
-  await expect(conditions.locator('.row')).toHaveCount(1);
-  await expect(conditions.locator('.row')).toContainText('High blood pressure');
-  await expect(conditions.locator('.row')).toContainText('Example Health');
-  await expect(conditions.getByRole('link', { name: /All conditions, 1 past or inactive/ })).toBeVisible();
-
-  await expect(page.locator('.card', { hasText: 'Current medicines' }).locator('.row')).toHaveText([/Lisinopril 10 mg tablet/]);
-  await expect(page.locator('.card', { hasText: 'Allergies' }).locator('.row')).toHaveText([/Sulfa drugs.*Rash/]);
-  await expect(page.locator('.card', { hasText: 'Immunizations' }).locator('.row').first()).toContainText('Influenza');
-  const visits = page.locator('.card', { hasText: 'Recent visits' });
-  await expect(visits.locator('.row').first()).toContainText('Nov 18, 2026 · Blood pressure follow-up');
-  await expect(visits.locator('.row').first()).toContainText('1 document');
-  await expect(visits.locator('.row').nth(1)).toContainText('Oct 1, 2026 · Annual physical');
-  await expect(visits.locator('.row').nth(1)).toContainText('3 documents');
-
-  // A card's link opens its whole section: 6 of Robin's 10 tests are shown here.
-  await results.getByRole('link', { name: 'All 10 tests' }).click();
-  await expect(page).toHaveURL(/#\/p\/p_[a-z2-7]{20}\/results$/);
+test('a person’s old address opens their Health, and its lists still open', async ({ page }) => {
+  await page.goto(`./?demo#/p/${PEOPLE['Robin Example']}`);
+  await expect(page).toHaveURL(new RegExp(`#/health\\?who=${PEOPLE['Robin Example']}$`));
+  await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Health' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('main')).toContainText('Potassium');
+  // A list keeps its address, under Health's tab, and leads back to the person's Health.
+  await openList(page, 'Robin Example', 'results');
+  await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Health' })).toHaveAttribute('aria-current', 'page');
+  await page.getByRole('link', { name: 'Robin Example’s health' }).click();
+  await expect(page).toHaveURL(new RegExp(`#/health\\?who=${PEOPLE['Robin Example']}$`));
 });
 
-test('a child’s overview shows the visit, condition and medicine loaded yesterday', async ({ page }) => {
-  await page.goto('./?demo');
-  await page.getByRole('link', { name: /^Alex Example/ }).first().click();
-  const fresh = page.locator('.card', { hasText: 'New in the latest loads' });
-  await expect(fresh.locator('.load-head')).toHaveText(/^Example Pediatrics, (1 day|\d+ hours) ago: 3 records and 1 document$/);
-  await expect(page.locator('.card', { hasText: 'Active conditions' }).locator('.row')).toContainText('Ear infection');
-  await expect(page.locator('.card', { hasText: 'Current medicines' }).locator('.row')).toContainText('Amoxicillin');
-  await expect(page.locator('.card', { hasText: 'Allergies' })).toContainText('No allergies recorded in these records.');
-  await expect(page.locator('.card', { hasText: 'Recent visits' }).locator('.row').first()).toContainText('Sick visit');
-});
-
-test('a newborn’s overview lists the doses the schedule has coming up', async ({ page }) => {
+test('a newborn’s immunizations list the schedule’s doses, those coming up first', async ({ page }) => {
   // The sample's birth date and doses are fixed, so the clock is too.
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
-  await page.goto('./?demo');
-  await page.getByRole('link', { name: /^Jamie Example/ }).first().click();
-  const card = page.locator('.card', { hasText: 'Immunizations' });
-  const schedule = card.locator('.schedule');
-  await expect(schedule.locator('.row').first()).toContainText('Hepatitis B');
-  await expect(schedule.locator('.row').first()).toContainText('Dose 2 of 3, at 1–2 months, from Dec 8, 2026');
-  await expect(schedule.locator('.row', { hasText: 'Coming up' })).toHaveCount(6);
-  await expect(schedule.locator('.row', { hasText: 'Not in these records' })).toHaveCount(0);
-  await expect(schedule.getByRole('link', { name: 'CDC child and adolescent immunization schedule' })).toHaveAttribute('href', 'https://www.cdc.gov/vaccines/hcp/imz-schedules/child-adolescent-age-compliant.html');
-  await expect(card.locator('.row', { hasText: 'Hep B, adolescent or pediatric' })).toContainText('Nov 8, 2026');
-
-  await card.getByRole('link', { name: 'Doses and the schedule' }).click();
-  await expect(page).toHaveURL(/#\/p\/p_[a-z2-7]{20}\/immunizations$/);
+  await openList(page, 'Jamie Example', 'immunizations');
   const full = page.locator('.card', { hasText: 'By the schedule' });
   await expect(full.locator('.row')).toHaveCount(12);
+  await expect(full.locator('.row').first()).toContainText('Hepatitis B');
+  await expect(full.locator('.row').first()).toContainText('1 of 3 doses in these records · next at 1–2 months, from Dec 8, 2026');
+  await expect(full.locator('.row', { hasText: 'Coming up' })).toHaveCount(6);
+  await expect(full.locator('.row', { hasText: 'Not in these records' })).toHaveCount(0);
   await expect(full.locator('.row', { hasText: 'MMR' })).toContainText('0 of 2 doses in these records · next at 12–15 months, from Nov 8, 2027');
   await expect(full.locator('.row', { hasText: 'Rotavirus' })).toContainText('0 of 2 or 3 doses in these records');
-  await expect(page.locator('.schedule')).toHaveCount(0);
+  await expect(full.getByRole('link', { name: 'CDC child and adolescent immunization schedule' })).toHaveAttribute('href', 'https://www.cdc.gov/vaccines/hcp/imz-schedules/child-adolescent-age-compliant.html');
+  await expect(page.locator('.card', { has: page.locator('.card-head h2', { hasText: 'Doses given' }) }).locator('.row', { hasText: 'Hep B, adolescent or pediatric' })).toContainText('Nov 8, 2026');
 });
 
 test('a school-age child’s schedule shows only this season’s flu dose missing', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
-  await page.goto('./?demo');
-  await page.getByRole('link', { name: /^Alex Example/ }).first().click();
-  const schedule = page.locator('.card', { hasText: 'Immunizations' }).locator('.schedule');
-  await expect(schedule.locator('.row')).toHaveCount(1);
-  await expect(schedule.locator('.row')).toContainText('Flu (influenza)');
-  await expect(schedule.locator('.row')).toContainText('2026–27 season: dose 1 of 1');
-  await expect(schedule.locator('.row .chip')).toHaveText('Not in these records');
-  await openSection(page, 'Immunizations');
+  await openList(page, 'Alex Example', 'immunizations');
   const full = page.locator('.card', { hasText: 'By the schedule' });
+  await expect(full.locator('.row', { hasText: 'Not in these records' })).toHaveCount(1);
+  await expect(full.locator('.row', { hasText: 'Not in these records' })).toContainText('Flu (influenza)');
+  await expect(full.locator('.row', { hasText: 'Not in these records' })).toContainText('2026–27 season: dose 1 of 1');
   await expect(full.locator('.row', { hasText: 'All in these records' })).toHaveCount(9);
   await expect(full.locator('.row', { hasText: 'Rotavirus' })).toContainText('2 of 2 doses in these records');
 });
 
 test('an adult has no childhood schedule', async ({ page }) => {
-  await page.goto('./?demo');
-  await page.getByRole('link', { name: /^Robin Example/ }).first().click();
-  await expect(page.locator('.schedule')).toHaveCount(0);
+  await openList(page, 'Robin Example', 'immunizations');
+  await expect(page.locator('.card', { has: page.locator('.card-head h2', { hasText: 'Doses given' }) })).toBeVisible();
+  await expect(page.locator('.card', { hasText: 'By the schedule' })).toHaveCount(0);
 });
 
 test('results come by panel, the panel with an out-of-range result first', async ({ page }) => {
-  await page.goto('./?demo');
-  await page.getByRole('link', { name: /^Robin Example/ }).first().click();
-  await openSection(page, 'Results');
+  await openList(page, 'Robin Example', 'results');
   const panels = page.locator('main .card');
   await expect(panels.locator('.card-head h2')).toHaveText(['Metabolic panel', 'Cholesterol (lipid panel)', 'Blood sugar (A1c)', 'Blood count (CBC)']);
   const metabolic = panels.first();
@@ -257,9 +212,7 @@ test('results come by panel, the panel with an out-of-range result first', async
 });
 
 test('a low result read from its range is flagged in its panel', async ({ page }) => {
-  await page.goto('./?demo');
-  await page.getByRole('link', { name: /^Sam Example/ }).first().click();
-  await openSection(page, 'Results');
+  await openList(page, 'Sam Example', 'results');
   const cbc = page.locator('main .card').first();
   await expect(cbc.locator('.card-head h2')).toHaveText('Blood count (CBC)');
   await expect(cbc.locator('.row').first()).toContainText('Hemoglobin');
@@ -267,21 +220,17 @@ test('a low result read from its range is flagged in its panel', async ({ page }
 });
 
 test('conditions, allergies and medicines read as lists naming their source', async ({ page }) => {
-  await page.goto('./?demo');
-  await page.getByRole('link', { name: /^Sam Example/ }).first().click();
-  await expect(page.locator('.card', { hasText: 'Allergies' }).locator('.row')).toContainText('Peanuts');
-  await expect(page.locator('.card', { hasText: 'Allergies' }).locator('.row .chip')).toHaveText('High risk');
-
-  await openSection(page, 'Conditions');
+  await openList(page, 'Sam Example', 'conditions');
   const active = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Active$/ }) });
   await expect(active.locator('.row')).toHaveText([/Vitamin D deficiency.*recorded Apr 2, 2026 · from Example Health/]);
   const ended = page.locator('.card', { hasText: 'Resolved or inactive' });
   await expect(ended.locator('.row')).toHaveText([/Right ankle sprain.*May 20, 2026 to Jul 1, 2026 · from Example Health/]);
 
-  await openSection(page, 'Allergies');
+  await openList(page, 'Sam Example', 'allergies');
   await expect(page.locator('main .card').first().locator('.row')).toHaveText([/Peanuts.*Hives, Swelling of the lips · high risk of a severe reaction · recorded Mar 1, 2001 · from Example Health/]);
+  await expect(page.locator('main .card').first().locator('.row .chip')).toHaveText('High risk');
 
-  await openSection(page, 'Medicines');
+  await openList(page, 'Sam Example', 'medicines');
   const past = page.locator('.card', { hasText: 'Past and other' });
   await expect(past.locator('.row')).toContainText('Ibuprofen 200 mg tablet');
   await expect(past.locator('.row')).toContainText('reported, not prescribed in these records');
@@ -289,9 +238,7 @@ test('conditions, allergies and medicines read as lists naming their source', as
 });
 
 test('a medicine shows its prescriber and last fill, and an inactive allergy and a declined dose stand apart', async ({ page }) => {
-  await page.goto('./?demo');
-  await page.getByRole('link', { name: /^Robin Example/ }).first().click();
-  await openSection(page, 'Medicines');
+  await openList(page, 'Robin Example', 'medicines');
   const active = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Active$/ }) });
   await expect(active.locator('.row')).toHaveText([
     /Lisinopril 10 mg tablet.*Take 1 tablet by mouth once a day · prescribed by Dr\. Jordan Sample · since Mar 12, 2025 · last filled Nov 12, 2026 at Example Pharmacy, 90 days · from Example Health/,
@@ -299,18 +246,16 @@ test('a medicine shows its prescriber and last fill, and an inactive allergy and
   await expect(active.locator('.chip')).toHaveCount(0);
   await expect(page.locator('.card', { hasText: 'Past and other' }).locator('.row')).toHaveText([/Cetirizine 10 mg tablet.*Take 1 tablet daily as needed · recorded Apr 2, 2023 · from Example Health.*Stopped/]);
 
-  await openSection(page, 'Allergies');
+  await openList(page, 'Robin Example', 'allergies');
   await expect(page.locator('.card', { hasText: 'No longer active' }).locator('.row')).toHaveText([/Latex.*Inactive/]);
 
-  await openSection(page, 'Immunizations');
+  await openList(page, 'Robin Example', 'immunizations');
   await expect(page.locator('.card', { hasText: 'Recorded as not given' }).locator('.row')).toHaveText([/COVID-19 vaccine.*Oct 4, 2025 · from Example Health/]);
   await expect(page.locator('.card', { has: page.locator('.card-head h2', { hasText: 'Doses given' }) }).locator('.row', { hasText: 'COVID-19' })).toHaveCount(0);
 });
 
 test('each vaccine is listed once, with a link to every dose', async ({ page }) => {
-  await page.goto('./?demo');
-  await page.getByRole('link', { name: /^Alex Example/ }).first().click();
-  await openSection(page, 'Immunizations');
+  await openList(page, 'Alex Example', 'immunizations');
   const doses = page.locator('.card', { has: page.locator('.card-head h2', { hasText: 'Doses given' }) });
   const pcv = doses.locator('.row', { hasText: 'Pneumococcal conjugate PCV 13' });
   await expect(pcv).toContainText('4 doses, the last Jan 7, 2019 · from Example Pediatrics');
@@ -320,45 +265,8 @@ test('each vaccine is listed once, with a link to every dose', async ({ page }) 
   await expect(page.locator('main')).toContainText('Mar 5, 2018');
 });
 
-test('bills say what is owed to each provider, and each claim sits beside its bill', async ({ page }) => {
-  // Due dates are fixed in the sample, so the clock is too.
-  await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
-  await page.goto('./?demo');
-  await page.getByRole('link', { name: /^Robin Example/ }).first().click();
-  await openSection(page, 'Claims and bills');
-
-  const owed = page.locator('.card', { hasText: 'Owed to each provider' });
-  await expect(owed.locator('.glance-answer')).toHaveText('$72.96 due to 2 providers');
-  await expect(owed.locator('.row-title')).toHaveText(['Example Health', 'Example Lab']);
-  await expect(owed.locator('.row').first()).toContainText('statement Oct 20, 2026 · account ****0000 · due Nov 19, 2026');
-  await expect(owed.locator('.row').first().locator('.chip')).toHaveText('Due date passed');
-  await expect(owed.locator('.row').nth(1).locator('.chip')).toHaveCount(0);
-
-  const plan = page.locator('.card', { hasText: 'Plan year so far' });
-  await expect(plan.locator('.row').first()).toContainText('Deductible');
-  await expect(plan.locator('.row').first()).toContainText('in network, individual · $1,120.40 of $1,500.00 used');
-  await expect(plan.locator('progress').first()).toHaveAttribute('aria-label', 'Deductible, in network, individual: $1,120.40 of $1,500.00 used');
-
-  const claims = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Claims$/ }) });
-  const rows = claims.locator('.row');
-  await expect(rows).toHaveCount(7);
-  // Named for what was done, not "Professional".
-  const fill = 'Lisinopril 10 mg tablet, 90 days';
-  await expect(rows.locator('.row-title')).toHaveText(['Office visit', fill, 'Lipid panel and blood draw', 'Preventive visit, flu vaccine and 1 more', fill, 'Office visit', 'Office visit and blood count']);
-  await expect(rows.nth(2).locator('.row-meta').first()).toHaveText('Oct 3, 2026 · Example Lab · by Example Health Plan');
-  await expect(rows.nth(0)).toContainText('No bill from Example Health in these records within 120 days of the visit.');
-  // A fill's share goes to the pharmacy, so no statement is looked for.
-  await expect(rows.nth(1)).toContainText('Your share of a fill is paid to the pharmacy, usually when it is picked up or shipped, so no statement follows.');
-  await expect(rows.nth(2)).toContainText('Billed on the statement of Oct 28, 2026: $19.28, your share.');
-  await expect(rows.nth(3).locator('.totals')).toHaveText('Billed $412.00; Plan allowed $268.40; Plan paid $214.72; Your share $53.68');
-  await expect(rows.nth(3)).toContainText('Your share is coinsurance $53.68.');
-  await expect(rows.nth(3).getByRole('link', { name: 'Explanation of Benefits' })).toBeVisible();
-  await expect(rows.nth(5)).toContainText('Nothing for you to pay on this claim.');
-  await expect(rows.nth(6)).toContainText('Billed on the statement of Apr 2, 2025: $51.18, your share. A receipt was filed Apr 20, 2025.');
-
-  // A claim's page lists its lines, each with its code, what kind of service it is, and its amounts.
-  await rows.nth(2).locator('a.row-main').click();
-  await expect(page.locator('main h1')).toHaveText('Lipid panel and blood draw');
+test('a claim’s page lists its lines, each with its code, kind of service and amounts', async ({ page }) => {
+  await openClaim(page, 'Robin Example', 'Lipid panel and blood draw');
   const lines = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^2 lines$/ }) });
   await expect(lines.locator('.row-title')).toHaveText(['Lipid panel', 'Blood draw']);
   await expect(lines.locator('.row-meta')).toHaveText(['80061 · Lab test · Oct 3, 2026', '36415 · Lab test · Oct 3, 2026']);
@@ -369,13 +277,8 @@ test('bills say what is owed to each provider, and each claim sits beside its bi
   await expect(page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Paid for$/ }) })).toHaveCount(0);
   await page.goBack();
   // Without medrec's link, the visit is the one of the same day from a matching provider.
-  await rows.nth(0).locator('a.row-main').click();
+  await claimRow(page, 'Office visit').locator('a.row-main').click();
   await expect(page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Paid for$/ }) }).locator('.row-title')).toHaveText(['Office visit']);
-  await page.goBack();
-
-  await rows.nth(3).getByRole('link', { name: 'statement of Oct 20, 2026' }).click();
-  await expect(page).toHaveURL(/#\/p\/p_[a-z2-7]{20}\/r\/d_[a-z2-7]{20}$/);
-  await expect(page.locator('main')).toContainText('Statement from Example Health');
 });
 
 /** A label's value in the page's key-value list. */
@@ -383,11 +286,7 @@ const field = (page: Page, label: string) => page.locator('main .kv-row', { has:
 const paidFor = (page: Page) => page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Paid for$/ }) });
 
 test('a claim medrec linked says what it paid for: the visit, the diagnosis and each line’s records', async ({ page }) => {
-  await page.goto('./?demo');
-  await page.getByRole('link', { name: /^Alex Example/ }).first().click();
-  await openSection(page, 'Claims and bills');
-  await page.locator('.row', { hasText: 'Office visit and strep test' }).locator('a.row-main').click();
-  await expect(page.locator('main h1')).toHaveText('Office visit and strep test');
+  await openClaim(page, 'Alex Example', 'Office visit and strep test');
   await expect(field(page, 'Diagnosis')).toHaveText('Otitis media, unspecified, unspecified ear (H66.90)');
   await expect(paidFor(page).locator('.row-title')).toHaveText(['Sick visit']);
   await expect(paidFor(page).locator('.row-meta').first()).toContainText('Visit · Nov 20, 2026');
@@ -400,11 +299,7 @@ test('a claim medrec linked says what it paid for: the visit, the diagnosis and 
 });
 
 test('a lab claim lists the results of its day once, a claim without the payer’s figure adds up your share, and a fill gives its discount', async ({ page }) => {
-  await page.goto('./?demo');
-  await page.getByRole('link', { name: /^Sam Example/ }).first().click();
-  await openSection(page, 'Claims and bills');
-  await page.locator('.row', { hasText: 'Blood count and vitamin D test' }).locator('a.row-main').click();
-  await expect(page.locator('main h1')).toHaveText('Blood count and vitamin D test');
+  await openClaim(page, 'Sam Example', 'Blood count and vitamin D test');
   await expect(page.locator('main .result-value').first()).toHaveText('You owe $70.30');
   await expect(field(page, 'Diagnosis')).toHaveText('Vitamin D deficiency, unspecified (E55.9)');
   // medrec links each lab line to every result and report of its day, from any source.
@@ -414,16 +309,12 @@ test('a lab claim lists the results of its day once, a claim without the payer�
   await expect(page.locator('.claim-paid-for')).toHaveCount(0);
   await page.goBack();
   // The payer gave the parts of the member's share but no figure for it.
-  await page.locator('.row', { hasText: 'Thyroid test (TSH) and blood draw' }).locator('a.row-main').click();
+  await claimRow(page, 'Thyroid test (TSH) and blood draw').locator('a.row-main').click();
   await expect(page.locator('main .result-value').first()).toHaveText('Your share $50.70');
   await expect(field(page, 'Your share comes from')).toHaveText('Deductible $50.70');
 
-  await page.goto('./?demo');
-  await page.getByRole('link', { name: /^Robin Example/ }).first().click();
-  await openSection(page, 'Claims and bills');
-  await page.locator('.row', { hasText: 'Lisinopril 10 mg tablet, 90 days' }).first().locator('a.row-main').click();
   // medrec's name for it ends with the pharmacy, which the page shows apart.
-  await expect(page.locator('main h1')).toHaveText('Lisinopril 10 mg tablet, 90 days');
+  await openClaim(page, 'Robin Example', 'Lisinopril 10 mg tablet, 90 days');
   await expect(field(page, 'Billed')).toHaveText('$32.50');
   await expect(field(page, 'Discount')).toHaveText('$20.10');
   await expect(field(page, 'Diagnosis')).toHaveText('Essential (primary) hypertension (I10)');
@@ -432,20 +323,8 @@ test('a lab claim lists the results of its day once, a claim without the payer�
   await expect(page.locator('.claim-paid-for')).toHaveCount(0);
 });
 
-test('a bill no claim matches is listed apart', async ({ page }) => {
-  await page.goto('./?demo');
-  await page.getByRole('link', { name: /^Sam Example/ }).first().click();
-  await openSection(page, 'Claims and bills');
-  await expect(page.locator('.card', { hasText: 'Owed to each provider' }).locator('.glance-answer')).toHaveText('$370.00 due to 2 providers');
-  const others = page.locator('.card', { hasText: 'Other bills and receipts' });
-  await expect(others.locator('.row')).toHaveText([/Statement from Example Billing.*no claim in these records matches it.*\$120\.00/]);
-});
-
 test('a result over time, down to its raw FHIR', async ({ page }) => {
-  await page.goto('./?demo');
-  await page.getByRole('link', { name: /^Robin Example/ }).first().click();
-  await expect(page.locator('.person-head h1')).toHaveText('Robin Example');
-  await openSection(page, 'Results');
+  await openList(page, 'Robin Example', 'results');
   await page.getByRole('link', { name: /LDL cholesterol/ }).click();
   await expect(page.locator('svg.chart')).toBeVisible();
   await expect(page.locator('table tbody tr')).toHaveCount(4);
@@ -460,57 +339,30 @@ test('a result over time, down to its raw FHIR', async ({ page }) => {
   await expect(page).toHaveURL(/#\/p\/p_[a-z2-7]{20}\/r\/r_[a-z2-7]{20}$/);
 });
 
-test('search finds words inside documents', async ({ page }) => {
-  await page.goto('./?demo');
-  await page.getByRole('link', { name: /^Robin Example/ }).first().click();
-  await openSection(page, 'Search');
-  await page.fill('input[type=search]', 'fasting');
+test('search finds words inside documents, and a person’s old search address opens it on that person', async ({ page }) => {
+  const robin = PEOPLE['Robin Example'];
+  await page.goto(`./?demo#/p/${robin}/search?q=fasting`);
+  await expect(page).toHaveURL(new RegExp(`#/search\\?q=fasting&who=${robin}$`));
   await expect(page.locator('.snippet')).toContainText('Lipid panel, fasting 12 hours');
-  await expect(page).toHaveURL(/\/search\?q=fasting$/);
-});
+  const whose = page.getByRole('group', { name: 'Filter by person' });
+  await expect(whose.getByRole('button', { name: 'Robin Example' })).toHaveAttribute('aria-pressed', 'true');
 
-test('the timeline lists visits with their documents, and switches to every record', async ({ page }) => {
-  await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
-  await page.goto('./?demo');
-  await page.getByRole('link', { name: /^Robin Example/ }).first().click();
-  await openSection(page, 'Timeline');
-
-  const tl = page.locator('.card', { has: page.locator('.card-head h2', { hasText: 'Timeline' }) });
-  await expect(tl.getByRole('link', { name: 'Visits' })).toHaveAttribute('aria-current', 'page');
-  const rows = tl.locator('.row');
-  await expect(rows).toHaveCount(5);
-  // The day Robin's coverage changed sits among the visits, between Nov 18 and Oct 1.
-  await expect(rows.nth(1)).toContainText('Coverage changed');
-  await expect(rows.nth(1)).toContainText('Nov 8, 2026 · Example Health Plan, PPO Choice');
-  await expect(rows.nth(1).locator('.coverage-born')).toHaveText('Changed on Nov 8, 2026, the day Jamie Example was born.');
-  const october = rows.nth(2);
-  await expect(october).toContainText('Oct 1, 2026 · Annual physical · Dr. Jordan Sample · Example Health Main Clinic');
-  await expect(october).toContainText('3 documents');
-  await expect(october.locator('.visit-docs li')).toHaveText(['After visit summary Visit summary', 'Lipid panel Lab report', 'Statement from Example Health Bill']);
-  await expect(october.locator('.visit-line')).toHaveText([/^Results: LDL cholesterol · Glucose · .+ and 5 more$/, 'Vaccine: Influenza, seasonal, injectable', 'Claim: your share $53.68 from Example Health Plan']);
-  await expect(rows.nth(3).locator('.visit-line').last()).toHaveText('Claim: nothing for you to pay from Example Health Plan');
-  await expect(tl).toContainText('5 documents from no visit in these records (bills, scans, letters) are under Documents.');
-
-  await october.getByRole('link', { name: 'Lipid panel' }).click();
-  await expect(page.locator('.card-head h1')).toHaveText('Lipid panel');
-  await page.goBack();
-
-  await tl.getByRole('link', { name: 'Every record' }).click();
-  await expect(page).toHaveURL(/\/timeline\/all$/);
-  await expect(page.locator('.chips[role=group]').getByRole('button', { name: 'All', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByRole('link', { name: 'Every record' })).toHaveAttribute('aria-current', 'page');
-  await page.goBack();
-  await expect(page.getByRole('link', { name: 'Visits' })).toHaveAttribute('aria-current', 'page');
+  // Robin's search for what only Sam has says so, and Everyone shows it.
+  await page.goto(`./?demo#/search?q=peanuts&who=${robin}`);
+  await expect(page.locator('main')).toContainText(/No matches for Robin Example; \d+ match(es)? for everyone\./);
+  await whose.getByRole('button', { name: 'Everyone' }).click();
+  await expect(page).toHaveURL(/#\/search\?q=peanuts$/);
+  await expect(page.locator('main .row').first()).toContainText('Peanuts');
 });
 
 test('a visit’s page shows what belongs to it, a hand-filed note among them', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
-  await page.goto('./?demo');
-  await page.getByRole('link', { name: /^Alex Example/ }).first().click();
-  await openSection(page, 'Timeline');
-  const sick = page.locator('.row', { hasText: 'Sick visit' });
-  await expect(sick).toContainText('Nov 20, 2026 · Office visit · Ear pain');
-  await sick.locator('a.row-link, a').first().click();
+  // The portal's visit record, from how its event was put together.
+  await page.goto(`./?demo#/calendar?view=list&who=${PEOPLE['Alex Example']}`);
+  await page.locator('main a', { hasText: 'Sick visit' }).first().click();
+  await expect(page.locator('main h1').first()).toHaveText('Sick visit');
+  await page.getByText('How this visit was put together').click();
+  await page.locator('.row', { hasText: 'Portal visit' }).locator('a.row-main').click();
   await expect(page.locator('.card-head h1').first()).toHaveText('Sick visit');
   const at = page.locator('.card', { hasText: 'At this visit' });
   await expect(at.locator('.visit-docs li')).toHaveText(['School note Letter']);
@@ -532,12 +384,6 @@ test('a search starts reading the documents’ text before anything is typed, an
   await field.press('Enter');
   await expect(page.locator('main p[aria-live]')).toHaveText(/matches/);
   expect(reads).toHaveLength(4);
-
-  // A person's own search, on a fresh load, reads only theirs, as soon as it opens.
-  await page.goto('about:blank');
-  await page.goto('./?demo#/p/p_xo4em46i7yj3hphlpajo/search');
-  await expect.poll(() => reads.filter((u) => u.includes('/Robin Example/')).length).toBe(2);
-  expect(reads).toHaveLength(5);
 });
 
 test('one search over everyone, from the home screen, with filters by kind and person', async ({ page }) => {
@@ -616,23 +462,29 @@ test('the app bar opens search from anywhere', async ({ page }) => {
   await expect(page.getByRole('searchbox', { name: 'Search', exact: true })).toBeFocused();
 });
 
-test('every section of every person opens', async ({ page }) => {
-  // 27 sections, several through the phone's More sheet.
+test('every list of every person opens, and every old section address lands on its new page', async ({ page }) => {
   test.setTimeout(120_000);
-  await page.goto('./?demo');
-  for (const name of ['Robin Example', 'Sam Example', 'Alex Example', 'Jamie Example']) {
-    await page.goto('./?demo#/');
-    await page.getByRole('link', { name: new RegExp(`^${name}`) }).first().click();
-    for (const section of ['Timeline', 'Results', 'Medicines', 'Conditions', 'Allergies', 'Immunizations', 'Claims and bills', 'Documents', 'Imaging', 'Overview']) {
-      await openSection(page, section);
+  for (const [name, id] of Object.entries(PEOPLE)) {
+    for (const list of ['results', 'medicines', 'conditions', 'allergies', 'immunizations', 'imaging']) await openList(page, name, list);
+    for (const [old, now] of [
+      ['', `#/health?who=${id}`],
+      ['/timeline', `#/calendar?view=list&who=${id}`],
+      ['/timeline/all', `#/calendar?view=list&who=${id}`],
+      ['/claims', `#/money?who=${id}`],
+      ['/documents', `#/papers?who=${id}`],
+    ]) {
+      await page.goto(`./?demo#/p/${id}${old}`);
+      await expect(page).toHaveURL((u) => u.hash === now);
+      await expect(page.locator('main h1, main h2').first()).toBeVisible();
     }
   }
 });
 
-test('a Huishouden link lands on the person', async ({ page }) => {
+test('a Huishouden link lands on the person’s Health', async ({ page }) => {
   await page.goto('./?demo#/hh/hh-demo-sam');
-  await expect(page.locator('.person-head h1')).toHaveText('Sam Example');
-  await expect(page).toHaveURL(/#\/p\/p_[a-z2-7]{20}$/);
+  await expect(page).toHaveURL(new RegExp(`#/health\\?who=${PEOPLE['Sam Example']}$`));
+  await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Health' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('main')).toContainText('Sam Example');
 });
 
 test('Refresh asks the Mac and shows its answer', async ({ page }) => {
@@ -663,18 +515,23 @@ test('a request can be cancelled before the Mac takes it', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Refresh everything' })).toBeVisible();
 });
 
-test('section navigation fits the screen', async ({ page }) => {
+test('the tabs fit the screen: a bar at the bottom of a phone, a row above the page from 640px', async ({ page }) => {
   await page.goto('./?demo');
-  await page.getByRole('link', { name: /^Robin Example/ }).first().click();
-  if (isPhone(page)) {
-    await expect(page.locator('.bottom-nav')).toBeVisible();
-    await expect(page.locator('.section-tabs')).toBeHidden();
-  } else {
-    await expect(page.locator('.bottom-nav')).toBeHidden();
-    await expect(page.locator('.section-tabs')).toBeVisible();
-  }
+  const tabs = page.getByRole('navigation', { name: 'Main' });
+  await expect(tabs.getByRole('link')).toHaveText(['Home', 'Calendar', 'Money', 'Health']);
+  await expect(tabs.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
+  const bar = (await tabs.boundingBox())!;
+  const view = page.viewportSize()!;
+  if (view.width < 640) expect(bar.y + bar.height).toBeCloseTo(view.height, 0);
+  else expect(bar.y + bar.height).toBeLessThanOrEqual((await page.locator('main').boundingBox())!.y + 1);
+  for (const link of await tabs.getByRole('link').all()) expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(48);
   const width = await page.evaluate(() => document.documentElement.scrollWidth);
-  expect(width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  expect(width).toBeLessThanOrEqual(view.width);
+  for (const [name, url] of [['Calendar', /#\/calendar$/], ['Money', /#\/money$/], ['Health', /#\/health$/], ['Home', /#\/$/]] as const) {
+    await tabs.getByRole('link', { name }).click();
+    await expect(page).toHaveURL(url);
+    await expect(tabs.locator('[aria-current="page"]')).toHaveText(name);
+  }
 });
 
 test('an unknown address says so', async ({ page }) => {
@@ -734,9 +591,9 @@ test('bills finds claims and statements, records before claims, and a claim name
 
 test('coverage over time: each insurer and plan, newest first, the same coverage from two sources once, a change on a birthday marked', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
-  await page.goto('./?demo');
-  await page.getByRole('link', { name: /^Robin Example/ }).first().click();
-  await openSection(page, 'Claims and bills');
+  // On the person's Money, where their old claims address leads.
+  await page.goto(`./?demo#/p/${PEOPLE['Robin Example']}/claims`);
+  await expect(page).toHaveURL(new RegExp(`#/money\\?who=${PEOPLE['Robin Example']}$`));
 
   const coverage = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Coverage$/ }) });
   const rows = coverage.locator('.row');
@@ -764,6 +621,6 @@ test('costs say when a coverage changed inside the period shown', async ({ page 
   await expect(note).toHaveCount(0);
   await page.getByRole('group', { name: 'Period' }).getByRole('button', { name: '2026' }).click();
   await note.getByRole('link', { name: 'Robin Example' }).click();
-  await expect(page).toHaveURL(/\/claims$/);
+  await expect(page).toHaveURL(new RegExp(`#/money\\?who=${PEOPLE['Robin Example']}$`));
   await expect(page.locator('.card-head h2', { hasText: /^Coverage$/ })).toBeVisible();
 });

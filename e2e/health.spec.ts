@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// Health under ?next: each person's standing on everyone's view, a person's
+// Health: each person's standing on everyone's view, a person's
 // page in the design's order (Due, Current, Worth noticing, Recently, Quiet),
 // and the sheet to hand a doctor, with private items kept off shared views
 // and off the sheet until included.
@@ -9,7 +9,7 @@ const SAM = 'p_wwezzed7kml67hnp6s7n';
 
 async function open(page: Page, path: string) {
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
-  await page.goto(`./?demo&next${path}`);
+  await page.goto(`./?demo${path}`);
 }
 
 const card = (page: Page, title: string | RegExp) => page.locator('.card', { has: page.locator('.card-head h2', { hasText: title }) });
@@ -107,11 +107,6 @@ test('the doctor’s sheet leaves private items off until they are included', as
   await expect(page.locator('.sheet-private')).toBeHidden();
   await expect(page.getByRole('button', { name: 'Print' })).toBeHidden();
   await expect(page.locator('.sheet')).toBeVisible();
-});
-
-test('Health asks for ?next', async ({ page }) => {
-  await page.goto('./?demo#/health');
-  await expect(page.getByText('Health is part of the redesign. Add ?next to the address to try it.')).toBeVisible();
 });
 
 test('Health fits a 360px phone in the dark theme', async ({ page }) => {

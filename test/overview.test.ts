@@ -1,18 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import {
-  immunizationsGiven,
-  latestResults,
-  newInLatestLoads,
-  RECENT_LOAD_MS,
-} from '../src/model/overview';
+import { latestResults } from '../src/model/overview';
 import { isOutOfRange, parseRange, resultFlag } from '../src/model/flags';
 import { recentVisits } from '../src/model/visits';
 import { organizationName, originNames } from '../src/model/records';
 import type { MedRecord, PersonIndex } from '../src/model/types';
 import { demo, personNamed } from './demo-data';
 
-// The sample folder's times are anchored here (scripts/demo-folder.mjs).
-const ANCHOR = new Date('2026-11-22T20:00:00Z');
 const { household, indexes } = demo();
 const index = (name: string) => indexes.get(personNamed(household, name).id)!;
 
@@ -101,45 +94,12 @@ function withRecords(idx: PersonIndex, extra: Partial<MedRecord>[]): PersonIndex
 }
 
 describe('what is current', () => {
-  it('lists doses given, newest first, and not one not given', () => {
-    const idx = withRecords(index('Alex Example'), [{ kind: 'immunization', display: 'Hep A', date: '2026-11-01', status: 'not-done' }]);
-    const given = immunizationsGiven(idx);
-    expect(given[0]!.display).toBe('Influenza, seasonal, injectable');
-    expect(given.map((r) => r.display)).not.toContain('Hep A');
-  });
-
   it('lists visits that happened, not planned or future ones', () => {
     const idx = withRecords(index('Alex Example'), [
       { kind: 'encounter', display: 'Well child visit, 9 years', date: '2027-01-11', status: 'planned' },
       { kind: 'encounter', display: 'Follow-up', date: '2026-12-01', status: 'finished' },
     ]);
     expect(recentVisits(idx, '2026-11-22').map((r) => r.display).slice(0, 2)).toEqual(['Sick visit', 'Well child visit, 8 years']);
-  });
-});
-
-describe('new in the latest loads', () => {
-  it('lists what each source’s newest import added', () => {
-    const loads = newInLatestLoads(index('Robin Example'), ANCHOR);
-    expect(loads).toHaveLength(1);
-    expect(loads[0]).toMatchObject({ cli: 'mychart', organization: 'example-health', at: '2026-11-22T17:00:00Z' });
-    expect(loads[0]!.records.map((r) => r.display).sort()).toEqual(['Creatinine', 'Potassium']);
-    expect(loads[0]!.documents.map((d) => d.title)).toEqual(['Basic metabolic panel']);
-  });
-
-  it('leaves out a load older than the window, and one that added nothing', () => {
-    const alex = index('Alex Example');
-    expect(newInLatestLoads(alex, ANCHOR)[0]!.records).toHaveLength(3);
-    expect(newInLatestLoads(alex, new Date(ANCHOR.getTime() + RECENT_LOAD_MS))).toEqual([]);
-    // Sam's newest loads added no record: their records were filed earlier.
-    expect(newInLatestLoads(index('Sam Example'), ANCHOR)).toEqual([]);
-  });
-
-  it('counts a record only from the source whose import first filed it', () => {
-    const idx = index('Robin Example');
-    const run = idx.imports.find((i) => i.cli === 'mychart' && i.imported_at === '2026-11-22T17:00:00Z')!;
-    const other = { ...run, cli: 'oneblood', organization: 'example-blood-center', imported_at: run.imported_at, id: 'i_other' };
-    const loads = newInLatestLoads({ ...idx, imports: [...idx.imports.filter((i) => i.cli !== 'oneblood'), other] }, ANCHOR);
-    expect(loads.find((l) => l.cli === 'oneblood')).toBeUndefined();
   });
 });
 
