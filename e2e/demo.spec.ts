@@ -359,9 +359,9 @@ test('a visit’s page shows what belongs to it, a hand-filed note among them', 
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
   // The portal's visit record, from how its event was put together.
   await page.goto(`./?demo#/calendar?view=list&who=${PEOPLE['Alex']}`);
-  await page.locator('main a', { hasText: 'Sick visit' }).first().click();
+  await page.locator('main a', { hasText: 'Ear pain' }).first().click();
   await expect(page.locator('main h1').first()).toHaveText('Office visit');
-  await expect(page.locator('.event-what')).toHaveText('Sick visit');
+  await expect(page.locator('.event-what')).toHaveText('Ear pain');
   await page.getByText('How this visit was put together').click();
   await page.locator('.row', { hasText: 'Portal visit' }).locator('a.row-main').click();
   await expect(page.locator('.card-head h1').first()).toHaveText('Sick visit');

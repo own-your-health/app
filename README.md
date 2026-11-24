@@ -483,11 +483,11 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   moves it when another project's preview holds that port.
 - The sample folder in `public/demo/` comes from `scripts/demo-folder.mjs`.
   Run `node scripts/demo-folder.mjs` after changing it, and commit both. It
-  ends by running medrec 0.9.1 or later over the folder to write its views
+  ends by running medrec 0.9.3 or later over the folder to write its views
   (`MEDREC=<path to medrec>`, else `medrec` on the PATH), under a scratch
   home and profile with only the variables it needs and the time zone set
   to `America/New_York`, so the machine's own medrec setup is never touched and every
-  machine writes the same views. CI runs medrec 0.9.1's Linux build,
+  machine writes the same views. CI runs medrec 0.9.3's Linux build,
   checked against its SHA-256. Only `views/views.json` and each person's
   `events.json` are kept: the app reads no other view. `manifest.json`
   gives each file's MD5, as Drive would, for the store's freshness check.
@@ -537,8 +537,10 @@ dropped from the address.
   What an event is called and what it cost (`src/next/event.ts`) come from
   its records either way. A visit leads with its kind and its place
   ("Office visit · Example Pediatrics"). What it was, in plain words, goes
-  beneath: the portal's name for the visit, its reason, medrec's `what`, or
-  the claims' services. A fill is named for its drug, from the pharmacy's
+  beneath: medrec's `what`, the portal's name for the visit, its reason, or
+  the claims' services, the first that is plain and says more than the
+  title. A private visit goes by the portal's own name for it before
+  medrec's `what`, which can be its reason. A fill is named for its drug, from the pharmacy's
   record before a claim's word for any drug ("Prescription drug"). A
   vaccine is named for its dose, and a day of several doses for how many.
   A day whose claims are all for vaccines is a vaccine visit, with medrec's

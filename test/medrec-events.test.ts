@@ -8,7 +8,7 @@ import { DemoFolder } from '../src/folder';
 import { eventsView, parseMedrecEvents } from '../src/model/events';
 import { FolderError, parseIndex } from '../src/model/parse';
 import type { MedRecord, PersonIndex } from '../src/model/types';
-import { doseCount, eventOf, nameEvent, ruleText, type CareEvent } from '../src/next/event';
+import { doseCount, eventOf, nameEvent, privateArea, ruleText, type CareEvent } from '../src/next/event';
 import { groupedByMedrec, personEvents } from '../src/next/load';
 import { claimLines } from '../src/model/claims';
 import { careEvents } from '../src/next/grouping';
@@ -186,7 +186,7 @@ describe('medrec’s events as the app’s', () => {
 
   it('makes a portal stay with no claim a hospital stay', () => {
     const birth = events('Jamie Example').find((e) => e.visits.some((v) => v.record.display === 'Birth hospital stay'))!;
-    expect([birth.kind, birth.title, birth.what, birth.place]).toEqual(['stay', 'Hospital stay', 'Birth hospital stay', 'Example Health Birth Center']);
+    expect([birth.kind, birth.title, birth.what, birth.place]).toEqual(['stay', 'Hospital stay', 'Newborn delivery', 'Example Health Birth Center']);
   });
 
   it('leaves out a member the index no longer has, names a kind it does not know by medrec’s title, and says why an unsure one is unsure', () => {
@@ -201,8 +201,8 @@ describe('medrec’s events as the app’s', () => {
     const file = parseMedrecEvents(fixture('events/odd.json'), ODD);
     file.papers.set('d_other', { person: 'p_bbbbbbbbbbbbbbbbbbbb', doc: { ...other, id: 'd_other' } });
     const [withVisit, papersOnly] = fromMedrec(file, index, household);
-    // medrec's title names a kind the app does not know; the portal's name for the visit says what it was.
-    expect([withVisit!.kind, withVisit!.title, withVisit!.what, withVisit!.place, withVisit!.visits.length, withVisit!.recorded.length]).toEqual(['service', 'Video visit', visit.display, 'Example Clinic', 1, 0]);
+    // medrec's title names a kind the app does not know, and its `what` says what it was.
+    expect([withVisit!.kind, withVisit!.title, withVisit!.what, withVisit!.place, withVisit!.visits.length, withVisit!.recorded.length]).toEqual(['service', 'Video visit', 'Follow-up', 'Example Clinic', 1, 0]);
     expect(withVisit!.papers.map((p) => [p.doc.id, p.person])).toEqual(expect.arrayContaining([['d_known', undefined], ['d_other', 'p_bbbbbbbbbbbbbbbbbbbb']]));
     expect(withVisit!.doubt).toBe('It could be part of any of 2 other visits');
     expect(ruleText(withVisit!.papers.find((p) => p.doc.id === 'd_known')!.rule)).toBe('medrec’s rule D9');
@@ -241,6 +241,29 @@ describe('naming an event', () => {
     expect([doseCount(two), two.title]).toEqual([2, '2 vaccines']);
   });
 
+  it('says what a visit was in the first words that say more than its title', () => {
+    const said = (list: CareEvent[], day: string) => list.find((e) => e.start === day && e.kind !== 'tests')!.what;
+    const own = (name: string) => careEvents(indexes.get(id(name))!, household, TODAY);
+    // The portal calls each of these "Office visit": medrec's words, else the portal's reason.
+    expect(['2025-03-10', '2025-09-15', '2026-10-01'].map((day) => said(events('Robin Example'), day))).toEqual(['Annual physical', 'Follow-up visit', 'Annual physical']);
+    expect(['2025-03-10', '2025-09-15', '2026-10-01'].map((day) => said(own('Robin Example'), day))).toEqual(['Annual physical', 'Follow-up', 'Annual physical']);
+    // medrec's "Emergency room visit" is the title again, so the claims say it.
+    expect(said(events('Sam Example'), '2026-09-12')).toBe('Emergency visit, moderate severity and chest X-ray, 2 views');
+    // medrec's words come before the portal's name for the visit ("Sick visit").
+    expect(said(events('Alex Example'), '2026-11-20')).toBe('Ear pain');
+  });
+
+  it('calls a private visit by the portal’s name for it, not the reason', () => {
+    const counseling = events('Sam Example').find((e) => e.start === '2026-10-27')!;
+    expect([privateArea(counseling), counseling.what]).toEqual(['mental_health', 'Counseling session']);
+    // The same words, when nothing marks the visit.
+    const open = structuredClone(counseling);
+    for (const r of [...open.visits.map((v) => v.record), ...open.claims.map((c) => c.record), ...open.recorded]) delete r.private;
+    for (const p of open.papers) delete p.doc.private;
+    nameEvent(open, household, id('Sam Example'), { what: 'Anxiety' });
+    expect([privateArea(open), open.what]).toEqual([undefined, 'Anxiety']);
+  });
+
   it('never makes a portal platform’s name a place', () => {
     const visit = structuredClone(events('Robin Example').find((e) => e.start === '2026-11-18')!);
     visit.place = 'athenahealth (all practices)';
@@ -256,8 +279,8 @@ describe('naming an event', () => {
     nameEvent(claimOnly, household, id('Robin Example'));
     expect(claimOnly.title).toBe('Pharmacy fill');
     // A drug a pharmacy names in capitals.
-    const capitals = { ...blank('fill'), what: 'SERTRALINE 50 MG TABLET' };
-    nameEvent(capitals, household, id('Sam Example'));
+    const capitals = blank('fill');
+    nameEvent(capitals, household, id('Sam Example'), { what: 'SERTRALINE 50 MG TABLET' });
     expect(capitals.title).toBe('Sertraline 50 mg tablet');
   });
 

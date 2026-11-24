@@ -26,7 +26,7 @@ async function openEmergency(page: Page) {
   await happened.getByRole('link', { name: 'All 7 in the calendar' }).click();
   const er = page.locator('.cal-row', { hasText: 'Emergency room · overnight' });
   await expect(er.locator('.row-title')).toHaveText('Emergency room · overnight · Example General Hospital');
-  await expect(er.locator('.row-meta')).toHaveText('Emergency visit, moderate severity and Chest X-ray, 2 views · to Sep 13, 2026');
+  await expect(er.locator('.row-meta')).toHaveText('Emergency visit, moderate severity and chest X-ray, 2 views · to Sep 13, 2026');
   await expect(er.locator('.row-aside')).toHaveText('$346.40');
   await er.locator('a.row-main').click();
   await expect(page).toHaveURL(new RegExp(`#/p/${SAM}/e/e_[a-z2-7]{20}$`));
@@ -99,6 +99,7 @@ async function openRobinVisit(page: Page, day: string) {
 test('a visit the portal recorded leads with the portal’s own words and results, one line each', async ({ page }) => {
   await openRobinVisit(page, '2026-10-01');
   await expect(page.locator('.event h1')).toHaveText('Office visit');
+  await expect(page.locator('.event-what')).toHaveText('Annual physical');
   await expect(page.locator('.event-settled')).toHaveText('$53.68 billed, due Nov 19, 2026');
   await expect(card(page, /^What happened$/)).toContainText('Annual physical');
   await expect(card(page, /^What happened$/)).toContainText('From the provider’s own records.');

@@ -17,7 +17,7 @@ test('home leads to the calendar, which opens on this month with a lane per pers
   const recent = card(page, /^Recently$/);
   // Each row leads with the kind and the place, and says what it was beneath: Robin's portal names the visit by its billing descriptor, so its reason says it.
   await expect(recent.locator('.row-title')).toHaveText(['Office visit · Example Pediatrics', 'Office visit · Example Pediatrics', 'Office visit · Example Health Main Clinic']);
-  await expect(recent.locator('.row-meta')).toHaveText(['Alex · Sick visit', 'Jamie · Weight check', 'Robin · Blood pressure follow-up']);
+  await expect(recent.locator('.row-meta')).toHaveText(['Alex · Ear pain', 'Jamie · Weight check', 'Robin · Blood pressure follow-up']);
   await recent.getByRole('link', { name: /^Calendar/ }).click();
   await expect(page).toHaveURL(/#\/calendar$/);
   await expect(page.locator('main h1')).toHaveText('Calendar');
@@ -43,9 +43,9 @@ test('home leads to the calendar, which opens on this month with a lane per pers
   await expect(card(page, 'What happened in November 2026')).toBeVisible();
 
   // Each row opens the visit's page.
-  await card(page, 'What happened in November 2026').locator('.row', { hasText: 'Birth hospital stay' }).locator('a.row-main').click();
+  await card(page, 'What happened in November 2026').locator('.row', { hasText: 'Newborn delivery' }).locator('a.row-main').click();
   await expect(page.locator('.event h1')).toHaveText('Hospital stay · 2 nights');
-  await expect(page.locator('.event-what')).toHaveText('Birth hospital stay');
+  await expect(page.locator('.event-what')).toHaveText('Newborn delivery');
 });
 
 test('a private event stays off the Everyone calendar until shown, and on its person’s own', async ({ page }) => {
