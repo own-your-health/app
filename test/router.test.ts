@@ -33,6 +33,9 @@ describe('routes', () => {
     { name: 'money', view: 'calls', who: P },
     { name: 'money', view: 'calls', who: P, bill: 'd_abcdefghijklmnopqrst' },
     { name: 'money', period: 'plan-1' },
+    { name: 'health' },
+    { name: 'health', who: P },
+    { name: 'health', view: 'doctor', who: P },
     { name: 'money', view: 'bills', who: P },
     { name: 'money', view: 'events', who: P, period: '2025', sort: 'share' },
   ];
@@ -66,6 +69,8 @@ describe('routes', () => {
   it('give money its year, bills, calls and where the money went, and nothing else', () => {
     expect(href({ name: 'money', view: 'calls', who: P })).toBe(`#/money/calls?who=${P}`);
     expect(parseRoute('#/money/year')).toEqual({ name: 'not_found' });
+    expect(parseRoute('#/health/papers')).toEqual({ name: 'not_found' });
+    expect(parseRoute('#/health?who=%3Cb%3E')).toEqual({ name: 'health' });
     // A period belongs to the year and where the money went; an order only to where the money went.
     expect(parseRoute('#/money/bills?period=2025&sort=share')).toEqual({ name: 'money', view: 'bills' });
     expect(parseRoute('#/money?period=last&sort=share')).toEqual({ name: 'money' });

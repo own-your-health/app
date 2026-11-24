@@ -2427,3 +2427,95 @@ a.cal-day:hover .cal-date {
 .limit-line p {
   margin: 6px 0 0;
 }
+
+/* Health (?next). */
+.health-group {
+  margin: 16px 0 4px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.health-group:first-of-type {
+  margin-top: 4px;
+}
+
+.health-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 8px;
+}
+
+.health-quiet > summary {
+  cursor: pointer;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.health-kv .kv-row {
+  grid-template-columns: minmax(96px, 30%) 1fr;
+}
+
+.sheet-private {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.sheet-private p {
+  margin: 0;
+  flex: 1 1 240px;
+}
+
+.sheet-section + .sheet-section {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.sheet-section h2 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
+.sheet-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.sheet-list li + li {
+  margin-top: 4px;
+}
+
+.sheet-table {
+  width: 100%;
+  font-size: 14px;
+}
+
+.sheet-print {
+  margin: 0;
+}
+
+/* A printed doctor's sheet: the sheet alone, without the app around it or the private-items note. */
+@media print {
+  body:has(.doctor) .app-bar,
+  body:has(.doctor) .banner-slot,
+  body:has(.doctor) .toast-slot,
+  body:has(.doctor) .site-footer,
+  .doctor .chips,
+  .doctor .sheet-back,
+  .doctor .sheet-private,
+  .doctor .sheet-print {
+    display: none;
+  }
+
+  .doctor .sheet {
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+}

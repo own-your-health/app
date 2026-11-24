@@ -215,7 +215,7 @@ export function calendarView(ctx: Ctx, route: CalendarRoute): HTMLElement {
       ] as const
     ).map(([text, view]) => {
       const on = r.view === view;
-      return h('a', { class: ['filter', on ? 'filter-on' : null], href: href({ name: 'calendar', ...(view ? { view } : { month: r.month }), ...(who ? { who } : {}) }), 'aria-current': on ? 'true' : false }, text);
+      return h('a', { class: ['filter', on ? 'filter-on' : null], href: href({ name: 'calendar', ...(view ? { view } : { month: r.month }), ...(who ? { who } : {}) }), 'aria-current': on ? 'page' : false }, text);
     }),
   );
   const whose = h(
@@ -223,7 +223,7 @@ export function calendarView(ctx: Ctx, route: CalendarRoute): HTMLElement {
     { class: 'chips', role: 'group', 'aria-label': 'Whose calendar' },
     [{ id: '', name: 'Everyone' }, ...people].map((p) => {
       const on = p.id ? who === p.id : !who;
-      return h('a', { class: ['filter', on ? 'filter-on' : null], href: href({ name: 'calendar', ...(r.view ? { view: r.view } : { month: r.month }), ...(p.id ? { who: p.id } : {}) }), 'aria-current': on ? 'true' : false }, p.name);
+      return h('a', { class: ['filter', on ? 'filter-on' : null], href: href({ name: 'calendar', ...(r.view ? { view: r.view } : { month: r.month }), ...(p.id ? { who: p.id } : {}) }), 'aria-current': on ? 'page' : false }, p.name);
     }),
   );
 

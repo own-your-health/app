@@ -83,7 +83,7 @@ function yearChips(route: MoneyRoute, d: YearData, who: string | undefined): HTM
     d.choices.map((p) => {
       const on = p.id === d.chosen?.id;
       const to: Route = { name: 'money', ...(route.view ? { view: route.view } : {}), ...(who ? { who } : {}), ...(route.sort ? { sort: route.sort } : {}), ...(p.id === 'plan' ? {} : { period: p.id }) };
-      return h('a', { class: ['filter', on ? 'filter-on' : null], href: href(to), 'aria-current': on ? 'true' : false }, p.label);
+      return h('a', { class: ['filter', on ? 'filter-on' : null], href: href(to), 'aria-current': on ? 'page' : false }, p.label);
     }),
   );
 }
@@ -311,7 +311,7 @@ export function eventsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined)
     (['price', 'share'] as const).map((o) => {
       const on = o === order;
       const to: Route = { name: 'money', view: 'events', ...(who ? { who } : {}), ...(route.period ? { period: route.period } : {}), ...(o === 'share' ? { sort: 'share' as const } : {}) };
-      return h('a', { class: ['filter', on ? 'filter-on' : null], href: href(to), 'aria-current': on ? 'true' : false }, o === 'share' ? 'Your share' : 'Network price');
+      return h('a', { class: ['filter', on ? 'filter-on' : null], href: href(to), 'aria-current': on ? 'page' : false }, o === 'share' ? 'Your share' : 'Network price');
     }),
   );
   const pharmacies = [...new Set(fills.map((c) => c.event.event.place).filter(Boolean))];
