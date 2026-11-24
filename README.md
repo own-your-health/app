@@ -88,7 +88,8 @@ may load again.
 
 For a child under 19, the overview and the Immunizations section set the
 recorded doses beside the routine rows of the CDC's child and adolescent
-immunization schedule (the July 2, 2025 version, which CDC's site serves):
+immunization schedule (the July 2, 2025 version, which CDC restored after a
+court stayed its January 2026 changes on March 16, 2026; the page says so):
 which doses the schedule places by the child's age that the records do not
 show, and which fall in the next 90 days, with each season's flu dose. It is
 the schedule's timing, not advice. Doses given elsewhere may be missing from
@@ -497,6 +498,26 @@ app without it is unchanged.
   page says which. Every screen reads events through `src/next/load.ts`:
   reading medrec's events changes the one call there, and `grouping.ts` is
   then deleted. What an event is and what it cost (`src/next/event.ts`) stay.
+- **Home** leads with **Needs you**, quiet when nothing does:
+  - a bill worth a call: one that asks something other than what the
+    claims say you owe, or that no claim in these records backs
+    (`src/next/money.ts`; receipts carry no amount yet, so an
+    overpayment can't be found);
+  - bills to pay, one row per visit, overdue first, until a receipt from
+    the provider is filed after the bill;
+  - vaccine doses the CDC schedule places by now that the records don't
+    show, and this season's flu dose;
+  - a refill, from two weeks before the last fill's days' supply runs out
+    to two weeks after;
+  - doses coming up within 90 days, grouped into the visit that gives
+    them ("2-month vaccines").
+
+  The schedule is CDC's of July 2, 2025, which CDC restored after a court
+  stayed its January 2026 changes on March 16, 2026; Home and the
+  person's page name that version and date. **Where everyone stands**
+  follows, a few lines a person: their age, their last visit, what is
+  open to pay and what comes next. **Recently** closes it. A person's
+  overview opens with their own Needs you.
 - **Calendar** (`#/calendar`, and Recently on Home): the household's
   events a month at a time, with a lane per person (a dot for a visit or
   tests, a ring for a pharmacy trip or vaccine, a bar across the days of an
@@ -508,15 +529,19 @@ app without it is unchanged.
   person's own pages and calendar, marked Private. The Everyone calendar
   and Home leave it off. The calendar says how many it left off and in
   which area, and Show them brings them back there until the calendar is
-  left or the page reloaded; nothing about it is stored. The app says this is discretion, not security: everyone the Drive
-  folder is shared with can still read the files.
+  left or the page reloaded; nothing about it is stored. Home counts the
+  private items it leaves off, bills and refills included, without naming
+  them; the person's own overview lists them, marked. The app says this is
+  discretion, not security: everyone the Drive folder is shared with can
+  still read the files.
 - A visit's address names a record in it. Any record or paper of the visit
   opens it, so a saved address still works after records arrive and the
   visit is led by another one.
 - The sample's Sam spent a night in the emergency room: five claims from
   four providers, a line the plan re-coded and left out of its totals, a
   bill that matches its claim and a doctor's bill not yet filed. Sam also
-  has a private video counseling session, marked the way medrec marks one.
+  has a private video counseling session, marked the way medrec marks one,
+  a private prescription that goes with it, and a vitamin D refill due.
 
 Unofficial. Not affiliated with or endorsed by Google.
 

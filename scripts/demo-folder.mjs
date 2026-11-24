@@ -1230,6 +1230,39 @@ counseling.private = true;
 counseling.private_area = 'mental_health';
 S.write();
 
+// ---- Refills ----
+// Sam's vitamin D, filled for 30 days, so a refill comes due. And a medicine
+// tied to the counseling, private like it: its refill shows on Sam's own
+// pages and stays off the household's shared screens.
+S.record(src.samChart, 'MedicationDispense', 'medication', {
+  date: '2026-10-29',
+  display: 'Vitamin D3 2,000 unit capsule',
+  status: 'completed',
+  fields: { dosage: 'Take 1 capsule by mouth once a day', quantity: '30 capsule', days_supply: 30, pharmacy: 'Example Pharmacy', prescriber: 'Dr. Casey Placeholder', source: 'dispense' },
+  resource: { status: 'completed', medicationCodeableConcept: { text: 'Vitamin D3 2,000 unit capsule' }, whenHandedOver: '2026-10-29', quantity: { value: 30, unit: 'capsule' }, daysSupply: { value: 30, unit: 'days' } },
+});
+const sertraline = [
+  S.record(src.samChart, 'MedicationRequest', 'medication', {
+    date: '2026-10-27',
+    display: 'Sertraline 50 mg tablet',
+    status: 'active',
+    fields: { dosage: 'Take 1 tablet by mouth once a day', prescriber: 'Dr. Morgan Placeholder', source: 'request' },
+    resource: { status: 'active', intent: 'order', medicationCodeableConcept: { text: 'Sertraline 50 mg tablet' }, authoredOn: '2026-10-27', dosageInstruction: [{ text: 'Take 1 tablet by mouth once a day' }] },
+  }),
+  S.record(src.samChart, 'MedicationDispense', 'medication', {
+    date: '2026-10-28',
+    display: 'Sertraline 50 mg tablet',
+    status: 'completed',
+    fields: { dosage: 'Take 1 tablet by mouth once a day', quantity: '30 tablet', days_supply: 30, pharmacy: 'Example Pharmacy', prescriber: 'Dr. Morgan Placeholder', source: 'dispense' },
+    resource: { status: 'completed', medicationCodeableConcept: { text: 'Sertraline 50 mg tablet' }, whenHandedOver: '2026-10-28', quantity: { value: 30, unit: 'tablet' }, daysSupply: { value: 30, unit: 'days' } },
+  }),
+];
+for (const r of sertraline) {
+  r.private = true;
+  r.private_area = 'mental_health';
+}
+S.write();
+
 // ---- Write ----
 
 rmSync(ROOT, { recursive: true, force: true });
