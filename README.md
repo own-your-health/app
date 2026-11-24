@@ -79,9 +79,9 @@ the app and Refresh.
 3. Choose the records folder. The app lists the folders with a
    `household.json` that the account can see; you can also paste a folder link.
 
-Home, Calendar, Money and Health are tabs: at the bottom of a phone's
-screen, and a row above the page from 640px wide. The bar's menu holds
-Papers, Sources and Settings. Home closes with one line for a
+Home, Calendar, Money, Health and Papers are tabs: at the bottom of a
+phone's screen, and a row above the page from 640px wide. The bar's menu
+holds Sources and Settings. Home closes with one line for a
 sign-in that needs a person ("Example Pediatrics needs a sign-in on the
 Mac"), which opens the source, then when the records last loaded and
 **Refresh everything**. **Sources** (`#/sources`, in the bar's menu, which
@@ -598,7 +598,7 @@ dropped from the address.
   medicines). It prints on its own. Private items stay off everyone's view,
   counted. The sheet leaves them off, and any doctor known only from them,
   until Include brings them back; leaving the sheet leaves them off again.
-- **Papers** (`#/papers`, from the bar's menu, Recently on Home and each
+- **Papers** (`#/papers`, a tab, also from Recently on Home and each
   person's Health): every paper in the Drive
   folder, newest first by year, each with the visit it belongs to as a
   link. A paper is with a visit when the visit holds it, when a record of
