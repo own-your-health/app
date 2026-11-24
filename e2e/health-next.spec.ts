@@ -96,7 +96,7 @@ test('the doctor’s sheet leaves private items off until they are included', as
 
   // Leaving the sheet leaves them off again.
   await page.getByRole('button', { name: 'Include 2 private items' }).click();
-  await page.getByRole('link', { name: 'Health', exact: true }).click();
+  await page.locator('main').getByRole('link', { name: 'Health', exact: true }).click();
   await page.getByRole('link', { name: 'Hand to a doctor' }).click();
   await expect(page.getByRole('button', { name: 'Include 2 private items' })).toBeVisible();
   await expect(page.locator('.sheet')).not.toContainText('Sertraline');

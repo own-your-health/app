@@ -580,6 +580,11 @@ app without it is unchanged.
   medicines). It prints on its own. Private items stay off everyone's view,
   counted. The sheet leaves them off, and any doctor known only from them,
   until Include brings them back; leaving the sheet leaves them off again.
+- **Tabs.** Under `?next`, Home, Calendar, Money, Health and Papers are
+  tabs (`src/next/tabs.ts`): a bar at the bottom of a phone's screen, a row
+  above the page from 640px wide, left off a printed page. The tab of the
+  part shown is marked; a visit belongs to none. A person's own pages keep
+  their section tabs instead.
 - **Papers** (`#/papers`, and Recently on Home): every paper in the Drive
   folder, newest first by year, each with the visit it belongs to as a
   link. A paper is with a visit when the visit holds it, when a record of

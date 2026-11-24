@@ -71,7 +71,7 @@ test('worth a call gives each bill the figures and the words to say', async ({ p
   // On Sam's own Bills the private copay is listed, marked.
   const counseling = card(page, 'Not billed yet').locator('.row', { hasText: 'Example Counseling' });
   await expect(counseling.locator('.chip')).toHaveText('Private');
-  await page.getByRole('link', { name: 'Money', exact: true }).click();
+  await page.locator('main').getByRole('link', { name: 'Money', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`#/money\\?who=${SAM}$`));
 });
 

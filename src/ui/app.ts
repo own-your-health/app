@@ -26,6 +26,7 @@ import { calendarView, hidePrivateEvents } from '../next/calendarView';
 import { moneyView } from '../next/moneyView';
 import { healthView, leaveOutPrivate } from '../next/healthView';
 import { papersView } from '../next/papersView';
+import { hasTabs, tabBar } from '../next/tabs';
 import { eventView } from '../next/eventView';
 
 /** What the app says when a renewal interrupted a write the person asked for. */
@@ -72,6 +73,8 @@ export class App {
   private main = h('main', { class: 'main', id: 'main' });
   private bar = h('header', { class: 'app-bar' });
   private banner = h('div', { class: 'banner-slot', 'aria-live': 'polite' });
+  /** The redesign's tabs, under ?next once the folder is read. */
+  private tabs = h('div', { class: 'tabs-slot' });
   private toastBox = h('div', { class: 'toast-slot', 'aria-live': 'polite' });
   private toastTimer: number | undefined;
   private signature = '';
@@ -82,7 +85,7 @@ export class App {
   constructor(private readonly root: HTMLElement) {
     this.demo = new URLSearchParams(location.search).has('demo');
     this.next = new URLSearchParams(location.search).has('next');
-    root.append(this.bar, this.banner, this.main, this.toastBox);
+    root.append(this.bar, this.banner, this.tabs, this.main, this.toastBox);
   }
 
   async start(): Promise<void> {
@@ -460,6 +463,8 @@ export class App {
           : null,
       ),
     );
+    const route = parseRoute(location.hash);
+    this.tabs.replaceChildren(...(ready && this.next && hasTabs(route) ? [tabBar(route)] : []));
     if (this.demo && ready) {
       this.banner.replaceChildren(h('div', { class: 'banner banner-sample' }, h('span', { class: 'chip chip-attention' }, 'Sample data'), h('span', null, 'Invented records. Nothing is saved.')));
     }
