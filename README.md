@@ -364,7 +364,8 @@ Refresh writes one small request file into the folder's `_requests/`. The Mac
 picks it up on its next pass (every few minutes), loads the sources it names,
 and writes the outcome to `_status/` and `_requests/done/`, which the app
 reads back. The app shows when a request is waiting, when the Mac is late, and
-what it answered.
+what it answered. Once a request is finished the app reads the records again,
+so what it brought shows without a reload.
 
 A request loads each source at most once every 15 minutes, counted from its
 last load or try (medrec 0.7.0 and later; before, it waited the source's own
@@ -653,11 +654,14 @@ page count. Papers took the place of each person's list of documents. A
 - **Private items.** medrec 0.9.1 and later list each person's private
   records, papers and events, by area, in
   `views/<person id>/private.json`, from their codes and the household's own
-  marks. The app reads that list and decides nothing itself, but for four
-  things the list does not judge:
-  - a paper that only a record links is as private as the record;
-  - an imaging study is as private as its report, and stays off everyone's
-    search without one;
+  marks. From 0.9.5 the list has two more rules: a paper that a private
+  record links is private, whatever else links it, and an imaging study is
+  as private as its report (`studies`), or judged by nothing without one
+  (`unreported_studies`). The app judges both the same way where an earlier
+  medrec wrote the list. The household's own mark on a paper wins; an
+  earlier list shows one only on a paper in a private visit, so a paper it
+  took out that a private record links stays off until medrec is 0.9.5. The
+  app decides nothing else itself, but for two things no list judges:
   - a fill or a vaccine is as private as the record it is named for;
   - with the app's own grouping, a visit is private when a record or paper
     in it is.
@@ -666,7 +670,8 @@ page count. Papers took the place of each person's list of documents. A
   kept off every shared screen: Home, the Everyone calendar, Money, Papers,
   Health, Costs and everyone's search. Each says how many it left off,
   without naming them, but search, which would say that words matched: it
-  never looks at private items, and always says so. The calendar gives the
+  never looks at private items, and always says so, with how many imaging
+  studies it leaves off because no report judges them. The calendar gives the
   areas, and Show them brings the events back there until the calendar is
   left or the page reloaded; nothing about it is stored. While anything is
   left off, an empty list on a shared screen says that nothing is listed
@@ -681,8 +686,11 @@ page count. Papers took the place of each person's list of documents. A
   behind, still arriving, unreadable or from a newer medrec, or one that
   says the household's marks could not be read (`marks_unreadable`), holds
   back all of that person's items from every shared screen, which says so in
-  a line with the reason. Their own pages still show everything. Settings
-  gives each person's reason.
+  a line with the reason. So does a `views.json` in a layout newer than the
+  app knows, which says to update the app, or one that does not read. Their
+  own pages still show everything. Settings gives each person's reason. While
+  someone's items are held back, the app reads the records again each time it
+  comes to the front, so the hold ends once medrec has written the list.
 
   The app says this is discretion, not security: everyone the Drive folder
   is shared with can still read the files. Money's totals count private care

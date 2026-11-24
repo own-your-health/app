@@ -70,6 +70,10 @@ export class App {
   private drive: Drive | null = null;
   private demo: boolean;
   private demoMac: ((file: string) => void) | null = null;
+  /** The read of the records under way, if one is. */
+  private reading: Promise<boolean> | null = null;
+  /** A request finished and the records have not been read since: that read failed. */
+  private unread = false;
   private main = h('main', { class: 'main', id: 'main' });
   private bar = h('header', { class: 'app-bar' });
   private banner = h('div', { class: 'banner-slot', 'aria-live': 'polite' });
@@ -119,7 +123,7 @@ export class App {
       if (document.visibilityState !== 'visible') return;
       void this.lookForUpdate();
       if (this.signInEnded()) return this.renew();
-      void this.pollOnce();
+      void this.pollOnce(true);
     });
     if (this.demo) return this.startDemo();
 
@@ -317,13 +321,24 @@ export class App {
     }, this.demo ? 1500 : 30_000);
   }
 
-  private async pollOnce(): Promise<void> {
-    if (!this.store || (!this.demo && !this.token)) return;
+  /**
+   * Looks for the Mac's answer. The records are read again when a request it
+   * had is finished, and when the app comes to the front while someone's items
+   * are held back, so what the Mac wrote since shows without a reload.
+   */
+  private async pollOnce(front = false): Promise<void> {
+    const store = this.store;
+    if (!store || (!this.demo && !this.token)) return;
+    const asked = store.pending.map((p) => p.request.id);
     try {
-      await this.store.loadRefreshState();
+      await store.loadRefreshState();
     } catch {
       return;
     }
+    const waiting = new Set(store.pending.map((p) => p.request.id));
+    if (asked.some((id) => !waiting.has(id))) this.unread = true;
+    if ((this.unread || (front && store.anyHeld())) && (await this.readAgain(store))) this.unread = false;
+    if (store !== this.store) return;
     const sig = this.stateSignature();
     if (sig === this.signature) return;
     // Held back, not dropped: the poll stops once nothing is pending, so the change is drawn when the input is let go.
@@ -333,6 +348,12 @@ export class App {
     }
     this.signature = sig;
     this.renderKeepingScroll();
+  }
+
+  /** One read at a time: a second asked for meanwhile is this one. */
+  private readAgain(store: Store): Promise<boolean> {
+    this.reading ??= store.reload().finally(() => (this.reading = null));
+    return this.reading;
   }
 
   private drawIfStale(): void {
@@ -358,7 +379,7 @@ export class App {
   private stateSignature(): string {
     const st = this.store;
     if (!st) return '';
-    return JSON.stringify([st.status.kind === 'ok' ? st.status.status.updated_at : st.status.kind, st.pending.map((p) => p.file), st.done.length, st.refused.length]);
+    return JSON.stringify([st.status.kind === 'ok' ? st.status.status.updated_at : st.status.kind, st.pending.map((p) => p.file), st.done.length, st.refused.length, st.snapshot]);
   }
 
   private ctx(): Ctx {

@@ -185,11 +185,17 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
   const left = h('div');
   // With something to leave off, everyone's chip is there to choose: a chip never says whose private item matched.
   const leaves = () => many && people.some((p) => ctx.store.index(p.id) && anyPrivate(ctx.store.index(p.id)!));
-  const unread = () => people.some((p) => ctx.store.index(p.id)?.studies.some((s) => studyPrivate(ctx.store.index(p.id)!, s) === HELD && !isHeld(ctx.store.index(p.id)!)));
+  const unjudged = () =>
+    people.reduce((n, p) => {
+      const idx = ctx.store.index(p.id);
+      return n + (idx && !isHeld(idx) ? idx.studies.filter((s) => studyPrivate(idx, s) === HELD).length : 0);
+    }, 0);
+  /** Imaging no report judges, counted for everyone and never for what was searched for. */
+  const imagingLeft = (n: number) => (n ? ` So ${n === 1 ? 'is' : 'are'} ${count(n, 'imaging study', 'imaging studies')} with no report in these records: nothing says whether ${n === 1 ? 'it is' : 'they are'} private.` : '');
   const leftNotes = () =>
     many && who === 'all' && leaves()
       ? [
-          h('p', { class: 'small muted' }, `Private items are left off everyone’s results.${unread() ? ' So is imaging with no report in these records: nothing says whether it is private.' : ''} Choose a person to search theirs.`),
+          h('p', { class: 'small muted' }, `Private items are left off everyone’s results.${imagingLeft(unjudged())} Choose a person to search theirs.`),
           ...heldNotes(ctx, 'everyone’s results'),
         ]
       : [];

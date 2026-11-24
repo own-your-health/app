@@ -146,9 +146,22 @@ describe('when the store uses medrec’s events', () => {
     expect([...unchecked.eventsNotes.values()].map((n) => n.kind)).toEqual(['unchecked', 'unchecked', 'unchecked', 'unchecked']);
 
     const noViews = await loadWith((path, text) => (path === 'views/views.json' ? 'not json' : text));
-    expect(noViews.viewsError).toBe('medrec’s views could not be read (views/views.json is not valid JSON.). The app groups each person’s visits itself.');
+    expect(noViews.viewsError).toEqual({ kind: 'unreadable', text: 'medrec’s views could not be read: views/views.json is not valid JSON. The app groups each person’s visits itself.' });
     expect(Object.values(grouped(noViews))).toEqual([false, false, false, false]);
     expect(noViews.indexErrors.size).toBe(0);
+
+    const withViews = (change: (v: Record<string, unknown>) => object) => loadWith((path, text) => (path === 'views/views.json' ? JSON.stringify(change(JSON.parse(text))) : text));
+    const newer = await withViews((v) => ({ ...v, schema: 'medrec-views/v3' }));
+    expect(newer.viewsError).toEqual({ kind: 'newer_format', text: 'medrec’s views are written by a newer medrec. Update the app. Until then it groups each person’s visits itself.' });
+    expect(Object.values(grouped(newer))).toEqual([false, false, false, false]);
+    const noPeople = await withViews((v) => ({ ...v, people: undefined }));
+    expect(noPeople.viewsError?.text).toBe('medrec’s views could not be read: views/views.json names no people. The app groups each person’s visits itself.');
+
+    // One person's entry that leaves out what freshness needs is theirs alone.
+    const sam = id('Sam Example');
+    const people = demoJson<{ people: Record<string, object> }>('views/views.json').people;
+    const odd = await withViews((v) => ({ ...v, people: { ...people, [sam]: { ...people[sam], linked: undefined } } }));
+    expect([odd.viewsError, [...odd.eventsNotes]]).toEqual([null, [[sam, { kind: 'unreadable', text: 'medrec’s grouping of these visits could not be read: views/views.json does not say which files it was made from. The app groups them itself.' }]]]);
   });
 
   it('shows another person’s paper in an event, from their index (X2)', async () => {

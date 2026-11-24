@@ -7,8 +7,8 @@ import { FolderError, parseAttempts, parseHousehold, parseIndex, parseRefused, p
 import { buildRequest, requestFileName, sameScope } from '../model/requests';
 import { macState, sourceViews, type MacState, type SourceView } from '../model/sources';
 import { parseMedrecEvents } from '../model/events';
-import { held, noList, parsePrivate, type HeldWhy, type Privacy } from '../model/private';
-import { viewOf, type PersonView } from '../model/views';
+import { held, isHeld, noList, parsePrivate, type HeldWhy, type Privacy } from '../model/private';
+import { parseViews, viewOf, type PersonView } from '../model/views';
 import type { AttemptLine, Household, Person, PersonIndex, PersonText, RefreshRequest, RefreshStatus, RefusedRequest, RequestScope } from '../model/types';
 
 export type StatusRead =
@@ -46,6 +46,12 @@ function heldFor(s: NonNullable<ViewState>): Privacy {
   return held('behind', `medrec’s list of which items are private is older than ${s.than}. medrec writes it again after its next import or refresh.`);
 }
 
+/** Why every person's private items are unknown when views.json itself can't be used. */
+const NO_VIEWS = {
+  newer_format: 'medrec’s views, which say which items are private, are written by a newer medrec. Update the app.',
+  unreadable: 'medrec’s views could not be read, so nothing says which items are private.',
+};
+
 export interface PendingRequest {
   file: string;
   request: RefreshRequest;
@@ -58,8 +64,8 @@ export class Store {
   status: StatusRead = { kind: 'missing' };
   indexes = new Map<string, PersonIndex>();
   indexErrors = new Map<string, string>();
-  /** views/views.json could not be read: every person's visits are the app's own grouping. */
-  viewsError: string | null = null;
+  /** views/views.json could not be read, and why: every person's visits are the app's own grouping, and their private items unknown. */
+  viewsError: { kind: 'newer_format' | 'unreadable'; text: string } | null = null;
   /** Each person whose visits are the app's own grouping although medrec wrote events for them, and why. */
   eventsNotes = new Map<string, EventsNote>();
   pending: PendingRequest[] = [];
@@ -69,6 +75,8 @@ export class Store {
   /** Whether `_requests/` exists: the Mac set up refresh for this folder. */
   requestsReady = false;
   loadedAt = 0;
+  /** What the records and medrec's views were when read: another read with the same has nothing new to show. */
+  snapshot = '';
   private texts = new Map<string, Promise<PersonText | null>>();
   /** Handled requests of the app's own it has tried to remove once. */
   private tidied = new Set<string>();
@@ -77,23 +85,71 @@ export class Store {
 
   /** Reads household.json, every person's index, the status and the requests. */
   async load(): Promise<void> {
+    await this.loadHousehold();
+    await Promise.all([this.loadRecords(), this.loadRefreshState()]);
+  }
+
+  /**
+   * Reads the records again: every index, medrec's events and its private
+   * lists, so each person's stay of one moment. False, with nothing changed,
+   * when the read fails or leaves out someone whose records are here.
+   */
+  async reload(): Promise<boolean> {
+    this.folder.forget('');
+    const next = new Store(this.folder);
+    try {
+      await next.loadHousehold();
+      await next.loadRecords();
+    } catch {
+      return false;
+    }
+    if ([...next.indexErrors.keys()].some((id) => this.indexes.has(id))) return false;
+    this.household = next.household;
+    this.indexes = next.indexes;
+    this.indexErrors = next.indexErrors;
+    this.viewsError = next.viewsError;
+    this.eventsNotes = next.eventsNotes;
+    this.texts = next.texts;
+    this.loadedAt = next.loadedAt;
+    this.snapshot = next.snapshot;
+    return true;
+  }
+
+  private async loadHousehold(): Promise<void> {
     const raw = await readJson(this.folder, 'household.json');
     if (raw === null) throw new FolderError('not_household', 'This folder has no household.json. Choose the records folder medrec writes.');
     this.household = parseHousehold(raw);
-    const [views] = await Promise.all([this.readViews(), this.loadIndexes(), this.loadRefreshState()]);
+  }
+
+  /** Reads every person's index, with medrec's events and private list for each. */
+  private async loadRecords(): Promise<void> {
+    const [views] = await Promise.all([this.readViews(), this.loadIndexes()]);
     const household = this.folder.md5('household.json');
     // Whoever compares with it says why it could not be read; with no view to compare, nobody does.
     household.catch(() => undefined);
     await Promise.all([this.loadEvents(views, household), this.loadPrivate(views, household)]);
     this.loadedAt = Date.now();
+    this.snapshot = JSON.stringify([
+      this.household,
+      views,
+      this.viewsError,
+      ...this.household.people.map((p) => {
+        const index = this.indexes.get(p.id);
+        return [index?.rev, this.indexErrors.get(p.id), this.eventsNotes.get(p.id), index?.privacy?.kind === 'held' ? index.privacy.text : null];
+      }),
+    ]);
   }
 
   /** medrec's views.json (0.8.0 and later). A folder without it, or one where it cannot be read, still loads. */
-  private async readViews(): Promise<unknown> {
+  private async readViews(): Promise<Record<string, unknown> | null> {
     try {
-      return await readJson(this.folder, 'views/views.json');
+      const raw = await readJson(this.folder, 'views/views.json');
+      return raw === null ? null : parseViews(raw);
     } catch (e) {
-      this.viewsError = `medrec’s views could not be read (${e instanceof Error ? e.message : 'unknown error'}). The app groups each person’s visits itself.`;
+      const newer = e instanceof FolderError && e.kind === 'newer_format';
+      this.viewsError = newer
+        ? { kind: 'newer_format', text: 'medrec’s views are written by a newer medrec. Update the app. Until then it groups each person’s visits itself.' }
+        : { kind: 'unreadable', text: `medrec’s views could not be read: ${e instanceof Error ? e.message : 'unknown error'} The app groups each person’s visits itself.` };
       return null;
     }
   }
@@ -123,14 +179,15 @@ export class Store {
    * newer records out, so that person's visits stay the app's own grouping,
    * and eventsNotes says why.
    */
-  private async loadEvents(views: unknown, household: Promise<string | null | undefined>): Promise<void> {
+  private async loadEvents(views: Record<string, unknown> | null, household: Promise<string | null | undefined>): Promise<void> {
     if (views === null) return;
     await Promise.all(
       this.household.people.map(async (p) => {
         const index = this.indexes.get(p.id);
-        const view = viewOf(views, p.id, 'events.json');
-        if (!index || !view) return;
+        if (!index) return;
         try {
+          const view = viewOf(views, p.id, 'events.json');
+          if (!view) return;
           const state = await this.viewState(p, view, household);
           if (state) return void this.eventsNotes.set(p.id, eventsNote(state));
           const raw = await readJson(this.folder, `views/${p.id}/${view.name}`);
@@ -158,7 +215,7 @@ export class Store {
    * list that reads and matches the folder, all of that person's items are
    * held back from shared screens, and it says why.
    */
-  private async loadPrivate(views: unknown, household: Promise<string | null | undefined>): Promise<void> {
+  private async loadPrivate(views: Record<string, unknown> | null, household: Promise<string | null | undefined>): Promise<void> {
     await Promise.all(
       this.household.people.map(async (p) => {
         const index = this.indexes.get(p.id);
@@ -167,11 +224,11 @@ export class Store {
     );
   }
 
-  private async privacyOf(p: Person, views: unknown, household: Promise<string | null | undefined>): Promise<Privacy> {
-    if (views === null && this.viewsError) return held('unreadable', 'medrec’s views could not be read, so nothing says which items are private.');
-    const view = viewOf(views, p.id, 'private.json');
-    if (!view) return noList();
+  private async privacyOf(p: Person, views: Record<string, unknown> | null, household: Promise<string | null | undefined>): Promise<Privacy> {
+    if (this.viewsError) return held(this.viewsError.kind, NO_VIEWS[this.viewsError.kind]);
     try {
+      const view = viewOf(views, p.id, 'private.json');
+      if (!view) return noList();
       const state = await this.viewState(p, view, household);
       if (state) return heldFor(state);
       const raw = await readJson(this.folder, `views/${p.id}/${view.name}`);
@@ -243,6 +300,11 @@ export class Store {
     const done = await Promise.all(doneFiles.map((n) => readJson(this.folder, `${REQUESTS_DIR}/done/${n}`).catch(() => null)));
     this.done = done.map(parseRequest).filter((x): x is RefreshRequest => x !== null);
     this.refused = done.map(parseRefused).filter((x): x is RefusedRequest => x !== null);
+  }
+
+  /** Whether any of the household's items are off shared screens because no list says which are private. */
+  anyHeld(): boolean {
+    return [...this.indexes.values()].some(isHeld);
   }
 
   person(id: string): Person | undefined {

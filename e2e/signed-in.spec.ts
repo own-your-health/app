@@ -203,6 +203,64 @@ test('Refresh writes one request and shows the Mac’s answer', async ({ page })
   expect(google.changes).toHaveLength(1);
 });
 
+test('a finished Refresh shows what it brought, without a reload', async ({ page }) => {
+  const robin = 'p_xo4em46i7yj3hphlpajo';
+  await signIn(page);
+  await page.getByRole('button', { name: 'Refresh everything' }).click();
+  await expect(page.getByText(/waiting for the Mac/).first()).toBeVisible();
+  await page.evaluate((to) => void (location.hash = to), `#/p/${robin}/allergies`);
+  await expect(page.locator('main .row', { hasText: 'Sulfa drugs' })).toBeVisible();
+
+  // The import filed a new name, and medrec wrote its views of the new index.
+  const index = JSON.parse(google.read('Robin Example/index.json')!) as { rev: number; records: { kind: string; display: string }[] };
+  index.rev += 1;
+  index.records.find((r) => r.display === 'Sulfa drugs')!.display = 'An invented allergy';
+  const md5 = google.writeAsMac('Robin Example/index.json', JSON.stringify(index));
+  const views = JSON.parse(google.read('views/views.json')!) as { people: Record<string, { index: string; linked: Record<string, { index: string }> }> };
+  views.people[robin]!.index = md5;
+  for (const p of Object.values(views.people)) if (p.linked[robin]) p.linked[robin]!.index = md5;
+  google.writeAsMac('views/views.json', JSON.stringify(views));
+  // While the request waits, a look reads no records.
+  const before = google.reads.length;
+  await lookAgain(page);
+  await expect.poll(() => google.reads.slice(before)).toContain('_status/status.json');
+  expect(google.reads.slice(before).filter((f) => !f.startsWith('_'))).toEqual([]);
+
+  answerAsMac(google.changes[0]!.path);
+  await lookAgain(page);
+  await expect(page.locator('main .row', { hasText: 'An invented allergy' })).toBeVisible();
+  await expect(page.locator('main .row', { hasText: 'Sulfa drugs' })).toHaveCount(0);
+  // medrec's lists are of the new index, so nothing is held back.
+  await page.evaluate(() => void (location.hash = '#/'));
+  await expect(page.locator('.stand-name')).toHaveCount(4);
+  await expect(page.locator('main .held-note')).toHaveCount(0);
+});
+
+test('someone held back is shown again when the app comes to the front after medrec has written their list', async ({ page }) => {
+  const sam = 'p_wwezzed7kml67hnp6s7n';
+  const list = google.list(`views/${sam}`).find((f) => f.startsWith('private.'))!;
+  const content = google.read(`views/${sam}/${list}`)!;
+  google.removeAsMac(`views/${sam}/${list}`);
+  await signIn(page);
+  const note = page.locator('main .held-note');
+  await expect(note).toHaveText('Sam’s items are left off Home. medrec is still writing its list of which items are private. Sam’s own pages show them.');
+
+  // Still not there: the line stays.
+  const before = google.reads.length;
+  await lookAgain(page);
+  await expect.poll(() => google.reads.slice(before).filter((f) => f === 'views/views.json').length).toBe(1);
+  await expect(note).toHaveCount(1);
+  google.writeAsMac(`views/${sam}/${list}`, content);
+  await lookAgain(page);
+  await expect(note).toHaveCount(0);
+
+  // With no one held back, a look reads no records again.
+  const settled = google.reads.length;
+  await lookAgain(page);
+  await expect.poll(() => google.reads.slice(settled)).toContain('_status/status.json');
+  expect(google.reads.slice(settled).filter((f) => !f.startsWith('_'))).toEqual([]);
+});
+
 test('a request is cancelled by removing only its own file', async ({ page }) => {
   await signIn(page);
   await page.getByRole('button', { name: 'Refresh everything' }).click();

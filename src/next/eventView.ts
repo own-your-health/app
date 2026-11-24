@@ -309,7 +309,7 @@ const sureWord = (c: string) => (c === 'sure' ? null : chip(c === 'likely' ? 'Li
 /** Who grouped this person's visits, and why the app did when medrec wrote events for them. */
 function grouping(ctx: Ctx, idx: PersonIndex): string {
   if (groupedByMedrec(idx)) return 'medrec grouped these by its matching rules.';
-  const why = ctx.store.eventsNotes.get(idx.person)?.text ?? ctx.store.viewsError;
+  const why = ctx.store.eventsNotes.get(idx.person)?.text ?? ctx.store.viewsError?.text;
   return why ? `The app grouped these by medrec’s matching rules. ${why}` : 'The app groups these itself until medrec writes events.';
 }
 

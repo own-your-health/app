@@ -8,7 +8,7 @@ import { CATEGORY_LABELS, claimAmounts, claimCategory, claimCents, claimTitle, c
 import { sameProvider } from '../model/providers';
 import { practiceName, str } from '../model/records';
 import type { MedrecRule, Sureness } from '../model/events';
-import { documentPrivate, HELD, isHeld, recordsPrivate } from '../model/private';
+import { HELD, isHeld, paperPrivate, recordsPrivate } from '../model/private';
 import type { Household, MedDocument, MedRecord, PersonIndex } from '../model/types';
 import { isDescriptor, placeName, plainWords } from '../model/words';
 
@@ -234,7 +234,7 @@ export function eventPrivate(e: CareEvent, index: PersonIndex): string | undefin
     const area = index.privacy?.kind === 'known' ? index.privacy.events.get(e.id) : HELD;
     return area ?? (e.kind === 'fill' || e.kind === 'vaccine' ? members() : undefined);
   }
-  return members() ?? e.papers.map((p) => (p.person ? undefined : documentPrivate(index, p.doc.id))).find(Boolean);
+  return members() ?? e.papers.map((p) => (p.person ? undefined : paperPrivate(index, p.doc.id))).find(Boolean);
 }
 
 /** CPT and HCPCS codes for giving a vaccine, billed beside the vaccine itself. */

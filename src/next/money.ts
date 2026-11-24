@@ -8,7 +8,7 @@
 import { billList, owedByProvider, type Bill } from '../model/billing';
 import { sameProvider } from '../model/providers';
 import { claimLines, type ClaimLine } from '../model/claims';
-import { documentPrivate, inVisit, recordPrivate, recordsPrivate } from '../model/private';
+import { inVisit, paperPrivate, recordPrivate, recordsPrivate, takenOut } from '../model/private';
 import { str, toCents } from '../model/records';
 import type { MedDocument, MedRecord, PersonIndex } from '../model/types';
 import type { PersonEvent } from './calendar';
@@ -39,12 +39,12 @@ export interface OpenBill {
 }
 
 /**
- * Why a bill is private: medrec's answer for it, else its visit's. medrec
- * judged a bill its events hold with that visit, so one it left out, the
- * household took out, and only its visit stays private.
+ * Why a bill is private: as any paper is, else as its visit is. medrec judged
+ * a bill its events hold with that visit, so one it left out, the household
+ * took out, and only its visit stays private.
  */
 export function billPrivate(idx: PersonIndex, doc: MedDocument, event?: PersonEvent): string | undefined {
-  return documentPrivate(idx, doc.id) ?? (event && inVisit(idx, doc.id) ? undefined : event?.private);
+  return paperPrivate(idx, doc.id) ?? (event && (inVisit(idx, doc.id) || takenOut(idx, doc.id)) ? undefined : event?.private);
 }
 
 /** What a shared screen shows of some bills: those not private, without the visit of one whose visit is. */
