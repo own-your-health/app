@@ -20,8 +20,8 @@ describe('places', () => {
   });
 
   it('are never a portal platform’s name, which stands for a sign-in', () => {
-    for (const name of ['athenahealth (all practices)', 'athenahealth', 'MyChart', 'Example Health (all locations)']) expect(placeName(name)).toBeUndefined();
-    for (const name of ['Example Pediatrics', 'Epic Dermatology Example']) expect(placeName(name)).toBe(name);
+    for (const name of ['athenahealth (all practices)', 'athenahealth', 'MyChart', 'MyChart (Example Health)', 'Patient Portal', 'Veradigm', 'Example Health (all locations)']) expect(placeName(name)).toBeUndefined();
+    for (const name of ['Example Pediatrics', 'Epic Dermatology Example', 'Example Clinic (Main Street)']) expect(placeName(name)).toBe(name);
     expect(placeName('Example Pharmacy #1234 1234')).toBe('Example Pharmacy #1234');
   });
 });

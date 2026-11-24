@@ -7,7 +7,7 @@
 import { billList, type Bill } from '../model/billing';
 import { claimDiagnoses, claimLines, diagnosisText } from '../model/claims';
 import { sameProvider } from '../model/providers';
-import { AMOUNT_LABELS, docTypeLabel, documentTitle, formatMoney, fromCents, KIND_LABELS, organizationName, resultPoint, resultReading, str, toCents } from '../model/records';
+import { AMOUNT_LABELS, docTypeLabel, documentTitle, formatMoney, fromCents, KIND_LABELS, portalCounts, resultPoint, resultReading, str, toCents } from '../model/records';
 import { isOutOfRange, resultFlag } from '../model/flags';
 import { unitText } from '../model/result';
 import { recordTitle, visitTitle } from '../model/titles';
@@ -51,16 +51,13 @@ export function eventNumber(m: EventMoney): string | undefined {
 }
 
 function sourcesStrip(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
-  const portal = e.visits.length + e.recorded.length;
   const insurers = [...new Set(e.claims.map((c) => str(c.record.fields.insurer)).filter((x): x is string => !!x))];
-  // The clinic or pharmacy whose portal gave the records: a visit's, else a dose's or a medicine's.
-  const orgs = [...new Set([...e.visits.map((v) => v.record), ...e.recorded].flatMap((r) => r.provenance.map((p) => p.source.organization_id)).filter((x): x is string => !!x))];
-  const orgName = orgs.length ? organizationName(ctx.store.household, idx.person, orgs[0]!) : 'Portal';
+  const portals = portalCounts([...e.visits.map((v) => v.record), ...e.recorded], ctx.store.household, idx.person);
   const part = (label: string, n: string) => h('span', { class: 'event-source' }, h('span', { class: 'event-source-label' }, label), ' ', h('strong', null, n));
   return h(
     'p',
     { class: 'event-sources small' },
-    portal ? part(orgName, count(portal, 'record')) : null,
+    [...portals].map(([name, n]) => part(name, count(n, 'record'))),
     e.claims.length ? part(insurers.length === 1 ? insurers[0]! : 'Insurer', count(e.claims.length, 'claim')) : null,
     e.papers.length ? part('Drive', count(e.papers.length, 'paper')) : null,
   );

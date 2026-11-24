@@ -1,0 +1,19 @@
+{
+  "sources": [
+    { "id": "s_one", "kind": "fhir", "person": "p_child", "cli": "athena", "organization": "900001", "organization_name": "Example Pediatrics", "fhir_base": "https://athena.example.test/fhir/r4/" },
+    { "id": "s_two", "kind": "fhir", "person": "p_parent", "cli": "athena", "organization": "900002", "organization_name": "Example Family Medicine", "fhir_base": "https://athena.example.test/fhir/r4/" },
+    { "id": "s_unnamed", "kind": "fhir", "person": "p_parent", "cli": "athena", "organization": "900003", "fhir_base": "https://athena.example.test/fhir/r4/" },
+    { "id": "s_every", "kind": "fhir", "person": "p_parent", "cli": "athena", "organization": "900004", "organization_name": "athenahealth (all practices)", "fhir_base": "https://athena.example.test/fhir/r4/" },
+    { "id": "s_other_cli", "kind": "fhir", "person": "p_parent", "cli": "mychart", "organization": "900001", "organization_name": "Example Health", "fhir_base": "https://mychart.example.test/fhir/r4" }
+  ],
+  "organizations": [{ "id": "900005", "name": "Example Orthopedics", "fhir_base": "https://athena.example.test/fhir/r4" }],
+  "encounter": {
+    "id": "r_visit",
+    "kind": "encounter",
+    "date": "2026-11-02",
+    "display": "OFC VISIT, EST PT, LOW MDM",
+    "fields": { "class": "AMB", "service_provider": "athenahealth (all practices)" },
+    "documents": [],
+    "provenance": [{ "source": { "kind": "fhir", "cli": "athena", "organization_id": "900001", "fhir_base": "https://athena.example.test/fhir/r4" }, "method": "fhir-api", "filed_at": "2026-11-20T10:00:00Z", "filed_by": "medrec 0.9.3" }]
+  }
+}
