@@ -1156,7 +1156,7 @@
         }
       ],
       "fields": {
-        "provider": "Example Hospitalists",
+        "provider": "Sample Rheumatology Group",
         "insurer": "Example Health Plan",
         "type": "Professional",
         "outcome": "complete",
@@ -1233,7 +1233,7 @@
         }
       ],
       "fields": {
-        "provider": "Example Hospitalists",
+        "provider": "Sample Rheumatology Group",
         "insurer": "Example Health Plan",
         "type": "Professional",
         "outcome": "complete",
