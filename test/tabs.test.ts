@@ -14,9 +14,10 @@ describe('the tab a page belongs to', () => {
     expect(tabOf(parseRoute(`#/health/doctor?who=${P}`))).toBe('health');
     expect(tabOf(parseRoute(`#/p/${P}/results`))).toBe('health');
     expect(tabOf(parseRoute(`#/p/${P}/immunizations`))).toBe('health');
+    expect(tabOf(parseRoute(`#/papers?who=${P}`))).toBe('papers');
   });
 
-  it('is none for a visit, a record, documents, search and settings', () => {
-    for (const hash of [`#/p/${P}/e/${R}`, `#/p/${P}/r/${R}`, `#/p/${P}/documents`, '#/search?q=flu', '#/settings', '#/sources']) expect(tabOf(parseRoute(hash))).toBeUndefined();
+  it('is none for a visit, a record, search and settings', () => {
+    for (const hash of [`#/p/${P}/e/${R}`, `#/p/${P}/r/${R}`, '#/search?q=flu', '#/settings', '#/sources']) expect(tabOf(parseRoute(hash))).toBeUndefined();
   });
 });

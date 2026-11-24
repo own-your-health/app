@@ -486,7 +486,7 @@ export class App {
     return new Date();
   }
 
-  /** The menu: Papers, the sources and the settings, with a dot while a source needs attention at the Mac. */
+  /** The menu: the sources and the settings, with a dot while a source needs attention at the Mac. */
   private menuButton(): HTMLElement {
     const alert = this.store ? needsAttention(this.store.sources(this.now())).length > 0 : false;
     const open = () => {
@@ -495,8 +495,6 @@ export class App {
       const body = h(
         'div',
         { class: 'menu-list' },
-        item({ name: 'papers' }, 'Papers'),
-        h('h3', { class: 'menu-sub' }, 'This app'),
         item({ name: 'sources' }, 'Sources', alert ? 'A source needs attention' : undefined),
         item({ name: 'settings' }, 'Settings'),
       );

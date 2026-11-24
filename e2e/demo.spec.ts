@@ -516,10 +516,10 @@ test('a request can be cancelled before the Mac takes it', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Refresh everything' })).toBeVisible();
 });
 
-test('the tabs fit the screen: a bar at the bottom of a phone, a row above the page from 640px', async ({ page }) => {
+test('the five tabs fit the screen: a bar at the bottom of a phone, a row above the page from 640px', async ({ page }) => {
   await page.goto('./?demo');
   const tabs = page.getByRole('navigation', { name: 'Main' });
-  await expect(tabs.getByRole('link')).toHaveText(['Home', 'Calendar', 'Money', 'Health']);
+  await expect(tabs.getByRole('link')).toHaveText(['Home', 'Calendar', 'Money', 'Health', 'Papers']);
   await expect(tabs.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
   const bar = (await tabs.boundingBox())!;
   const view = page.viewportSize()!;
@@ -528,7 +528,7 @@ test('the tabs fit the screen: a bar at the bottom of a phone, a row above the p
   for (const link of await tabs.getByRole('link').all()) expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(48);
   const width = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(width).toBeLessThanOrEqual(view.width);
-  for (const [name, url] of [['Calendar', /#\/calendar$/], ['Money', /#\/money$/], ['Health', /#\/health$/], ['Home', /#\/$/]] as const) {
+  for (const [name, url] of [['Calendar', /#\/calendar$/], ['Money', /#\/money$/], ['Health', /#\/health$/], ['Papers', /#\/papers$/], ['Home', /#\/$/]] as const) {
     await tabs.getByRole('link', { name }).click();
     await expect(page).toHaveURL(url);
     await expect(tabs.locator('[aria-current="page"]')).toHaveText(name);

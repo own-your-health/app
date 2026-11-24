@@ -1,30 +1,33 @@
-// The app's tabs: Home, Calendar, Money and Health. On a phone they sit at
-// the bottom of the screen; from 640px wide they are a row above the page.
+// The app's tabs: Home, Calendar, Money, Health and Papers. On a phone they
+// sit at the bottom of the screen; from 640px wide they are a row above the
+// page.
 
 import { h, icon } from './dom';
 import { href, type Route } from './router';
 
-type Tab = 'home' | 'calendar' | 'money' | 'health';
+type Tab = 'home' | 'calendar' | 'money' | 'health' | 'papers';
 
 const TABS: { tab: Tab; route: Route; label: string; icon: string }[] = [
   { tab: 'home', route: { name: 'home' }, label: 'Home', icon: 'home' },
   { tab: 'calendar', route: { name: 'calendar' }, label: 'Calendar', icon: 'calendar' },
   { tab: 'money', route: { name: 'money' }, label: 'Money', icon: 'money' },
   { tab: 'health', route: { name: 'health' }, label: 'Health', icon: 'heart' },
+  { tab: 'papers', route: { name: 'papers' }, label: 'Papers', icon: 'file' },
 ];
 
-/** The tab a page belongs to. A part's own pages keep its tab: every claim is Money's, a person's full lists are Health's. A visit, a record, documents, search and settings belong to none. */
+/** The tab a page belongs to. A part's own pages keep its tab: every claim is Money's, a person's full lists are Health's. A visit, a record, search and settings belong to none. */
 export function tabOf(route: Route): Tab | undefined {
   switch (route.name) {
     case 'home':
     case 'calendar':
     case 'money':
     case 'health':
+    case 'papers':
       return route.name;
     case 'costs':
       return 'money';
     case 'person':
-      return route.section === 'documents' ? undefined : 'health';
+      return 'health';
     default:
       return undefined;
   }
