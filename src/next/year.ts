@@ -1,4 +1,4 @@
-// Money's year under ?next: what a period's care cost (what the providers
+// Money's year: what a period's care cost (what the providers
 // charged, what the network took off, what the plans paid and your share),
 // each person's deductible and out-of-pocket limit as their plan printed
 // them, and the visits by what they cost. The figures are the claims' own;

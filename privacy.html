@@ -51,10 +51,16 @@
         <section class="card">
           <h2>What is sent, and where</h2>
           <p>
-            Nothing from your records is sent anywhere but back to Google Drive. The page talks only to Google: the
+            Nothing from your records is sent anywhere but back to Google Drive. Apart from its own site (below), the page talks only to Google: the
             sign-in at accounts.google.com and oauth2.googleapis.com, and the Drive API at www.googleapis.com. Its
             Content-Security-Policy blocks every other host. It loads no analytics, advertising, fonts or other
             third-party scripts, and it sends no error reports.
+          </p>
+          <p>
+            Besides Google, the page asks one site: its own, GitHub Pages, where it is published. Each time the app
+            comes back to the front, at most every five minutes, it asks for its own start page, to see whether a newer
+            version was published. The request carries nothing from your records, no account and no cookies; like any
+            page load, it tells GitHub the time and your network address.
           </p>
           <p>
             A record's page can link to MedlinePlus (the National Library of Medicine's health site) or to the CDC's

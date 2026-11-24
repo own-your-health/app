@@ -298,7 +298,7 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
             const born = bornClause(change);
             return [
               i ? '; ' : null,
-              link({ name: 'person', person, section: 'claims' }, names.get(person) ?? 'Someone'),
+              link({ name: 'money', who: person }, names.get(person) ?? 'Someone'),
               `, ${change.insurer} from ${dateText(change.start)}${born ? `, ${born}` : ''}`,
             ];
           }),
@@ -499,25 +499,3 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
   draw();
   return page;
 }
-
-/** For the home screen: this plan year's share so far across everyone, or null with no claims. */
-export function costsGlance(ctx: Ctx): HTMLElement | null {
-  const store = ctx.store;
-  const all = householdLines(
-    store.household.people.map((p) => ({ id: p.id, index: store.index(p.id) })),
-    { planStart: getPlanStart() ?? undefined },
-  );
-  if (!all.length) return null;
-  const today = localDay(ctx.now());
-  const year = all.filter((l) => inPeriod(l, 'plan', today));
-  const t = totals(year);
-  return card(
-    { title: 'Costs' },
-    year.length ? h('p', { class: 'glance-answer' }, `${money(t.cents.youOwe ?? 0)} your share this plan year`) : h('p', null, 'No claims yet this plan year.'),
-    year.length ? totalsLine(t.cents) : null,
-    h('p', { class: 'small' }, link({ name: 'costs' }, 'Costs by provider, kind of care and month')),
-  );
-}
-
-/** The costs screen for one person. */
-export const personCosts = (person: string): Route => ({ name: 'costs', only: [{ by: 'person', key: person }] });
