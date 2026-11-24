@@ -146,3 +146,15 @@ test('without ?next the app is as it was, and a visit’s address says how to se
   await expect(page.locator('main .card-head h2')).toHaveText('Page not found');
   await expect(page.locator('main')).toContainText('Visit pages are part of the redesign. Add ?next to the address to try it.');
 });
+
+test('a visit says what medrec still expects for it, and that medrec grouped it', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
+  // Alex's well-child visit: the portal's record, and no claim from the plan yet.
+  await page.goto('./?demo&next#/p/p_bjpnvyvnmxv74q335tk4/e/r_jlaqcmc74llvhvsjt635');
+  await expect(page.locator('.event h1')).toHaveText('Well child visit, 8 years');
+  await expect(page).toHaveURL(/#\/p\/p_bjpnvyvnmxv74q335tk4\/e\/e_[a-z2-7]{20}$/);
+  const tech = page.locator('details.tech', { has: page.locator('summary', { hasText: 'How this visit was put together' }) });
+  await tech.locator('summary').first().click();
+  await expect(tech.locator('.event-gap')).toHaveText('No insurer claim for this visit yet.');
+  await expect(tech).toContainText('medrec grouped these by its matching rules.');
+});

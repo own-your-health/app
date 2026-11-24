@@ -17,7 +17,7 @@ import { h, icon, type Child } from '../ui/dom';
 import { count, dateText, localDay } from '../ui/format';
 import { href, type Route } from '../ui/router';
 import { eventConfidence, eventMoney, eventOf, kindText, paidAtCounter, privateArea, PRIVATE_AREAS, ruleText, type CareEvent, type EventMoney } from './event';
-import { personEvents } from './load';
+import { groupedByMedrec, personEvents } from './load';
 
 const money = (c: number | undefined) => (c === undefined ? '' : formatMoney(fromCents(c)) ?? '');
 const itemRoute = (person: string, id: string): Route => ({ name: 'item', person, id });
@@ -307,8 +307,10 @@ function assemblyCard(idx: PersonIndex, e: CareEvent): HTMLElement {
       {},
       e.doubt ? h('p', { class: 'event-gap' }, `${e.doubt}.`) : null,
       e.noFacility ? h('p', { class: 'event-gap' }, 'No claim from the hospital itself is in yet; this visit is known from its doctors’ claims.') : null,
+      // What medrec still expects, in its words. A missing bill is said under Bills, and a hospital's own claim just above.
+      (e.expected ?? []).filter((x) => x.what !== 'bill' && !(x.what === 'facility_claim' && e.noFacility) && x.why).map((x) => h('p', { class: 'event-gap' }, x.why)),
       items,
-      h('p', { class: 'small muted' }, 'The app groups these itself until medrec writes events. “Likely” means only the day and the kind of visit tie it in.'),
+      h('p', { class: 'small muted' }, groupedByMedrec(idx) ? 'medrec grouped these by its matching rules.' : 'The app groups these itself until medrec writes events.', ' “Likely” means only the day and the kind of visit tie it in.'),
     ),
   );
 }
