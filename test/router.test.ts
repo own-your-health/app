@@ -116,9 +116,10 @@ describe('addresses from before the redesign', () => {
     expect(to(`#/p/${P}/claims`)).toBe(`#/money?who=${P}`);
     expect(to(`#/p/${P}/search?q=flu&words=1`)).toBe(`#/search?q=flu&words=1&who=${P}`);
     expect(to(`#/p/${P}/search`)).toBe(`#/search?who=${P}`);
+    expect(to(`#/p/${P}/documents`)).toBe(`#/papers?who=${P}`);
   });
 
-  it('leave a person’s lists, their documents and every other page where they are', () => {
+  it('leave a person’s lists and every other page where they are', () => {
     for (const section of LIST_SECTIONS) expect(to(`#/p/${P}/${section}`)).toBeUndefined();
     expect(to(`#/p/${P}/results/2345-7`)).toBeUndefined();
     for (const hash of ['#/', '#/money', `#/p/${P}/r/r_aaaaaaaaaaaaaaaaaaaa`, `#/p/${P}/e/r_aaaaaaaaaaaaaaaaaaaa`, '#/settings']) expect(to(hash)).toBeUndefined();

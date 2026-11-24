@@ -18,7 +18,8 @@ Google Drive. It reads the records folder that
   recent), their full lists of results against their reference range,
   medicines, conditions, allergies, immunizations and imaging, and a sheet to
   hand a doctor;
-- each person's documents;
+- **Papers**: every file in the folder, each with the visit it belongs to,
+  for everyone or one person, by kind of paper;
 - one search over everyone's records, documents and imaging, and the text
   medrec extracted from documents, from Home or the search button in the
   bar;
@@ -79,8 +80,8 @@ the app and Refresh.
    `household.json` that the account can see; you can also paste a folder link.
 
 Home, Calendar, Money and Health are tabs: at the bottom of a phone's
-screen, and a row above the page from 640px wide. The bar's menu holds each
-person's documents, Sources and Settings. Home closes with one line for a
+screen, and a row above the page from 640px wide. The bar's menu holds
+Papers, Sources and Settings. Home closes with one line for a
 sign-in that needs a person ("Example Pediatrics needs a sign-in on the
 Mac"), which opens the source, then when the records last loaded and
 **Refresh everything**. **Sources** (`#/sources`, in the bar's menu, which
@@ -315,10 +316,9 @@ or another app can link straight to it. `#/hh/<id>` opens the Health of the
 person whose `links.huishouden_health_person` is that id. Addresses from
 before the redesign still open, where their page lives now:
 `#/p/<person id>` on the person's Health, `/timeline` on their calendar's
-list, `/claims` on their Money and `/search` on the search, its person
-filter on them. The person's
-lists (`/results`, `/medicines` and so on) and `/documents` keep their
-addresses.
+list, `/claims` on their Money, `/search` on the search, its person filter
+on them, and `/documents` on their Papers. The person's lists (`/results`,
+`/medicines` and so on) keep their addresses.
 
 A link from Huishouden Health, or any other app, can carry the setup link's
 `?client=<client id>` before the route:
@@ -613,6 +613,23 @@ dropped from the address.
   medicines). It prints on its own. Private items stay off everyone's view,
   counted. The sheet leaves them off, and any doctor known only from them,
   until Include brings them back; leaving the sheet leaves them off again.
+- **Papers** (`#/papers`, from the bar's menu, Recently on Home and each
+  person's Health): every paper in the Drive
+  folder, newest first by year, each with the visit it belongs to as a
+  link. A paper is with a visit when the visit holds it, when a record of
+  the visit links it (an explanation of benefits names its claim), or when
+  it is the receipt for a bill the visit holds; a parent's paper in a
+  newborn's visit (medrec's X2) is with that visit. A paper with none says
+  why: it fits several visits, which it names (medrec's `pending`), it is a
+  kind about no one visit (an explanation of benefits whose claim is in no
+  visit, an insurance card, a vaccine record), it has no date, or no visit
+  is near its date. All, With a visit and With none filter the list, and so
+does the kind of paper (bills, lab reports and so on); each row gives its
+page count. Papers took the place of each person's list of documents. A
+  person's own (`#/papers?who=`) shows their private papers, marked;
+  everyone's leaves them off and counts them. A paper is private when it or
+  its visit is, or when it is with none and could be part of a private
+  visit.
 - **Calendar** (`#/calendar`, and Recently on Home): the household's
   events a month at a time, with a lane per person (a dot for a visit or
   tests, a ring for a pharmacy trip or vaccine, a bar across the days of an

@@ -153,7 +153,7 @@ function personPage(ctx: Ctx, p: Person, idx: PersonIndex): HTMLElement {
       { class: 'health-standing' },
       h('div', { class: 'chips' }, p.birth_date ? chip(ageWords(p.birth_date, today) ?? '', 'muted') : null, chip(cov.words, cov.kind === 'records_and_claims' ? 'ok' : 'attention')),
       h('p', { class: 'small muted' }, cov.detail),
-      h('div', { class: 'health-actions' }, link({ name: 'health', view: 'doctor', who: p.id }, 'Hand to a doctor'), link({ name: 'person', person: p.id, section: 'documents' }, 'Papers')),
+      h('div', { class: 'health-actions' }, link({ name: 'health', view: 'doctor', who: p.id }, 'Hand to a doctor'), link({ name: 'papers', who: p.id }, 'Papers')),
     ),
     dueCard(p, idx, today),
     currentCard(p, h0, words, from),

@@ -1,10 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// The bar's menu holds what the four tabs leave out: each person's documents,
-// the sources and the settings. Its button carries the dot while a source
+// The bar's menu holds what the four tabs leave out: Papers, the sources
+// and the settings. Its button carries the dot while a source
 // needs attention at the Mac.
-
-const ROBIN = 'p_xo4em46i7yj3hphlpajo';
 
 const menu = (page: Page) => page.getByRole('dialog', { name: 'Menu' });
 
@@ -13,14 +11,14 @@ async function openMenu(page: Page) {
   await expect(menu(page)).toBeVisible();
 }
 
-test('the menu opens each person’s documents, the sources and the settings', async ({ page }) => {
+test('the menu opens Papers, the sources and the settings', async ({ page }) => {
   await page.goto('./?demo');
   // The sample has a source that needs a sign-in, so the button says so.
   const button = page.getByRole('button', { name: 'Menu: a source needs attention' });
   await expect(button).toHaveAttribute('aria-haspopup', 'dialog');
   await openMenu(page);
-  await expect(menu(page).locator('h3')).toHaveText(['Documents', 'This app']);
-  await expect(menu(page).locator('.menu-item')).toHaveText(['Robin', 'Sam', 'Alex', 'Jamie', 'SourcesA source needs attention', 'Settings']);
+  await expect(menu(page).locator('h3')).toHaveText(['This app']);
+  await expect(menu(page).locator('.menu-item')).toHaveText(['Papers', 'SourcesA source needs attention', 'Settings']);
   // The first choice takes focus, and Escape gives it back to the button.
   await expect(menu(page).locator('.menu-item').first()).toBeFocused();
   await page.keyboard.press('Escape');
@@ -28,10 +26,10 @@ test('the menu opens each person’s documents, the sources and the settings', a
   await expect(button).toBeFocused();
 
   await openMenu(page);
-  await menu(page).getByRole('link', { name: 'Robin' }).click();
+  await menu(page).getByRole('link', { name: 'Papers' }).click();
   await expect(menu(page)).toHaveCount(0);
-  await expect(page).toHaveURL(new RegExp(`#/p/${ROBIN}/documents$`));
-  await expect(page.locator('main h1')).toHaveText('Robin’s documents');
+  await expect(page).toHaveURL(/#\/papers$/);
+  await expect(page.locator('main h1')).toHaveText('Papers');
 
   await openMenu(page);
   await menu(page).getByRole('link', { name: 'Settings' }).click();

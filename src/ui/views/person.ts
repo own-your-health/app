@@ -1,7 +1,8 @@
 // One person's full lists, reached from their Health: results, medicines,
-// conditions, allergies, immunizations, imaging, and their documents.
+// conditions, allergies, immunizations and imaging. Their documents are on
+// Papers.
 
-import { docTypeLabel, documentTitle, originNames, sortByDateDesc, str, studyTitle } from '../../model/records';
+import { originNames, sortByDateDesc, str, studyTitle } from '../../model/records';
 import { isOutOfRange, rangeFor, resultFlag } from '../../model/flags';
 import type { LatestResult } from '../../model/overview';
 import { allergyList, conditionList, CRITICALITY_TEXT, medicineList, statusText, vaccineList, type AllergyItem, type ConditionItem, type MedicineItem } from '../../model/lists';
@@ -9,7 +10,7 @@ import { resultGroups } from '../../model/panels';
 import { COMING_UP_DAYS, FLU, fluSeason, SCHEDULE_SOURCE, scheduleDigest, scheduleFor, type DoseState, type FluSeason, type ScheduleRow } from '../../model/schedule';
 import type { Person, PersonIndex, Provenance } from '../../model/types';
 import { resultChart, resultSparkline } from '../chart';
-import { button, card, chip, command, driveLink, empty, filterChips, flagChip, link, row, type Ctx } from '../components';
+import { button, card, chip, command, empty, flagChip, link, row, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, localDay, yearOf } from '../format';
 import { SECTION_LABELS, type ListSection, type Route } from '../router';
@@ -22,7 +23,7 @@ function itemRoute(person: string, id: string): Route {
 }
 
 /** A list grouped by year, a page at a time, so a phone draws only what it shows. */
-function yearList<T extends { date?: string }>(items: T[], render: (x: T) => HTMLElement): HTMLElement {
+export function yearList<T extends { date?: string }>(items: T[], render: (x: T) => HTMLElement): HTMLElement {
   const box = h('div');
   let shown = 0;
   let year = '';
@@ -310,31 +311,6 @@ function immunizationList(ctx: Ctx, person: Person, idx: PersonIndex): HTMLEleme
   );
 }
 
-function documentsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
-  const docs = sortByDateDesc(idx.documents);
-  const types = [...new Set(docs.map((d) => d.doc_type ?? 'other'))];
-  const options: [string, string][] = [['all', 'All'], ...types.map((t): [string, string] => [t, docTypeLabel(t)])];
-  let current = 'all';
-  const list = h('div');
-  const draw = () => {
-    const items = current === 'all' ? docs : docs.filter((d) => (d.doc_type ?? 'other') === current);
-    list.replaceChildren(
-      yearList(items, (d) =>
-        row({
-          route: itemRoute(person.id, d.id),
-          title: documentTitle(d),
-          meta: [dateText(d.date), docTypeLabel(d.doc_type), d.organization, d.pages ? count(d.pages, 'page') : null].filter(Boolean).join(' · '),
-          extra: h('div', { class: 'row-actions' }, driveLink(ctx, d.path)),
-        }),
-      ),
-    );
-  };
-  if (!docs.length) return card({ title: 'Documents' }, empty('No documents yet.'));
-  const chips = filterChips(options, current, (v) => ((current = v), draw()), 'Filter by type');
-  draw();
-  return card({ title: 'Documents' }, chips, list);
-}
-
 function imagingSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
   const studies = sortByDateDesc(idx.studies);
   return card(
@@ -375,9 +351,6 @@ export function personView(ctx: Ctx, personId: string, section: ListSection, sub
       break;
     case 'immunizations':
       body = h('div', { class: 'stack' }, scheduleBlock(person, idx, localDay(ctx.now()), false), immunizationList(ctx, person, idx));
-      break;
-    case 'documents':
-      body = documentsSection(ctx, person, idx);
       break;
     case 'imaging':
       body = imagingSection(ctx, person, idx);

@@ -2398,6 +2398,16 @@ a.cal-day:hover .cal-date {
   margin: 6px 0 0;
 }
 
+/* Papers. */
+.paper-place {
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+}
+
+.papers-private p {
+  margin: 0 0 4px;
+}
+
 /* Health. */
 .health-group {
   margin: 16px 0 4px;
