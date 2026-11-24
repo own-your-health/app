@@ -36,9 +36,17 @@ export interface MedrecEvent {
   could_join: string[];
 }
 
+/** A paper that fits two or more events, which medrec merged into none. */
+export interface MedrecPending {
+  document: string;
+  could_join: string[];
+  rule: MedrecRule;
+}
+
 export interface MedrecEvents {
   person: string;
   events: MedrecEvent[];
+  pending: MedrecPending[];
   /** The other people's papers these events name (X2), by id; the store fills it in from their indexes. */
   papers: Map<string, { person: string; doc: MedDocument }>;
 }
@@ -94,7 +102,10 @@ export function parseMedrecEvents(raw: unknown, person: string): MedrecEvents {
       could_join: (Array.isArray(e.could_join) ? e.could_join : []).filter((x): x is string => typeof x === 'string'),
     });
   }
-  return { person, events, papers: new Map() };
+  const pending = (Array.isArray(raw.pending) ? raw.pending : []).filter(isObj).flatMap((x): MedrecPending[] =>
+    text(x.document) ? [{ document: text(x.document)!, could_join: (Array.isArray(x.could_join) ? x.could_join : []).filter((y): y is string => typeof y === 'string'), rule: (text(x.rule) ?? '') as MedrecRule }] : [],
+  );
+  return { person, events, pending, papers: new Map() };
 }
 
 type Md5 = string | null;

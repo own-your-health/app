@@ -25,6 +25,7 @@ import { searchView } from './search';
 import { calendarView, hidePrivateEvents } from '../next/calendarView';
 import { moneyView } from '../next/moneyView';
 import { healthView, leaveOutPrivate } from '../next/healthView';
+import { papersView } from '../next/papersView';
 import { eventView } from '../next/eventView';
 
 /** What the app says when a renewal interrupted a write the person asked for. */
@@ -560,6 +561,9 @@ export class App {
       case 'health':
         if (ctx.next) return healthView(ctx, r);
         return messageView('Page not found', 'Health is part of the redesign. Add ?next to the address to try it.', [h('a', { class: 'button button-primary', href: '#/' }, 'Home')]);
+      case 'papers':
+        if (ctx.next) return papersView(ctx, r);
+        return messageView('Page not found', 'Papers is part of the redesign. Add ?next to the address to try it.', [h('a', { class: 'button button-primary', href: '#/' }, 'Home')]);
       case 'money':
         if (ctx.next) return moneyView(ctx, r);
         return messageView('Page not found', 'Money is part of the redesign. Add ?next to the address to try it.', [h('a', { class: 'button button-primary', href: '#/' }, 'Home')]);

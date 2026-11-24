@@ -580,6 +580,19 @@ app without it is unchanged.
   medicines). It prints on its own. Private items stay off everyone's view,
   counted. The sheet leaves them off, and any doctor known only from them,
   until Include brings them back; leaving the sheet leaves them off again.
+- **Papers** (`#/papers`, and Recently on Home): every paper in the Drive
+  folder, newest first by year, each with the visit it belongs to as a
+  link. A paper is with a visit when the visit holds it, when a record of
+  the visit links it (an explanation of benefits names its claim), or when
+  it is the receipt for a bill the visit holds; a parent's paper in a
+  newborn's visit (medrec's X2) is with that visit. A paper with none says
+  why: it fits several visits, which it names (medrec's `pending`), it is a
+  kind about no one visit (an explanation of benefits whose claim is in no
+  visit, an insurance card, a vaccine record), it has no date, or no visit
+  is near its date. All, With a visit and With none filter the list. A
+  person's own (`#/papers?who=`) shows their private papers, marked;
+  everyone's leaves them off and counts them. A paper is private when it or
+  its visit is.
 - **Calendar** (`#/calendar`, and Recently on Home): the household's
   events a month at a time, with a lane per person (a dot for a visit or
   tests, a ring for a pharmacy trip or vaccine, a bar across the days of an

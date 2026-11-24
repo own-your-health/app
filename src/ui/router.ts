@@ -64,6 +64,7 @@ export type Route =
   | { name: 'money'; view?: MoneyView; who?: string; bill?: string; period?: string; sort?: 'share' }
   // Health (?next): each person's standing, one person's page, or the sheet to hand their doctor.
   | { name: 'health'; view?: 'doctor'; who?: string }
+  | { name: 'papers'; who?: string }
   | { name: 'huishouden'; hh: string }
   | { name: 'not_found' };
 
@@ -93,6 +94,10 @@ export function parseRoute(hash: string): Route {
   if (head === 'health' && (parts.length === 1 || (parts.length === 2 && a === 'doctor'))) {
     const who = query.get('who') ?? '';
     return { name: 'health', ...(a === 'doctor' ? { view: 'doctor' as const } : {}), ...(ID.test(who) ? { who } : {}) };
+  }
+  if (head === 'papers' && parts.length === 1) {
+    const who = query.get('who') ?? '';
+    return { name: 'papers', ...(ID.test(who) ? { who } : {}) };
   }
   if (head === 'money' && (parts.length === 1 || (parts.length === 2 && (MONEY_VIEWS as readonly string[]).includes(a ?? '')))) {
     const who = query.get('who') ?? '';
@@ -219,6 +224,8 @@ export function href(route: Route): string {
       return `#/money${route.view ? `/${route.view}` : ''}${moneyQuery(route)}`;
     case 'health':
       return `#/health${route.view ? `/${route.view}` : ''}${route.who ? `?${new URLSearchParams({ who: route.who })}` : ''}`;
+    case 'papers':
+      return `#/papers${route.who ? `?${new URLSearchParams({ who: route.who })}` : ''}`;
     case 'search':
       return route.query ? `#/search?${searchQuery(route.query, route.words)}` : '#/search';
     case 'source':

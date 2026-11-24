@@ -114,7 +114,7 @@ function entryRow(person: string, e: TimelineEntry): HTMLElement {
 }
 
 /** A list grouped by year, a page at a time, so a phone draws only what it shows. */
-function yearList<T extends { date?: string }>(items: T[], render: (x: T) => HTMLElement): HTMLElement {
+export function yearList<T extends { date?: string }>(items: T[], render: (x: T) => HTMLElement): HTMLElement {
   const box = h('div');
   let shown = 0;
   let year = '';
