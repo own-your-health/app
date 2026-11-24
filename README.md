@@ -590,7 +590,11 @@ Unofficial. Not affiliated with or endorsed by Google.
 
 ## License
 
-MIT, except the Sign in with Google button images in `public/google-sign-in/`.
+Copyright (C) 2026 Own Your Health contributors. Licensed under the GNU Affero
+General Public License, version 3 only (AGPL-3.0-only); see LICENSE.
+
+The Sign in with Google button images in `public/google-sign-in/` are not
+covered by that license.
 They are Google's pre-approved branding assets, unchanged, from its
 [branding guidelines](https://developers.google.com/identity/branding-guidelines),
 and Google's trademarks. The sign-in screen shows them as the button, light or
