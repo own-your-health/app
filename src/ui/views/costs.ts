@@ -3,7 +3,8 @@
 // person, and any drill-down (a provider, a kind of care, a month, one code)
 // narrow it; each is in the address. The totals, plan balances, months,
 // breakdown, prices and claims below all count the same lines. Each claim
-// leads with what it says you owe, its lines under it.
+// leads with what it says you owe, its lines under it. Everyone's costs are a
+// shared screen: private claims are in none of it, and a line says so.
 
 import { CATEGORY_LABELS, claimAmounts, type Category, type Cents } from '../../model/claims';
 import {
@@ -39,6 +40,7 @@ import { monthChart, priceStrip, stackStrip } from '../costchart';
 import { button, card, empty, link, row, type Ctx } from '../components';
 import { h } from '../dom';
 import { count, dateText, localDay } from '../format';
+import { heldNotes, privateCount, quietClaims } from '../../next/shared';
 import { href, type CostBy, type CostFilter, type CostFilterBy, type Route } from '../router';
 import { called } from '../../model/people';
 
@@ -63,11 +65,11 @@ function filterLabel(f: CostFilter, lines: CostLine[], names: Map<string, string
   if (f.by === 'person') return names.get(f.key) ?? 'Someone';
   if (f.by === 'code') {
     const l = lines.find((x) => matches(x, f, names));
-    return l ? `${l.service} (${f.key.replace(':', ' ')})` : f.key.replace(':', ' ');
+    return l ? `${l.service} (${f.key.replace(':', ' ')})` : 'one not listed here';
   }
   if (f.by === 'month') return monthLabel(f.key);
   if (f.by === 'category') return CATEGORY_LABELS[f.key as Category]?.many ?? f.key;
-  return lines.find((x) => matches(x, f, names))?.provider ?? f.key;
+  return lines.find((x) => matches(x, f, names))?.provider ?? 'one not listed here';
 }
 
 /** The totals as a line of label and amount pairs, with a hidden "; " between them for screen readers. */
@@ -170,13 +172,24 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
   const store = ctx.store;
   const people = store.household.people;
   const names = new Map(people.map((p) => [p.id, called(p)]));
-  const all = householdLines(
+  const whole = householdLines(
     people.map((p) => ({ id: p.id, index: store.index(p.id) })),
     { planStart: getPlanStart() ?? undefined },
   );
   const records = new Map<string, MedRecord>();
   for (const p of people) for (const r of store.index(p.id)?.records ?? []) if (r.kind === 'claim') records.set(r.id, r);
   const today = localDay(ctx.now());
+  // One person's costs count their private claims; everyone's leave every private one out.
+  const own = (route.only ?? []).some((f) => f.by === 'person');
+  const quiet = own ? new Map<string, string>() : quietClaims(store, today);
+  const all = whole.filter((l) => !quiet.has(l.claim));
+  const kept = privateCount(new Map(whole.map((l) => [l.claim, quiet.get(l.claim)])).values());
+  const leftOut = own
+    ? []
+    : [
+        kept ? h('p', { class: 'small muted cost-left' }, `${count(kept, 'private claim is', 'private claims are')} left out of this shared view, its totals too. Money’s totals count ${kept === 1 ? 'it' : 'them'}. Choose a person to see theirs.`) : null,
+        ...heldNotes(ctx, 'this shared view, its totals too'),
+      ];
 
   const page = h('div', { class: 'stack' });
   const head = h(
@@ -185,7 +198,7 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
     h('h1', null, 'Costs'),
     h('p', { class: 'muted small' }, 'What each visit, test and fill cost, from the claims the health plans sent: what was billed, what the plan allowed and paid, and your share.'),
   );
-  if (!all.length) {
+  if (!whole.length) {
     page.append(head, card({}, empty('No claims in these records yet. Once medrec imports a health plan’s claims, what each visit cost shows here.')));
     return page;
   }
@@ -234,7 +247,7 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
       );
 
     // People with claims; choosing one is a filter like any other, kept in the address.
-    const withClaims = people.filter((p) => all.some((l) => l.person === p.id));
+    const withClaims = people.filter((p) => whole.some((l) => l.person === p.id));
     const personChips =
       withClaims.length > 1
         ? h(
@@ -258,7 +271,7 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
           drilled.map((f) => h('a', { class: 'filter filter-on', href: href(without(f.by)), 'aria-label': `${FILTER_LABELS[f.by]}: ${filterLabel(f, all, names)}. Remove this filter.` }, `${FILTER_LABELS[f.by]}: ${filterLabel(f, all, names)}`, h('span', { 'aria-hidden': 'true' }, '×'))),
         )
       : null;
-    const controls = h('div', { class: 'cost-controls' }, personChips, periodChips, drillChips);
+    const controls = h('div', { class: 'cost-controls' }, personChips, periodChips, drillChips, leftOut);
 
     if (!chosen || !lines.length) {
       const none = card({}, empty('No claim lines match these choices.', link(routeWith({ only: personFilter ? [personFilter] : [] }), 'Show every line')));

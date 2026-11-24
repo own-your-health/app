@@ -8,7 +8,8 @@ import { CATEGORY_LABELS, claimAmounts, claimCategory, claimCents, claimTitle, c
 import { sameProvider } from '../model/providers';
 import { practiceName, str } from '../model/records';
 import type { MedrecRule, Sureness } from '../model/events';
-import type { Household, MedDocument, MedRecord } from '../model/types';
+import { documentPrivate, HELD, isHeld, recordsPrivate } from '../model/private';
+import type { Household, MedDocument, MedRecord, PersonIndex } from '../model/types';
 import { isDescriptor, placeName, plainWords } from '../model/words';
 
 export type EventKind = 'er' | 'stay' | 'outpatient' | 'series' | 'office' | 'service' | 'tests' | 'dental' | 'vaccine' | 'fill';
@@ -219,19 +220,22 @@ export function eventOf(events: CareEvent[], id: string): CareEvent | undefined 
   return events.find((e) => e.id === id || e.claims.some((c) => c.record.id === id) || e.visits.some((v) => v.record.id === id) || e.recorded.some((r) => r.id === id) || e.papers.some((p) => p.doc.id === id));
 }
 
-/** Why an event is private, when a record or paper in it is (medrec's `private_area`); undefined when nothing in it is. */
-export function privateArea(e: CareEvent): string | undefined {
-  const marked = [...e.claims.map((c) => c.record), ...e.visits.map((v) => v.record), ...e.recorded, ...e.papers.map((p) => p.doc)].find((x) => x.private === true);
-  return marked ? (marked.private_area ?? 'household') : undefined;
+/**
+ * Why an event is private: its area, or HELD while no current list says which
+ * items are; undefined when it is not. medrec's answer for its own events,
+ * the household's marks in it. A fill or a vaccine is named for a record, so
+ * it is also private when that record is. In the app's own grouping, whose
+ * events medrec does not know, any private record or paper makes one private.
+ */
+export function eventPrivate(e: CareEvent, index: PersonIndex): string | undefined {
+  if (isHeld(index)) return HELD;
+  const members = () => recordsPrivate(index, [...e.claims.map((c) => c.record), ...e.visits.map((v) => v.record), ...e.recorded].map((r) => r.id));
+  if (index.events) {
+    const area = index.privacy?.kind === 'known' ? index.privacy.events.get(e.id) : HELD;
+    return area ?? (e.kind === 'fill' || e.kind === 'vaccine' ? members() : undefined);
+  }
+  return members() ?? e.papers.map((p) => (p.person ? undefined : documentPrivate(index, p.doc.id))).find(Boolean);
 }
-
-export const PRIVATE_AREAS: Record<string, string> = {
-  mental_health: 'Mental health',
-  reproductive: 'Reproductive care',
-  sexual_health: 'Sexual health',
-  substance_use: 'Substance use',
-  household: 'Marked private',
-};
 
 /** CPT and HCPCS codes for giving a vaccine, billed beside the vaccine itself. */
 const GIVING = /^(9046[01]|9047[1-4]|G00(08|09|10))$/;
@@ -274,7 +278,7 @@ const sameWords = (a: string, b: string) => {
  * descriptors among them go to `descriptors`, for Details. The place is the
  * first of medrec's, the visit's and the claims' that names a place.
  */
-export function nameEvent(e: CareEvent, household: Household, person: string, given: { title?: string; what?: string } = {}): void {
+export function nameEvent(e: CareEvent, household: Household, person: string, given: { title?: string; what?: string; private?: boolean } = {}): void {
   const v = e.visits[0]?.record;
   // Every practice the visit came through, so a connection's name does not hide one that is a place.
   const orgs = (v?.provenance ?? []).map((p) => practiceName(household, person, p.source));
@@ -285,7 +289,7 @@ export function nameEvent(e: CareEvent, household: Household, person: string, gi
   const portal = [v?.display, str(v?.fields.reason)];
   // medrec's pick is the portal's reason, or a plain name for its code. A private visit goes by the
   // portal's own name for it first ("Counseling session"), so that no row says more than it has to.
-  const said = (privateArea(e) ? [...portal, given.what, claimSaid] : [given.what, ...portal, claimSaid]).filter((x): x is string => !!x);
+  const said = (given.private ? [...portal, given.what, claimSaid] : [given.what, ...portal, claimSaid]).filter((x): x is string => !!x);
   const title = given.title ?? kindTitle(e, claimSaid, given.what);
   e.title = title;
   // A fill or a vaccine says what it was in its title.

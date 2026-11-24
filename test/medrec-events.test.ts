@@ -5,10 +5,11 @@
 import { describe, expect, it } from 'vitest';
 import { Store } from '../src/data/store';
 import { DemoFolder } from '../src/folder';
-import { eventsView, parseMedrecEvents } from '../src/model/events';
+import { parseMedrecEvents } from '../src/model/events';
+import { viewOf } from '../src/model/views';
 import { FolderError, parseIndex } from '../src/model/parse';
 import type { MedRecord, PersonIndex } from '../src/model/types';
-import { doseCount, eventOf, nameEvent, privateArea, ruleText, type CareEvent } from '../src/next/event';
+import { doseCount, eventOf, eventPrivate, nameEvent, ruleText, type CareEvent } from '../src/next/event';
 import { groupedByMedrec, personEvents } from '../src/next/load';
 import { claimLines } from '../src/model/claims';
 import { careEvents } from '../src/next/grouping';
@@ -46,21 +47,21 @@ const otherMd5 = (...paths: string[]) => (path: string, text: string) => {
   return JSON.stringify(m);
 };
 
-const eventsPath = (pid: string) => `views/${pid}/${eventsView(demoJson('views/views.json'), pid)!.name}`;
+const eventsPath = (pid: string) => `views/${pid}/${viewOf(demoJson('views/views.json'), pid, 'events.json')!.name}`;
 const grouped = (store: Store) => Object.fromEntries(household.people.map((p) => [p.name, groupedByMedrec(store.index(p.id)!)]));
 
 describe('reading events.json', () => {
   it('finds each person’s events, and the MD5s medrec wrote them from, in views.json', () => {
     const views = demoJson<{ household: string; people: Record<string, { index: string }> }>('views/views.json');
-    const sam = eventsView(views, id('Sam Example'))!;
+    const sam = viewOf(views, id('Sam Example'), 'events.json')!;
     expect(sam.name).toMatch(/^events\.[0-9a-f]{12}\.json$/);
     expect([sam.household, sam.index]).toEqual([views.household, views.people[id('Sam Example')]!.index]);
     expect(sam.overrides).toBeNull();
     // Jamie's events read their parents' records too.
-    expect([...eventsView(views, id('Jamie Example'))!.linked.keys()].sort()).toEqual([id('Robin Example'), id('Sam Example')].sort());
-    expect(eventsView(views, 'p_nobody')).toBeUndefined();
-    expect(eventsView({ schema: 'medrec-views/v1', people: {} }, id('Sam Example'))).toBeUndefined();
-    expect(eventsView(null, id('Sam Example'))).toBeUndefined();
+    expect([...viewOf(views, id('Jamie Example'), 'events.json')!.linked.keys()].sort()).toEqual([id('Robin Example'), id('Sam Example')].sort());
+    expect(viewOf(views, 'p_nobody', 'events.json')).toBeUndefined();
+    expect(viewOf({ schema: 'medrec-views/v1', people: {} }, id('Sam Example'), 'events.json')).toBeUndefined();
+    expect(viewOf(null, id('Sam Example'), 'events.json')).toBeUndefined();
   });
 
   it('refuses a later schema as newer, and another person’s file as malformed', () => {
@@ -255,13 +256,11 @@ describe('naming an event', () => {
 
   it('calls a private visit by the portal’s name for it, not the reason', () => {
     const counseling = events('Sam Example').find((e) => e.start === '2026-10-27')!;
-    expect([privateArea(counseling), counseling.what]).toEqual(['mental_health', 'Counseling session']);
-    // The same words, when nothing marks the visit.
+    expect([eventPrivate(counseling, indexes.get(id('Sam Example'))!), counseling.what]).toEqual(['mental_health', 'Counseling session']);
+    // medrec's words, when it is not private.
     const open = structuredClone(counseling);
-    for (const r of [...open.visits.map((v) => v.record), ...open.claims.map((c) => c.record), ...open.recorded]) delete r.private;
-    for (const p of open.papers) delete p.doc.private;
     nameEvent(open, household, id('Sam Example'), { what: 'Anxiety' });
-    expect([privateArea(open), open.what]).toEqual([undefined, 'Anxiety']);
+    expect(open.what).toBe('Anxiety');
   });
 
   it('never makes a portal platform’s name a place', () => {

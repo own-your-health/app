@@ -7,6 +7,10 @@
 // The words (?q=) and whether to search them as written (&words=1) are part
 // of the address; the filters are not.
 //
+// Everyone's results are a shared screen: private items are not searched for
+// them at all, so neither a row nor a count says one matches, and a person's
+// own results search them too.
+//
 // Results come in groups by kind, health records first, then imaging and
 // documents, then coverage and claims. A test found several times is one
 // row, under its panel, opening its history. A query that names a concept
@@ -14,13 +18,15 @@
 // as written instead.
 
 import { KIND_LABELS } from '../model/records';
-import { conceptOf, find, matchRanges, terms, type Hit, type Searchable } from '../model/search';
+import { anyPrivate, HELD, isHeld, itemPrivate, studyPrivate } from '../model/private';
+import { conceptOf, find, matchRanges, terms, type Found, type Hit, type Searchable } from '../model/search';
 import type { Person, PersonText } from '../model/types';
 import { button, card, empty, filterChips, row, type Ctx } from './components';
 import { h, type Child } from './dom';
 import { count, dateText } from './format';
 import { href, type Route } from './router';
 import { called } from '../model/people';
+import { heldNotes } from '../next/shared';
 
 const PAGE = 50;
 
@@ -175,8 +181,25 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
   // Says how the words were read; announced when it changes.
   const notice = h('div', { 'aria-live': 'polite' });
 
-  const draw = (hits: Hit[], ts: string[], untexted: string[], keep?: 'who' | 'kind') => {
-    const whos = [...new Set(hits.map((x) => x.person))];
+  // Says what everyone's results leave off, whatever was searched for.
+  const left = h('div');
+  // With something to leave off, everyone's chip is there to choose: a chip never says whose private item matched.
+  const leaves = () => many && people.some((p) => ctx.store.index(p.id) && anyPrivate(ctx.store.index(p.id)!));
+  const unread = () => people.some((p) => ctx.store.index(p.id)?.studies.some((s) => studyPrivate(ctx.store.index(p.id)!, s) === HELD && !isHeld(ctx.store.index(p.id)!)));
+  const leftNotes = () =>
+    many && who === 'all' && leaves()
+      ? [
+          h('p', { class: 'small muted' }, `Private items are left off everyone’s results.${unread() ? ' So is imaging with no report in these records: nothing says whether it is private.' : ''} Choose a person to search theirs.`),
+          ...heldNotes(ctx, 'everyone’s results'),
+        ]
+      : [];
+
+  /** `found` searches everyone's shared items; `own` searches private ones too, for the person chosen. */
+  const draw = (found: Found, own: Found, untexted: string[], keep?: 'who' | 'kind') => {
+    const { hits, terms: ts } = who === 'all' ? found : own;
+    say(who === 'all' ? found : own);
+    left.replaceChildren(...leftNotes());
+    const whos = leaves() ? people.map((p) => p.id) : [...new Set(hits.map((x) => x.person))];
     const groups = entriesByKind(hits.filter((x) => who === 'all' || x.person === who));
     // Kinds come from the chosen person's hits, so a kind they have none of falls back to All.
     if (!groups.some((g) => g.kind === kind)) kind = 'all';
@@ -190,13 +213,13 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
       const pick = (v: string) => {
         who = v;
         address();
-        draw(hits, ts, untexted, 'who');
+        draw(found, own, untexted, 'who');
       };
       whoRow.replaceChildren(...(many && (whos.length > 1 || who !== 'all') ? [filterChips<string>(options, who, pick, 'Filter by person')] : []));
     }
     if (keep !== 'kind') {
       const options: [string, string][] = [['all', `All ${all}`], ...groups.map((g): [string, string] => [g.kind, `${plural(g.kind)} ${g.entries.length}`])];
-      kindRow.replaceChildren(...(groups.length > 1 ? [filterChips<string>(options, kind, (v) => ((kind = v), draw(hits, ts, untexted, 'kind')), 'Filter by kind')] : []));
+      kindRow.replaceChildren(...(groups.length > 1 ? [filterChips<string>(options, kind, (v) => ((kind = v), draw(found, own, untexted, 'kind')), 'Filter by kind')] : []));
     }
 
     const missing = untexted.length ? ` Document text is not searched for ${untexted.join(' and ')}: there is no text.json in ${untexted.length === 1 ? 'their folder' : 'their folders'}.` : '';
@@ -253,7 +276,7 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
       if (at < lines.length) list.appendChild(more);
     };
     page();
-    const none = who !== 'all' && !all && hits.length ? `No matches for ${names.get(who) ?? 'this person'}; ${count(hits.length, 'match', 'matches')} for everyone.` : ts.length ? 'Nothing matches every word.' : 'Nothing of this kind in these records.';
+    const none = who !== 'all' && !all && found.hits.length ? `No matches for ${names.get(who) ?? 'this person'}; ${count(found.hits.length, 'match', 'matches')} for everyone.` : ts.length ? 'Nothing matches every word.' : 'Nothing of this kind in these records.';
     results.replaceChildren(shown ? list : empty(none));
   };
 
@@ -270,6 +293,7 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
       whoRow.replaceChildren();
       kindRow.replaceChildren();
       notice.replaceChildren();
+      left.replaceChildren();
       status.textContent = '';
       return;
     }
@@ -280,7 +304,13 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
       return index ? [{ person: p.id, index, text: loaded.get(p.id) ?? null }] : [];
     });
     const untexted = scope.filter((x) => !x.text).map((x) => names.get(x.person) ?? x.person);
-    const found = find(scope, q, { words });
+    const own = find(scope, q, { words });
+    const found = leaves() ? find(scope.map((s) => ({ ...s, leave: (kind: string, id: string) => !!itemPrivate(s.index, kind, id) })), q, { words }) : own;
+    draw(found, own, many ? untexted : untexted.length ? ['this person'] : []);
+  };
+
+  /** Says how the words were read. */
+  const say = (found: Found) => {
     const switchTo = (w: boolean) => async () => {
       words = w;
       kind = 'all';
@@ -299,7 +329,6 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
             ? ['Showing every match for the words. ', toggle(`Show ${label} instead`, false)]
             : null;
     notice.replaceChildren(...(said ? [h('p', { class: 'search-concept' }, said)] : []));
-    draw(found.hits, found.terms, many ? untexted : untexted.length ? ['this person'] : []);
   };
 
   input.addEventListener('input', () => {
@@ -312,7 +341,7 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
     // Read the documents' text while the words are typed: on a slow link it is most of the first search's wait.
     for (const p of people) void ctx.store.text(p.id).catch(() => null);
   }
-  return card({ title: opts.title }, h('p', { class: 'muted small' }, opts.intro), input, notice, status, filters, results);
+  return card({ title: opts.title }, h('p', { class: 'muted small' }, opts.intro), input, notice, status, filters, left, results);
 }
 
 /** #/search: one search over everyone in the folder. */

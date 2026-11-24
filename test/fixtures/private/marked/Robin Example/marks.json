@@ -1,0 +1,19 @@
+{
+  "schema": "medrec-marks/v1",
+  "person": "p_xo4em46i7yj3hphlpajo",
+  "payments": [],
+  "private": [
+    {
+      "id": "o_253gjrx5vd4i5w5w3ucp",
+      "item": "r_z3thkgr6cawjzk4rk73n",
+      "private": true,
+      "at": "2026-11-24T22:42:16Z"
+    },
+    {
+      "id": "o_hew2b5hpvulcyojmulpw",
+      "item": "d_kbw3kvi6dmg664qsv4aa",
+      "private": true,
+      "at": "2026-11-24T22:42:16Z"
+    }
+  ]
+}

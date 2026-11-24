@@ -3510,9 +3510,7 @@
           "raw_path": "Sam Example/Records/mychart-example-health/Encounter/encounter-e9275cb5.json",
           "filed_by": "medrec 0.2.11"
         }
-      ],
-      "private": true,
-      "private_area": "mental_health"
+      ]
     },
     {
       "id": "r_x7kgkq2xdb3nnofipq3r",
@@ -3587,9 +3585,7 @@
           "raw_path": "Sam Example/Records/mychart-example-health/MedicationRequest/medicationrequest-a3ce81f0.json",
           "filed_by": "medrec 0.2.11"
         }
-      ],
-      "private": true,
-      "private_area": "mental_health"
+      ]
     },
     {
       "id": "r_4dy25xkew72toq7h45n5",
@@ -3628,9 +3624,7 @@
           "raw_path": "Sam Example/Records/mychart-example-health/MedicationDispense/medicationdispense-2bfc59e2.json",
           "filed_by": "medrec 0.2.11"
         }
-      ],
-      "private": true,
-      "private_area": "mental_health"
+      ]
     },
     {
       "id": "r_ykqgd5ubp23vha2jfssl",
@@ -3922,9 +3916,7 @@
           "raw_path": "Sam Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-f74e903d.json",
           "filed_by": "medrec 0.2.11"
         }
-      ],
-      "private": true,
-      "private_area": "mental_health"
+      ]
     }
   ],
   "studies": [

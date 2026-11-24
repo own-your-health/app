@@ -6,6 +6,7 @@
 // the lists that name visits keep private ones off the shared view, counted.
 
 import { householdLines, inPeriod, monthLabel, monthsSpanned, periods, planYearsIn, type CostLine, type Period, type PlanBasis, type PlanYear } from '../model/costs';
+import { knownArea } from '../model/private';
 import type { MedRecord, Person } from '../model/types';
 import { getPlanStart } from '../settings';
 import { card, chip, link, row, type Ctx } from '../ui/components';
@@ -19,6 +20,7 @@ import { eventRoute, eventWhen } from './eventView';
 import { coverageCard } from './coverageCard';
 import { callsSummary } from './money';
 import { gather, head, money, num, privateChip, type MoneyRoute } from './moneyParts';
+import { anyLeftOff, heldNotes, quietClaims } from './shared';
 import { eventCosts, monthMoney, planLimits, yearMoney, type CostOrder, type EventCost, type Limit, type LimitKind } from './year';
 import { called } from '../model/people';
 
@@ -54,8 +56,8 @@ interface YearData {
   /** The chosen period's lines. */
   lines: CostLine[];
   records: Map<string, MedRecord>;
-  /** On everyone's view, the claims not to name or date: private ones, and those of a private visit. */
-  quiet: Set<string>;
+  /** On everyone's view, the claims not to name or date, each with why (quietClaims). */
+  quiet: Map<string, string>;
 }
 
 /** Everyone's claim lines, or one person's, and the period chosen among those they span. */
@@ -70,11 +72,7 @@ function yearData(ctx: Ctx, route: MoneyRoute, who: string | undefined): YearDat
   const choices = periods(all, today);
   const chosen = choices.find((p) => p.id === route.period) ?? choices[0];
   const records = new Map(people.flatMap((p) => (store.index(p.id)?.records ?? []).map((r) => [r.id, r] as const)));
-  const quiet = new Set<string>();
-  if (!who) {
-    for (const r of records.values()) if (r.kind === 'claim' && r.private) quiet.add(r.id);
-    for (const x of householdEvents(store.household, (p) => store.index(p), today)) if (x.private) for (const c of x.event.claims) quiet.add(c.record.id);
-  }
+  const quiet = who ? new Map<string, string>() : quietClaims(store, today);
   return { today, people, choices, chosen, lines: chosen ? all.filter((l) => inPeriod(l, chosen.id, today)) : [], records, quiet };
 }
 
@@ -143,7 +141,7 @@ function billsCard(ctx: Ctx, who: string | undefined): { el: HTMLElement; kept: 
     g.unbilled.length ? row({ route: to('bills'), title: 'Not billed yet', meta: 'What the claims say you owe, with no bill or receipt yet.', aside: num(unbilled) }) : null,
   ];
   return {
-    el: card({ title: 'Bills' }, rows.some(Boolean) ? rows : h('p', null, 'No open bills.'), h('p', { class: 'small' }, link(to('bills'), 'All bills, beside their claims'))),
+    el: card({ title: 'Bills' }, rows.some(Boolean) ? rows : h('p', null, !who && anyLeftOff(ctx.store) ? 'No open bills listed here.' : 'No open bills.'), h('p', { class: 'small' }, link(to('bills'), 'All bills, beside their claims'))),
     // What the rows left off: a private visit once, however many of its bills and shares; a bill with no visit by itself.
     kept: [...g.hidden.open.map((b) => b.event?.event.id ?? b.bill.doc.id), ...g.hidden.unbilled.map((u) => u.event.event.id)],
   };
@@ -154,7 +152,7 @@ const LIMIT_WORDS: Record<LimitKind, { title: string; what: string }> = {
   out_of_pocket: { title: 'Out-of-pocket limit', what: 'The most you pay for covered care in a plan year. After it, the plan pays all of it.' },
 };
 
-function limitRow(l: Limit, p: Person, who: string | undefined, scoped: boolean, quiet: Set<string>): HTMLElement {
+function limitRow(l: Limit, p: Person, who: string | undefined, scoped: boolean, quiet: Map<string, string>): HTMLElement {
   const met = l.used >= l.limit;
   // A private claim is neither dated nor linked on a shared view.
   const source = quiet.has(l.claim) ? ['As of their plan’s newest claim.'] : ['As of ', link({ name: 'item', person: l.person, id: l.claim }, `the claim for ${dateText(l.asOf)}`), '.'];
@@ -227,13 +225,14 @@ function monthsCard(d: YearData, who: string | undefined): HTMLElement | null {
   );
 }
 
-/** The period's visits by cost: everyone's leave private ones off, counted. */
+/** The period's visits by cost: everyone's leave off those that are private or whose cost is a private claim's, counted. */
 function costsOf(ctx: Ctx, d: YearData, who: string | undefined, order: CostOrder): { shown: EventCost[]; kept: string[] } {
   const store = ctx.store;
   const events = householdEvents(store.household, (id) => store.index(id), d.today).filter((x) => !who || x.person.id === who);
   const all = d.chosen ? eventCosts(events, d.lines, d.chosen.id, order) : [];
-  const shown = who ? all : all.filter((c) => !c.event.private);
-  return { shown, kept: all.filter((c) => c.event.private).map((c) => c.event.event.id) };
+  const area = (c: EventCost) => c.event.private ?? c.event.event.claims.map((x) => d.quiet.get(x.record.id)).find(Boolean);
+  const shown = who ? all : all.filter((c) => !area(c));
+  return { shown, kept: all.filter((c) => knownArea(area(c))).map((c) => c.event.event.id) };
 }
 
 /** "$4,181.40 off $6,417.00 charged, 65%": what the network took off, against what was charged. */
@@ -334,6 +333,7 @@ export function overviewPage(ctx: Ctx, route: MoneyRoute, who: string | undefine
         )
       : null,
     privateNote(who ? [] : [...bills.kept, ...costs.kept]),
+    ...(who ? [] : heldNotes(ctx, 'the lists on this shared view')),
     who ? coverageCard(ctx, who) : null,
     h('p', { class: 'small' }, link(explorer, 'Every claim, by provider, kind of care and month')),
   );
@@ -388,8 +388,9 @@ export function eventsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined)
           h('p', { class: 'small muted' }, byDiscount ? DISCOUNT_NOTE : PRICE_NOTE),
           byDiscount ? unsaidNote(unsaid.visits, unsaid.fills) : null,
         )
-      : card({}, h('p', null, `No visits with a price in ${periodWords(d.chosen)}.`)),
+      : card({}, h('p', null, `No visits with a price ${!who && anyLeftOff(ctx.store) ? 'listed here for' : 'in'} ${periodWords(d.chosen)}.`)),
     privateNote(who ? [] : costs.kept),
+    ...(who ? [] : heldNotes(ctx, 'this shared view')),
   );
 }
 

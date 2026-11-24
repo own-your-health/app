@@ -5,7 +5,6 @@ import { householdEvents } from '../src/next/calendar';
 import { ageWords } from '../src/next/homeView';
 import { openBills } from '../src/next/money';
 import { refillsDue, vaccineNeeds } from '../src/next/needs';
-import type { PersonIndex } from '../src/model/types';
 import { demo, personNamed } from './demo-data';
 
 const TODAY = '2026-11-22';
@@ -36,10 +35,8 @@ describe('open bills', () => {
     expect(openBills(index('Robin Example'), [], TODAY).map((b) => b.verdict)).toEqual(['no_claim', 'no_claim']);
   });
 
-  it('carry a private marker from the bill', () => {
-    const idx = index('Robin Example');
-    const marked: PersonIndex = { ...idx, documents: idx.documents.map((d) => (d.organization === 'Example Lab' && d.doc_type === 'bill' ? { ...d, private: true, private_area: 'reproductive' } : d)) };
-    expect(openBills(marked, events('Robin Example'), TODAY).map((b) => b.private)).toEqual([undefined, 'reproductive']);
+  it('carry no private area when neither they nor their visits are private', () => {
+    expect(['Robin Example', 'Sam Example'].flatMap((n) => openBills(index(n), events(n), TODAY)).map((b) => b.private)).toEqual([undefined, undefined, undefined, undefined]);
   });
 });
 

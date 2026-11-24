@@ -1,6 +1,6 @@
 // medrec's events (views/<person id>/events.json, `medrec-events/v1`, medrec
-// 0.9.0 and later) and what views.json says medrec read when it wrote them.
-// The store reads both; src/next/medrecEvents.ts makes them the app's events.
+// 0.9.0 and later). The store reads them; src/next/medrecEvents.ts makes them
+// the app's events.
 
 import { FolderError } from './parse';
 import type { MedDocument } from './types';
@@ -106,43 +106,4 @@ export function parseMedrecEvents(raw: unknown, person: string): MedrecEvents {
     text(x.document) ? [{ document: text(x.document)!, could_join: (Array.isArray(x.could_join) ? x.could_join : []).filter((y): y is string => typeof y === 'string'), rule: (text(x.rule) ?? '') as MedrecRule }] : [],
   );
   return { person, events, pending, papers: new Map() };
-}
-
-type Md5 = string | null;
-
-/**
- * What views.json (`medrec-views/v2`) says of a person's events.json: its
- * stored name, its MD5, and the MD5s of the files medrec read to write it.
- * A reader compares those with the folder's to tell fresh events from stale
- * ones (the data contract's "A reader decides freshness by MD5").
- */
-export interface EventsView {
-  /** `events.<first 12 hex of its MD5>.json`, under views/<person id>/. */
-  name: string;
-  md5: string;
-  household: Md5;
-  index: Md5;
-  text: Md5;
-  overrides: Md5;
-  linked: Map<string, { index: Md5; text: Md5 }>;
-}
-
-const MD5 = /^[0-9a-f]{32}$/;
-const md5Of = (v: unknown): Md5 | undefined => (v === null ? null : typeof v === 'string' && MD5.test(v) ? v : undefined);
-
-/** Undefined when the views are not medrec's v2 layout, hold no events for this person, or leave out what freshness needs. */
-export function eventsView(views: unknown, person: string): EventsView | undefined {
-  if (!isObj(views) || views.schema !== 'medrec-views/v2' || !isObj(views.people)) return undefined;
-  const p = views.people[person];
-  if (!isObj(p) || !isObj(p.files)) return undefined;
-  const md5 = md5Of(p.files['events.json']);
-  const [household, index, txt, overrides] = [md5Of(views.household), md5Of(p.index), md5Of(p.text), md5Of(p.overrides)];
-  if (!md5 || household === undefined || index === undefined || txt === undefined || overrides === undefined || !isObj(p.linked)) return undefined;
-  const linked = new Map<string, { index: Md5; text: Md5 }>();
-  for (const [id, l] of Object.entries(p.linked)) {
-    const [li, lt] = isObj(l) ? [md5Of(l.index), md5Of(l.text)] : [undefined, undefined];
-    if (li === undefined || lt === undefined) return undefined;
-    linked.set(id, { index: li, text: lt });
-  }
-  return { name: `events.${md5.slice(0, 12)}.json`, md5, household, index, text: txt, overrides, linked };
 }

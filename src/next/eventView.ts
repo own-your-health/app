@@ -11,12 +11,13 @@ import { AMOUNT_LABELS, docTypeLabel, documentTitle, formatMoney, fromCents, KIN
 import { isOutOfRange, resultFlag } from '../model/flags';
 import { unitText } from '../model/result';
 import { recordTitle, visitTitle } from '../model/titles';
+import { areaText, knownArea } from '../model/private';
 import type { MedDocument, PersonIndex } from '../model/types';
 import { card, chip, driveLink, empty, flagChip, link, row, type Ctx } from '../ui/components';
 import { h, icon, type Child } from '../ui/dom';
 import { count, dateText, localDay } from '../ui/format';
 import { href, type Route } from '../ui/router';
-import { eventConfidence, eventMoney, eventOf, kindText, paidAtCounter, privateArea, PRIVATE_AREAS, ruleText, type CareEvent, type EventMoney } from './event';
+import { eventConfidence, eventMoney, eventOf, kindText, paidAtCounter, eventPrivate, ruleText, type CareEvent, type EventMoney } from './event';
 import { groupedByMedrec, personEvents } from './load';
 import { called } from '../model/people';
 import { plainWords } from '../model/words';
@@ -78,19 +79,19 @@ function headCard(ctx: Ctx, idx: PersonIndex, e: CareEvent, m: EventMoney): HTML
     sourcesStrip(ctx, idx, e),
     number ? h('p', { class: 'result-value' }, m.share === 0 ? 'Nothing for you to pay' : `${m.shareAdded ? 'Your share' : 'You owe'} ${number}`) : null,
     settledLine(idx, e, m),
-    privateNote(e),
+    privateNote(e, idx),
   );
 }
 
 /** A private event says so on its page: where it stays off, and that this is discretion, not security. */
-function privateNote(e: CareEvent): HTMLElement | null {
-  const area = privateArea(e);
+function privateNote(e: CareEvent, idx: PersonIndex): HTMLElement | null {
+  const area = knownArea(eventPrivate(e, idx));
   if (!area) return null;
   return h(
     'p',
     { class: 'event-private small' },
     chip('Private', 'muted'),
-    ` ${PRIVATE_AREAS[area] ?? PRIVATE_AREAS.household}. Kept off Home and the Everyone calendar. This is discretion, not security: everyone the Drive folder is shared with can still read its files.`,
+    ` ${areaText(area)}. Kept off Home and everyone’s Calendar, Money, Papers and search results. This is discretion, not security: everyone the Drive folder is shared with can still read its files.`,
   );
 }
 
@@ -391,7 +392,7 @@ export function eventsCard(ctx: Ctx, personId: string, idx: PersonIndex, shown =
       ? events.slice(0, shown).map((e) => {
           const n = eventNumber(eventMoney(e));
           const { title, kind } = headline(e);
-          return row({ route: eventRoute(personId, e.id), title: [title, e.place].filter(Boolean).join(' · '), meta: [kind, eventWhen(e), e.what].filter(Boolean).join(' · '), aside: [privateArea(e) ? chip('Private', 'muted') : null, n ? h('span', { class: 'num' }, n) : null] });
+          return row({ route: eventRoute(personId, e.id), title: [title, e.place].filter(Boolean).join(' · '), meta: [kind, eventWhen(e), e.what].filter(Boolean).join(' · '), aside: [knownArea(eventPrivate(e, idx)) ? chip('Private', 'muted') : null, n ? h('span', { class: 'num' }, n) : null] });
         })
       : empty('No visits, claims or papers yet.'),
     events.length ? h('p', { class: 'small' }, link({ name: 'calendar', view: 'list', who: personId }, events.length > shown ? `All ${events.length} in the calendar` : 'In the calendar')) : null,

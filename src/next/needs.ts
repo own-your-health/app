@@ -5,6 +5,7 @@
 
 import { medicineList, type MedicineItem } from '../model/lists';
 import { fluSeason, monthsBetween, scheduleDigest, scheduleFor, type FluSeason, type ScheduleRow } from '../model/schedule';
+import { recordsPrivate } from '../model/private';
 import type { PersonIndex } from '../model/types';
 
 const DAY_MS = 86_400_000;
@@ -22,7 +23,7 @@ export interface Refill {
   runsOut: string;
   /** Days from today to that day; negative once past. */
   days: number;
-  /** Why it is private, when a record of the medicine is marked so. */
+  /** Why it is private, when a record of the medicine is. */
   private?: string;
 }
 
@@ -35,8 +36,8 @@ export function refillsDue(index: PersonIndex, today: string): Refill[] {
       const runsOut = addDays(f.date, f.daysSupply);
       const days = daysBetween(today, runsOut);
       if (Math.abs(days) > REFILL_DAYS) return [];
-      const marked = m.records.find((r) => r.private);
-      return [{ medicine: m, runsOut, days, ...(marked ? { private: marked.private_area ?? 'household' } : {}) }];
+      const area = recordsPrivate(index, m.records.map((r) => r.id));
+      return [{ medicine: m, runsOut, days, ...(area ? { private: area } : {}) }];
     })
     .sort((a, b) => a.runsOut.localeCompare(b.runsOut));
 }

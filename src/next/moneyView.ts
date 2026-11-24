@@ -15,6 +15,7 @@ import { eventRoute, eventWhen } from './eventView';
 import { callsSummary, type OpenBill, type PaidBill } from './money';
 import { forBill, gather, head, keptNote, money, num, privateChip, visitText, type Mine, type MoneyRoute } from './moneyParts';
 import { eventsPage, overviewPage } from './moneyYear';
+import { anyLeftOff, heldNotes } from './shared';
 import { called } from '../model/people';
 
 const billWhen = (b: OpenBill | PaidBill) => {
@@ -63,6 +64,7 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
   const unbilledCents = g.unbilled.reduce((t, m) => t + m.item.cents, 0);
   const callsRoute = (bill?: string): Route => ({ name: 'money', view: 'calls', ...(who ? { who } : {}), ...(bill ? { bill } : {}) });
 
+  const left = !who && anyLeftOff(ctx.store);
   const hero = card(
     { class: 'money-hero' },
     h('p', { class: 'money-hero-label' }, 'Ready to pay'),
@@ -70,8 +72,8 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
     h(
       'p',
       null,
-      ready.length ? `${count(ready.length, 'bill')}, each asking what its claim says you owe.` : 'No bill that matches its claim is waiting.',
-      check.length ? [' ', link(callsRoute(), `${count(check.length, 'more bill')} ${check.length === 1 ? 'is' : 'are'} worth a call first.`)] : ready.length ? ' None asks for more than the claims say.' : null,
+      ready.length ? `${count(ready.length, 'bill')}, each asking what its claim says you owe.` : left ? 'No bill listed here matches its claim.' : 'No bill that matches its claim is waiting.',
+      check.length ? [' ', link(callsRoute(), `${count(check.length, 'more bill')} ${check.length === 1 ? 'is' : 'are'} worth a call first.`)] : ready.length && !left ? ' None asks for more than the claims say.' : null,
     ),
   );
 
@@ -133,7 +135,8 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
     unbilledCard,
     paidCard,
     keptNote(g.hidden.open.length + g.hidden.unbilled.length + g.hidden.paid, 'Bills'),
-    !g.open.length && !g.unbilled.length && !g.paid.length ? card({}, h('p', null, 'No bills, receipts or claim shares in these records yet.')) : null,
+    ...(who ? [] : heldNotes(ctx, 'this shared view')),
+    !g.open.length && !g.unbilled.length && !g.paid.length ? card({}, h('p', null, 'No bills, receipts or claim shares to show here.')) : null,
   );
 }
 
@@ -196,7 +199,7 @@ function callsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
           [`Across ${count(sum.providers, 'provider')}.`, sum.unbacked ? `${count(sum.unbacked, 'bill')} no claim backs ${sum.unbacked === 1 ? 'is' : 'are'} not counted in it.` : null, 'Each below has the dates and amounts to read out on the call.'].filter(Boolean).join(' '),
         ),
       )
-    : card({}, h('p', null, 'No bill asks for more than the claims say you owe.'));
+    : card({}, h('p', null, !who && anyLeftOff(ctx.store) ? 'No bill listed here asks for more than the claims say you owe.' : 'No bill asks for more than the claims say you owe.'));
 
   const look = sum.asksLess.length
     ? card(
@@ -239,6 +242,7 @@ function callsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
     look,
     explained,
     keptNote(kept, 'view'),
+    ...(who ? [] : heldNotes(ctx, 'this shared view')),
     h('p', { class: 'small' }, link({ name: 'money', view: 'bills', ...(who ? { who } : {}) }, 'All bills')),
   );
   // A row elsewhere named one bill: mark it, and take the reader and the keyboard to it once the page is in place.

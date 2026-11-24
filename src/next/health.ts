@@ -1,14 +1,15 @@
 // Health: each person's page in a fixed order (Due, Current,
 // Worth noticing, Recently, then Quiet), how much the records can know about
 // them, and what a doctor's sheet holds. Quiet by default: what is not news
-// is counted and kept one tap away, never dropped. A private item (medrec's
-// `private`) shows on its person's own page, marked, and stays off shared
-// views and the doctor's sheet unless turned on.
+// is counted and kept one tap away, never dropped. A private item
+// (model/private.ts) shows on its person's own page, marked, and stays off
+// shared views, and off the doctor's sheet unless turned on.
 
 import { isOutOfRange } from '../model/flags';
 import { allergyList, conditionList, medicineList, vaccineList, type AllergyItem, type ConditionItem, type MedicineItem, type VaccineItem } from '../model/lists';
 import { latestResults, type LatestResult } from '../model/overview';
 import { isWithdrawn, str } from '../model/records';
+import { recordPrivate, recordsPrivate } from '../model/private';
 import type { MedRecord, PersonIndex } from '../model/types';
 import { placeName } from '../model/words';
 
@@ -39,16 +40,14 @@ export function coverageOf(index: PersonIndex): Coverage {
   return { kind: 'none', words: 'No records yet', detail: 'Nothing has been loaded for this person yet.' };
 }
 
-/** Why an item is private, from any of its records: their area, or the household's own marking; undefined when none is. */
-export function privateOf(records: MedRecord[]): string | undefined {
-  const r = records.find((x) => x.private);
-  return r ? (r.private_area ?? 'household') : undefined;
-}
+/** Why an item is private, from any of its records: their area, or HELD; undefined when none is. */
+export const privateOf = (index: PersonIndex, records: MedRecord[]): string | undefined => recordsPrivate(index, records.map((r) => r.id));
 
-/** A result's record, for its privacy and its page. */
+/** A result's record, for its page. */
 const recordOf = (index: PersonIndex, x: LatestResult) => index.records.find((r) => r.id === x.latest.id);
 
-export const resultPrivate = (index: PersonIndex, x: LatestResult) => privateOf([recordOf(index, x)].filter((r): r is MedRecord => !!r));
+/** A test is private when any of its results is, as medrec counts a series. */
+export const resultPrivate = (index: PersonIndex, x: LatestResult) => recordsPrivate(index, [x.latest.id, ...x.series.points.map((p) => p.id)]);
 
 /** Whether a result is a vital sign (weight, height, blood pressure) rather than a lab test. */
 export const isVital = (index: PersonIndex, x: LatestResult) => /vital/i.test(String(recordOf(index, x)?.fields.category ?? ''));
@@ -166,35 +165,48 @@ export interface DoctorSheet {
   labs: LatestResult[];
   vitals: LatestResult[];
   careTeam: CareMember[];
-  /** How many private items were left off: a medicine, and a doctor known only from private care, are one each. */
+  /** How many items were left off, private or held back: a medicine, and a doctor known only from private care, are one each. */
   privateLeft: number;
+  /** The sections something was left off, which can't say that nothing is in these records. */
+  leftFrom: Set<SheetSection>;
 }
+
+export type SheetSection = 'allergies' | 'medicines' | 'problems' | 'vaccines' | 'labs' | 'vitals' | 'careTeam';
 
 export function doctorSheet(index: PersonIndex, today: string, withPrivate: boolean): DoctorSheet {
   const h = healthOf(index, today);
   const from = since(today, NOTICE_DAYS);
   const recent = latestResults(index).filter((x) => (x.latest.date ?? '') >= from);
   let left = 0;
-  const keep = <T>(xs: T[], priv: (x: T) => string | undefined): T[] => {
+  const leftFrom = new Set<SheetSection>();
+  const note = (section: SheetSection, n: number) => {
+    left += n;
+    if (n) leftFrom.add(section);
+  };
+  const keep = <T>(section: SheetSection, xs: T[], priv: (x: T) => string | undefined): T[] => {
     if (withPrivate) return xs;
     const out = xs.filter((x) => !priv(x));
-    left += xs.length - out.length;
+    note(section, xs.length - out.length);
     return out;
   };
   const byName = <T extends { name: string }>(xs: T[]) => [...xs].sort((a, b) => a.name.localeCompare(b.name));
   const vitals = recent.filter((x) => isVital(index, x));
-  const team = careTeam(index, today, (r) => !r.private);
+  const everyone = careTeam(index, today);
+  const team = careTeam(index, today, (r) => !recordPrivate(index, r.id));
+  if (!withPrivate) note('careTeam', everyone.filter((m) => !team.some((t) => t.name === m.name)).length);
   return {
-    allergies: keep(h.allergies, (x) => privateOf(x.records)),
-    medicines: keep(byName(h.medicines), (x) => privateOf(x.records)),
-    problems: keep(h.conditions, (x) => privateOf(x.records)),
-    vaccines: keep(h.quiet.vaccines, (x) => privateOf(x.records)),
+    allergies: keep('allergies', h.allergies, (x) => privateOf(index, x.records)),
+    medicines: keep('medicines', byName(h.medicines), (x) => privateOf(index, x.records)),
+    problems: keep('problems', h.conditions, (x) => privateOf(index, x.records)),
+    vaccines: keep('vaccines', h.quiet.vaccines, (x) => privateOf(index, x.records)),
     labs: keep(
+      'labs',
       recent.filter((x) => !vitals.includes(x)),
       (x) => resultPrivate(index, x),
     ),
-    vitals: keep(vitals, (x) => resultPrivate(index, x)),
-    careTeam: withPrivate ? careTeam(index, today) : team,
-    privateLeft: left + (withPrivate ? 0 : careTeam(index, today).filter((m) => !team.some((t) => t.name === m.name)).length),
+    vitals: keep('vitals', vitals, (x) => resultPrivate(index, x)),
+    careTeam: withPrivate ? everyone : team,
+    privateLeft: left,
+    leftFrom,
   };
 }

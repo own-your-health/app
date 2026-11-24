@@ -489,8 +489,11 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   to `America/New_York`, so the machine's own medrec setup is never touched and every
   machine writes the same views. CI runs medrec 0.9.3's Linux build,
   checked against its SHA-256. Only `views/views.json` and each person's
-  `events.json` are kept: the app reads no other view. `manifest.json`
-  gives each file's MD5, as Drive would, for the store's freshness check.
+  `events.json` and `private.json` are kept: the app reads no other view.
+  `manifest.json` gives each file's MD5, as Drive would, for the store's
+  freshness check. No private list is written by hand: the cases the tests
+  lay over the sample (`test/fixtures/private/`) are medrec's too, made by
+  `node scripts/private-fixtures.mjs`. CI runs both scripts.
 - The PNG icons in `public/` (for the manifest and the iPhone Home Screen) are
   drawn from `public/icon.svg` by `npm run icons`. Run it after changing the
   icon, and commit them.
@@ -552,9 +555,7 @@ dropped from the address.
   (`practiceName` in `src/model/records.ts`), and has no place when that is
   not known. A store's number is said once. People go by their first name,
   or their full name where two share one, except in Settings and on the
-  doctor's sheet (`src/model/people.ts`). An event is private when a record
-  or paper in it is. medrec 0.9.1 writes its own marks (`private.json`), which the app does
-  not read yet.
+  doctor's sheet (`src/model/people.ts`).
 - **Home** leads with **Needs you**, quiet when nothing does:
   - a bill worth a call: one that asks something other than what the
     claims say you owe, or that no claim in these records backs
@@ -592,7 +593,9 @@ dropped from the address.
   the discount look smaller. The visits and fills left out are counted
   under the list. Totals and months count
   private care without naming it. The lists on everyone's view leave private
-  visits off and count them.
+  visits off and count them. Costs (`#/costs`), which names every claim it
+  adds up, leaves private claims out of its totals too on everyone's view,
+  and says so; one person's counts theirs.
 - **Bills** (`#/money/bills`, from Home, Money and each visit's bills): the
   open bills that ask what their claims say you owe, due date first; those
   to check before paying; the shares the claims say you owe with no bill or
@@ -602,9 +605,10 @@ dropped from the address.
   and the words to say on the phone. It then lists the bills that ask less,
   and the lines the plan left out of a claim's totals in the last year,
   which need nothing. Everyone's view leaves private bills off and counts
-  them. One person's view lists them, marked. medrec 0.9.1 will add Mark
-  paid, receipt amounts, the bill's phone number and `bills.json`. Reading
-  that file will replace `src/next/money.ts`.
+  them. One person's view lists them, marked. medrec 0.9.1 and later keep
+  what the household marked paid, receipts' amounts and each bill's phone
+  number in `views/<person id>/bills.json`. The app does not read that file
+  yet: it works the bills out itself (`src/next/money.ts`).
 - **Health** (`#/health`, from Where everyone stands on Home) gives each
   person a card: what the records can know about them (doctors' records and
   claims, doctors' records only, claims and papers only, or no records
@@ -636,35 +640,64 @@ dropped from the address.
 does the kind of paper (bills, lab reports and so on); each row gives its
 page count. Papers took the place of each person's list of documents. A
   person's own (`#/papers?who=`) shows their private papers, marked;
-  everyone's leaves them off and counts them. A paper is private when it or
-  its visit is, or when it is with none and could be part of a private
-  visit.
+  everyone's leaves them off and counts them. A paper is private when medrec
+  lists it, when a private record links it, when it is with no visit and
+  could be part of a private one, or when its visit is private and medrec
+  did not judge the two together (the app's own grouping). A paper the
+  household marked not private shows, without naming its private visit.
 - **Calendar** (`#/calendar`, and Recently on Home): the household's
   events a month at a time, with a lane per person (a dot for a visit or
   tests, a ring for a pharmacy trip or vaccine, a bar across the days of an
   emergency room visit or a hospital stay) and the month's events listed
   below with one number each; or every event as one list, by month. A day
   opens its own list. The list shows twelve months at a time.
-- **Private events.** medrec marks a record or paper private from its codes
-  (`private: true`, with `private_area`). A private event shows on its
-  person's own pages and calendar, marked Private. The Everyone calendar
-  and Home leave it off. The calendar says how many it left off and in
-  which area, and Show them brings them back there until the calendar is
-  left or the page reloaded; nothing about it is stored. Home counts the
-  private items it leaves off, bills and refills included, without naming
-  them; the person's own Health and Money list them, marked. Health does the
-  same, and its doctor's sheet leaves them off until included. The app says this is
-  discretion, not security: everyone the Drive folder is shared with can
-  still read the files.
+- **Private items.** medrec 0.9.1 and later list each person's private
+  records, papers and events, by area, in
+  `views/<person id>/private.json`, from their codes and the household's own
+  marks. The app reads that list and decides nothing itself, but for four
+  things the list does not judge:
+  - a paper that only a record links is as private as the record;
+  - an imaging study is as private as its report, and stays off everyone's
+    search without one;
+  - a fill or a vaccine is as private as the record it is named for;
+  - with the app's own grouping, a visit is private when a record or paper
+    in it is.
+
+  A private item shows on its person's own pages, marked Private, and is
+  kept off every shared screen: Home, the Everyone calendar, Money, Papers,
+  Health, Costs and everyone's search. Each says how many it left off,
+  without naming them, but search, which would say that words matched: it
+  never looks at private items, and always says so. The calendar gives the
+  areas, and Show them brings the events back there until the calendar is
+  left or the page reloaded; nothing about it is stored. While anything is
+  left off, an empty list on a shared screen says that nothing is listed
+  there, not that there is nothing. The doctor's sheet
+  leaves private items off until they are included. A section it left
+  something out of says "None listed here", never that nothing is known.
+
+  **Without a current list, everything of that person's stays off.** The
+  list is used only when the MD5s in `views/views.json` are the folder's:
+  the same files as for events, and the person's `marks.json`
+  (`src/model/private.ts`, `src/data/store.ts`). A list that is missing,
+  behind, still arriving, unreadable or from a newer medrec, or one that
+  says the household's marks could not be read (`marks_unreadable`), holds
+  back all of that person's items from every shared screen, which says so in
+  a line with the reason. Their own pages still show everything. Settings
+  gives each person's reason.
+
+  The app says this is discretion, not security: everyone the Drive folder
+  is shared with can still read the files. Money's totals count private care
+  without naming it, and the Sources screen names every sign-in, a private
+  one's practice included.
 - A visit's address names a record in it. Any record or paper of the visit
   opens it, so a saved address still works after records arrive and the
   visit is led by another one.
 - The sample's Sam spent a night in the emergency room: five claims from
   four providers, a line the plan re-coded and left out of its totals, a
   bill that matches its claim and a doctor's bill not yet filed. Sam also
-  has a private video counseling session, marked the way medrec marks one,
-  with a private claim for it whose copay is not billed yet, a private
-  prescription that goes with it, and a vitamin D refill due.
+  has a video counseling session that medrec's list makes private by its
+  codes, with its claim, whose copay is not billed yet, and the prescription
+  that goes with it, and a vitamin D refill due.
 
 Unofficial. Not affiliated with or endorsed by Google.
 

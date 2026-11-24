@@ -99,6 +99,8 @@ export interface Searchable {
   index: PersonIndex;
   /** Null when the person's text.json is missing or not loaded: their titles and fields are still searched. */
   text: PersonText | null;
+  /** The items to leave out of the search (private ones, on a shared screen). */
+  leave?: (kind: string, id: string) => boolean;
 }
 
 const MARKS = /\p{M}/gu;
@@ -356,7 +358,7 @@ export function searchAll(people: Searchable[], query: string): Hit[] {
   for (const p of people) {
     for (const c of candidates(p.index)) {
       const hit = match(c, ts, p.text, p.person);
-      if (hit) hits.push(hit);
+      if (hit && !p.leave?.(c.kind, c.id)) hits.push(hit);
     }
   }
   return hits.sort((a, b) => RANK[a.where] - RANK[b.where] || (b.date ?? '').localeCompare(a.date ?? '') || a.title.localeCompare(b.title));
@@ -433,7 +435,7 @@ export function find(people: Searchable[], query: string, opts: { words?: boolea
     for (const c of candidates(p.index)) {
       if (c.concept !== concept.id) continue;
       const hit = rest.length ? match(c, rest, p.text, p.person) : { person: p.person, id: c.id, kind: c.kind, title: c.title, date: c.date, where: 'title' as const, ...c.extra };
-      if (hit) hits.push(hit);
+      if (hit && !p.leave?.(c.kind, c.id)) hits.push(hit);
     }
   }
   if (hits.length === 0 && rest.length) return asWords('fallback');

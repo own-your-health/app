@@ -3,6 +3,7 @@
 // object keeps the rest, which the Inspect view shows as it is.
 
 import type { MedrecEvents } from './events';
+import type { Privacy } from './private';
 
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 export type JsonObject = { [key: string]: Json };
@@ -118,9 +119,6 @@ export interface MedDocument {
   origin?: { kind: string; name?: string; action: string };
   text?: { chars: number; engines?: string[]; ocr_pages?: number; note?: string };
   statement?: Statement;
-  /** As on a record: medrec 0.9.1's private marker, present only when true. */
-  private?: true;
-  private_area?: string;
   same_statement_as?: string;
   near_duplicates?: { document: string; similarity: number }[];
   provenance: Provenance;
@@ -149,10 +147,6 @@ export interface MedRecord {
   fields: JsonObject;
   documents: string[];
   provenance: Provenance[];
-  /** medrec 0.9.1: kept off shared screens (Home, the Everyone calendar, Hand to a doctor) unless turned on. Present only when true. */
-  private?: true;
-  /** Why it is private: mental_health, reproductive, sexual_health, substance_use, or household when the household set it. */
-  private_area?: string;
 }
 
 export interface ImagingSeries {
@@ -212,6 +206,8 @@ export interface PersonIndex {
   imports: ImportRun[];
   /** medrec's events for this index (views/<person id>/events.json), when the store found them written from it. */
   events?: MedrecEvents;
+  /** Which of these items are private (src/model/private.ts), as the store read it: while it is missing, all are held back from shared screens. */
+  privacy?: Privacy;
 }
 
 export interface PersonText {

@@ -8,6 +8,7 @@ import { dateTime } from '../format';
 import { PRIVACY_URL, REGISTRATION_URL, REPO_URL } from './setup';
 import { getPlanStart, getTheme, setPlanStart, setTheme, type Theme } from '../../settings';
 import { applyTheme } from '../../theme';
+import { heldPeople } from '../../next/shared';
 
 /** Who grouped the records into visits: medrec's events (0.9.0 and later), else the app. */
 function visitsText(ctx: Ctx): string {
@@ -30,6 +31,14 @@ function visitsNotes(ctx: Ctx): HTMLElement[] {
   });
 }
 
+/** Whether medrec's list of private items is in use: read for everyone, or for how many; everyone else's items are off shared screens. */
+function privateText(ctx: Ctx): string {
+  const people = ctx.store.household.people.filter((p) => ctx.store.index(p.id));
+  const held = heldPeople(ctx.store).length;
+  if (!held) return 'Left off shared screens, as medrec lists them';
+  return held === people.length ? 'Not listed: everyone’s items are left off shared screens' : `Listed for ${people.length - held} of ${people.length} people: the rest’s items are all left off shared screens`;
+}
+
 export function settingsView(
   ctx: Ctx,
   opts: { clientId: string | null; setupLink: string | null; scopes: string[]; onChangeFolder: () => void; onChangeClient: () => void },
@@ -48,8 +57,10 @@ export function settingsView(
         ['Read', dateTime(new Date(ctx.store.loadedAt).toISOString())],
         ['Refresh on the Mac', status.kind === 'ok' ? `medrec ${refresher?.medrec_version ?? ''}`.trim() : status.kind === 'missing' ? 'Not set up' : 'Unreadable status'],
         ['Visits', visitsText(ctx)],
+        ['Private items', privateText(ctx)],
       ]),
       ...visitsNotes(ctx),
+      ...heldPeople(ctx.store).map(({ person, why }) => h('p', { class: 'small muted' }, `${person.name}: ${why}`)),
       ctx.demo ? h('a', { class: 'button button-outline', href: './' }, 'Leave the sample records') : h('div', { class: 'actions' }, button('Choose another folder', opts.onChangeFolder)),
     ),
     ctx.demo
