@@ -18,10 +18,15 @@ describe('shares not billed yet', () => {
   it('list each provider’s share with no bill or receipt from them, and none for a fill', () => {
     expect(shares('Robin Example')).toEqual([['2026-11-18', 'Example Health', 2500]]);
     expect(shares('Sam Example')).toEqual([
+      ['2026-10-27', 'Example Counseling', 3000],
       ['2026-10-12', 'Example Lab', 7030],
       ['2026-09-12', 'Example Emergency Physicians', 9640],
       ['2026-05-20', 'Example Health', 5640],
     ]);
+  });
+
+  it('carry the privacy of their visit', () => {
+    expect(unbilledShares(index('Sam Example'), events('Sam Example')).map((u) => u.private)).toEqual(['mental_health', undefined, undefined, undefined]);
   });
 
   it('take a billing company’s bill as the visit’s, and a receipt on or after the visit as paid', () => {

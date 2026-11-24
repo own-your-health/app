@@ -3631,6 +3631,268 @@
       ],
       "private": true,
       "private_area": "mental_health"
+    },
+    {
+      "id": "r_ykqgd5ubp23vha2jfssl",
+      "kind": "claim",
+      "key": "claim|http://terminology.hl7.org/CodeSystem/claim-type|professional|2026-10-27",
+      "date": "2026-10-27",
+      "code": {
+        "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+        "code": "professional",
+        "display": "Professional"
+      },
+      "display": "Psychotherapy, 45 minutes · Example Counseling",
+      "status": "active",
+      "fields": {
+        "when": "2026-10-27",
+        "provider": "Example Counseling",
+        "insurer": "Example Care Plan",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-10-27",
+          "end": "2026-10-27"
+        },
+        "total": [
+          {
+            "category": "Submitted Amount",
+            "amount": {
+              "amount": "180.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Eligible Amount",
+            "amount": {
+              "amount": "110.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Benefit Amount",
+            "amount": {
+              "amount": "80.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Deductible",
+            "amount": {
+              "amount": "0.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Copay",
+            "amount": {
+              "amount": "30.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Coinsurance",
+            "amount": {
+              "amount": "0.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Member liability",
+            "amount": {
+              "amount": "30.00",
+              "currency": "USD"
+            }
+          }
+        ],
+        "payment": {
+          "amount": "80.00",
+          "currency": "USD"
+        },
+        "type": "Professional",
+        "use": "claim",
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "90834",
+              "display": "Psychotherapy, 45 minutes"
+            },
+            "serviced": "2026-10-27",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "180.00",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "180.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "110.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "80.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Copay",
+                "amount": {
+                  "amount": "30.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "0.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "30.00",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ],
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "180.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "110.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "80.00",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "copay": {
+                "amount": "30.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "30.00",
+                "currency": "USD"
+              }
+            },
+            "records": [
+              "r_l2hawbmbuvibfaovzyjw"
+            ]
+          }
+        ],
+        "benefit_period": {
+          "start": "2026-07-01",
+          "end": "2027-06-30"
+        },
+        "category": "visit",
+        "amounts": {
+          "billed": {
+            "amount": "180.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "110.00",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "80.00",
+            "currency": "USD"
+          },
+          "deductible": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "copay": {
+            "amount": "30.00",
+            "currency": "USD"
+          },
+          "coinsurance": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "30.00",
+            "currency": "USD"
+          }
+        },
+        "diagnoses": [
+          {
+            "sequence": 1,
+            "code": {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "F41.1",
+              "display": "Generalized anxiety disorder"
+            }
+          }
+        ],
+        "visit": "r_l2hawbmbuvibfaovzyjw",
+        "results": []
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "kp",
+            "cli_version": "0.7.1",
+            "organization_id": "example-care-plan",
+            "fhir_base": "https://fhir.example.com/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "ExplanationOfBenefit",
+            "id": "explanationofbenefit-f74e903d",
+            "last_updated": "2026-11-21T08:00:00Z"
+          },
+          "fetched_at": "2026-11-21T13:59:00Z",
+          "filed_at": "2026-11-21T13:59:00Z",
+          "raw_path": "Sam Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-f74e903d.json",
+          "filed_by": "medrec 0.2.11"
+        }
+      ],
+      "private": true,
+      "private_area": "mental_health"
     }
   ],
   "studies": [

@@ -271,7 +271,7 @@ function billsCard(idx: PersonIndex, e: CareEvent, m: EventMoney): HTMLElement |
     { title: 'Bills and payments' },
     bills.map(billRow),
     unbilled.map((c) => h('p', { class: 'event-gap' }, `No bill from ${c.provider} filed yet, for the ${money(c.share)} its claim says you owe.`)),
-    h('p', { class: 'small' }, link({ name: 'money', who: idx.person }, 'All bills, beside their claims')),
+    h('p', { class: 'small' }, link({ name: 'money', view: 'bills', who: idx.person }, 'All bills, beside their claims')),
   );
 }
 

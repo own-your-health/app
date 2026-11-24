@@ -894,7 +894,7 @@ function julyYear(date) {
 // links guessed by date and name. The plans' and the pharmacy benefit's
 // claims carry them; Robin's member-site plan keeps the earlier shape, so the
 // sample shows both.
-const LINE_CATEGORY = { 99213: 'visit', 99214: 'visit', 99215: 'visit', 99284: 'visit', 99285: 'visit', 71046: 'imaging', 80053: 'lab', 73610: 'imaging', 84443: 'lab', 36415: 'lab', 85025: 'lab', 82306: 'lab', 87880: 'lab', 90686: 'vaccine', 90471: 'vaccine' };
+const LINE_CATEGORY = { 99213: 'visit', 99214: 'visit', 99215: 'visit', 99284: 'visit', 99285: 'visit', 71046: 'imaging', 80053: 'lab', 73610: 'imaging', 84443: 'lab', 36415: 'lab', 85025: 'lab', 82306: 'lab', 87880: 'lab', 90686: 'vaccine', 90471: 'vaccine', 90834: 'visit' };
 const words = (...texts) => new Set(texts.filter(Boolean).join(' ').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 4));
 function claimFields(P, { date, provider, type, lines, diagnoses, liability }) {
   const pharmacy = type === 'Pharmacy';
@@ -992,7 +992,7 @@ function claimOf(P, s, { date, end = date, provider, insurer, type = 'Profession
     });
     items.forEach((it, i) => (it.sequence = i + 1));
   }
-  P.record(s, 'ExplanationOfBenefit', 'claim', {
+  return P.record(s, 'ExplanationOfBenefit', 'claim', {
     date,
     code: { system: 'http://terminology.hl7.org/CodeSystem/claim-type', code: type.toLowerCase(), display: type },
     display: medrec.display,
@@ -1261,6 +1261,15 @@ for (const r of sertraline) {
   r.private = true;
   r.private_area = 'mental_health';
 }
+S.write();
+
+// ---- What the counseling cost ----
+// The plan's claim for Sam's counseling session, private like the visit, so
+// Money's totals count it while its shared lists leave it off, counted. Sam
+// owes a copay and no bill has come yet. Drawn last, so no other id moves.
+const counselingClaim = claimOf(S, src.samPlan, { date: '2026-10-27', provider: 'Example Counseling', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-10-27'), diagnoses: [['F41.1', 'Generalized anxiety disorder']], lines: [['90834', 'Psychotherapy, 45 minutes', '180.00', '110.00', '0.00', '30.00', '0.00', '80.00']] });
+counselingClaim.private = true;
+counselingClaim.private_area = 'mental_health';
 S.write();
 
 // ---- Write ----

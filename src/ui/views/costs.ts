@@ -108,7 +108,7 @@ export function planBasisText(years: { insurer?: string; basis: PlanBasis }[]): 
 }
 
 /** A plan year in words: "2026" when it is a calendar year, else "Jul 1, 2026 to Jun 30, 2027". */
-function yearText(y: PlanYear): string {
+export function yearText(y: PlanYear): string {
   return y.anniversary === '01-01' ? y.start.slice(0, 4) : `${dateText(y.start)} to ${dateText(y.end)}`;
 }
 
@@ -127,7 +127,7 @@ function download(name: string, text: string): void {
   window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-function legend(items: [string, string][]): HTMLElement {
+export function legend(items: [string, string][]): HTMLElement {
   return h('p', { class: 'cost-legend small' }, items.map(([cls, text]) => h('span', { class: 'cost-key' }, h('span', { class: ['swatch', cls], 'aria-hidden': 'true' }), text)));
 }
 

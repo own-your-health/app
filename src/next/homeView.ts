@@ -228,7 +228,7 @@ function needsCard(all: PersonNeeds[], own?: string): HTMLElement | null {
         )
       : null,
     calls.length || pay.length
-      ? h('p', { class: 'small muted' }, 'A bill stays here until a receipt from its provider is filed after it. ', link({ name: 'money', ...(own ? { who: own } : {}) }, 'Bills: each one beside its claim'))
+      ? h('p', { class: 'small muted' }, 'A bill stays here until a receipt from its provider is filed after it. ', link({ name: 'money', view: 'bills', ...(own ? { who: own } : {}) }, 'Bills: each one beside its claim'))
       : null,
     kept ? h('p', { class: 'small muted' }, `${count(kept, 'private item')} ${kept === 1 ? 'is' : 'are'} kept off Home. Each shows on its person’s own overview.`) : null,
   );
