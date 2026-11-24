@@ -27,6 +27,7 @@ describe('routes', () => {
     { name: 'calendar', month: '2026-10' },
     { name: 'calendar', month: '2026-10', day: '2026-10-12', who: P },
     { name: 'calendar', view: 'list', who: P },
+    { name: 'calendar', view: 'list', before: '2026-07' },
   ];
 
   it.each(routes.map((r) => [href(r), r]))('%s round-trips', (h, r) => {
@@ -56,11 +57,14 @@ describe('routes', () => {
   });
 
   it('keep only the calendar choices they know', () => {
-    expect(href({ name: 'calendar', month: '2026-10', day: '2026-10-12' })).toBe('#/calendar?m=2026-10&day=2026-10-12');
-    expect(parseRoute('#/calendar?m=2026-13&day=2026-02-3x&who=%3Cscript%3E&view=year')).toEqual({ name: 'calendar' });
+    expect(href({ name: 'calendar', month: '2026-10', day: '2026-10-12' })).toBe('#/calendar?month=2026-10&day=2026-10-12');
+    expect(parseRoute('#/calendar?month=2026-13&day=2026-02-3x&who=%3Cscript%3E&view=year&before=2026-07')).toEqual({ name: 'calendar' });
+    // A day that does not exist is dropped, not rolled over.
+    expect(parseRoute('#/calendar?day=2026-02-31')).toEqual({ name: 'calendar' });
+    expect(parseRoute('#/calendar?day=2028-02-29')).toEqual({ name: 'calendar', month: '2028-02', day: '2028-02-29' });
     // A day picks its month; the list has neither.
-    expect(parseRoute('#/calendar?m=2026-01&day=2026-10-12')).toEqual({ name: 'calendar', month: '2026-10', day: '2026-10-12' });
-    expect(parseRoute('#/calendar?view=list&m=2026-10&day=2026-10-12')).toEqual({ name: 'calendar', view: 'list' });
+    expect(parseRoute('#/calendar?month=2026-01&day=2026-10-12')).toEqual({ name: 'calendar', month: '2026-10', day: '2026-10-12' });
+    expect(parseRoute('#/calendar?view=list&month=2026-10&day=2026-10-12')).toEqual({ name: 'calendar', view: 'list' });
     expect(parseRoute('#/calendar/x')).toEqual({ name: 'not_found' });
   });
 

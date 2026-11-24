@@ -22,7 +22,7 @@ import { settingsView } from './views/settings';
 import { sourceView } from './views/source';
 import { sourcesView } from './views/sources';
 import { searchView } from './search';
-import { calendarView } from '../next/calendarView';
+import { calendarView, hidePrivateEvents } from '../next/calendarView';
 import { eventView } from '../next/eventView';
 
 /** What the app says when a renewal interrupted a write the person asked for. */
@@ -423,6 +423,8 @@ export class App {
   }
 
   private onRoute(): void {
+    // Private events shown on the calendar are hidden again once it is left.
+    if (parseRoute(location.hash).name !== 'calendar') hidePrivateEvents();
     if (this.phase.name === 'ready') {
       this.render();
       window.scrollTo(0, 0);

@@ -1,7 +1,7 @@
 // The calendar (?next): the month's weeks, the household's events in order,
 // and private events kept off the shared view.
 import { describe, expect, it } from 'vitest';
-import { barPart, householdEvents, inMonth, markShape, monthWeeks, onDay, shiftMonth, shown } from '../src/next/calendar';
+import { barPart, householdEvents, inMonth, listPage, markShape, monthWeeks, onDay, shiftMonth, shown } from '../src/next/calendar';
 import { demo, personNamed } from './demo-data';
 
 describe('a month', () => {
@@ -52,6 +52,15 @@ describe('the household’s events', () => {
     const fill = events.find((x) => x.event.kind === 'fill')!;
     expect(markShape(fill.event)).toBe('ring');
     expect(markShape(events.find((x) => x.event.kind === 'office')!.event)).toBe('dot');
+  });
+
+  it('list a page of months at a time, then the months before', () => {
+    const first = listPage(events, undefined, 3);
+    expect(first).toEqual({ months: ['2026-11', '2026-10', '2026-09'], earlier: '2026-09' });
+    expect(listPage(events, first.earlier, 3).months[0]).toBe('2026-08');
+    const all = listPage(events, undefined, 100);
+    expect(all.earlier).toBeUndefined();
+    expect(all.months.at(-1)).toBe(events.at(-1)!.event.start.slice(0, 7));
   });
 
   it('belong to every month they touch', () => {

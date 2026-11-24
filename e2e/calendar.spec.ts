@@ -33,7 +33,7 @@ test('home leads to the calendar, which opens on this month with a lane per pers
 
   // A day opens its own list, and goes back to the month.
   await month.getByRole('link', { name: /^Thursday, November 12:/ }).click();
-  await expect(page).toHaveURL(/#\/calendar\?m=2026-11&day=2026-11-12$/);
+  await expect(page).toHaveURL(/#\/calendar\?month=2026-11&day=2026-11-12$/);
   await expect(month.getByRole('link', { name: /^Thursday, November 12:/ })).toHaveAttribute('aria-current', 'date');
   const day = card(page, 'Thursday, November 12');
   await expect(day.locator('.row-title')).toHaveText(['Lisinopril 10 mg tablet, 90 days', 'Newborn visit']);
@@ -48,21 +48,32 @@ test('home leads to the calendar, which opens on this month with a lane per pers
 test('a private event stays off the Everyone calendar until shown, and on its person’s own', async ({ page }) => {
   await open(page, '#/calendar');
   await page.getByRole('link', { name: 'Previous month: October 2026' }).click();
-  await expect(page).toHaveURL(/#\/calendar\?m=2026-10$/);
+  await expect(page).toHaveURL(/#\/calendar\?month=2026-10$/);
   const list = card(page, 'What happened in October 2026');
   await expect(list.locator('.row-title')).toHaveText(['Lab tests', 'Lab tests', 'Office visit']);
   const notice = page.locator('.cal-private');
   await expect(notice).toContainText('1 private event (mental health) is kept off this shared view.');
   await expect(notice).toContainText('This is discretion, not security');
 
+  // The button keeps the keyboard, and a screen reader hears what changed.
   await notice.getByRole('button', { name: 'Show them' }).click();
   await expect(list.locator('.row', { hasText: 'Counseling session' }).locator('.chip')).toHaveText('Private');
-  await page.locator('.cal-private').getByRole('button', { name: 'Hide them again' }).click();
+  await expect(page.getByRole('button', { name: 'Hide them again' })).toBeFocused();
+  await expect(page.locator('.calendar').getByRole('status')).toHaveText('1 private event now shown.');
+  await page.keyboard.press('Enter');
   await expect(list.locator('.row', { hasText: 'Counseling session' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Show them' })).toBeFocused();
+  await expect(page.locator('.calendar').getByRole('status')).toHaveText('1 private event hidden again.');
+
+  // Shown, then the calendar is left: back on it, they are hidden again.
+  await page.getByRole('button', { name: 'Show them' }).click();
+  await page.goto('./?demo&next#/');
+  await page.goto('./?demo&next#/calendar?month=2026-10');
+  await expect(page.locator('.cal-private')).toContainText('1 private event (mental health) is kept off this shared view.');
 
   // Sam's own calendar shows it, marked, with no notice.
   await page.getByRole('group', { name: 'Whose calendar' }).getByRole('link', { name: 'Sam Example' }).click();
-  await expect(page).toHaveURL(new RegExp(`#/calendar\\?m=2026-10&who=${SAM}$`));
+  await expect(page).toHaveURL(new RegExp(`#/calendar\\?month=2026-10&who=${SAM}$`));
   await expect(page.locator('.cal-private')).toHaveCount(0);
   const own = card(page, 'What happened in October 2026');
   await expect(own.locator('.row-title')).toHaveText(['Counseling session', 'Lab tests']);
@@ -90,7 +101,7 @@ test('the list has every event by month, and a person’s overview opens theirs'
 test('the month fits a 360px phone in the dark theme', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 780 });
   await page.emulateMedia({ colorScheme: 'dark' });
-  await open(page, '#/calendar?m=2026-11');
+  await open(page, '#/calendar?month=2026-11');
   await expect(page.locator('.cal-month h2')).toHaveText('November 2026');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
   const lane = await page.locator('.cal-lane.lane-3 .mark-bar').first().evaluate((el) => getComputedStyle(el).backgroundColor);

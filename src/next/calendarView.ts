@@ -9,15 +9,19 @@ import { h, icon } from '../ui/dom';
 import { formatMoney, fromCents } from '../model/records';
 import { count, dateText, localDay } from '../ui/format';
 import { href, type Route } from '../ui/router';
-import { barPart, householdEvents, inMonth, isMonth, markShape, monthOf, monthWeeks, onDay, shiftMonth, shown, type PersonEvent } from './calendar';
+import { barPart, householdEvents, inMonth, isMonth, listPage, markShape, monthOf, monthWeeks, onDay, shiftMonth, shown, type PersonEvent } from './calendar';
 import { PRIVATE_AREAS } from './event';
 import { eventNumber, eventRoute, headline } from './eventView';
 
 type CalendarRoute = Extract<Route, { name: 'calendar' }>;
 
-// Shown for this visit to the page only: never stored, so a reload keeps
-// private events off the shared screens again.
+// Shown while the calendar stays open: never stored, and hidden again when
+// the calendar is left (the app calls hidePrivateEvents) or the page reloads.
 let showPrivate = false;
+
+export function hidePrivateEvents(): void {
+  showPrivate = false;
+}
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -156,7 +160,8 @@ function monthView(route: CalendarRoute, events: PersonEvent[], laneOf: Map<stri
 
   const day = route.day && monthOf(route.day) === month ? route.day : undefined;
   const listed = day ? onDay(these, day) : these;
-  const days = new Set(these.flatMap((x) => monthWeeks(month).flat().filter((d) => monthOf(d) === month && x.event.start <= d && d <= x.event.end))).size;
+  const monthDays = monthWeeks(month).flat().filter((d) => monthOf(d) === month);
+  const days = new Set(these.flatMap((x) => monthDays.filter((d) => x.event.start <= d && d <= x.event.end))).size;
   const summary = these.length ? [`${kindsText(these)} on ${count(days, 'day')}`, shareText(these)].filter(Boolean).join(' · ') : null;
   const list = card(
     { title: day ? dayLabel(day) : `What happened in ${monthLabel(month)}` },
@@ -171,15 +176,20 @@ function monthView(route: CalendarRoute, events: PersonEvent[], laneOf: Map<stri
 
 function listView(route: CalendarRoute, events: PersonEvent[]): HTMLElement[] {
   if (!events.length) return [card({}, empty('Nothing recorded yet.'))];
-  const months = [...new Set(events.map((x) => monthOf(x.event.start)))];
-  return months.map((m) => {
-    const these = events.filter((x) => monthOf(x.event.start) === m);
-    return card(
-      { title: monthLabel(m) },
-      h('p', { class: 'small muted' }, `${[kindsText(these), shareText(these)].filter(Boolean).join(' · ')}.`),
-      these.map((x) => eventRow(x, { person: !route.who })),
-    );
-  });
+  const { months, earlier } = listPage(events, route.before);
+  const page = (before?: string): Route => ({ name: 'calendar', view: 'list', ...(before ? { before } : {}), ...(route.who ? { who: route.who } : {}) });
+  return [
+    ...(route.before ? [h('p', { class: 'small' }, link(page(), 'Newest months'))] : []),
+    ...months.map((m) => {
+      const these = events.filter((x) => monthOf(x.event.start) === m);
+      return card(
+        { title: monthLabel(m) },
+        h('p', { class: 'small muted' }, `${[kindsText(these), shareText(these)].filter(Boolean).join(' · ')}.`),
+        these.map((x) => eventRow(x, { person: !route.who })),
+      );
+    }),
+    ...(earlier ? [h('p', { class: 'small' }, link(page(earlier), `Earlier months, before ${monthLabel(earlier)}`))] : []),
+  ];
 }
 
 export function calendarView(ctx: Ctx, route: CalendarRoute): HTMLElement {
@@ -190,11 +200,10 @@ export function calendarView(ctx: Ctx, route: CalendarRoute): HTMLElement {
   const r: CalendarRoute = { ...route, ...(who ? { who } : { who: undefined }) };
   const all = householdEvents(store.household, (id) => store.index(id), today);
   const laneOf = new Map(people.map((p, i) => [p.id, i]));
-  const { events } = shown(all, who, showPrivate);
-  const month = isMonth(r.month) ? r.month : monthOf(today);
-  const inView = r.view === 'list' ? all : inMonth(all, month);
-  const { hidden } = shown(inView, who, showPrivate);
   const loading = people.filter((p) => !store.index(p.id) && !store.indexErrors.has(p.id)).length;
+  const month = isMonth(r.month) ? r.month : monthOf(today);
+  // What this view would show with private events: the month's, or the list's.
+  const inView = r.view === 'list' ? all : inMonth(all, month);
 
   const views = h(
     'div',
@@ -218,25 +227,42 @@ export function calendarView(ctx: Ctx, route: CalendarRoute): HTMLElement {
     }),
   );
 
-  const privateShown = !who && showPrivate ? inView.filter((x) => x.private) : [];
+  // Showing or hiding private events redraws what is below; this says what changed. It is never redrawn itself.
+  const said = h('p', { class: 'sr-only', role: 'status', 'aria-live': 'polite' });
+  const body = h('div', { class: 'stack' });
   const areas = (xs: PersonEvent[]) => [...new Set(xs.map((x) => PRIVATE_AREAS[x.private!] ?? PRIVATE_AREAS.household!))].join(', ').toLowerCase();
-  const toggle = (on: boolean) =>
-    button(on ? 'Show them' : 'Hide them again', () => {
-      showPrivate = on;
-      ctx.render();
-    }, { small: true });
-  const privacy =
-    hidden || privateShown.length
-      ? h(
-          'div',
-          { class: 'cal-private' },
-          hidden
-            ? h('p', null, `${count(hidden, 'private event')} (${areas(inView.filter((x) => x.private))}) ${hidden === 1 ? 'is' : 'are'} kept off this shared view. Each shows on its person’s own calendar.`)
-            : h('p', null, `Private events are shown here until you leave this page or reload.`),
-          h('p', { class: 'small muted' }, 'This is discretion, not security: everyone the Drive folder is shared with can still read those files.'),
-          toggle(!!hidden),
-        )
-      : null;
+
+  const draw = (focusToggle = false) => {
+    const { events } = shown(all, who, showPrivate);
+    const { hidden } = shown(inView, who, showPrivate);
+    const privateShown = !who && showPrivate ? inView.filter((x) => x.private) : [];
+    const toggle = (on: boolean) =>
+      button(
+        on ? 'Show them' : 'Hide them again',
+        () => {
+          showPrivate = on;
+          const n = inView.filter((x) => x.private).length;
+          said.textContent = on ? `${count(n, 'private event')} now shown.` : `${count(n, 'private event')} hidden again.`;
+          draw(true);
+        },
+        { small: true },
+      );
+    const privacy =
+      hidden || privateShown.length
+        ? h(
+            'div',
+            { class: 'cal-private' },
+            hidden
+              ? h('p', null, `${count(hidden, 'private event')} (${areas(inView.filter((x) => x.private))}) ${hidden === 1 ? 'is' : 'are'} kept off this shared view. Each shows on its person’s own calendar.`)
+              : h('p', null, 'Private events are shown here until you leave the calendar or reload.'),
+            h('p', { class: 'small muted' }, 'This is discretion, not security: everyone the Drive folder is shared with can still read those files.'),
+            toggle(!!hidden),
+          )
+        : null;
+    body.replaceChildren(...[privacy, ...(r.view === 'list' ? listView(r, events) : monthView(r, events, laneOf, people, today))].filter((x): x is HTMLElement => !!x));
+    if (focusToggle) body.querySelector<HTMLButtonElement>('.cal-private button')?.focus();
+  };
+  draw();
 
   return h(
     'div',
@@ -245,8 +271,8 @@ export function calendarView(ctx: Ctx, route: CalendarRoute): HTMLElement {
     views,
     whose,
     loading ? h('p', { class: 'small muted' }, `Still loading the records of ${count(loading, 'person', 'people')}.`) : null,
-    privacy,
-    ...(r.view === 'list' ? listView(r, events) : monthView(r, events, laneOf, people, today)),
+    said,
+    body,
   );
 }
 

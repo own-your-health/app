@@ -502,13 +502,13 @@ app without it is unchanged.
   tests, a ring for a pharmacy trip or vaccine, a bar across the days of an
   emergency room visit or a hospital stay) and the month's events listed
   below with one number each; or every event as one list, by month. A day
-  opens its own list.
+  opens its own list. The list shows twelve months at a time.
 - **Private events.** medrec marks a record or paper private from its codes
   (`private: true`, with `private_area`). A private event shows on its
   person's own pages and calendar, marked Private. The Everyone calendar
-  and Home leave it off and say how many they left off; Show them brings
-  them back until the page is left or reloaded, and nothing about it is
-  stored. The app says this is discretion, not security: everyone the Drive
+  and Home leave it off. The calendar says how many it left off and in
+  which area, and Show them brings them back there until the calendar is
+  left or the page reloaded; nothing about it is stored. The app says this is discretion, not security: everyone the Drive
   folder is shared with can still read the files.
 - A visit's address names a record in it. Any record or paper of the visit
   opens it, so a saved address still works after records arrive and the

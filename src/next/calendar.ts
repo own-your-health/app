@@ -97,6 +97,19 @@ export function inMonth(events: PersonEvent[], month: string): PersonEvent[] {
   return events.filter((x) => x.event.start <= last && x.event.end >= first);
 }
 
+/** How many months the list shows at a time. */
+export const LIST_MONTHS = 12;
+
+/**
+ * One page of the list: the newest `size` months with events, or those before
+ * `before`; `earlier` is where the next page starts when there is one.
+ */
+export function listPage(events: PersonEvent[], before: string | undefined, size = LIST_MONTHS): { months: string[]; earlier?: string } {
+  const all = [...new Set(events.map((x) => monthOf(x.event.start)))].filter((m) => !before || m < before);
+  const months = all.slice(0, size);
+  return all.length > size ? { months, earlier: months.at(-1)! } : { months };
+}
+
 /** Where a bar's day sits in its event: the first day, the last, one between, or a single day. */
 export function barPart(e: CareEvent, day: string): 'start' | 'end' | 'mid' | 'one' {
   if (e.start === e.end) return 'one';
