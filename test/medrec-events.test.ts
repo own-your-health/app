@@ -216,6 +216,11 @@ describe('naming an event', () => {
   it('heads a visit with its kind, says what it was in plain words, and keeps a billing descriptor for Details', () => {
     const visit = events('Robin Example').find((e) => e.start === '2026-11-18')!;
     expect([visit.title, visit.what, visit.place, visit.descriptors]).toEqual(['Office visit', 'Blood pressure follow-up', 'Example Health Main Clinic', ['OFFICE VISIT EST PATIENT LEVEL 3']]);
+    // Named again once its records say it plainly, it keeps no descriptor.
+    const again = structuredClone(visit);
+    again.visits[0]!.record.display = 'Blood pressure check';
+    nameEvent(again, household, id('Robin Example'));
+    expect([again.what, again.descriptors]).toEqual(['Blood pressure check', undefined]);
   });
 
   it('never makes a portal platform’s name a place', () => {

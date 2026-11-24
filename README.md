@@ -487,7 +487,8 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   (`MEDREC=<path to medrec>`, else `medrec` on the PATH), under a scratch
   home and profile with only the variables it needs and the time zone set
   to `America/New_York`, so the machine's own medrec setup is never touched and every
-  machine writes the same views. Only `views/views.json` and each person's
+  machine writes the same views. CI runs medrec 0.9.1's Linux build,
+  checked against its SHA-256. Only `views/views.json` and each person's
   `events.json` are kept: the app reads no other view. `manifest.json`
   gives each file's MD5, as Drive would, for the store's freshness check.
 - The PNG icons in `public/` (for the manifest and the iPhone Home Screen) are
