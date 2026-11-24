@@ -101,4 +101,26 @@ describe('the visits by cost', () => {
     expect(last.every((c) => c.event.event.start < '2026-07-01')).toBe(true);
     expect(last.some((c) => c.event.event.start === '2026-05-20')).toBe(true);
   });
+
+  it('orders them by what the network took off, each with what was charged', () => {
+    const cuts = eventCosts(events, plan, 'plan', 'discount');
+    const said = cuts.filter((c) => c.discount !== undefined);
+    expect(said.map((c) => c.discount)).toEqual([...said.map((c) => c.discount!)].sort((a, b) => b - a));
+    expect(said.every((c) => c.charged! - c.discount! === c.price)).toBe(true);
+    expect(cuts.slice(said.length).every((c) => c.discount === undefined)).toBe(true);
+    expect([said[0]!.event.event.start, said[0]!.charged, said[0]!.discount]).toEqual(['2026-09-12', 477900, 339580]);
+  });
+
+  it('says no discount when a claim does not say what was charged, or the charge is below the price', () => {
+    const er = events.find((x) => x.event.start === '2026-09-12' && x.money.billed !== undefined)!;
+    const claim = er.event.claims[0]!;
+    // One more claim with no totals: the visit's charge would leave it out and look like a smaller discount.
+    const silent = { ...er, event: { ...er.event, claims: [...er.event.claims, { ...claim, record: { ...claim.record, fields: {} } }] } };
+    const under = { ...er, money: { ...er.money, billed: er.money.price! - 100, discount: -100 } };
+    const costs = eventCosts([silent, under], plan, 'plan', 'discount');
+    expect(costs.map((c) => [c.charged, c.discount])).toEqual([
+      [undefined, undefined],
+      [undefined, undefined],
+    ]);
+  });
 });

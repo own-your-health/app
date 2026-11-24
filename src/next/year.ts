@@ -4,6 +4,7 @@
 // them, and the visits by what they cost. The figures are the claims' own;
 // medrec's bills.json will not change them.
 
+import { claimCents } from '../model/claims';
 import { balances, dayInPeriod, type CostLine, type PeriodId } from '../model/costs';
 import type { MedRecord } from '../model/types';
 import type { PersonEvent } from './calendar';
@@ -116,21 +117,31 @@ export function planLimits(lines: CostLine[], records: Map<string, MedRecord>): 
   return out;
 }
 
-/** A visit's cost: its network price (what the plan paid and your share), in cents. */
+/** A visit's cost: its network price (what the plan paid and your share), in cents, and what the network took off what was charged. */
 export interface EventCost {
   event: PersonEvent;
   price: number;
   planPaid: number;
   share: number;
+  /** What the providers charged, when every claim says and it is no less than the network price. */
+  charged?: number;
+  /** What the network took off: charged less the network price, when `charged` is known. */
+  discount?: number;
   /** A pharmacy fill: paid at the counter. */
   fill: boolean;
 }
 
-export type CostOrder = 'price' | 'share';
+export type CostOrder = 'price' | 'share' | 'discount';
+
+/** What a visit's providers charged: only when every claim says, since one that does not would make the discount look smaller, and only when it covers the network price. */
+function charged(x: PersonEvent): number | undefined {
+  const { billed, discount } = x.money;
+  return billed !== undefined && discount !== undefined && discount >= 0 && x.event.claims.every((c) => claimCents(c.record).billed !== undefined) ? billed : undefined;
+}
 
 /**
- * The visits of a period that carry a network price, most costly first, or
- * by your share. `lines` are the period's: a visit is in a plan year when it
+ * The visits of a period that carry a network price, most costly first, by
+ * your share, or by what the network took off (those that say last). `lines` are the period's: a visit is in a plan year when it
  * falls in one of its person's plan years among them.
  */
 export function eventCosts(events: PersonEvent[], lines: CostLine[], period: PeriodId, order: CostOrder = 'price'): EventCost[] {
@@ -138,6 +149,16 @@ export function eventCosts(events: PersonEvent[], lines: CostLine[], period: Per
   for (const l of lines) byPerson.set(l.person, [...(byPerson.get(l.person) ?? []), l]);
   return events
     .filter((x) => x.money.price !== undefined && dayInPeriod(x.event.start, period, byPerson.get(x.person.id) ?? []))
-    .map((x) => ({ event: x, price: x.money.price!, planPaid: x.money.planPaid ?? 0, share: x.money.share ?? 0, fill: paidAtCounter(x.event) }))
-    .sort((a, b) => (order === 'share' ? b.share - a.share || b.price - a.price : b.price - a.price || b.share - a.share) || b.event.event.start.localeCompare(a.event.event.start));
+    .map((x): EventCost => ({
+      event: x,
+      price: x.money.price!,
+      planPaid: x.money.planPaid ?? 0,
+      share: x.money.share ?? 0,
+      ...(charged(x) !== undefined ? { charged: x.money.billed!, discount: x.money.discount! } : {}),
+      fill: paidAtCounter(x.event),
+    }))
+    .sort((a, b) => {
+      const by = order === 'share' ? b.share - a.share || b.price - a.price : order === 'discount' ? (b.discount ?? -1) - (a.discount ?? -1) || b.price - a.price : b.price - a.price || b.share - a.share;
+      return by || b.event.event.start.localeCompare(a.event.event.start);
+    });
 }

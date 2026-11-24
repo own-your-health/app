@@ -2424,6 +2424,10 @@ a.cal-day:hover .cal-date {
   margin-top: 0;
 }
 
+.cost-row-strip .cost-off {
+  margin: 0;
+}
+
 .limit-line p {
   margin: 6px 0 0;
 }

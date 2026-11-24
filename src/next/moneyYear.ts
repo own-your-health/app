@@ -22,6 +22,8 @@ import { eventCosts, monthMoney, planLimits, yearMoney, type CostOrder, type Eve
 
 /** How many visits the year lists before linking to them all. */
 export const BIGGEST = 5;
+/** How many visits the year lists by what the network took off. */
+export const NETWORK = 3;
 
 const PERIOD_WORDS: Record<string, string> = { plan: 'this plan year', 'plan-1': 'last plan year', all: 'every year' };
 const periodWords = (p: Period | undefined) => (p ? (PERIOD_WORDS[p.id] ?? p.label) : 'this plan year');
@@ -232,17 +234,34 @@ function costsOf(ctx: Ctx, d: YearData, who: string | undefined, order: CostOrde
   return { shown, kept: all.filter((c) => c.event.private).map((c) => c.event.event.id) };
 }
 
+/** "$4,181.40 off $6,417.00 charged, 65%": what the network took off, against what was charged. */
+export function offText(discount: number, charged: number): string {
+  if (!discount) return `Nothing off the ${money(charged)} charged`;
+  return `${money(discount)} off ${money(charged)} charged, ${Math.round((discount / charged) * 100)}%`;
+}
+
 function costRow(c: EventCost, max: number, who: string | undefined, order: CostOrder): HTMLElement {
   const x = c.event;
   return row({
     route: eventRoute(x.person.id, x.event.id),
     title: x.event.title,
     meta: [eventWhen(x.event), x.event.place, who ? null : x.person.name].filter(Boolean).join(' · '),
-    aside: num(order === 'share' ? c.share : c.price),
-    extra: h('div', { class: 'cost-row-strip' }, stackStrip({ planPaid: c.planPaid, share: c.share }, max), privateChip(x.private)),
+    aside: num(order === 'share' ? c.share : order === 'discount' ? (c.discount ?? 0) : c.price),
+    extra: h(
+      'div',
+      { class: 'cost-row-strip' },
+      order === 'discount' && c.discount !== undefined && c.charged !== undefined ? h('p', { class: 'small muted cost-off' }, offText(c.discount, c.charged)) : stackStrip({ planPaid: c.planPaid, share: c.share }, max),
+      privateChip(x.private),
+    ),
   });
 }
 
+/** The visits the network took something off, most first; those whose claims do not say in full what was charged are left out. */
+const discounted = (costs: EventCost[]) => costs.filter((c) => !c.fill && c.discount !== undefined && c.discount > 0);
+
+const ORDER_WORDS: Record<CostOrder, string> = { price: 'Network price', share: 'Your share', discount: 'Network discount' };
+
+const DISCOUNT_NOTE = 'What the providers charged above the plan’s network price. The plan and you pay the network price; a provider in the plan’s network does not bill you the rest.';
 const PRICE_NOTE = 'Network price: what the plan agreed to pay the provider, its part and yours.';
 const costLegend = () =>
   legend([
@@ -265,6 +284,7 @@ export function overviewPage(ctx: Ctx, route: MoneyRoute, who: string | undefine
   const limits = planPeriod(d.chosen) ? planLimits(d.lines, d.records) : [];
   const costs = costsOf(ctx, d, who, 'price');
   const top = costs.shown.slice(0, BIGGEST);
+  const cuts = discounted(costsOf(ctx, d, who, 'discount').shown).slice(0, NETWORK);
   const max = Math.max(0, ...top.map((c) => c.price));
   const eventsRoute: Route = { name: 'money', view: 'events', ...(who ? { who } : {}), ...(route.period ? { period: route.period } : {}) };
   const explorer: Route = { name: 'costs', ...(d.chosen ? { period: d.chosen.id } : {}), ...(who ? { only: [{ by: 'person' as const, key: who }] } : {}) };
@@ -290,6 +310,14 @@ export function overviewPage(ctx: Ctx, route: MoneyRoute, who: string | undefine
           h('p', { class: 'small' }, link(eventsRoute, `Where the money went: all ${costs.shown.length}, by price or by your share`)),
         )
       : null,
+    cuts.length
+      ? card(
+          { title: 'Where the network took off most' },
+          cuts.map((c) => costRow(c, 0, who, 'discount')),
+          h('p', { class: 'small muted' }, DISCOUNT_NOTE),
+          h('p', { class: 'small' }, link({ ...eventsRoute, sort: 'discount' }, 'Every visit, by what the network took off')),
+        )
+      : null,
     privateNote(who ? [] : [...bills.kept, ...costs.kept]),
     h('p', { class: 'small' }, link(explorer, 'Every claim, by provider, kind of care and month')),
   );
@@ -298,20 +326,25 @@ export function overviewPage(ctx: Ctx, route: MoneyRoute, who: string | undefine
 /** Where the money went: every visit of the period, by network price or by your share; fills paid at the counter as one line. */
 export function eventsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLElement {
   const d = yearData(ctx, route, who);
-  const order: CostOrder = route.sort === 'share' ? 'share' : 'price';
+  const order: CostOrder = route.sort ?? 'price';
   const costs = costsOf(ctx, d, who, order);
-  const visits = costs.shown.filter((c) => !c.fill);
-  const fills = costs.shown.filter((c) => c.fill);
-  const fillSum = { price: fills.reduce((t, c) => t + c.price, 0), planPaid: fills.reduce((t, c) => t + c.planPaid, 0), share: fills.reduce((t, c) => t + c.share, 0) };
-  const key = (c: { price: number; share: number }) => (order === 'share' ? c.share : c.price);
+  const all = costs.shown.filter((c) => !c.fill);
+  // By what the network took off, a visit whose claims do not say in full what was charged has no place; it is counted.
+  const byDiscount = order === 'discount';
+  const visits = byDiscount ? all.filter((c) => c.discount !== undefined) : all;
+  const fills = costs.shown.filter((c) => c.fill && (!byDiscount || c.discount !== undefined));
+  const unsaid = costs.shown.filter((c) => c.discount === undefined).length;
+  const sum = (k: 'price' | 'planPaid' | 'share' | 'discount' | 'charged') => fills.reduce((t, c) => t + (c[k] ?? 0), 0);
+  const fillSum = { price: sum('price'), planPaid: sum('planPaid'), share: sum('share'), discount: sum('discount'), charged: sum('charged') };
+  const key = (c: { price: number; share: number; discount?: number }) => (order === 'share' ? c.share : byDiscount ? (c.discount ?? 0) : c.price);
   const max = Math.max(0, ...visits.map((c) => c.price), fills.length ? fillSum.price : 0);
   const sortChips = h(
     'div',
     { class: 'chips', role: 'group', 'aria-label': 'Order by' },
-    (['price', 'share'] as const).map((o) => {
+    (['price', 'share', 'discount'] as const).map((o) => {
       const on = o === order;
-      const to: Route = { name: 'money', view: 'events', ...(who ? { who } : {}), ...(route.period ? { period: route.period } : {}), ...(o === 'share' ? { sort: 'share' as const } : {}) };
-      return h('a', { class: ['filter', on ? 'filter-on' : null], href: href(to), 'aria-current': on ? 'page' : false }, o === 'share' ? 'Your share' : 'Network price');
+      const to: Route = { name: 'money', view: 'events', ...(who ? { who } : {}), ...(route.period ? { period: route.period } : {}), ...(o !== 'price' ? { sort: o } : {}) };
+      return h('a', { class: ['filter', on ? 'filter-on' : null], href: href(to), 'aria-current': on ? 'page' : false }, ORDER_WORDS[o]);
     }),
   );
   const pharmacies = [...new Set(fills.map((c) => c.event.event.place).filter(Boolean))];
@@ -320,7 +353,7 @@ export function eventsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined)
         title: count(fills.length, 'prescription fill'),
         meta: [pharmacies.join(', '), 'paid at the counter'].filter(Boolean).join(' · '),
         aside: num(key(fillSum)),
-        extra: h('div', { class: 'cost-row-strip' }, stackStrip(fillSum, max)),
+        extra: h('div', { class: 'cost-row-strip' }, byDiscount ? h('p', { class: 'small muted cost-off' }, offText(fillSum.discount, fillSum.charged)) : stackStrip(fillSum, max)),
       })
     : null;
   return h(
@@ -330,7 +363,14 @@ export function eventsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined)
     yearChips(route, d, who),
     sortChips,
     visits.length || fills.length
-      ? card({ class: 'money-events' }, costLegend(), visits.map((c) => costRow(c, max, who, order)), fillRow, h('p', { class: 'small muted' }, PRICE_NOTE))
+      ? card(
+          { class: 'money-events' },
+          byDiscount ? null : costLegend(),
+          visits.map((c) => costRow(c, max, who, order)),
+          fillRow,
+          h('p', { class: 'small muted' }, byDiscount ? DISCOUNT_NOTE : PRICE_NOTE),
+          byDiscount && unsaid ? h('p', { class: 'small muted' }, `${count(unsaid, 'visit’s claims do', 'visits’ claims do')} not say in full what was charged, so ${unsaid === 1 ? 'it is' : 'they are'} left off this order.`) : null,
+        )
       : card({}, h('p', null, `No visits with a price in ${periodWords(d.chosen)}.`)),
     privateNote(who ? [] : costs.kept),
   );
