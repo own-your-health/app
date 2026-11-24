@@ -24,6 +24,7 @@ import { sourcesView } from './views/sources';
 import { searchView } from './search';
 import { calendarView, hidePrivateEvents } from '../next/calendarView';
 import { moneyView } from '../next/moneyView';
+import { healthView, leaveOutPrivate } from '../next/healthView';
 import { eventView } from '../next/eventView';
 
 /** What the app says when a renewal interrupted a write the person asked for. */
@@ -424,8 +425,10 @@ export class App {
   }
 
   private onRoute(): void {
-    // Private events shown on the calendar are hidden again once it is left.
-    if (parseRoute(location.hash).name !== 'calendar') hidePrivateEvents();
+    // Private events shown on the calendar, and private items on a doctor’s sheet, are left off again once the page is left.
+    const now = parseRoute(location.hash);
+    if (now.name !== 'calendar') hidePrivateEvents();
+    if (now.name !== 'health' || now.view !== 'doctor') leaveOutPrivate();
     if (this.phase.name === 'ready') {
       this.render();
       window.scrollTo(0, 0);
@@ -554,6 +557,9 @@ export class App {
       case 'event':
         if (ctx.next) return eventView(ctx, r.person, r.id);
         return messageView('Page not found', 'Visit pages are part of the redesign. Add ?next to the address to try it.', [h('a', { class: 'button button-primary', href: '#/' }, 'Home')]);
+      case 'health':
+        if (ctx.next) return healthView(ctx, r);
+        return messageView('Page not found', 'Health is part of the redesign. Add ?next to the address to try it.', [h('a', { class: 'button button-primary', href: '#/' }, 'Home')]);
       case 'money':
         if (ctx.next) return moneyView(ctx, r);
         return messageView('Page not found', 'Money is part of the redesign. Add ?next to the address to try it.', [h('a', { class: 'button button-primary', href: '#/' }, 'Home')]);

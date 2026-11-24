@@ -62,6 +62,8 @@ export type Route =
   // Money (?next), for everyone or one person: the year (in a `period` as the costs screen's), the bills, those worth a
   // call (and the bill a row named), or where the money went (by network price, or by your share).
   | { name: 'money'; view?: MoneyView; who?: string; bill?: string; period?: string; sort?: 'share' }
+  // Health (?next): each person's standing, one person's page, or the sheet to hand their doctor.
+  | { name: 'health'; view?: 'doctor'; who?: string }
   | { name: 'huishouden'; hh: string }
   | { name: 'not_found' };
 
@@ -88,6 +90,10 @@ export function parseRoute(hash: string): Route {
   if (head === 'sources' && parts.length === 1) return { name: 'sources' };
   if (head === 'costs' && parts.length === 1) return costsRoute(query);
   if (head === 'calendar' && parts.length === 1) return calendarRoute(query);
+  if (head === 'health' && (parts.length === 1 || (parts.length === 2 && a === 'doctor'))) {
+    const who = query.get('who') ?? '';
+    return { name: 'health', ...(a === 'doctor' ? { view: 'doctor' as const } : {}), ...(ID.test(who) ? { who } : {}) };
+  }
   if (head === 'money' && (parts.length === 1 || (parts.length === 2 && (MONEY_VIEWS as readonly string[]).includes(a ?? '')))) {
     const who = query.get('who') ?? '';
     const bill = query.get('bill') ?? '';
@@ -211,6 +217,8 @@ export function href(route: Route): string {
       return `#/calendar${calendarQuery(route)}`;
     case 'money':
       return `#/money${route.view ? `/${route.view}` : ''}${moneyQuery(route)}`;
+    case 'health':
+      return `#/health${route.view ? `/${route.view}` : ''}${route.who ? `?${new URLSearchParams({ who: route.who })}` : ''}`;
     case 'search':
       return route.query ? `#/search?${searchQuery(route.query, route.words)}` : '#/search';
     case 'source':

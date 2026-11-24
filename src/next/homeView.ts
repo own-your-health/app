@@ -87,7 +87,7 @@ function payRows(p: Person, bills: OpenBill[], own: boolean): Dated[] {
 
 const inDays = (days: number) => (days === 0 ? 'Today' : days > 0 ? `In ${count(days, 'day')}` : `${count(-days, 'day')} ago`);
 
-function vaccinesDueRow(p: Person, v: VaccineNeeds, own: boolean): HTMLElement | null {
+export function vaccinesDueRow(p: Person, v: VaccineNeeds, own: boolean): HTMLElement | null {
   const names = [...v.due.map((d) => `${d.name}, dose ${d.next.dose}`), ...(v.flu ? [`Flu, ${v.flu.season} season`] : [])];
   if (!names.length) return null;
   return needRow(names.length > 1 ? 'Vaccines due' : 'Vaccine due', 'attention', {
@@ -97,7 +97,7 @@ function vaccinesDueRow(p: Person, v: VaccineNeeds, own: boolean): HTMLElement |
   });
 }
 
-function visitRow(p: Person, v: DoseVisit, own: boolean): HTMLElement {
+export function visitRow(p: Person, v: DoseVisit, own: boolean): HTMLElement {
   const one = v.doses.length === 1 ? v.doses[0]! : undefined;
   return needRow('Coming up', 'soon', {
     route: { name: 'person', person: p.id, section: 'immunizations' },
@@ -107,7 +107,7 @@ function visitRow(p: Person, v: DoseVisit, own: boolean): HTMLElement {
   });
 }
 
-function refillRow(p: Person, r: Refill, own: boolean): HTMLElement {
+export function refillRow(p: Person, r: Refill, own: boolean): HTMLElement {
   const f = r.medicine.lastFill!;
   return needRow('Refill', r.days < 0 ? 'attention' : 'soon', {
     route: { name: 'item', person: p.id, id: r.medicine.latest.id },
@@ -258,5 +258,5 @@ export function nextHome(ctx: Ctx, signIn: HTMLElement | null): HTMLElement[] {
     needs.push(n);
     stands.push(standing(n.standing, today));
   }
-  return [needsCard(needs)!, ...(signIn ? [signIn] : []), card({ title: 'Where everyone stands' }, stands), recentCard(ctx)];
+  return [needsCard(needs)!, ...(signIn ? [signIn] : []), card({ title: 'Where everyone stands' }, stands, h('p', { class: 'small' }, link({ name: 'health' }, 'Health: what each person has now and what is worth a look'))), recentCard(ctx)];
 }

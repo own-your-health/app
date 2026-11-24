@@ -542,6 +542,23 @@ app without it is unchanged.
   them. One person's view lists them, marked. medrec 0.9.1 will add Mark
   paid, receipt amounts, the bill's phone number and `bills.json`. Reading
   that file will replace `src/next/money.ts`.
+- **Health** (`#/health`, from Where everyone stands on Home) gives each
+  person a card: what the records can know about them (doctors' records and
+  claims, doctors' records only, or claims and papers only), what is due,
+  what is current and which results are worth a look. A person's page
+  (`#/health?who=`) runs in a fixed order: Due, then Current (conditions,
+  medicines and allergies, each with when it was last recorded and where
+  from), then Worth noticing (each test whose newest result is out of range
+  and from the last two years, with its trend), then Recently. Quiet comes
+  last, folded: the past conditions, medicines and allergies, the tests in
+  range, older results out of range and the vaccines given, counted, each
+  linking to all of them. **Hand to a doctor** (`#/health/doctor?who=`) is
+  a sheet in a clinician's terms: allergies, medicines, problems with their
+  ICD-10 codes, vaccines, two years of labs and vital signs as tables, and
+  the care team (who was seen in two years, and who prescribes the current
+  medicines). It prints on its own. Private items stay off everyone's view,
+  counted. The sheet leaves them off, and any doctor known only from them,
+  until Include brings them back; leaving the sheet leaves them off again.
 - **Calendar** (`#/calendar`, and Recently on Home): the household's
   events a month at a time, with a lane per person (a dot for a visit or
   tests, a ring for a pharmacy trip or vaccine, a bar across the days of an
@@ -555,7 +572,8 @@ app without it is unchanged.
   which area, and Show them brings them back there until the calendar is
   left or the page reloaded; nothing about it is stored. Home counts the
   private items it leaves off, bills and refills included, without naming
-  them; the person's own overview lists them, marked. The app says this is
+  them; the person's own overview lists them, marked. Health does the
+  same, and its doctor's sheet leaves them off until included. The app says this is
   discretion, not security: everyone the Drive folder is shared with can
   still read the files.
 - A visit's address names a record in it. Any record or paper of the visit
