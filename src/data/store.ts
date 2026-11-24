@@ -52,6 +52,12 @@ const NO_VIEWS = {
   unreadable: 'medrec’s views could not be read, so nothing says which items are private.',
 };
 
+/** Holds that end once medrec has written, or the folder answers. */
+const MAY_END = new Set<HeldWhy>(['behind', 'arriving', 'unchecked', 'unreadable']);
+
+/** A read that has not ended by then is taken over by the next. */
+const STALLED_MS = 120_000;
+
 export interface PendingRequest {
   file: string;
   request: RefreshRequest;
@@ -77,6 +83,18 @@ export class Store {
   loadedAt = 0;
   /** What the records and medrec's views were when read: another read with the same has nothing new to show. */
   snapshot = '';
+  /** How many requests this app saw waiting have finished, and how many of those the records were read after. */
+  finished = 0;
+  private readUpTo = 0;
+  /** The files of the requests seen waiting whose finish has not been seen, and whether the last look found neither them nor their answer. */
+  private watched = new Map<string, boolean>();
+  private reading: Promise<void> | null = null;
+  private readingSince = 0;
+  private runs = 0;
+  /** Whether views.json was there to read. */
+  private hasViews = false;
+  /** Who has no index.json: nothing is imported for them yet. */
+  private absent = new Set<string>();
   private texts = new Map<string, Promise<PersonText | null>>();
   /** Handled requests of the app's own it has tried to remove once. */
   private tidied = new Set<string>();
@@ -89,30 +107,54 @@ export class Store {
     await Promise.all([this.loadRecords(), this.loadRefreshState()]);
   }
 
+  /** Whether a request this app saw waiting has finished since the records were last read. */
+  get owed(): boolean {
+    return this.finished > this.readUpTo;
+  }
+
   /**
    * Reads the records again: every index, medrec's events and its private
-   * lists, so each person's stay of one moment. False, with nothing changed,
-   * when the read fails or leaves out someone whose records are here.
+   * lists, so each person's stay of one moment. Throws, with nothing changed,
+   * when the read fails or leaves out something that is here. A read already
+   * under way is joined, unless it has stalled; what finished since it began
+   * stays owed.
    */
-  async reload(): Promise<boolean> {
+  reload(): Promise<void> {
+    const now = Date.now();
+    if (this.reading && now - this.readingSince < STALLED_MS) return this.reading;
+    const run = this.readAgain((this.runs += 1));
+    this.reading = run;
+    this.readingSince = now;
+    const ended = () => void (this.reading === run && (this.reading = null));
+    run.then(ended, ended);
+    return run;
+  }
+
+  private async readAgain(run: number): Promise<void> {
+    const upTo = this.finished;
     this.folder.forget('');
     const next = new Store(this.folder);
-    try {
-      await next.loadHousehold();
-      await next.loadRecords();
-    } catch {
-      return false;
+    await next.loadHousehold();
+    await next.loadRecords();
+    // Another read took over from this one, which had stalled.
+    if (run !== this.runs) return;
+    for (const p of next.household.people) {
+      // Someone the household no longer lists is gone; someone it does, with records here, is not without any.
+      const error = next.indexErrors.get(p.id) ?? (next.absent.has(p.id) ? 'Their index is not in the folder.' : undefined);
+      if (error && this.indexes.get(p.id)?.rev) throw new Error(`${p.name}’s records could not be read: ${error}`);
     }
-    if ([...next.indexErrors.keys()].some((id) => this.indexes.has(id))) return false;
+    if (this.hasViews && !next.hasViews && !next.viewsError) throw new Error('medrec’s views are not in the folder.');
     this.household = next.household;
     this.indexes = next.indexes;
+    this.absent = next.absent;
     this.indexErrors = next.indexErrors;
+    this.hasViews = next.hasViews;
     this.viewsError = next.viewsError;
     this.eventsNotes = next.eventsNotes;
     this.texts = next.texts;
     this.loadedAt = next.loadedAt;
     this.snapshot = next.snapshot;
-    return true;
+    this.readUpTo = upTo;
   }
 
   private async loadHousehold(): Promise<void> {
@@ -144,6 +186,7 @@ export class Store {
   private async readViews(): Promise<Record<string, unknown> | null> {
     try {
       const raw = await readJson(this.folder, 'views/views.json');
+      this.hasViews = raw !== null;
       return raw === null ? null : parseViews(raw);
     } catch (e) {
       const newer = e instanceof FolderError && e.kind === 'newer_format';
@@ -160,6 +203,7 @@ export class Store {
         try {
           const raw = await readJson(this.folder, `${p.folder}/index.json`);
           if (raw === null) {
+            this.absent.add(p.id);
             this.indexes.set(p.id, { schema: 'medrec-index/v1', person: p.id, rev: 0, documents: [], records: [], studies: [], imports: [] });
             return;
           }
@@ -262,6 +306,7 @@ export class Store {
 
   /** Reads `_status/status.json` and `_requests/` again. */
   async loadRefreshState(): Promise<void> {
+    const before = new Map(this.pending.map((p) => [p.file, p]));
     this.folder.forget('_status');
     this.folder.forget(REQUESTS_DIR);
     const [statusRaw, entries, doneEntries] = await Promise.all([
@@ -284,13 +329,23 @@ export class Store {
       }
     }
     const pendingFiles = listed.filter((e) => !doneNames.has(e.name));
-    const pending = await Promise.all(
+    const read = await Promise.all(
       pendingFiles.map(async (e) => {
-        const r = parseRequest(await readJson(this.folder, `${REQUESTS_DIR}/${e.name}`).catch(() => null));
-        return r ? { file: e.name, request: r, cancellable: e.deletable } : null;
+        try {
+          const r = parseRequest(await readJson(this.folder, `${REQUESTS_DIR}/${e.name}`));
+          return r ? { file: e.name, request: r, cancellable: e.deletable } : null;
+        } catch {
+          // Still listed, so still waiting, though it did not read this time.
+          return before.get(e.name) ?? null;
+        }
       }),
     );
-    this.pending = pending.filter((x): x is PendingRequest => x !== null);
+    // What the person asked for or cancelled while this was read stands.
+    const now = new Set(this.pending.map((p) => p.file));
+    const waiting = read.filter((x): x is PendingRequest => x !== null && (now.has(x.file) || !before.has(x.file)));
+    const names = new Set(waiting.map((p) => p.file));
+    this.pending = [...waiting, ...this.pending.filter((p) => !before.has(p.file) && !names.has(p.file))];
+    this.watch(new Set(listed.map((e) => e.name)), doneNames);
     // Only the latest outcomes matter on screen; the names sort by time.
     const doneFiles = (doneEntries ?? [])
       .filter((e) => !e.folder && e.name.endsWith('.json'))
@@ -305,6 +360,30 @@ export class Store {
   /** Whether any of the household's items are off shared screens because no list says which are private. */
   anyHeld(): boolean {
     return [...this.indexes.values()].some(isHeld);
+  }
+
+  /** Whether a hold may end by itself soon: medrec is writing, or the read failed. */
+  holdMayEnd(): boolean {
+    return [...this.indexes.values()].some((i) => isHeld(i) && (i.privacy?.kind !== 'held' || MAY_END.has(i.privacy.why)));
+  }
+
+  /** Whether the Mac's answer to a request is still to come, or to be seen. */
+  get waiting(): boolean {
+    return this.pending.length > 0 || this.watched.size > 0;
+  }
+
+  /**
+   * Counts the watched requests that finished: the folder has their answer.
+   * One gone with no answer, at two looks, was cancelled; at one, its answer
+   * may have come between the two listings.
+   */
+  private watch(listed: Set<string>, done: Set<string>): void {
+    for (const [file, gone] of [...this.watched]) {
+      if (done.has(file)) this.finished += 1;
+      if (done.has(file) || (!listed.has(file) && gone)) this.watched.delete(file);
+      else this.watched.set(file, !listed.has(file));
+    }
+    for (const p of this.pending) this.watched.set(p.file, false);
   }
 
   person(id: string): Person | undefined {
@@ -367,12 +446,15 @@ export class Store {
     const file = requestFileName(request);
     await this.folder.createRequest(file, request);
     const p = { file, request, cancellable: true };
-    this.pending.push(p);
+    // A look meanwhile may have listed it already.
+    this.pending = [...this.pending.filter((x) => x.file !== file), p];
+    this.watched.set(file, false);
     return p;
   }
 
   async cancel(p: PendingRequest): Promise<void> {
     await this.folder.deleteRequest(p.file);
     this.pending = this.pending.filter((x) => x.file !== p.file);
+    this.watched.delete(p.file);
   }
 }

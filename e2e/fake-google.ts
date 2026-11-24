@@ -61,6 +61,8 @@ export class FakeGoogle {
   driveCalls = 0;
   /** The path of every file whose content the app read, in order. */
   readonly reads: string[] = [];
+  /** A file whose content Drive fails to give, as it does now and then. */
+  failing: string | null = null;
   /** What the sign-in grants, and so what the token may do; a person can untick a scope on Google's screen. */
   granted = [READ, WRITE];
   /** The client tokeninfo names: another one means a token issued to another app. */
@@ -241,6 +243,7 @@ export class FakeGoogle {
     }
     if (url.searchParams.get('alt') === 'media') {
       this.reads.push(this.pathOf(node));
+      if (this.pathOf(node) === this.failing) return driveError(route, 503, 'backendError', 'Backend Error');
       return route.fulfill({ status: 200, headers: { ...cors(), 'content-type': 'application/json' }, body: node.content ?? '' });
     }
     return json(route, 200, this.resource(node));

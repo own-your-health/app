@@ -236,6 +236,34 @@ test('a finished Refresh shows what it brought, without a reload', async ({ page
   await expect(page.locator('main .held-note')).toHaveCount(0);
 });
 
+test('a read that fails after a finished Refresh is tried again while the app stays in front', async ({ page }) => {
+  await page.clock.install();
+  await signIn(page);
+  await page.getByRole('button', { name: 'Refresh everything' }).click();
+  await expect(page.getByText(/waiting for the Mac/).first()).toBeVisible();
+  google.failing = 'household.json';
+  answerAsMac(google.changes[0]!.path);
+  const reads = () => google.reads.filter((f) => f === 'household.json').length;
+  const before = reads();
+  // Each look is the timer's: nothing brings the app to the front.
+  await page.clock.fastForward('00:31');
+  await expect(page.getByText(/Last refresh request just now: loaded/).first()).toBeVisible();
+  await expect.poll(reads).toBe(before + 1);
+  await page.clock.fastForward('00:31');
+  await expect.poll(reads).toBe(before + 2);
+  await expect(page.locator('.toast-error')).toHaveCount(0);
+  await page.clock.fastForward('01:01');
+  await expect.poll(reads).toBe(before + 3);
+  await expect(page.locator('.toast-error')).toHaveText('The records could not be read again, so these are from before. Drive: Backend Error');
+  google.failing = null;
+  await page.clock.fastForward('02:01');
+  await expect.poll(reads).toBe(before + 4);
+  // Read, so nothing looks again.
+  await page.clock.fastForward('20:00');
+  expect(reads()).toBe(before + 4);
+  problems = problems.filter((p) => !/503/.test(p));
+});
+
 test('someone held back is shown again when the app comes to the front after medrec has written their list', async ({ page }) => {
   const sam = 'p_wwezzed7kml67hnp6s7n';
   const list = google.list(`views/${sam}`).find((f) => f.startsWith('private.'))!;

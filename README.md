@@ -365,7 +365,10 @@ picks it up on its next pass (every few minutes), loads the sources it names,
 and writes the outcome to `_status/` and `_requests/done/`, which the app
 reads back. The app shows when a request is waiting, when the Mac is late, and
 what it answered. Once a request is finished the app reads the records again,
-so what it brought shows without a reload.
+so what it brought shows without a reload. A read that fails, or that leaves
+out someone whose records are here, changes nothing: it is tried again after
+30 seconds, then after twice as long each time, six tries in all, and the
+third failure says so (`src/data/rereads.ts`).
 
 A request loads each source at most once every 15 minutes, counted from its
 last load or try (medrec 0.7.0 and later; before, it waited the source's own
@@ -690,7 +693,8 @@ page count. Papers took the place of each person's list of documents. A
   app knows, which says to update the app, or one that does not read. Their
   own pages still show everything. Settings gives each person's reason. While
   someone's items are held back, the app reads the records again each time it
-  comes to the front, so the hold ends once medrec has written the list.
+  comes to the front and, where the list is behind, arriving or unread, with
+  the same waits as after a Refresh, so the hold ends once medrec has written.
 
   The app says this is discretion, not security: everyone the Drive folder
   is shared with can still read the files. Money's totals count private care

@@ -2,6 +2,7 @@
 
 import { completeSignIn, SCOPE_READ, SCOPE_WRITE, signInErrorText, startSignIn, verifyToken, type Token, type Unsent } from '../auth';
 import { startDemoMac } from '../data/demo-mac';
+import { Rereads } from '../data/rereads';
 import { Store } from '../data/store';
 import { Drive, DriveError } from '../drive';
 import { DemoFolder, DriveFolder } from '../folder';
@@ -70,10 +71,7 @@ export class App {
   private drive: Drive | null = null;
   private demo: boolean;
   private demoMac: ((file: string) => void) | null = null;
-  /** The read of the records under way, if one is. */
-  private reading: Promise<boolean> | null = null;
-  /** A request finished and the records have not been read since: that read failed. */
-  private unread = false;
+  private rereads: Rereads | null = null;
   private main = h('main', { class: 'main', id: 'main' });
   private bar = h('header', { class: 'app-bar' });
   private banner = h('div', { class: 'banner-slot', 'aria-live': 'polite' });
@@ -290,7 +288,7 @@ export class App {
       return this.show({ name: 'message', title: 'That folder could not be opened', text, actions: [button('Choose a folder', () => this.show({ name: 'folder' }), { primary: true })] });
     }
     setFolder(f);
-    this.store = store;
+    this.opened(store);
     this.show({ name: 'ready' });
     this.startPolling();
   }
@@ -304,7 +302,7 @@ export class App {
     } catch (e) {
       return this.show({ name: 'message', title: 'The sample records did not load', text: e instanceof Error ? e.message : String(e) });
     }
-    this.store = store;
+    this.opened(store);
     this.scopes = [SCOPE_READ, SCOPE_WRITE];
     this.user = { name: 'Sample visitor' };
     this.demoMac = startDemoMac(folder, () => void this.pollOnce());
@@ -312,32 +310,36 @@ export class App {
     this.startPolling();
   }
 
+  private opened(store: Store): void {
+    this.store = store;
+    this.rereads = new Rereads(store, () => Date.now(), (text) => store === this.store && this.toast(text, 'error'));
+  }
+
   private startPolling(): void {
     window.clearInterval(this.pollTimer);
     // While a request waits, look for the Mac's answer: two Drive listings
     // and a status read per look.
     this.pollTimer = window.setInterval(() => {
-      if (this.store?.pending.length && document.visibilityState === 'visible') void this.pollOnce();
+      if ((this.store?.waiting || this.rereads?.due()) && document.visibilityState === 'visible') void this.pollOnce();
     }, this.demo ? 1500 : 30_000);
   }
 
-  /**
-   * Looks for the Mac's answer. The records are read again when a request it
-   * had is finished, and when the app comes to the front while someone's items
-   * are held back, so what the Mac wrote since shows without a reload.
-   */
+  /** Looks for the Mac's answer, draws it, and reads the records again when that is due. */
   private async pollOnce(front = false): Promise<void> {
-    const store = this.store;
-    if (!store || (!this.demo && !this.token)) return;
-    const asked = store.pending.map((p) => p.request.id);
+    const { store, rereads } = this;
+    if (!store || !rereads || (!this.demo && !this.token)) return;
     try {
       await store.loadRefreshState();
     } catch {
       return;
     }
-    const waiting = new Set(store.pending.map((p) => p.request.id));
-    if (asked.some((id) => !waiting.has(id))) this.unread = true;
-    if ((this.unread || (front && store.anyHeld())) && (await this.readAgain(store))) this.unread = false;
+    this.drawIfNew(store);
+    await rereads.look(front);
+    this.drawIfNew(store);
+  }
+
+  /** Draws the page again when what it shows has changed. */
+  private drawIfNew(store: Store): void {
     if (store !== this.store) return;
     const sig = this.stateSignature();
     if (sig === this.signature) return;
@@ -348,12 +350,6 @@ export class App {
     }
     this.signature = sig;
     this.renderKeepingScroll();
-  }
-
-  /** One read at a time: a second asked for meanwhile is this one. */
-  private readAgain(store: Store): Promise<boolean> {
-    this.reading ??= store.reload().finally(() => (this.reading = null));
-    return this.reading;
   }
 
   private drawIfStale(): void {
@@ -444,6 +440,7 @@ export class App {
   private signOut(): void {
     this.token = null;
     this.store = null;
+    this.rereads = null;
     this.drive = null;
     window.clearInterval(this.pollTimer);
     setAccount(null);
