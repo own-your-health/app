@@ -68,10 +68,10 @@ type Month = { ym: string; label: string } & Stack;
 
 /**
  * Plan paid and your share for each month, stacked, with the months between
- * them. Each month is a link to its lines. Drawn at its box's width, so its
- * text keeps its size and stays inside the chart. Null with nothing to draw.
+ * them. Each month is a link (`linkFor`), and `linkText` ends its label,
+ * saying where the link goes. Drawn at its box's width, so its text keeps its
+ * size and stays inside the chart. Null with nothing to draw.
  */
-/** `linkText` ends each month's label, saying where its link goes. */
 export function monthChart(months: Month[], linkFor: (ym: string) => Route, linkText = 'Show its lines.'): HTMLElement | null {
   if (!months.length) return null;
   return fitted((width) => monthSvg(months, linkFor, width, linkText), 360);

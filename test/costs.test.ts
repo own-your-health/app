@@ -140,8 +140,8 @@ describe('the sample household', () => {
 
   it('reads each plan’s deductible and out-of-pocket limit from its newest claim in the plan year', () => {
     const got = balances(inPlanYear, records).map((b) => [names.get(b.person), b.insurer, b.planYear.start, b.asOf, b.items.map((i) => [i.label, i.used, i.limit])]);
-    // Counting September's emergency visit, which came before.
-    expect(got).toContainEqual(['Sam Example', 'Example Care Plan', '2026-07-01', '2026-10-12', [['Deductible', 21740, 75000], ['Out-of-pocket limit', 46740, 300000]]]);
+    // Counting September's emergency visit, which came before; the newest is the private counseling's.
+    expect(got).toContainEqual(['Sam Example', 'Example Care Plan', '2026-07-01', '2026-10-27', [['Deductible', 21740, 75000], ['Out-of-pocket limit', 49740, 300000]]]);
     expect(got).toContainEqual(['Robin Example', 'Example Health Plan', '2026-01-01', '2026-10-01', [['Deductible', 112040, 150000], ['Out-of-pocket limit', 135610, 400000]]]);
     // The pharmacy benefit printed none.
     expect(got.some((b) => b[1] === 'Example Pharmacy Benefits')).toBe(false);

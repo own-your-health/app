@@ -87,7 +87,7 @@ export function head(ctx: Ctx, route: MoneyRoute, title: string, lead: string, w
     [{ id: '', name: 'Everyone' }, ...people].map((p) => {
       const on = p.id ? who === p.id : !who;
       // The same page, year and order for someone else; a bill a row named stays behind.
-      const to: Route = { name: 'money', ...(route.view ? { view: route.view } : {}), ...(route.year ? { year: route.year } : {}), ...(route.sort ? { sort: route.sort } : {}), ...(p.id ? { who: p.id } : {}) };
+      const to: Route = { name: 'money', ...(route.view ? { view: route.view } : {}), ...(route.period ? { period: route.period } : {}), ...(route.sort ? { sort: route.sort } : {}), ...(p.id ? { who: p.id } : {}) };
       return h('a', { class: ['filter', on ? 'filter-on' : null], href: href(to), 'aria-current': on ? 'true' : false }, p.name);
     }),
   );

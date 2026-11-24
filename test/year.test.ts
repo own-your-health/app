@@ -47,8 +47,8 @@ describe('deductibles and out-of-pocket limits', () => {
     expect(planLimits(plan, records).map((l) => [household.people.find((p) => p.id === l.person)?.name, l.kind, l.used, l.limit, l.asOf, l.fromClaims, l.metOn])).toEqual([
       ['Alex Example', 'deductible', 0, 75000, '2026-11-20', 0, undefined],
       ['Alex Example', 'out_of_pocket', 2500, 300000, '2026-11-20', undefined, undefined],
-      ['Sam Example', 'deductible', 21740, 75000, '2026-10-12', 21740, undefined],
-      ['Sam Example', 'out_of_pocket', 46740, 300000, '2026-10-12', undefined, undefined],
+      ['Sam Example', 'deductible', 21740, 75000, '2026-10-27', 21740, undefined],
+      ['Sam Example', 'out_of_pocket', 49740, 300000, '2026-10-27', undefined, undefined],
       ['Robin Example', 'deductible', 112040, 150000, '2026-10-01', 0, undefined],
       ['Robin Example', 'out_of_pocket', 135610, 400000, '2026-10-01', undefined, undefined],
     ]);
@@ -60,7 +60,7 @@ describe('deductibles and out-of-pocket limits', () => {
       new Map(
         [...records].map(([k, r]): [string, MedRecord] => {
           const bal = r.fields.benefit_balance;
-          if (!Array.isArray(bal) || r.fields.provider !== 'Example Lab' || r.date?.slice(0, 10) !== '2026-10-12') return [k, r];
+          if (!Array.isArray(bal) || r.fields.provider !== 'Example Counseling') return [k, r];
           const changed = bal.map((b) => {
             const o = b as { [k: string]: Json };
             return { ...o, financial: (o.financial as { [k: string]: Json }[]).map((f) => (f.type === 'Deductible' ? { ...f, allowed: { amount: limit, currency: 'USD' } } : f)) };
@@ -69,8 +69,8 @@ describe('deductibles and out-of-pocket limits', () => {
         }),
       );
     const sam = (m: Map<string, MedRecord>) => planLimits(plan, m).find((l) => l.person === id('Sam Example') && l.kind === 'deductible')!;
-    expect(sam(lower('140.00')).metOn).toBe('2026-09-12');
-    expect(sam(lower('217.40')).metOn).toBe('2026-10-12');
+    expect([sam(lower('140.00')).metOn, sam(lower('217.40')).metOn]).toEqual(['2026-09-12', '2026-10-12']);
+    expect(sam(lower('140.00')).metClaim).toBe(plan.find((l) => l.person === id('Sam Example') && l.date === '2026-09-12' && l.provider === 'Example Emergency Physicians')?.claim);
     // What the plan printed is more than these records' claims add up to: met, with no claim to name.
     const robin = planLimits(plan, records).find((l) => l.person === id('Robin Example') && l.kind === 'deductible')!;
     expect(robin.fromClaims).not.toBe(robin.used);

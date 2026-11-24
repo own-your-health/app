@@ -3821,6 +3821,38 @@
             ]
           }
         ],
+        "benefit_balance": [
+          {
+            "category": "1",
+            "network": "in",
+            "unit": "individual",
+            "term": "annual",
+            "financial": [
+              {
+                "type": "Deductible",
+                "allowed": {
+                  "amount": "750.00",
+                  "currency": "USD"
+                },
+                "used": {
+                  "amount": "217.40",
+                  "currency": "USD"
+                }
+              },
+              {
+                "type": "Out-of-pocket limit",
+                "allowed": {
+                  "amount": "3000.00",
+                  "currency": "USD"
+                },
+                "used": {
+                  "amount": "497.40",
+                  "currency": "USD"
+                }
+              }
+            ]
+          }
+        ],
         "benefit_period": {
           "start": "2026-07-01",
           "end": "2027-06-30"

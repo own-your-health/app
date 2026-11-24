@@ -50,6 +50,8 @@ interface YearData {
   /** The chosen period's lines. */
   lines: CostLine[];
   records: Map<string, MedRecord>;
+  /** On everyone's view, the claims not to name or date: private ones, and those of a private visit. */
+  quiet: Set<string>;
 }
 
 /** Everyone's claim lines, or one person's, and the period chosen among those they span. */
@@ -62,9 +64,14 @@ function yearData(ctx: Ctx, route: MoneyRoute, who: string | undefined): YearDat
     { planStart: getPlanStart() ?? undefined },
   );
   const choices = periods(all, today);
-  const chosen = choices.find((p) => p.id === route.year) ?? choices[0];
+  const chosen = choices.find((p) => p.id === route.period) ?? choices[0];
   const records = new Map(people.flatMap((p) => (store.index(p.id)?.records ?? []).map((r) => [r.id, r] as const)));
-  return { today, people, choices, chosen, lines: chosen ? all.filter((l) => inPeriod(l, chosen.id, today)) : [], records };
+  const quiet = new Set<string>();
+  if (!who) {
+    for (const r of records.values()) if (r.kind === 'claim' && r.private) quiet.add(r.id);
+    for (const x of householdEvents(store.household, (p) => store.index(p), today)) if (x.private) for (const c of x.event.claims) quiet.add(c.record.id);
+  }
+  return { today, people, choices, chosen, lines: chosen ? all.filter((l) => inPeriod(l, chosen.id, today)) : [], records, quiet };
 }
 
 /** The periods to choose from, as links that keep the page, the person and the order. */
@@ -75,7 +82,7 @@ function yearChips(route: MoneyRoute, d: YearData, who: string | undefined): HTM
     { class: 'chips', role: 'group', 'aria-label': 'Which year' },
     d.choices.map((p) => {
       const on = p.id === d.chosen?.id;
-      const to: Route = { name: 'money', ...(route.view ? { view: route.view } : {}), ...(who ? { who } : {}), ...(route.sort ? { sort: route.sort } : {}), ...(p.id === 'plan' ? {} : { year: p.id }) };
+      const to: Route = { name: 'money', ...(route.view ? { view: route.view } : {}), ...(who ? { who } : {}), ...(route.sort ? { sort: route.sort } : {}), ...(p.id === 'plan' ? {} : { period: p.id }) };
       return h('a', { class: ['filter', on ? 'filter-on' : null], href: href(to), 'aria-current': on ? 'true' : false }, p.label);
     }),
   );
@@ -91,11 +98,14 @@ function heroCard(d: YearData, who: string | undefined): HTMLElement {
     cents === undefined ? null : h('div', { class: 'kv-row' }, h('dt', null, swatch ? h('span', { class: ['swatch', swatch], 'aria-hidden': 'true' }) : null, label), h('dd', { class: 'num' }, money(cents)));
   const off = y.charged && y.discount && y.discount > 0 ? Math.round((y.discount / y.charged) * 100) : 0;
   const plans = new Set(d.lines.map((l) => l.insurer ?? '')).size;
+  // The dates come from claims the view may name: a private claim's day is not a bound of the range.
+  const named = yearMoney(d.lines.filter((l) => !d.quiet.has(l.claim)));
+  const span = named.first && named.last ? ` for care between ${dateText(named.first)} and ${dateText(named.last)}` : '';
   return card(
     { class: 'money-hero' },
     h('p', { class: 'money-hero-label' }, `${whose} share of ${words}’s care`),
     h('p', { class: 'money-hero-number num' }, money(y.share ?? 0)),
-    h('p', null, `${plans === 1 ? 'The plan’s' : 'The plans’'} figures, from ${count(y.claims, 'claim')} for care between ${dateText(y.first!)} and ${dateText(y.last!)}.`),
+    h('p', null, `${plans === 1 ? 'The plan’s' : 'The plans’'} figures, from ${count(y.claims, 'claim')}${span}.`),
     // On a track as wide as the charges: what the plans paid, then your share; the empty track is what the network took off.
     y.adds ? stackStrip({ planPaid: y.planPaid!, share: y.share! }, y.charged!) : null,
     h('dl', { class: 'kv money-steps' }, step(null, 'Providers charged', y.charged), step('swatch-track', 'The network took off', y.discount), step('swatch-plan', 'The plans paid', y.planPaid), step('swatch-share', 'Your share', y.share)),
@@ -140,8 +150,11 @@ const LIMIT_WORDS: Record<LimitKind, { title: string; what: string }> = {
   out_of_pocket: { title: 'Out-of-pocket limit', what: 'The most you pay for covered care in a plan year. After it, the plan pays all of it.' },
 };
 
-function limitRow(l: Limit, p: Person, who: string | undefined, scoped: boolean): HTMLElement {
+function limitRow(l: Limit, p: Person, who: string | undefined, scoped: boolean, quiet: Set<string>): HTMLElement {
   const met = l.used >= l.limit;
+  // A private claim is neither dated nor linked on a shared view.
+  const source = quiet.has(l.claim) ? ['As of their plan’s newest claim.'] : ['As of ', link({ name: 'item', person: l.person, id: l.claim }, `the claim for ${dateText(l.asOf)}`), '.'];
+  const metText = l.metOn && !(l.metClaim && quiet.has(l.metClaim)) ? `Met with the claim for ${dateText(l.metOn)}` : 'Met';
   const claims = l.fromClaims === undefined || l.fromClaims === l.used ? '' : l.fromClaims ? ` Claims in these records account for ${money(l.fromClaims)} of it.` : ' None of it comes from claims in these records.';
   return row({
     title: who ? capital(l.scope || 'Your plan') : p.name,
@@ -151,8 +164,8 @@ function limitRow(l: Limit, p: Person, who: string | undefined, scoped: boolean)
       'div',
       { class: 'limit-line' },
       limitMeter(l.used, l.limit),
-      met ? h('div', { class: 'chips' }, chip(l.metOn ? `Met with the claim for ${dateText(l.metOn)}` : 'Met', 'ok')) : null,
-      h('p', { class: 'small muted' }, met ? '' : `${money(l.limit - l.used)} to go. `, 'As of ', link({ name: 'item', person: l.person, id: l.claim }, `the claim for ${dateText(l.asOf)}`), '.', claims),
+      met ? h('div', { class: 'chips' }, chip(metText, 'ok')) : null,
+      h('p', { class: 'small muted' }, met ? '' : `${money(l.limit - l.used)} to go. `, ...source, claims),
     ),
   });
 }
@@ -168,7 +181,7 @@ function limitCard(kind: LimitKind, d: YearData, limits: Limit[], who: string | 
     h('p', { class: 'small muted' }, LIMIT_WORDS[kind].what, these.length ? shared : ''),
     d.people.flatMap((p) => {
       const mine = these.filter((l) => l.person === p.id);
-      if (mine.length) return mine.map((l) => limitRow(l, p, who, scopes.length > 1));
+      if (mine.length) return mine.map((l) => limitRow(l, p, who, scopes.length > 1, d.quiet));
       const lines = d.lines.filter((l) => l.person === p.id);
       const toward = kind === 'deductible' ? lines.reduce((t, l) => t + (l.cents.deductible ?? 0), 0) : 0;
       const meta = lines.length
@@ -253,7 +266,7 @@ export function overviewPage(ctx: Ctx, route: MoneyRoute, who: string | undefine
   const costs = costsOf(ctx, d, who, 'price');
   const top = costs.shown.slice(0, BIGGEST);
   const max = Math.max(0, ...top.map((c) => c.price));
-  const eventsRoute: Route = { name: 'money', view: 'events', ...(who ? { who } : {}), ...(route.year ? { year: route.year } : {}) };
+  const eventsRoute: Route = { name: 'money', view: 'events', ...(who ? { who } : {}), ...(route.period ? { period: route.period } : {}) };
   const explorer: Route = { name: 'costs', ...(d.chosen ? { period: d.chosen.id } : {}), ...(who ? { only: [{ by: 'person' as const, key: who }] } : {}) };
   return h(
     'div',
@@ -297,7 +310,7 @@ export function eventsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined)
     { class: 'chips', role: 'group', 'aria-label': 'Order by' },
     (['price', 'share'] as const).map((o) => {
       const on = o === order;
-      const to: Route = { name: 'money', view: 'events', ...(who ? { who } : {}), ...(route.year ? { year: route.year } : {}), ...(o === 'share' ? { sort: 'share' as const } : {}) };
+      const to: Route = { name: 'money', view: 'events', ...(who ? { who } : {}), ...(route.period ? { period: route.period } : {}), ...(o === 'share' ? { sort: 'share' as const } : {}) };
       return h('a', { class: ['filter', on ? 'filter-on' : null], href: href(to), 'aria-current': on ? 'true' : false }, o === 'share' ? 'Your share' : 'Network price');
     }),
   );

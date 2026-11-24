@@ -103,7 +103,10 @@ test('the year: what care cost, the bills to act on, deductibles, the months and
   await expect(deductible.locator('.row-aside')).toHaveText(['$1,120.40 of $1,500.00', '$217.40 of $750.00', '$0.00 of $750.00']);
   await expect(deductible.locator('.row').first()).toContainText('$379.60 to go. As of the claim for Oct 1, 2026. None of it comes from claims in these records.');
   await expect(deductible.locator('.row').last()).toContainText('No claims in this plan year yet.');
-  await expect(card(page, /^Out-of-pocket limit$/).locator('.row-aside')).toHaveText(['$1,356.10 of $4,000.00', '$467.40 of $3,000.00', '$25.00 of $3,000.00']);
+  // Sam's plan printed its balances last on the private counseling's claim: the shared view neither dates nor links it.
+  await expect(deductible.locator('.row').nth(1)).toContainText('$532.60 to go. As of their plan’s newest claim.');
+  await expect(deductible.locator('.row').nth(1).getByRole('link')).toHaveCount(0);
+  await expect(card(page, /^Out-of-pocket limit$/).locator('.row-aside')).toHaveText(['$1,356.10 of $4,000.00', '$497.40 of $3,000.00', '$25.00 of $3,000.00']);
 
   // Totals count the private counseling; the biggest costs leave it off, counted.
   const biggest = card(page, /^Biggest costs$/);
@@ -122,12 +125,16 @@ test('the year: what care cost, the bills to act on, deductibles, the months and
 
   // Last plan year: its own figures, and its own deductibles.
   await page.getByRole('group', { name: 'Which year' }).getByRole('link', { name: 'Last plan year' }).click();
-  await expect(page).toHaveURL(/#\/money\?year=plan-1$/);
+  await expect(page).toHaveURL(/#\/money\?period=plan-1$/);
   await expect(hero.locator('.money-hero-label')).toHaveText('The household’s share of last plan year’s care');
   // A calendar year has no deductibles of its own.
   await page.getByRole('group', { name: 'Which year' }).getByRole('link', { name: '2025' }).click();
   await expect(card(page, /^Deductible$/)).toHaveCount(0);
   await expect(page.getByText('Deductibles and out-of-pocket limits run by plan year.')).toBeVisible();
+
+  // On Sam's own year, the claim is dated and linked.
+  await open(page, `#/money?who=${SAM}`);
+  await expect(card(page, /^Deductible$/).getByRole('link', { name: 'the claim for Oct 27, 2026' })).toBeVisible();
 });
 
 test('where the money went lists every visit by price or by your share, fills as one line', async ({ page }) => {

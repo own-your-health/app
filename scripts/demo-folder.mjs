@@ -1266,8 +1266,10 @@ S.write();
 // ---- What the counseling cost ----
 // The plan's claim for Sam's counseling session, private like the visit, so
 // Money's totals count it while its shared lists leave it off, counted. Sam
-// owes a copay and no bill has come yet. Drawn last, so no other id moves.
-const counselingClaim = claimOf(S, src.samPlan, { date: '2026-10-27', provider: 'Example Counseling', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-10-27'), diagnoses: [['F41.1', 'Generalized anxiety disorder']], lines: [['90834', 'Psychotherapy, 45 minutes', '180.00', '110.00', '0.00', '30.00', '0.00', '80.00']] });
+// owes a copay and no bill has come yet. It is the newest claim to print
+// Sam's plan balances, so a shared view must not date or link it. Drawn
+// last, so no other id moves.
+const counselingClaim = claimOf(S, src.samPlan, { date: '2026-10-27', provider: 'Example Counseling', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-10-27'), diagnoses: [['F41.1', 'Generalized anxiety disorder']], lines: [['90834', 'Psychotherapy, 45 minutes', '180.00', '110.00', '0.00', '30.00', '0.00', '80.00']], balances: careBalance('217.40', '497.40') });
 counselingClaim.private = true;
 counselingClaim.private_area = 'mental_health';
 S.write();

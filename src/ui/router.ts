@@ -59,9 +59,9 @@ export type Route =
   | { name: 'event'; person: string; id: string }
   // The calendar (?next): a month (YYYY-MM) and a chosen day, or the list (from the newest month, or before one), for everyone or one person.
   | { name: 'calendar'; view?: 'list'; month?: string; who?: string; day?: string; before?: string }
-  // Money (?next), for everyone or one person: the year (a period of the costs screen's), the bills, those worth a
+  // Money (?next), for everyone or one person: the year (in a `period` as the costs screen's), the bills, those worth a
   // call (and the bill a row named), or where the money went (by network price, or by your share).
-  | { name: 'money'; view?: MoneyView; who?: string; bill?: string; year?: string; sort?: 'share' }
+  | { name: 'money'; view?: MoneyView; who?: string; bill?: string; period?: string; sort?: 'share' }
   | { name: 'huishouden'; hh: string }
   | { name: 'not_found' };
 
@@ -92,14 +92,14 @@ export function parseRoute(hash: string): Route {
     const who = query.get('who') ?? '';
     const bill = query.get('bill') ?? '';
     const view = a as MoneyView | undefined;
-    const year = query.get('year') ?? '';
+    const period = query.get('period') ?? '';
     const yearly = !view || view === 'events';
     return {
       name: 'money',
       ...(view ? { view } : {}),
       ...(ID.test(who) ? { who } : {}),
       ...(view === 'calls' && ID.test(bill) ? { bill } : {}),
-      ...(yearly && COST_PERIOD.test(year) ? { year } : {}),
+      ...(yearly && COST_PERIOD.test(period) ? { period } : {}),
       ...(view === 'events' && query.get('sort') === 'share' ? { sort: 'share' as const } : {}),
     };
   }
@@ -178,7 +178,7 @@ function moneyQuery(r: Extract<Route, { name: 'money' }>): string {
   const q = new URLSearchParams();
   if (r.who) q.set('who', r.who);
   if (r.bill && r.view === 'calls') q.set('bill', r.bill);
-  if (r.year && (!r.view || r.view === 'events')) q.set('year', r.year);
+  if (r.period && (!r.view || r.view === 'events')) q.set('period', r.period);
   if (r.sort && r.view === 'events') q.set('sort', r.sort);
   const t = q.toString();
   return t ? `?${t}` : '';
