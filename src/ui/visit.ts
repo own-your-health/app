@@ -1,9 +1,8 @@
 // What belongs to a visit, as the visits timeline and a visit's own page show it.
 
-import { claimAmounts, toCents } from '../model/billing';
-import { docTypeLabel, documentTitle, formatMoney, KIND_LABELS, str, studyTitle } from '../model/records';
+import { docTypeLabel, documentTitle, formatMoney, KIND_LABELS, str, studyTitle, toCents } from '../model/records';
 import type { Visit } from '../model/visits';
-import { claimTitle } from '../model/claims';
+import { claimAmounts, claimTitle } from '../model/claims';
 import { recordTitle } from '../model/titles';
 import { link } from './components';
 import { h, icon, type Child } from './dom';

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { billList, claimsWithBills, fromCents, owedByProvider, planBalances, toCents } from '../src/model/billing';
+import { billList, claimsWithBills, owedByProvider, planBalances } from '../src/model/billing';
+import { fromCents, toCents } from '../src/model/records';
 import type { MedDocument, MedRecord, PersonIndex } from '../src/model/types';
 import { demo, personNamed } from './demo-data';
 

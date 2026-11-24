@@ -1491,6 +1491,27 @@ body:has(.bottom-nav) {
   margin: 6px 0 0;
 }
 
+/* A claim's lines on the costs screen: what was done, and your share of it. */
+.claim-lines {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.claim-lines li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 4px 0;
+  border-top: 1px solid var(--line);
+}
+
+.claim-lines .num {
+  white-space: nowrap;
+}
+
 /* A visit's documents and what was recorded at it. */
 a.filter {
   display: inline-flex;

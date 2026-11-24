@@ -12,6 +12,7 @@ import {
   str,
   studyTitle,
   timeline,
+  toCents,
   type Money,
   type TimelineEntry,
 } from '../../model/records';
@@ -19,7 +20,7 @@ import { visitKind, visitTimeline, type Visit } from '../../model/visits';
 import { birthWords, coverageHistory, isChange, type CoverageSegment } from '../../model/coverage';
 import { claimTitle, isPharmacyClaim } from '../../model/claims';
 import { recordTitle } from '../../model/titles';
-import { BILL_WINDOW_DAYS, claimsWithBills, owedByProvider, planBalances, toCents, type Bill, type Claim, type Owed } from '../../model/billing';
+import { BILL_WINDOW_DAYS, claimsWithBills, owedByProvider, planBalances, type Bill, type Claim, type Owed } from '../../model/billing';
 import { isOutOfRange, rangeFor, resultFlag } from '../../model/flags';
 import { immunizationsGiven, latestResults, newInLatestLoads, type LatestResult } from '../../model/overview';
 import { allergyList, conditionList, CRITICALITY_TEXT, medicineList, statusText, vaccineList, type AllergyItem, type ConditionItem, type MedicineItem } from '../../model/lists';

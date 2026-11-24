@@ -73,8 +73,10 @@ describe('a day in a period', () => {
 
 describe('the sample household', () => {
   it('has a line for each thing each claim paid for, newest first', () => {
-    expect(all).toHaveLength(21);
+    expect(all).toHaveLength(22);
     expect(all.every((l) => l.split)).toBe(true);
+    // Alex's sick visit, billed as a longer one, was paid as a routine one: that line counts nothing.
+    expect(all.filter((l) => l.replaced).map((l) => [l.date, l.code, l.cents, l.replaced])).toEqual([['2026-11-20', '99215', {}, { billed: 24000, notCovered: 24000, youOwe: 24000 }]]);
     expect(all.map((l) => l.date)).toEqual([...all.map((l) => l.date)].sort().reverse());
     expect(all.find((l) => l.code === '00000-1111-90')).toMatchObject({ category: 'pharmacy', provider: 'Example Pharmacy', insurer: 'Example Pharmacy Benefits' });
   });

@@ -1,0 +1,460 @@
+{
+  "schema": "medrec-index/v1",
+  "person": "p_fixturereplacedaaaaa",
+  "rev": 1,
+  "documents": [],
+  "records": [
+    {
+      "id": "r_claimreplacedaaaaaaa",
+      "kind": "claim",
+      "key": "claim|r_claimreplacedaaaaaaa",
+      "date": "2026-03-14",
+      "display": "Emergency visit and blood count \u00b7 Example Hospital",
+      "fields": {
+        "when": "2026-03-14",
+        "provider": "Example Hospital",
+        "insurer": "Example Health Plan",
+        "outcome": "complete",
+        "type": "Institutional",
+        "billable_period": {
+          "start": "2026-03-14",
+          "end": "2026-03-14"
+        },
+        "category": "mixed",
+        "amounts": {
+          "billed": {
+            "amount": "1576.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "643.60",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "493.60",
+            "currency": "USD"
+          },
+          "copay": {
+            "amount": "150.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "150.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99285",
+              "display": "Emergency visit, high severity"
+            },
+            "serviced": "2026-03-14",
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "3120.00",
+                "currency": "USD"
+              },
+              "not_covered": {
+                "amount": "3120.00",
+                "currency": "USD"
+              }
+            }
+          },
+          {
+            "sequence": 2,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99284",
+              "display": "Emergency visit, moderate severity"
+            },
+            "serviced": "2026-03-14",
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "1480.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "612.40",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "462.40",
+                "currency": "USD"
+              },
+              "copay": {
+                "amount": "150.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "150.00",
+                "currency": "USD"
+              }
+            }
+          },
+          {
+            "sequence": 3,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "85025",
+              "display": "Blood count"
+            },
+            "serviced": "2026-03-14",
+            "category": "lab",
+            "amounts": {
+              "billed": {
+                "amount": "96.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "31.20",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "31.20",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "0.00",
+                "currency": "USD"
+              }
+            }
+          }
+        ]
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-04-02T08:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "r_claimreplacedwordsaa",
+      "kind": "claim",
+      "key": "claim|r_claimreplacedwordsaa",
+      "date": "2026-03-21",
+      "display": "Institutional",
+      "fields": {
+        "when": "2026-03-21",
+        "provider": "Example Urgent Care",
+        "insurer": "Example Health Plan",
+        "outcome": "complete",
+        "type": "Institutional",
+        "billable_period": {
+          "start": "2026-03-21",
+          "end": "2026-03-21"
+        },
+        "total": [
+          {
+            "category": "Submitted Amount",
+            "amount": {
+              "amount": "900.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Eligible Amount",
+            "amount": {
+              "amount": "420.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Benefit Amount",
+            "amount": {
+              "amount": "340.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Copay",
+            "amount": {
+              "amount": "80.00",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Member liability",
+            "amount": {
+              "amount": "80.00",
+              "currency": "USD"
+            }
+          }
+        ],
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99285",
+              "display": "Emergency visit, high severity"
+            },
+            "serviced": "2026-03-21",
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "2400.00",
+                  "currency": "USD"
+                }
+              },
+              {
+                "category": "Not Covered",
+                "amount": {
+                  "amount": "2400.00",
+                  "currency": "USD"
+                }
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "2400.00",
+                  "currency": "USD"
+                }
+              }
+            ]
+          },
+          {
+            "sequence": 2,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99284",
+              "display": "Emergency visit, moderate severity"
+            },
+            "serviced": "2026-03-21",
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "900.00",
+                  "currency": "USD"
+                }
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "420.00",
+                  "currency": "USD"
+                }
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "340.00",
+                  "currency": "USD"
+                }
+              },
+              {
+                "category": "Copay",
+                "amount": {
+                  "amount": "80.00",
+                  "currency": "USD"
+                }
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "80.00",
+                  "currency": "USD"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-04-02T08:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "r_claimambiguousaaaaaa",
+      "kind": "claim",
+      "key": "claim|r_claimambiguousaaaaaa",
+      "date": "2026-03-24",
+      "display": "Institutional",
+      "fields": {
+        "when": "2026-03-24",
+        "provider": "Example Clinic",
+        "insurer": "Example Health Plan",
+        "outcome": "complete",
+        "type": "Institutional",
+        "billable_period": {
+          "start": "2026-03-24",
+          "end": "2026-03-24"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "100.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "20.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "97110",
+              "display": "Therapeutic exercise"
+            },
+            "serviced": "2026-03-24",
+            "category": "procedure",
+            "amounts": {
+              "billed": {
+                "amount": "100.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "20.00",
+                "currency": "USD"
+              }
+            }
+          },
+          {
+            "sequence": 2,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "97110",
+              "display": "Therapeutic exercise"
+            },
+            "serviced": "2026-03-24",
+            "category": "procedure",
+            "amounts": {
+              "billed": {
+                "amount": "100.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "20.00",
+                "currency": "USD"
+              }
+            }
+          }
+        ]
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-04-02T08:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "r_claimnolinefitsaaaaa",
+      "kind": "claim",
+      "key": "claim|r_claimnolinefitsaaaaa",
+      "date": "2026-03-28",
+      "display": "Institutional",
+      "fields": {
+        "when": "2026-03-28",
+        "provider": "Example Clinic",
+        "insurer": "Example Health Plan",
+        "outcome": "complete",
+        "type": "Institutional",
+        "billable_period": {
+          "start": "2026-03-28",
+          "end": "2026-03-28"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "250.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "40.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "sequence": 1,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99213",
+              "display": "Office visit"
+            },
+            "serviced": "2026-03-28",
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "100.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "20.00",
+                "currency": "USD"
+              }
+            }
+          },
+          {
+            "sequence": 2,
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "73610",
+              "display": "X-ray of the ankle"
+            },
+            "serviced": "2026-03-28",
+            "category": "imaging",
+            "amounts": {
+              "billed": {
+                "amount": "200.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "30.00",
+                "currency": "USD"
+              }
+            }
+          }
+        ]
+      },
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-04-02T08:00:00Z"
+        }
+      ]
+    }
+  ],
+  "studies": [],
+  "imports": []
+}

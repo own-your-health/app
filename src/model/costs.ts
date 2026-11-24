@@ -4,24 +4,21 @@
 //
 // Money is whole cents. A claim's totals are the record: where its lines do
 // not add up to them, the difference is a line of its own ("Not split by
-// line"), so a year's totals always equal its claims'. A plan year starts on
+// line"), so a year's totals always equal its claims'. A line the plan
+// replaced with one of its own, which those totals leave out, counts
+// nothing, and the claims' totals are never moved to make up for it. A
+// plan year starts on
 // the day the plan's claims give for it (their benefit period), else on the
 // day set in Settings, else on January 1. Never on a coverage's start: that
 // is the day a coverage took effect, which can fall mid-year (a new child, a
 // new job), not the day the plan's year begins.
 
-import { claimAmounts, toCents } from './billing';
-import { CATEGORY_LABELS, categoryOf, claimCategory, claimLines, claimTitle, type Category } from './claims';
+import { AMOUNTS, CATEGORY_LABELS, categoryOf, claimCategory, claimCents, claimLines, claimTitle, lineCents, type Category, type Cents } from './claims';
 import { providerKey, sameProvider } from './providers';
-import { asMoney, isWithdrawn, SHARE_PARTS, str, type AmountName } from './records';
+import { asMoney, isWithdrawn, str, toCents, type AmountName } from './records';
 import type { Json, MedRecord, PersonIndex } from './types';
 
 export type Amount = AmountName;
-
-/** Every amount, in the order a statement lists them. */
-export const AMOUNTS: Amount[] = ['billed', 'allowed', 'planPaid', ...SHARE_PARTS, 'youOwe'];
-
-export type Cents = Partial<Record<Amount, number>>;
 
 export interface PlanYear {
   /** The day each plan year starts, "MM-DD"; "01-01" for a calendar year. */
@@ -36,6 +33,8 @@ export interface CostLine {
   /** The claim record's id. */
   claim: string;
   claimTitle: string;
+  /** The claim's day of service. */
+  claimDate: string;
   /** The day of service: the line's own, else the claim's. */
   date: string;
   provider: string;
@@ -51,6 +50,11 @@ export interface CostLine {
   planBasis: PlanBasis;
   /** False for the part of a claim's totals its lines do not account for. */
   split: boolean;
+  /**
+   * A line the plan replaced with one of its own, which the claim's totals
+   * leave out: what it carried. Its `cents` are empty, so it counts nothing.
+   */
+  replaced?: Cents;
 }
 
 const UNKNOWN_PROVIDER = 'Provider not named';
@@ -113,34 +117,6 @@ export interface CostOptions {
 
 // ---- Lines ----
 
-function lineCents(amounts: Partial<Record<Amount, { amount: string; currency: string }>>): Cents {
-  const out: Cents = {};
-  for (const k of AMOUNTS) {
-    const c = toCents(amounts[k]);
-    if (c !== undefined) out[k] = c;
-  }
-  // Your share is its parts when the payer gave only the parts.
-  const given = SHARE_PARTS.filter((k) => out[k] !== undefined);
-  if (out.youOwe === undefined && given.length) out.youOwe = given.reduce((t, k) => t + out[k]!, 0);
-  return out;
-}
-
-/** A claim's own totals, in cents, by the same names as its lines'. */
-function claimCents(r: MedRecord): Cents {
-  const a = claimAmounts(r);
-  const parts: Cents = {};
-  for (const p of a.parts) {
-    const c = toCents(p.amount);
-    if (c !== undefined) parts[p.name] = (parts[p.name] ?? 0) + c;
-  }
-  const out: Cents = { ...parts };
-  for (const [k, m] of [['billed', a.billed], ['allowed', a.allowed], ['planPaid', a.planPaid], ['youOwe', a.yourShare]] as const) {
-    const c = toCents(m);
-    if (c !== undefined) out[k] = c;
-  }
-  return out;
-}
-
 const dayOf = (v: Json | undefined): string | undefined => {
   if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10);
   if (v && typeof v === 'object' && !Array.isArray(v) && typeof v.start === 'string') return v.start.slice(0, 10);
@@ -169,6 +145,7 @@ export function costLines(person: string, index: PersonIndex, opts: CostOptions 
       person,
       claim: r.id,
       claimTitle: claimTitle(r),
+      claimDate: service,
       provider: str(r.fields.provider) ?? UNKNOWN_PROVIDER,
       insurer,
     };
@@ -176,9 +153,14 @@ export function costLines(person: string, index: PersonIndex, opts: CostOptions 
     const sums: Cents = {};
     for (const l of lines) {
       const cents = lineCents(l.amounts);
-      for (const k of AMOUNTS) if (cents[k] !== undefined) sums[k] = (sums[k] ?? 0) + cents[k]!;
       const date = l.date ?? service;
-      out.push({ ...base, date, category: l.category, service: l.label, code: l.code, system: l.system, cents, planYear: planYearOf(anniversary, date), planBasis, split: true });
+      const line = { ...base, date, category: l.category, service: l.label, code: l.code, system: l.system, planYear: planYearOf(anniversary, date), planBasis, split: true };
+      if (l.replaced) {
+        out.push({ ...line, cents: {}, replaced: cents });
+        continue;
+      }
+      for (const k of AMOUNTS) if (cents[k] !== undefined) sums[k] = (sums[k] ?? 0) + cents[k]!;
+      out.push({ ...line, cents });
     }
     // What the claim's totals hold beyond its lines.
     const totals = claimCents(r);
@@ -262,10 +244,60 @@ export interface Totals {
   lines: number;
 }
 
+/** What some lines add up to, and how many claims and lines count; a replaced line is not one. */
 export function totals(lines: CostLine[]): Totals {
+  const counted = lines.filter((l) => !l.replaced);
   const cents: Cents = {};
-  for (const l of lines) for (const k of AMOUNTS) if (l.cents[k] !== undefined) cents[k] = (cents[k] ?? 0) + l.cents[k]!;
-  return { cents, claims: new Set(lines.map((l) => l.claim)).size, lines: lines.length };
+  for (const l of counted) for (const k of AMOUNTS) if (l.cents[k] !== undefined) cents[k] = (cents[k] ?? 0) + l.cents[k]!;
+  return { cents, claims: new Set(counted.map((l) => `${l.person}|${l.claim}`)).size, lines: counted.length };
+}
+
+/** A claim among some lines: what the whole claim counts, and its lines among them. */
+export interface ClaimCost {
+  person: string;
+  claim: string;
+  title: string;
+  /** The claim's day of service. */
+  date: string;
+  provider: string;
+  insurer?: string;
+  /** What the whole claim counts: its own totals where it gives them, else its lines added up. */
+  cents: Cents;
+  /** Its lines among those asked about, a replaced one too, in their order. */
+  lines: CostLine[];
+  /** How many lines the claim has in all, counting a replaced one and the part not split by line. */
+  of: number;
+}
+
+/**
+ * The claims some lines are from, newest first, each with what the whole
+ * claim counts, so a claim leads with what it says you owe even when a
+ * choice shows only some of its lines. A claim whose only lines among them
+ * were replaced is left out, as nothing of it is counted there.
+ */
+export function claimsOf(lines: CostLine[], all: CostLine[]): ClaimCost[] {
+  const key = (l: CostLine) => `${l.person}|${l.claim}`;
+  const shown = new Map<string, CostLine[]>();
+  for (const l of lines) {
+    const ls = shown.get(key(l));
+    if (ls) ls.push(l);
+    else shown.set(key(l), [l]);
+  }
+  const whole = new Map<string, CostLine[]>();
+  for (const l of all) {
+    if (!shown.has(key(l))) continue;
+    const ls = whole.get(key(l));
+    if (ls) ls.push(l);
+    else whole.set(key(l), [l]);
+  }
+  return [...shown.entries()]
+    .filter(([, ls]) => ls.some((l) => !l.replaced))
+    .map(([k, ls]): ClaimCost => {
+      const l = ls[0]!;
+      const every = whole.get(k) ?? ls;
+      return { person: l.person, claim: l.claim, title: l.claimTitle, date: l.claimDate, provider: l.provider, insurer: l.insurer, cents: totals(every).cents, lines: ls, of: every.length };
+    })
+    .sort((a, b) => b.date.localeCompare(a.date) || a.claim.localeCompare(b.claim));
 }
 
 export type Dimension = 'person' | 'provider' | 'category' | 'month';
@@ -298,6 +330,7 @@ export interface Group extends Totals {
 export function breakdown(lines: CostLine[], by: Dimension, names: Map<string, string>): Group[] {
   const groups = new Map<string, { label: string; lines: CostLine[] }>();
   for (const l of lines) {
+    if (l.replaced) continue;
     const { key, label } = keyOf(l, by, names);
     const g = groups.get(key);
     if (g) g.lines.push(l);
@@ -381,7 +414,7 @@ export const codeKey = (l: Pick<CostLine, 'code' | 'system'>) => `${systemName(l
 export function comparableCodes(lines: CostLine[]): CodeSummary[] {
   const byCode = new Map<string, CostLine[]>();
   for (const l of lines) {
-    if (!l.code || !l.split) continue;
+    if (!l.code || !l.split || l.replaced) continue;
     const k = codeKey(l);
     byCode.set(k, [...(byCode.get(k) ?? []), l]);
   }
@@ -407,7 +440,7 @@ export function comparableCodes(lines: CostLine[]): CodeSummary[] {
 
 /** Every line for one code, newest first. */
 export function codeLines(lines: CostLine[], key: string): CostLine[] {
-  return lines.filter((l) => l.code && l.split && codeKey(l) === key);
+  return lines.filter((l) => l.code && l.split && !l.replaced && codeKey(l) === key);
 }
 
 // ---- Plan balances in a period ----
@@ -477,7 +510,7 @@ export function csvText(v: string | undefined): string {
 
 const csvMoney = (c: number | undefined) => (c === undefined ? '' : `${c < 0 ? '-' : ''}${Math.floor(Math.abs(c) / 100)}.${pad(Math.abs(c) % 100)}`);
 
-/** The lines as CSV, one row each, amounts in dollars. */
+/** The lines as CSV, one row each, amounts in dollars; a replaced line's are left empty, as it counts nothing. */
 export function toCsv(lines: CostLine[], names: Map<string, string>): string {
   const rows = lines.map((l) =>
     [
@@ -486,7 +519,7 @@ export function toCsv(lines: CostLine[], names: Map<string, string>): string {
       csvText(l.provider),
       csvText(l.insurer),
       csvText(`${l.planYear.start} to ${l.planYear.end}`),
-      csvText(l.service),
+      csvText(l.replaced ? `${l.service} (replaced by the plan, not owed)` : l.service),
       csvText(l.code),
       csvText(systemName(l.system)),
       csvText(CATEGORY_LABELS[l.category].one),

@@ -2,11 +2,13 @@
 // paid; and the claim's title from its services, not its FHIR type
 // ("Professional"). medrec keeps each line's adjudication in the payer's own
 // words; they are named by records.ts's amount words, as the claim's totals
-// are in billing.ts. A medrec that writes the claim fields of its data
+// are. A medrec that writes the claim fields of its data
 // contract also gives fixed amount names, each line's category, the claim's
-// diagnoses and links to what it paid for; where it does, those win.
+// diagnoses and links to what it paid for; where it does, those win. A line
+// the plan replaced with one of its own, which the totals leave out, is
+// marked, and is never owed.
 
-import { amountNames, asMoney, str, type AmountName, type Money } from './records';
+import { AMOUNT_LABELS, amountNames, asMoney, claimTotals, fromCents, SHARE_PARTS, str, toCents, type AmountName, type Money } from './records';
 import { isObject } from './parse';
 import type { Json, MedRecord } from './types';
 
@@ -95,6 +97,8 @@ export interface ClaimLine {
   amounts: LineAmounts;
   /** The records this line paid for, as medrec linked them. */
   records: string[];
+  /** The plan replaced this line with one of its own, and the claim's totals leave it out: none of it is owed. */
+  replaced?: boolean;
 }
 
 const isCategory = (v: string | undefined): v is Category => !!v && Object.hasOwn(CATEGORY_LABELS, v);
@@ -124,6 +128,116 @@ function adjudicated(list: Json | undefined): LineAmounts {
     for (const name of [total, share, other]) if (name && !out[name]) out[name] = m;
   }
   return out;
+}
+
+// ---- Amounts ----
+
+/** Every amount but a discount, in the order a statement lists them. */
+export const AMOUNTS: AmountName[] = ['billed', 'allowed', 'planPaid', ...SHARE_PARTS, 'youOwe'];
+
+/** Amounts in whole cents, by the same names. */
+export type Cents = Partial<Record<AmountName, number>>;
+
+/** A line's amounts in cents. Your share is its parts added up when the payer gave only the parts. */
+export function lineCents(amounts: LineAmounts): Cents {
+  const out: Cents = {};
+  for (const k of AMOUNTS) {
+    const c = toCents(amounts[k]);
+    if (c !== undefined) out[k] = c;
+  }
+  const given = SHARE_PARTS.filter((k) => out[k] !== undefined);
+  if (out.youOwe === undefined && given.length) out.youOwe = given.reduce((t, k) => t + out[k]!, 0);
+  return out;
+}
+
+/** A claim's totals by their names in records.ts's amount words. */
+const TOTAL_FIELD: Partial<Record<AmountName, 'billed' | 'allowed' | 'planPaid' | 'yourShare'>> = { billed: 'billed', allowed: 'allowed', planPaid: 'planPaid', youOwe: 'yourShare' };
+
+export interface ClaimAmounts {
+  billed?: Money;
+  allowed?: Money;
+  planPaid?: Money;
+  /** What you owe: the payer's own figure, else the parts it gives added up (`shareAdded`). */
+  yourShare?: Money;
+  /** Your share is the parts added up, as the payer gave no figure for it: "your share", not "you owe". */
+  shareAdded?: boolean;
+  /** What the provider took off the bill, when the payer says. */
+  discount?: Money;
+}
+
+/** A part of your share, as the claim gives it: a deductible, a copay, coinsurance, what was not covered. */
+export interface ClaimPart {
+  name: AmountName;
+  label: string;
+  amount: Money;
+}
+
+/**
+ * A claim's totals: medrec's fixed names (`amounts`) where it gives them,
+ * else the payer's words for each, else the payment. Without the payer's
+ * figure for what you owe, your share is the parts it gives (deductible,
+ * copay, coinsurance, not covered) added up, never a discount.
+ */
+export function claimAmounts(r: MedRecord): ClaimAmounts & { parts: ClaimPart[] } {
+  const named = namedAmounts(r.fields.amounts);
+  const worded: Partial<Record<AmountName, Money>> = {};
+  for (const t of claimTotals(r)) {
+    const { total, share, other } = amountNames(t.label);
+    for (const name of [total, share, other]) if (name && !worded[name]) worded[name] = t.amount;
+  }
+  const amount = (name: AmountName): Money | undefined => named[name] ?? worded[name];
+  const out: ClaimAmounts & { parts: ClaimPart[] } = { parts: [] };
+  for (const [name, field] of Object.entries(TOTAL_FIELD) as [AmountName, 'billed' | 'allowed' | 'planPaid' | 'yourShare'][]) {
+    const m = amount(name);
+    if (m) out[field] = m;
+  }
+  out.planPaid ??= asMoney(r.fields.payment);
+  out.discount = amount('discount');
+  for (const part of SHARE_PARTS) {
+    const m = amount(part);
+    if (m && (toCents(m) ?? 0) > 0) out.parts.push({ name: part, label: AMOUNT_LABELS[part], amount: m });
+  }
+  if (!out.yourShare) {
+    const given = SHARE_PARTS.map(amount).filter((m): m is Money => !!m && toCents(m) !== undefined);
+    const currencies = new Set(given.map((m) => m.currency));
+    if (given.length && currencies.size === 1) {
+      out.yourShare = fromCents(given.reduce((t, m) => t + toCents(m)!, 0), given[0]!.currency);
+      out.shareAdded = true;
+    }
+  }
+  return out;
+}
+
+/** A claim's own totals, in cents, by the same names as its lines'. */
+export function claimCents(r: MedRecord): Cents {
+  const a = claimAmounts(r);
+  const parts: Cents = {};
+  for (const p of a.parts) {
+    const c = toCents(p.amount);
+    if (c !== undefined) parts[p.name] = (parts[p.name] ?? 0) + c;
+  }
+  const out: Cents = { ...parts };
+  for (const [k, m] of [['billed', a.billed], ['allowed', a.allowed], ['planPaid', a.planPaid], ['youOwe', a.yourShare]] as const) {
+    const c = toCents(m);
+    if (c !== undefined) out[k] = c;
+  }
+  return out;
+}
+
+/**
+ * The line a plan replaced with one of its own. A plan that recodes a
+ * service under its coding policy (an emergency visit's level) keeps the
+ * provider's line, not covered, beside the one it paid, and its totals
+ * count only its own. That is the one line without which the lines add up
+ * to the totals, on every amount both give. None when they add up already,
+ * when no one line does it, or when more than one would.
+ */
+function replacedLine(lines: Cents[], totals: Cents): number | undefined {
+  const keys = AMOUNTS.filter((k) => totals[k] !== undefined && lines.some((l) => l[k] !== undefined));
+  const addsUp = (skip: number) => keys.every((k) => lines.reduce((t, l, i) => (i === skip ? t : t + (l[k] ?? 0)), 0) === totals[k]);
+  if (lines.length < 2 || !keys.length || addsUp(-1)) return undefined;
+  const found = lines.flatMap((_, i) => (addsUp(i) ? [i] : []));
+  return found.length === 1 ? found[0] : undefined;
 }
 
 function dayOf(v: Json | undefined): string | undefined {
@@ -159,21 +273,23 @@ export function claimLines(r: MedRecord): ClaimLine[] {
       records: ids(it.records),
     });
   }
+  const replaced = replacedLine(out.map((l) => lineCents(l.amounts)), claimCents(r));
+  if (replaced !== undefined) out[replaced]!.replaced = true;
   return out;
 }
 
 /** A pharmacy claim: its type says so, or every line is a drug the pharmacy filled. */
 export function isPharmacyClaim(r: MedRecord): boolean {
   if (/pharmacy/i.test(str(r.fields.type) ?? r.code?.code ?? '')) return true;
-  const lines = claimLines(r);
+  const lines = claimLines(r).filter((l) => !l.replaced);
   return lines.length > 0 && lines.every((l) => l.category === 'pharmacy');
 }
 
-/** What a claim paid for, each service once, in line order. */
+/** What a claim paid for, each service once, in line order; never a line the plan replaced. */
 export function claimServices(r: MedRecord): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
-  for (const l of claimLines(r)) {
+  for (const l of claimLines(r).filter((x) => !x.replaced)) {
     const k = l.label.toLowerCase();
     if (!seen.has(k)) {
       seen.add(k);
@@ -218,7 +334,7 @@ export function claimTitle(r: MedRecord): string {
 export function claimCategory(r: MedRecord): Category | 'mixed' | undefined {
   const given = str(r.fields.category);
   if (given === 'mixed' || isCategory(given)) return given;
-  const kinds = new Set(claimLines(r).map((l) => l.category));
+  const kinds = new Set(claimLines(r).filter((l) => !l.replaced).map((l) => l.category));
   if (kinds.size === 0) return undefined;
   return kinds.size === 1 ? [...kinds][0] : 'mixed';
 }

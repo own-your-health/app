@@ -2,8 +2,7 @@
 // diagnoses and links), read where a claim has them, and the app's own
 // reading of the payer's words where it does not.
 import { describe, expect, it } from 'vitest';
-import { claimAmounts } from '../src/model/billing';
-import { claimCategory, claimDiagnoses, claimLines, claimResultIds, claimTitle, claimVisitId, diagnosisText, isContractClaim } from '../src/model/claims';
+import { claimAmounts, claimCategory, claimDiagnoses, claimLines, claimResultIds, claimTitle, claimVisitId, diagnosisText, isContractClaim } from '../src/model/claims';
 import { costLines } from '../src/model/costs';
 import { formatMoney } from '../src/model/records';
 import { parseIndex } from '../src/model/parse';
