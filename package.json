@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "description": "Your household's health records from your own Google Drive, in the browser",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "engines": {
     "node": ">=22.12.0"

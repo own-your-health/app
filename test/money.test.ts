@@ -1,4 +1,4 @@
-// Money under ?next: the claim shares no paper accounts for yet, the bills a
+// Money: the claim shares no paper accounts for yet, the bills a
 // receipt paid, Worth a call's split and order, a bill's privacy, and the
 // lines the plan left out.
 import { describe, expect, it } from 'vitest';

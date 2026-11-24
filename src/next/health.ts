@@ -1,4 +1,4 @@
-// Health under ?next: each person's page in a fixed order (Due, Current,
+// Health: each person's page in a fixed order (Due, Current,
 // Worth noticing, Recently, then Quiet), how much the records can know about
 // them, and what a doctor's sheet holds. Quiet by default: what is not news
 // is counted and kept one tap away, never dropped. A private item (medrec's

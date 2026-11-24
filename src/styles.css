@@ -1131,26 +1131,7 @@ pre.text {
   gap: 4px;
 }
 
-/* ---- Person sections ---- */
-
-.person-head {
-  padding: 4px 0 0;
-}
-
-.person-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.person-actions {
-  margin-top: 8px;
-}
-
-.section-tabs {
-  display: none;
-}
+/* ---- Tabs: a bar at the bottom of a phone's screen, a row above the page from 640px ---- */
 
 .bottom-nav {
   position: fixed;
@@ -1159,7 +1140,7 @@ pre.text {
   bottom: 0;
   z-index: 10;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   background: var(--surface);
   border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom);
@@ -1176,9 +1157,6 @@ pre.text {
   font-size: 12px;
   color: var(--muted);
   text-decoration: none;
-  background: none;
-  border: 0;
-  cursor: pointer;
 }
 
 .bottom-current {
@@ -1193,37 +1171,34 @@ body:has(.bottom-nav) {
 
 @media (min-width: 640px) {
   .bottom-nav {
-    display: none;
+    position: static;
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    padding: 0 16px;
+    background: transparent;
+    border-top: 0;
+    border-bottom: 1px solid var(--line);
   }
 
   body:has(.bottom-nav) {
     --bottom-nav: 0px;
   }
 
-  .section-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 4px;
-    border-bottom: 1px solid var(--line);
-  }
-
-  .tab {
-    padding: 8px 12px;
-    margin-bottom: -1px;
-    text-decoration: none;
-    color: var(--muted);
-    border-bottom: 3px solid transparent;
+  .bottom-item {
+    flex-direction: row;
+    gap: 6px;
+    min-height: 48px;
+    padding: 0 14px;
     font-size: 15px;
-    font-weight: 600;
   }
 
-  .tab:hover {
+  .bottom-item:hover {
     color: var(--ink);
   }
 
-  .tab-current {
-    color: var(--link);
-    border-bottom-color: var(--primary);
+  .bottom-current {
+    box-shadow: inset 0 -3px 0 var(--primary);
   }
 }
 
@@ -1264,12 +1239,23 @@ body:has(.bottom-nav) {
   margin-bottom: 8px;
 }
 
-.sheet-list {
+/* The bar's menu. */
+.menu-list {
   display: flex;
   flex-direction: column;
 }
 
-.sheet-item {
+.menu-sub {
+  margin: 12px 8px 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.menu-item {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   padding: 12px 8px;
   min-height: 48px;
   border-top: 1px solid var(--line);
@@ -1277,9 +1263,9 @@ body:has(.bottom-nav) {
   text-decoration: none;
 }
 
-.sheet-item.tab-current {
-  font-weight: 600;
-  color: var(--link);
+.menu-note {
+  font-size: 13px;
+  color: var(--attention-text);
 }
 
 .toast-slot {
@@ -1425,24 +1411,6 @@ body:has(.bottom-nav) {
   outline-color: var(--on-primary);
 }
 
-/* ---- A person's overview: short cards, each with a link to its section ---- */
-
-.overview {
-  display: grid;
-  gap: 16px;
-  align-items: start;
-}
-
-@media (min-width: 960px) {
-  .overview {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .overview-wide {
-    grid-column: 1 / -1;
-  }
-}
-
 .card-more {
   margin: 8px 0 0;
   font-size: 15px;
@@ -1453,17 +1421,6 @@ body:has(.bottom-nav) {
   align-items: center;
   gap: 4px;
   min-height: 44px;
-}
-
-.load-group + .load-group {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
-}
-
-.load-head {
-  font-weight: 600;
-  margin: 0 0 4px;
 }
 
 /* A heading inside a card, under its label: the schedule, then the doses given. */
@@ -1971,7 +1928,7 @@ mark {
   gap: 6px;
 }
 
-/* ---- The redesign's event page (?next) ---- */
+/* ---- The event page ---- */
 
 .event-kind {
   margin: 0 0 4px;
@@ -2059,7 +2016,7 @@ mark {
   font-variant-numeric: tabular-nums;
 }
 
-/* The calendar (?next) */
+/* The calendar */
 
 .lane-0 {
   --lane: var(--lane-0);
@@ -2274,7 +2231,7 @@ a.cal-day:hover .cal-date {
   color: var(--ink-soft);
 }
 
-/* ---- Home (?next): what needs you, and where everyone stands ---- */
+/* ---- Home: what needs you, and where everyone stands ---- */
 
 .need-kind {
   display: block;
@@ -2317,7 +2274,7 @@ a.cal-day:hover .cal-date {
   border-top: 0;
 }
 
-/* ---- Money (?next): bills, and those worth a call ---- */
+/* ---- Money: bills, and those worth a call ---- */
 
 .money .lead {
   margin: -8px 0 0;
@@ -2397,7 +2354,7 @@ a.cal-day:hover .cal-date {
   outline-offset: 2px;
 }
 
-/* Money's year (?next). */
+/* Money's year. */
 .money-steps .kv-row {
   display: flex;
   justify-content: space-between;
@@ -2428,7 +2385,7 @@ a.cal-day:hover .cal-date {
   margin: 6px 0 0;
 }
 
-/* Papers (?next). */
+/* Papers. */
 .paper-place {
   margin: 4px 0 0;
   color: var(--ink-soft);
@@ -2438,7 +2395,7 @@ a.cal-day:hover .cal-date {
   margin: 0 0 4px;
 }
 
-/* Health (?next). */
+/* Health. */
 .health-group {
   margin: 16px 0 4px;
   color: var(--ink-soft);
@@ -2512,6 +2469,7 @@ a.cal-day:hover .cal-date {
 
 /* A printed doctor's sheet: the sheet alone, without the app around it or the private-items note. */
 @media print {
+  .bottom-nav,
   body:has(.doctor) .app-bar,
   body:has(.doctor) .banner-slot,
   body:has(.doctor) .toast-slot,

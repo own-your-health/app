@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { billList, claimsWithBills, owedByProvider, planBalances } from '../src/model/billing';
+import { billList, claimsWithBills, owedByProvider } from '../src/model/billing';
 import { fromCents, toCents } from '../src/model/records';
 import type { MedDocument, MedRecord, PersonIndex } from '../src/model/types';
 import { demo, personNamed } from './demo-data';
@@ -95,19 +95,5 @@ describe('claims beside their bills', () => {
   it('never takes a statement from before the visit', () => {
     const { claims } = claimsWithBills(only([claim('Example Health', '2026-03-01', '40.00')], [bill('Example Health', '2026-02-20', '40.00')]));
     expect(claims[0]!.bill).toBeUndefined();
-  });
-});
-
-describe('plan balances', () => {
-  it('come from the newest claim that printed them', () => {
-    expect(planBalances(index('Robin Example'))).toMatchObject([
-      { label: 'Deductible', scope: 'in network, individual', used: usd('1120.40'), limit: usd('1500.00'), asOf: '2026-10-01' },
-      { label: 'Out-of-pocket limit', scope: 'in network, individual', used: usd('1356.10'), limit: usd('4000.00'), asOf: '2026-10-01' },
-    ]);
-    expect(planBalances(index('Sam Example'))).toMatchObject([
-      { label: 'Deductible', used: usd('217.40'), limit: usd('750.00'), asOf: '2026-10-27' },
-      { label: 'Out-of-pocket limit', used: usd('497.40'), limit: usd('3000.00'), asOf: '2026-10-27' },
-    ]);
-    expect(planBalances(index('Jamie Example'))).toEqual([]);
   });
 });

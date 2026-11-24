@@ -1,14 +1,13 @@
-// Home: the household's people and their records first, then one line for
-// a sign-in that needs a person at the Mac. Every source's own state is on
-// the Sources screen.
+// Home: what needs you, where everyone stands and what happened recently,
+// then the search, the year's money at a glance and how fresh the records
+// are. Every source's own state is on the Sources screen.
 
 import { latestAnswered } from '../../model/sources';
 import { h, icon } from '../dom';
-import { card, empty, link, refreshControl, row, type Ctx } from '../components';
-import { count, relative } from '../format';
+import { card, empty, link, refreshControl, type Ctx } from '../components';
+import { relative } from '../format';
 import { nextHome } from '../../next/homeView';
 import { moneyGlance } from '../../next/moneyYear';
-import { costsGlance } from './costs';
 import { macLine, requestAnswer, signInNotice } from './sources';
 
 export function homeView(ctx: Ctx): HTMLElement {
@@ -37,22 +36,6 @@ export function homeView(ctx: Ctx): HTMLElement {
       h('p', { class: 'small' }, link({ name: 'sources' }, 'Sources and sign-ins')),
     ),
     h('div', { class: 'status-action' }, refreshControl(ctx, { all: true }, 'everything', { primary: true })),
-  );
-
-  const peopleCard = card(
-    { title: 'People' },
-    people.length === 0
-      ? empty('No people in this records folder yet. Add them on the Mac with medrec people add.')
-      : people.map((p) => {
-          const idx = store.index(p.id);
-          const err = store.indexErrors.get(p.id);
-          const meta = err
-            ? err
-            : idx
-              ? [count(idx.records.length, 'record'), count(idx.documents.length, 'document'), idx.studies.length ? count(idx.studies.length, 'imaging study', 'imaging studies') : null].filter(Boolean).join(' · ')
-              : 'Loading…';
-          return row({ route: { name: 'person', person: p.id, section: 'overview' }, title: p.name, meta });
-        }),
   );
 
   // A search field that opens the search page with what was typed.
@@ -86,7 +69,7 @@ export function homeView(ctx: Ctx): HTMLElement {
       )
     : null;
 
-  // The redesign (?next): what needs you, where everyone stands and what happened recently lead.
-  if (ctx.next) return h('div', { class: 'stack' }, h('h1', { class: 'sr-only' }, 'Own Your Health'), ...nextHome(ctx, signInNotice(views)), searchForm, moneyGlance(ctx), freshness);
-  return h('div', { class: 'stack' }, h('h1', { class: 'sr-only' }, 'Own Your Health'), peopleCard, signInNotice(views), searchForm, costsGlance(ctx), freshness);
+  // Quiet until something needs you: what needs you, where everyone stands and what happened recently lead.
+  if (!people.length) return h('div', { class: 'stack' }, h('h1', { class: 'sr-only' }, 'Own Your Health'), card({ title: 'People' }, empty('No people in this records folder yet. Add them on the Mac with medrec people add.')), freshness);
+  return h('div', { class: 'stack' }, h('h1', { class: 'sr-only' }, 'Own Your Health'), ...nextHome(ctx, signInNotice(views)), searchForm, moneyGlance(ctx), freshness);
 }

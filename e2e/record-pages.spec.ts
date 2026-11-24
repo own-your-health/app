@@ -3,16 +3,19 @@ import { expect, test, type Page } from '@playwright/test';
 // Every record page leads with the plain answer; codes, sources, identifiers
 // and the raw FHIR sit folded under Technical details.
 
-async function openPerson(page: Page, name: string) {
+const PEOPLE: Record<string, string> = { 'Robin Example': 'p_xo4em46i7yj3hphlpajo', 'Sam Example': 'p_wwezzed7kml67hnp6s7n' };
+
+/** One of a person's full lists (results, medicines…), at the address Health's links open. */
+async function openList(page: Page, name: string, list: string) {
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
-  await page.goto('./?demo');
-  await page.getByRole('link', { name: new RegExp(`^${name}`) }).first().click();
-  await expect(page.locator('.person-head h1')).toHaveText(name);
+  await page.goto(`./?demo#/p/${PEOPLE[name]}/${list}`);
+  await expect(page.locator('main h1')).toHaveText(`${name}’s ${list}`);
 }
 
-/** Opens a row of the overview card with this title. */
-async function openFromOverview(page: Page, cardTitle: string, rowText: string | RegExp) {
-  await page.locator('.card', { hasText: cardTitle }).locator('.row', { hasText: rowText }).first().locator('a.row-main').click();
+/** Opens the row of a person's list that names this. */
+async function openFromList(page: Page, name: string, list: string, rowText: string | RegExp) {
+  await openList(page, name, list);
+  await page.locator('main .row', { hasText: rowText }).first().locator('a.row-main').click();
 }
 
 async function expectFolded(page: Page) {
@@ -37,8 +40,8 @@ async function expectLearnLink(page: Page, site: RegExp, href: RegExp) {
 }
 
 test('a result leads with its value, the lab’s range and what the test measures', async ({ page }) => {
-  await openPerson(page, 'Robin Example');
-  await page.locator('.card', { hasText: 'Latest results' }).getByRole('link', { name: /LDL cholesterol/ }).first().click();
+  await openList(page, 'Robin Example', 'results');
+  await page.getByRole('link', { name: /LDL cholesterol/ }).first().click();
   await page.locator('table a').first().click();
 
   const head = page.locator('section.card').first();
@@ -74,8 +77,8 @@ test('a result leads with its value, the lab’s range and what the test measure
 });
 
 test('a result out of the lab’s range says so in words and marks it on the bar', async ({ page }) => {
-  await openPerson(page, 'Sam Example');
-  await page.locator('.card', { hasText: 'Latest results' }).getByRole('link', { name: /Hemoglobin/ }).first().click();
+  await openList(page, 'Sam Example', 'results');
+  await page.getByRole('link', { name: /Hemoglobin/ }).first().click();
   await page.locator('table a').last().click();
   const head = page.locator('section.card').first();
   await expect(head.locator('h1')).toHaveText('Hemoglobin');
@@ -88,8 +91,8 @@ test('a result out of the lab’s range says so in words and marks it on the bar
 });
 
 test('a number the lab sent as text reads as one: its unit, the range bar and the chart', async ({ page }) => {
-  await openPerson(page, 'Robin Example');
-  await page.locator('.card', { hasText: 'Latest results' }).getByRole('link', { name: /Glucose/ }).first().click();
+  await openList(page, 'Robin Example', 'results');
+  await page.getByRole('link', { name: /Glucose/ }).first().click();
   await page.locator('table a', { hasText: 'Mar 10, 2025' }).click();
   const head = page.locator('section.card').first();
   await expect(head.locator('h1')).toHaveText('Glucose');
@@ -104,8 +107,7 @@ test('a number the lab sent as text reads as one: its unit, the range bar and th
 });
 
 test('a medicine leads with how to take it and its last fill', async ({ page }) => {
-  await openPerson(page, 'Robin Example');
-  await openFromOverview(page, 'Current medicines', 'Lisinopril');
+  await openFromList(page, 'Robin Example', 'medicines', 'Lisinopril');
   const head = page.locator('section.card').first();
   await expect(head.locator('h1')).toHaveText('Lisinopril 10 mg tablet');
   await expect(head.locator('.result-value')).toHaveText('Take 1 tablet by mouth once a day');
@@ -118,21 +120,18 @@ test('a medicine leads with how to take it and its last fill', async ({ page }) 
 });
 
 test('a condition, an allergy and a vaccine lead with what they are and link to read more', async ({ page }) => {
-  await openPerson(page, 'Robin Example');
-  await openFromOverview(page, 'Active conditions', 'High blood pressure');
+  await openFromList(page, 'Robin Example', 'conditions', 'High blood pressure');
   await expect(page.locator('section.card').first().locator('p.muted').first()).toHaveText('Condition · Active · from Example Health');
   await expectLearnLink(page, /Read about High blood pressure on MedlinePlus/, /mainSearchCriteria\.v\.cs=2\.16\.840\.1\.113883\.6\.90&mainSearchCriteria\.v\.c=I10&/);
   await expectFolded(page);
 
-  await page.goBack();
-  await openFromOverview(page, 'Allergies', 'Sulfa drugs');
+  await openFromList(page, 'Robin Example', 'allergies', 'Sulfa drugs');
   const allergy = page.locator('section.card').first();
   await expect(allergy).toContainText('Rash');
   await expect(allergy).toContainText('Low risk of a severe reaction');
   await expectLearnLink(page, /Read about Sulfa drugs on MedlinePlus/, /mainSearchCriteria\.v\.cs=2\.16\.840\.1\.113883\.6\.96&mainSearchCriteria\.v\.c=91939003&/);
 
-  await page.goBack();
-  await openFromOverview(page, 'Immunizations', 'Influenza');
+  await openFromList(page, 'Robin Example', 'immunizations', 'Influenza');
   const vaccine = page.locator('section.card').first();
   await expect(vaccine.locator('p.muted').first()).toContainText('Vaccine · given');
   await expectLearnLink(page, /on CDC/, /^https:\/\/www\.cdc\.gov\/vaccines\/hcp\/current-vis\/influenza-inactivated\.html$/);
@@ -140,8 +139,12 @@ test('a condition, an allergy and a vaccine lead with what they are and link to 
 });
 
 test('a document and a visit keep their files and sources under Technical details', async ({ page }) => {
-  await openPerson(page, 'Robin Example');
-  await openFromOverview(page, 'Recent visits', 'Annual physical');
+  // The portal's visit record, from how its visit was put together.
+  await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
+  await page.goto(`./?demo#/calendar?month=2026-10&day=2026-10-01&who=${PEOPLE['Robin Example']}`);
+  await page.locator('.cal-row a.row-main').first().click();
+  await page.getByText('How this visit was put together').click();
+  await page.locator('.row', { hasText: 'Portal visit' }).locator('a.row-main').click();
   await expect(page.locator('section.card').first()).toContainText('Annual physical');
   const visit = page.locator('.card', { has: page.locator('h2', { hasText: /^At this visit$/ }) });
   // Results by their plain names.

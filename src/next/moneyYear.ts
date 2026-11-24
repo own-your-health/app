@@ -1,4 +1,4 @@
-// Money's landing under ?next, the year: what a period's care cost and how
+// Money's landing, the year: what a period's care cost and how
 // the price came down, what to do about bills, each person's deductible and
 // out-of-pocket limit, the months, and the visits that cost most. Where the
 // money went lists every visit of the period, by its network price or by
@@ -16,6 +16,7 @@ import { href, type Route } from '../ui/router';
 import { legend, yearText } from '../ui/views/costs';
 import { householdEvents } from './calendar';
 import { eventRoute, eventWhen } from './eventView';
+import { coverageCard } from './coverageCard';
 import { callsSummary } from './money';
 import { gather, head, money, num, privateChip, type MoneyRoute } from './moneyParts';
 import { eventCosts, monthMoney, planLimits, yearMoney, type CostOrder, type EventCost, type Limit, type LimitKind } from './year';
@@ -267,7 +268,7 @@ export function overviewPage(ctx: Ctx, route: MoneyRoute, who: string | undefine
   const top = costs.shown.slice(0, BIGGEST);
   const max = Math.max(0, ...top.map((c) => c.price));
   const eventsRoute: Route = { name: 'money', view: 'events', ...(who ? { who } : {}), ...(route.period ? { period: route.period } : {}) };
-  const explorer: Route = { name: 'costs', ...(d.chosen ? { period: d.chosen.id } : {}), ...(who ? { only: [{ by: 'person' as const, key: who }] } : {}) };
+  const explorer: Route = { name: 'costs', ...(d.chosen && d.chosen.id !== 'plan' ? { period: d.chosen.id } : {}), ...(who ? { only: [{ by: 'person' as const, key: who }] } : {}) };
   return h(
     'div',
     { class: 'stack money' },
@@ -291,6 +292,7 @@ export function overviewPage(ctx: Ctx, route: MoneyRoute, who: string | undefine
         )
       : null,
     privateNote(who ? [] : [...bills.kept, ...costs.kept]),
+    who ? coverageCard(ctx, who) : null,
     h('p', { class: 'small' }, link(explorer, 'Every claim, by provider, kind of care and month')),
   );
 }
@@ -336,7 +338,7 @@ export function eventsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined)
   );
 }
 
-/** Home's glance at Money under ?next: the household's share this plan year. */
+/** Home's glance at Money: the household's share this plan year. */
 export function moneyGlance(ctx: Ctx): HTMLElement | null {
   const d = yearData(ctx, { name: 'money' }, undefined);
   if (!d.choices.length) return null;

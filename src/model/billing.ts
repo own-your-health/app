@@ -1,14 +1,13 @@
 // Bills and claims. What is owed to each provider comes from the newest
 // statement of each account, the way a bill reads it. Each insurer claim is
 // put beside the bill for it: a statement from the same provider after the
-// date of service, preferring one whose amount is the claim's share. Plan
-// balances (the deductible and out-of-pocket limit so far) come from the
-// newest claim that printed them. Money stays in whole cents, never floats.
+// date of service, preferring one whose amount is the claim's share. Money
+// stays in whole cents, never floats.
 
 import { claimAmounts, isPharmacyClaim, type ClaimAmounts, type ClaimPart } from './claims';
 import { providerKey, sameProvider } from './providers';
-import { asMoney, fromCents, isWithdrawn, sortByDateDesc, str, toCents, type Money } from './records';
-import type { Json, MedDocument, MedRecord, PersonIndex } from './types';
+import { fromCents, isWithdrawn, sortByDateDesc, str, toCents, type Money } from './records';
+import type { MedDocument, MedRecord, PersonIndex } from './types';
 
 // ---- Bills ----
 
@@ -128,37 +127,4 @@ export function claimsWithBills(index: PersonIndex): { claims: Claim[]; otherBil
     }
   }
   return { claims, otherBills: billList(index).filter((b) => !used.has(b.doc.id)) };
-}
-
-// ---- Plan balances ----
-
-export interface PlanBalance {
-  /** "Deductible", "Out-of-pocket limit". */
-  label: string;
-  /** "in network, individual". */
-  scope: string;
-  used?: Money;
-  limit?: Money;
-  /** The claim that printed it, and its date of service. */
-  claim: MedRecord;
-  asOf?: string;
-}
-
-const NETWORK: Record<string, string> = { in: 'in network', out: 'out of network' };
-
-/** The deductible and out-of-pocket limit so far, from the newest claim that carries plan balances. */
-export function planBalances(index: PersonIndex): PlanBalance[] {
-  const { claims } = claimsWithBills(index);
-  const c = claims.find((x) => Array.isArray(x.record.fields.benefit_balance) && x.record.fields.benefit_balance.length);
-  if (!c) return [];
-  const out: PlanBalance[] = [];
-  for (const b of c.record.fields.benefit_balance as Json[]) {
-    if (!b || typeof b !== 'object' || Array.isArray(b)) continue;
-    const scope = [NETWORK[str(b.network) ?? ''] ?? str(b.network), str(b.unit)].filter(Boolean).join(', ');
-    for (const f of Array.isArray(b.financial) ? b.financial : []) {
-      if (!f || typeof f !== 'object' || Array.isArray(f)) continue;
-      out.push({ label: str(f.type) ?? 'Balance', scope, used: asMoney(f.used), limit: asMoney(f.allowed), claim: c.record, asOf: c.service });
-    }
-  }
-  return out;
 }

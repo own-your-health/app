@@ -1,4 +1,4 @@
-// What needs someone besides bills (?next): a refill coming due by its last
+// What needs someone besides bills: a refill coming due by its last
 // fill's days' supply, and a child's vaccine doses, those the schedule
 // places by now that the records do not show and those coming up, grouped
 // into the visits that give them.

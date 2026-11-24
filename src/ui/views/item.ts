@@ -659,10 +659,10 @@ function studyView(ctx: Ctx, idx: PersonIndex, st: ImagingStudy): Child[] {
 export function itemView(ctx: Ctx, personId: string, id: string): HTMLElement {
   const person = ctx.store.person(personId);
   const idx = ctx.store.index(personId);
-  const back = person ? h('p', null, link({ name: 'person', person: personId, section: 'overview' }, icon('back', 16), ` ${person.name}`)) : null;
+  const back = person ? h('p', null, link({ name: 'health', who: personId }, icon('back', 16), ` ${person.name}`)) : null;
   if (!person || !idx) return card({}, empty('This person is not in the records folder.'));
   const item = findItem(idx, id);
   if (!item) return h('div', { class: 'stack' }, back, card({}, empty('This record is not in the index. It may have been merged or removed by medrec.')));
   const body = item.type === 'record' ? recordView(ctx, idx, item.record) : item.type === 'document' ? documentView(ctx, idx, item.document) : studyView(ctx, idx, item.study);
-  return h('div', { class: 'stack' }, back, ctx.next ? partOfEvent(ctx, personId, idx, id) : null, ...body);
+  return h('div', { class: 'stack' }, back, partOfEvent(ctx, personId, idx, id), ...body);
 }
