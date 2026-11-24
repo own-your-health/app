@@ -2340,7 +2340,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Professional",
+      "display": "Office visit · Example Health",
       "status": "active",
       "fields": {
         "when": "2026-11-18",
@@ -2467,9 +2467,69 @@
                 },
                 "reason": null
               }
+            ],
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "180.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "112.50",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "87.50",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "25.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "25.00",
+                "currency": "USD"
+              }
+            },
+            "records": [
+              "r_gah7u2624gbdxmmpbj3l"
             ]
           }
-        ]
+        ],
+        "category": "visit",
+        "amounts": {
+          "billed": {
+            "amount": "180.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "112.50",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "87.50",
+            "currency": "USD"
+          },
+          "deductible": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "coinsurance": {
+            "amount": "25.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "25.00",
+            "currency": "USD"
+          }
+        },
+        "diagnoses": [],
+        "visit": "r_gah7u2624gbdxmmpbj3l",
+        "results": []
       },
       "documents": [],
       "provenance": [
@@ -2503,7 +2563,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Professional",
+      "display": "Lipid panel and Blood draw · Example Lab",
       "status": "active",
       "fields": {
         "when": "2026-10-03",
@@ -2630,7 +2690,35 @@
                 },
                 "reason": null
               }
-            ]
+            ],
+            "category": "lab",
+            "amounts": {
+              "billed": {
+                "amount": "180.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "78.40",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "62.72",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "15.68",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "15.68",
+                "currency": "USD"
+              }
+            },
+            "records": []
           },
           {
             "sequence": 2,
@@ -2697,9 +2785,66 @@
                 },
                 "reason": null
               }
-            ]
+            ],
+            "category": "lab",
+            "amounts": {
+              "billed": {
+                "amount": "40.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "18.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "14.40",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "3.60",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "3.60",
+                "currency": "USD"
+              }
+            },
+            "records": []
           }
-        ]
+        ],
+        "category": "lab",
+        "amounts": {
+          "billed": {
+            "amount": "220.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "96.40",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "77.12",
+            "currency": "USD"
+          },
+          "deductible": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "coinsurance": {
+            "amount": "19.28",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "19.28",
+            "currency": "USD"
+          }
+        },
+        "diagnoses": [],
+        "results": []
       },
       "documents": [],
       "provenance": [
@@ -2733,7 +2878,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Professional",
+      "display": "Preventive visit, Flu vaccine and 1 more · Example Health",
       "status": "active",
       "fields": {
         "when": "2026-10-01",
@@ -2860,6 +3005,36 @@
                 },
                 "reason": null
               }
+            ],
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "320.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "210.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "168.00",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "42.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "42.00",
+                "currency": "USD"
+              }
+            },
+            "records": [
+              "r_lj43uwdj7asa4yqv73kl"
             ]
           },
           {
@@ -2927,7 +3102,35 @@
                 },
                 "reason": null
               }
-            ]
+            ],
+            "category": "vaccine",
+            "amounts": {
+              "billed": {
+                "amount": "62.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "38.40",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "30.72",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "7.68",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "7.68",
+                "currency": "USD"
+              }
+            },
+            "records": []
           },
           {
             "sequence": 3,
@@ -2994,7 +3197,35 @@
                 },
                 "reason": null
               }
-            ]
+            ],
+            "category": "vaccine",
+            "amounts": {
+              "billed": {
+                "amount": "30.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "20.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "16.00",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "4.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "4.00",
+                "currency": "USD"
+              }
+            },
+            "records": []
           }
         ],
         "benefit_balance": [
@@ -3028,7 +3259,37 @@
               }
             ]
           }
-        ]
+        ],
+        "category": "mixed",
+        "amounts": {
+          "billed": {
+            "amount": "412.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "268.40",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "214.72",
+            "currency": "USD"
+          },
+          "deductible": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "coinsurance": {
+            "amount": "53.68",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "53.68",
+            "currency": "USD"
+          }
+        },
+        "diagnoses": [],
+        "visit": "r_lj43uwdj7asa4yqv73kl",
+        "results": []
       },
       "documents": [
         "d_yxneikjpr2ku6f473zde"
@@ -3064,7 +3325,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Professional",
+      "display": "Office visit · Example Health",
       "status": "active",
       "fields": {
         "when": "2025-09-15",
@@ -3191,9 +3452,69 @@
                 },
                 "reason": null
               }
+            ],
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "189.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "121.10",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "121.10",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "0.00",
+                "currency": "USD"
+              }
+            },
+            "records": [
+              "r_xg4egjewerq2z3hkgdfs"
             ]
           }
-        ]
+        ],
+        "category": "visit",
+        "amounts": {
+          "billed": {
+            "amount": "189.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "121.10",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "121.10",
+            "currency": "USD"
+          },
+          "deductible": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "coinsurance": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "0.00",
+            "currency": "USD"
+          }
+        },
+        "diagnoses": [],
+        "visit": "r_xg4egjewerq2z3hkgdfs",
+        "results": []
       },
       "documents": [],
       "provenance": [
@@ -3227,7 +3548,7 @@
         "code": "professional",
         "display": "Professional"
       },
-      "display": "Professional",
+      "display": "Office visit and Blood count · Example Health",
       "status": "active",
       "fields": {
         "when": "2025-03-10",
@@ -3354,6 +3675,36 @@
                 },
                 "reason": null
               }
+            ],
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "290.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "190.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "152.00",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "38.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "38.00",
+                "currency": "USD"
+              }
+            },
+            "records": [
+              "r_aadfrgir3efr7kc7xelw"
             ]
           },
           {
@@ -3421,8 +3772,84 @@
                 },
                 "reason": null
               }
+            ],
+            "category": "lab",
+            "amounts": {
+              "billed": {
+                "amount": "108.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "65.90",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "52.72",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "0.00",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "13.18",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "13.18",
+                "currency": "USD"
+              }
+            },
+            "records": [
+              "r_mzewhpjngag4bpi7fxy5",
+              "r_bmkeag5zxtlx3ibab3ys",
+              "r_bmixb2jhf642gxn524it",
+              "r_bwlwn4tzuqx67v76q4ls",
+              "r_l63e6du6bncuoti3youm",
+              "r_j632ex63tz27lw7xdpcf",
+              "r_yj64qrvnxx4sea6vkfj6",
+              "r_mjs2anm34tmrtqwdsxsd"
             ]
           }
+        ],
+        "category": "mixed",
+        "amounts": {
+          "billed": {
+            "amount": "398.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "255.90",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "204.72",
+            "currency": "USD"
+          },
+          "deductible": {
+            "amount": "0.00",
+            "currency": "USD"
+          },
+          "coinsurance": {
+            "amount": "51.18",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "51.18",
+            "currency": "USD"
+          }
+        },
+        "diagnoses": [],
+        "visit": "r_aadfrgir3efr7kc7xelw",
+        "results": [
+          "r_mzewhpjngag4bpi7fxy5",
+          "r_bmkeag5zxtlx3ibab3ys",
+          "r_bmixb2jhf642gxn524it",
+          "r_bwlwn4tzuqx67v76q4ls",
+          "r_l63e6du6bncuoti3youm",
+          "r_j632ex63tz27lw7xdpcf",
+          "r_yj64qrvnxx4sea6vkfj6",
+          "r_mjs2anm34tmrtqwdsxsd"
         ]
       },
       "documents": [],

@@ -6,13 +6,13 @@
 // its day; D2: a paper joins by provider and date). When medrec writes
 // events, load.ts reads those instead and this file is deleted.
 
-import { claimCategory, claimTitle, claimVisitId, countedLines, isPharmacyClaim } from '../model/claims';
+import { claimCategory, claimVisitId, countedLines, isPharmacyClaim } from '../model/claims';
 import { sameProvider } from '../model/providers';
 import { day, decimalCents, isWithdrawn, organizationName, sortByDateDesc, str } from '../model/records';
 import type { Household, MedRecord, PersonIndex } from '../model/types';
 import { recentVisits, visitTimeline, type Visit } from '../model/visits';
 
-import { eventMoney, KIND_TITLES, type CareEvent, type ClaimRole, type Confidence, type EventKind, type Rule } from './event';
+import { eventMoney, nameEvent, type CareEvent, type ClaimRole, type Confidence, type EventKind, type Rule } from './event';
 
 // ---- Claims (C) ----
 
@@ -340,7 +340,7 @@ export function careEvents(index: PersonIndex, household: Household, today: stri
     }
   }
 
-  for (const e of events) name(e, household, index.person);
+  for (const e of events) nameEvent(e, household, index.person);
   return events.sort((a, b) => b.start.localeCompare(a.start) || b.end.localeCompare(a.end) || a.id.localeCompare(b.id));
 }
 
@@ -350,19 +350,3 @@ function addDays(d: string, n: number): string {
   return t.toISOString().slice(0, 10);
 }
 
-/** Its title and place: the portal's words where there are some, else from the claims. */
-function name(e: CareEvent, household: Household, person: string): void {
-  const v = e.visits[0]?.record;
-  const vName = v ? str(v.fields.location) ?? str(v.fields.service_provider) ?? v.provenance.map((p) => p.source.organization_id).filter((x): x is string => !!x).map((o) => organizationName(household, person, o))[0] : undefined;
-  e.place ??= vName ?? e.claims.find((c) => c.role === 'office')?.provider ?? e.claims[0]?.provider;
-  if (v && v.display) {
-    e.title = v.display;
-    return;
-  }
-  const first = e.claims[0]?.record;
-  if (e.kind === 'tests' && e.claims.length) {
-    const cats = new Set(e.claims.map((c) => claimCategory(c.record)));
-    e.title = cats.size === 1 && cats.has('imaging') ? 'Imaging' : cats.size === 1 && cats.has('lab') ? 'Lab tests' : 'Tests';
-  } else if ((e.kind === 'service' || e.kind === 'fill' || e.kind === 'vaccine') && first) e.title = claimTitle(first);
-  else e.title = KIND_TITLES[e.kind];
-}

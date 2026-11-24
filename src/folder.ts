@@ -163,10 +163,12 @@ export const LOAD_TIMES = new Set([
   'requested_at',
   'picked_up_at',
   'next_allowed_at',
+  // views.json: a person's last import.
+  'last_import',
 ]);
 
-/** The sample's keys for times that stay as written: times of care, and a source's own. */
-export const KEPT_TIMES = new Set(['start', 'end', 'issued', 'lastUpdated', 'last_updated']);
+/** The sample's keys for times that stay as written: times of care (an event's `times` among them), and a source's own. */
+export const KEPT_TIMES = new Set(['start', 'end', 'issued', 'lastUpdated', 'last_updated', 'times[]']);
 
 /**
  * The synthetic records folder shipped with the app (public/demo/), read

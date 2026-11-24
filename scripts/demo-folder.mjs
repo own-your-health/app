@@ -8,7 +8,9 @@
 // them (LOAD_TIMES in src/folder.ts), so the sample's loads always look
 // recent; times of care stay as written.
 
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -420,8 +422,9 @@ const planBalance = [
   },
 ];
 // A claim's lines: [code, what was done, billed, allowed, plan paid, coinsurance].
-// Each claim's totals are its lines' sums. medrec names a claim for its type
-// today ("Professional"); the app names it for its lines.
+// Each claim's totals are its lines' sums. They are drawn here as medrec
+// before 0.5.0 filed them, named for their type ("Professional"), and shaped
+// again further down, after the pharmacy claims, as `medrec reindex` would.
 const CPT = 'http://www.ama-assn.org/go/cpt';
 const claims = [
   ['2026-11-18', 'Example Health', [['99213', 'Office visit', '180.00', '112.50', '87.50', '25.00']]],
@@ -894,7 +897,7 @@ function julyYear(date) {
 // links guessed by date and name. The plans' and the pharmacy benefit's
 // claims carry them; Robin's member-site plan keeps the earlier shape, so the
 // sample shows both.
-const LINE_CATEGORY = { 99213: 'visit', 99214: 'visit', 99215: 'visit', 99284: 'visit', 99285: 'visit', 71046: 'imaging', 80053: 'lab', 73610: 'imaging', 84443: 'lab', 36415: 'lab', 85025: 'lab', 82306: 'lab', 87880: 'lab', 90686: 'vaccine', 90471: 'vaccine', 90834: 'visit' };
+const LINE_CATEGORY = { 99213: 'visit', 99214: 'visit', 99215: 'visit', 99284: 'visit', 99285: 'visit', 71046: 'imaging', 80053: 'lab', 73610: 'imaging', 84443: 'lab', 36415: 'lab', 85025: 'lab', 82306: 'lab', 87880: 'lab', 90686: 'vaccine', 90471: 'vaccine', 90834: 'visit', 80061: 'lab', 99396: 'visit' };
 const words = (...texts) => new Set(texts.filter(Boolean).join(' ').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 4));
 function claimFields(P, { date, provider, type, lines, diagnoses, liability }) {
   const pharmacy = type === 'Pharmacy';
@@ -1070,6 +1073,19 @@ for (const date of ['2026-08-14', '2026-11-12']) {
   claimOf(R, src.robinRx, { date, provider: 'Example Pharmacy', insurer: 'Example Pharmacy Benefits', type: 'Pharmacy', system: NDC, diagnoses: [['I10', 'Essential (primary) hypertension']], lines: [['00000-1111-90', 'Lisinopril 10 mg tablet, 90 days', '32.50', '12.40', '0.00', '10.00', '0.00', '2.40']] });
 }
 R.importRun(src.robinRx, { importedAt: PLANS_LOAD, added: 2, updated: 0, unchanged: 0, cliVersion: '1.2.0' });
+// Robin's professional claims as medrec 0.5.0 and later files them (`medrec
+// reindex` shapes a claim again from its raw file): named for their lines,
+// with their categories, amounts and links. They stay where they were drawn,
+// so no id moves.
+for (const [date, provider, lines] of claims) {
+  const r = R.records.find((x) => x.kind === 'claim' && x.date === date && x.fields.provider === provider && x.display === 'Professional');
+  const medrec = claimFields(R, { date, provider, type: 'Professional', lines: lines.map(([code, what, b, a, paid, c]) => [code, what, b, a, '0.00', '0.00', c, paid]), diagnoses: [], liability: true });
+  // These claims print no copay, so medrec's amounts name none.
+  for (const x of [medrec, ...medrec.items]) delete x.amounts.copay;
+  r.display = medrec.display;
+  Object.assign(r.fields, { category: medrec.category, amounts: medrec.amounts, diagnoses: medrec.diagnoses, ...(medrec.visit ? { visit: medrec.visit } : {}), results: medrec.results });
+  r.fields.items.forEach((it, i) => Object.assign(it, medrec.items[i]));
+}
 R.write();
 const planOk = (s, person, run) => attempt(s, person, { started: at(-60 * 30 - 1), importId: run.id, c: counts(run) });
 const samPlanOk = planOk(src.samPlan, sam, S.imports.at(-1));
@@ -1283,5 +1299,31 @@ for (const path of list) {
   mkdirSync(dirname(full), { recursive: true });
   writeFileSync(full, files.get(path));
 }
+
+// ---- medrec's views ----
+// The app reads each person's events from medrec's views: views/views.json
+// and views/<person id>/events.<md5>.json (medrec 0.9.0 and later). medrec
+// writes them here itself, under a scratch home and profile, so this
+// machine's own medrec setup is never touched. MEDREC names the binary, else
+// `medrec` on the PATH. The app reads no other view, so the rest are not kept.
+const MEDREC = process.env.MEDREC ?? 'medrec';
+const medrecVersion = execFileSync(MEDREC, ['--version'], { encoding: 'utf8' }).trim().split(/\s+/).at(-1);
+const [major, minor] = medrecVersion.split('.').map(Number);
+if (major === 0 && minor < 9) throw new Error(`medrec ${medrecVersion} writes no events.json: set MEDREC to medrec 0.9.0 or later`);
+const medrecHome = mkdtempSync(join(tmpdir(), 'medrec-demo-'));
+try {
+  const env = { ...process.env, HOME: medrecHome, MEDREC_PROFILE: 'demo', NO_COLOR: '1' };
+  for (const args of [['profiles', 'add', 'demo'], ['init', ROOT], ['views', 'write', '--all']]) execFileSync(MEDREC, ['-q', ...args], { env, stdio: ['ignore', 'ignore', 'inherit'] });
+} finally {
+  rmSync(medrecHome, { recursive: true, force: true });
+}
+list.push('views/views.json');
+for (const person of readdirSync(join(ROOT, 'views'), { withFileTypes: true }).filter((e) => e.isDirectory())) {
+  for (const name of readdirSync(join(ROOT, 'views', person.name))) {
+    if (/^events\.[0-9a-f]{12}\.json$/.test(name)) list.push(`views/${person.name}/${name}`);
+    else rmSync(join(ROOT, 'views', person.name, name));
+  }
+}
+list.sort();
 writeFileSync(join(ROOT, 'manifest.json'), `${JSON.stringify({ anchor: ANCHOR, files: list }, null, 2)}\n`);
 console.log(`wrote ${list.length} files under public/demo/`);

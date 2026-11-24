@@ -16,7 +16,7 @@ import { card, chip, driveLink, empty, flagChip, link, row, type Ctx } from '../
 import { h, icon, type Child } from '../ui/dom';
 import { count, dateText, localDay } from '../ui/format';
 import { href, type Route } from '../ui/router';
-import { eventConfidence, eventMoney, eventOf, kindText, paidAtCounter, privateArea, PRIVATE_AREAS, RULES, type CareEvent, type EventMoney } from './event';
+import { eventConfidence, eventMoney, eventOf, kindText, paidAtCounter, privateArea, PRIVATE_AREAS, ruleText, type CareEvent, type EventMoney } from './event';
 import { personEvents } from './load';
 
 const money = (c: number | undefined) => (c === undefined ? '' : formatMoney(fromCents(c)) ?? '');
@@ -295,9 +295,9 @@ const sureWord = (c: string) => (c === 'sure' ? null : chip(c === 'likely' ? 'Li
 
 function assemblyCard(idx: PersonIndex, e: CareEvent): HTMLElement {
   const items: Child[] = [
-    ...e.visits.map((v) => row({ route: itemRoute(idx.person, v.record.id), title: recordTitle(v.record), meta: `Portal visit · ${RULES[v.rule]}`, aside: sureWord(v.confidence) })),
-    ...e.claims.map((c) => row({ route: itemRoute(idx.person, c.record.id), title: c.provider ?? recordTitle(c.record), meta: `Claim · ${RULES[c.rule]}`, aside: sureWord(c.confidence) })),
-    ...e.papers.map((p) => row({ route: itemRoute(idx.person, p.doc.id), title: documentTitle(p.doc), meta: `Paper · ${RULES[p.rule]}`, aside: sureWord(p.confidence) })),
+    ...e.visits.map((v) => row({ route: itemRoute(idx.person, v.record.id), title: recordTitle(v.record), meta: `Portal visit · ${ruleText(v.rule)}`, aside: sureWord(v.confidence) })),
+    ...e.claims.map((c) => row({ route: itemRoute(idx.person, c.record.id), title: c.provider ?? recordTitle(c.record), meta: `Claim · ${ruleText(c.rule)}`, aside: sureWord(c.confidence) })),
+    ...e.papers.map((p) => row({ route: itemRoute(idx.person, p.doc.id), title: documentTitle(p.doc), meta: `Paper · ${ruleText(p.rule)}`, aside: sureWord(p.confidence) })),
   ];
   return h(
     'details',

@@ -50,33 +50,33 @@ test('a private event stays off the Everyone calendar until shown, and on its pe
   await page.getByRole('link', { name: 'Previous month: October 2026' }).click();
   await expect(page).toHaveURL(/#\/calendar\?month=2026-10$/);
   const list = card(page, 'What happened in October 2026');
-  await expect(list.locator('.row-title')).toHaveText(['Lab tests', 'Lab tests', 'Office visit']);
+  await expect(list.locator('.row-title')).toHaveText(['Vitamin D3 2,000 unit capsule', 'Lab tests', 'Lab tests', 'Office visit']);
   const notice = page.locator('.cal-private');
-  await expect(notice).toContainText('1 private event (mental health) is kept off this shared view.');
+  await expect(notice).toContainText('2 private events (mental health) are kept off this shared view.');
   await expect(notice).toContainText('This is discretion, not security');
 
   // The button keeps the keyboard, and a screen reader hears what changed.
   await notice.getByRole('button', { name: 'Show them' }).click();
   await expect(list.locator('.row', { hasText: 'Counseling session' }).locator('.chip')).toHaveText('Private');
   await expect(page.getByRole('button', { name: 'Hide them again' })).toBeFocused();
-  await expect(page.locator('.calendar').getByRole('status')).toHaveText('1 private event now shown.');
+  await expect(page.locator('.calendar').getByRole('status')).toHaveText('2 private events now shown.');
   await page.keyboard.press('Enter');
   await expect(list.locator('.row', { hasText: 'Counseling session' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Show them' })).toBeFocused();
-  await expect(page.locator('.calendar').getByRole('status')).toHaveText('1 private event hidden again.');
+  await expect(page.locator('.calendar').getByRole('status')).toHaveText('2 private events hidden again.');
 
   // Shown, then the calendar is left: back on it, they are hidden again.
   await page.getByRole('button', { name: 'Show them' }).click();
   await page.goto('./?demo&next#/');
   await page.goto('./?demo&next#/calendar?month=2026-10');
-  await expect(page.locator('.cal-private')).toContainText('1 private event (mental health) is kept off this shared view.');
+  await expect(page.locator('.cal-private')).toContainText('2 private events (mental health) are kept off this shared view.');
 
   // Sam's own calendar shows it, marked, with no notice.
   await page.getByRole('group', { name: 'Whose calendar' }).getByRole('link', { name: 'Sam Example' }).click();
   await expect(page).toHaveURL(new RegExp(`#/calendar\\?month=2026-10&who=${SAM}$`));
   await expect(page.locator('.cal-private')).toHaveCount(0);
   const own = card(page, 'What happened in October 2026');
-  await expect(own.locator('.row-title')).toHaveText(['Counseling session', 'Lab tests']);
+  await expect(own.locator('.row-title')).toHaveText(['Vitamin D3 2,000 unit capsule', 'Sertraline 50 mg tablet', 'Counseling session', 'Lab tests']);
   await own.locator('.row', { hasText: 'Counseling session' }).locator('a.row-main').click();
   await expect(page.locator('.event-private')).toContainText('Mental health. Kept off Home and the Everyone calendar.');
 
@@ -95,7 +95,7 @@ test('the list has every event by month, and a person’s overview opens theirs'
 
   await page.getByRole('group', { name: 'Whose calendar' }).getByRole('link', { name: 'Everyone' }).click();
   await expect(page).toHaveURL(/#\/calendar\?view=list$/);
-  await expect(page.locator('.cal-private')).toContainText('1 private event');
+  await expect(page.locator('.cal-private')).toContainText('2 private events');
 });
 
 test('the month fits a 360px phone in the dark theme', async ({ page }) => {

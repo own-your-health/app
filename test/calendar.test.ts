@@ -32,12 +32,16 @@ describe('the household’s events', () => {
   });
 
   it('keep a private event off the shared view, and on its person’s own', () => {
-    const counseling = events.find((x) => x.private)!;
-    expect([counseling.person.id, counseling.private, counseling.event.title, counseling.event.start]).toEqual([sam, 'mental_health', 'Counseling session', '2026-10-27']);
-    expect(events.filter((x) => x.private)).toHaveLength(1);
+    // Sam's counseling session, and the fill of the medicine tied to it.
+    const kept = events.filter((x) => x.private);
+    expect(kept.map((x) => [x.person.id, x.private, x.event.title, x.event.start])).toEqual([
+      [sam, 'mental_health', 'Sertraline 50 mg tablet', '2026-10-28'],
+      [sam, 'mental_health', 'Counseling session', '2026-10-27'],
+    ]);
+    const counseling = kept[1]!;
 
     const everyone = shown(events, undefined, false);
-    expect([everyone.events.length, everyone.hidden]).toEqual([events.length - 1, 1]);
+    expect([everyone.events.length, everyone.hidden]).toEqual([events.length - 2, 2]);
     expect(everyone.events).not.toContain(counseling);
     expect(shown(events, undefined, true)).toEqual({ events, hidden: 0 });
     expect(shown(events, sam, false).events).toContain(counseling);

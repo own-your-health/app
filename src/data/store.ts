@@ -6,6 +6,8 @@ import { readJson, REQUESTS_DIR, type RecordsFolder } from '../folder';
 import { FolderError, parseAttempts, parseHousehold, parseIndex, parseRefused, parseRequest, parseStatus, parseText } from '../model/parse';
 import { buildRequest, requestFileName, sameScope } from '../model/requests';
 import { macState, sourceViews, type MacState, type SourceView } from '../model/sources';
+import { useMedrecEvents } from '../next/load';
+import { medrecEventsName, parseMedrecEvents } from '../next/medrecEvents';
 import type { AttemptLine, Household, Person, PersonIndex, PersonText, RefreshRequest, RefreshStatus, RefusedRequest, RequestScope } from '../model/types';
 
 export type StatusRead =
@@ -44,11 +46,13 @@ export class Store {
     const raw = await readJson(this.folder, 'household.json');
     if (raw === null) throw new FolderError('not_household', 'This folder has no household.json. Choose the records folder medrec writes.');
     this.household = parseHousehold(raw);
-    await Promise.all([this.loadIndexes(), this.loadRefreshState()]);
+    // medrec's views (0.8.0 and later); a folder without them, or one that cannot be read, still loads.
+    const views = await readJson(this.folder, 'views/views.json').catch(() => null);
+    await Promise.all([this.loadIndexes(views), this.loadRefreshState()]);
     this.loadedAt = Date.now();
   }
 
-  private async loadIndexes(): Promise<void> {
+  private async loadIndexes(views: unknown): Promise<void> {
     await Promise.all(
       this.household.people.map(async (p) => {
         try {
@@ -57,13 +61,31 @@ export class Store {
             this.indexes.set(p.id, { schema: 'medrec-index/v1', person: p.id, rev: 0, documents: [], records: [], studies: [], imports: [] });
             return;
           }
-          this.indexes.set(p.id, parseIndex(raw, p.id));
+          const index = parseIndex(raw, p.id);
+          this.indexes.set(p.id, index);
           this.indexErrors.delete(p.id);
+          await this.loadEvents(index, views);
         } catch (e) {
           this.indexErrors.set(p.id, e instanceof Error ? e.message : 'The index could not be read.');
         }
       }),
     );
+  }
+
+  /**
+   * medrec's events for a person, when its views hold them (medrec 0.9.0 and
+   * later). Without them, or when they cannot be read, the app groups the
+   * person's records itself (load.ts).
+   */
+  private async loadEvents(index: PersonIndex, views: unknown): Promise<void> {
+    const name = medrecEventsName(views, index.person);
+    if (!name) return;
+    try {
+      const raw = await readJson(this.folder, `views/${index.person}/${name}`);
+      if (raw !== null) useMedrecEvents(index, parseMedrecEvents(raw, index.person));
+    } catch {
+      // Unreadable: the app groups the records itself.
+    }
   }
 
   /** Reads `_status/status.json` and `_requests/` again. */

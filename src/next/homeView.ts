@@ -203,7 +203,8 @@ function personNeeds(p: Person, idx: PersonIndex, mine: PersonEvent[], today: st
     refills: refills.map((r) => refillRow(p, r, own)),
     soon: (vaccines?.visits ?? []).map((v) => visitRow(p, v, own)),
     kept: allBills.length - bills.length + allRefills.length - refills.length,
-    standing: { person: p, idx, latest: mine.find((x) => own || !x.private), bills, refills, ...(vaccines ? { vaccines } : {}) },
+    // A pharmacy fill is not a visit.
+    standing: { person: p, idx, latest: mine.find((x) => x.event.kind !== 'fill' && (own || !x.private)), bills, refills, ...(vaccines ? { vaccines } : {}) },
   };
 }
 

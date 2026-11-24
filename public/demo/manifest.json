@@ -160,6 +160,11 @@
     "_requests/done/20261122T165600Z_x_e3eq2mmny4qy6rrw2fzp.json",
     "_status/attempts/2026-11.ndjson",
     "_status/status.json",
-    "household.json"
+    "household.json",
+    "views/p_bjpnvyvnmxv74q335tk4/events.24cfb28af4ff.json",
+    "views/p_skrlw3od3nik2hkngezu/events.9a9e522d337c.json",
+    "views/p_wwezzed7kml67hnp6s7n/events.0e8e66712c97.json",
+    "views/p_xo4em46i7yj3hphlpajo/events.b1745d41fbd8.json",
+    "views/views.json"
   ]
 }

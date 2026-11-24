@@ -4,9 +4,10 @@
 // event's shape, its kind in words, how sure it is, and what it cost from its
 // claims' totals. Who makes the events is load.ts's choice.
 
-import { CATEGORY_LABELS, claimAmounts, claimCategory, claimCents, type Category } from '../model/claims';
+import { CATEGORY_LABELS, claimAmounts, claimCategory, claimCents, claimTitle, type Category } from '../model/claims';
 import { sameProvider } from '../model/providers';
-import type { MedDocument, MedRecord } from '../model/types';
+import { organizationName, str } from '../model/records';
+import type { Household, MedDocument, MedRecord } from '../model/types';
 
 export type EventKind = 'er' | 'stay' | 'outpatient' | 'series' | 'office' | 'service' | 'tests' | 'dental' | 'vaccine' | 'fill';
 export type Confidence = 'sure' | 'likely' | 'unsure';
@@ -46,6 +47,10 @@ export interface CareEvent {
   noFacility?: boolean;
   /** Why it is not as sure as the rest: other events of the day that could own a part of it. */
   doubt?: string;
+  /** What it was, in medrec's words: the portal's reason, else the claims' services (medrec's `what`). */
+  what?: string;
+  /** What medrec still expects for it: the doctors' claims, the hospital's claim, a claim or a bill. */
+  expected?: { what: string; why: string; since?: string }[];
 }
 
 /** The rules, in words a person can follow. */
@@ -68,8 +73,21 @@ export const RULES = {
   D3: 'The only visit that day; the paper’s practice is on no claim',
   D3a: 'The only visit that day, and the paper’s amount is this visit’s share',
   D3s: 'A bill from a provider of this visit, for exactly what its claim says you owe',
+  // medrec's rules (events.json, 0.9.0), where the app's had none.
+  E1: 'A call, message or order from the same practice within 3 days',
+  E5: 'A vaccine given the day of a vaccine claim',
+  D2b: 'The paper names a clinician of this visit',
+  D4: 'A note or summary from the portal’s visit, dated 0 to 3 days after it',
+  D5: 'A prescription filled at this pharmacy 0 to 1 day later',
+  X1: 'Care of a newborn during a parent’s hospital stay',
+  X2: 'A paper filed under someone else, dated before their birth',
+  N5: 'A clinician known to work at this practice',
 } as const;
-export type Rule = keyof typeof RULES;
+/** A rule's name, as the app or medrec wrote it; medrec may write one the app does not know yet. */
+export type Rule = keyof typeof RULES | (string & {});
+
+/** A rule in words; one the app does not know yet is named as medrec's. */
+export const ruleText = (rule: Rule): string => (RULES as Record<string, string>)[rule] ?? `medrec’s rule ${rule}`;
 
 const CONFIDENCE_ORDER: Confidence[] = ['sure', 'likely', 'unsure'];
 const leastSure = (cs: Confidence[]): Confidence => CONFIDENCE_ORDER[Math.max(0, ...cs.map((c) => CONFIDENCE_ORDER.indexOf(c)))]!;
@@ -207,3 +225,24 @@ export const PRIVATE_AREAS: Record<string, string> = {
   substance_use: 'Substance use',
   household: 'Marked private',
 };
+
+
+
+/** Its title, and its place when its source gave none: the portal's words where there are some, else from the claims. */
+export function nameEvent(e: CareEvent, household: Household, person: string): void {
+  const v = e.visits[0]?.record;
+  const vName = v ? str(v.fields.location) ?? str(v.fields.service_provider) ?? v.provenance.map((p) => p.source.organization_id).filter((x): x is string => !!x).map((o) => organizationName(household, person, o))[0] : undefined;
+  e.place ??= vName ?? e.claims.find((c) => c.role === 'office')?.provider ?? e.claims[0]?.provider;
+  if (v && v.display) {
+    e.title = v.display;
+    return;
+  }
+  const first = e.claims[0]?.record;
+  if (e.kind === 'tests' && e.claims.length) {
+    const cats = new Set(e.claims.map((c) => claimCategory(c.record)));
+    e.title = cats.size === 1 && cats.has('imaging') ? 'Imaging' : cats.size === 1 && cats.has('lab') ? 'Lab tests' : 'Tests';
+  } else if ((e.kind === 'service' || e.kind === 'fill' || e.kind === 'vaccine') && first) e.title = claimTitle(first);
+  // A fill or a vaccine known only from the portal is named for what it was.
+  else if (!e.claims.length && e.recorded[0]?.display && (e.kind === 'fill' || e.kind === 'vaccine')) e.title = e.recorded[0].display;
+  else e.title = KIND_TITLES[e.kind];
+}
