@@ -1,0 +1,78 @@
+{
+  "resourceType": "ExplanationOfBenefit",
+  "id": "explanationofbenefit-782cd3c7",
+  "meta": {
+    "lastUpdated": "2026-11-21T08:00:00Z"
+  },
+  "status": "active",
+  "type": {
+    "coding": [
+      {
+        "code": "institutional"
+      }
+    ]
+  },
+  "use": "claim",
+  "billablePeriod": {
+    "start": "2026-09-12",
+    "end": "2026-09-13"
+  },
+  "benefitPeriod": {
+    "start": "2026-07-01",
+    "end": "2027-06-30"
+  },
+  "outcome": "complete",
+  "item": [
+    {
+      "sequence": 1,
+      "productOrService": {
+        "coding": [
+          {
+            "system": "http://www.ama-assn.org/go/cpt",
+            "code": "99285",
+            "display": "Emergency visit, high severity"
+          }
+        ]
+      },
+      "servicedDate": "2026-09-12",
+      "net": {
+        "value": 4200,
+        "currency": "USD"
+      }
+    },
+    {
+      "sequence": 2,
+      "productOrService": {
+        "coding": [
+          {
+            "system": "http://www.ama-assn.org/go/cpt",
+            "code": "99284",
+            "display": "Emergency visit, moderate severity"
+          }
+        ]
+      },
+      "servicedDate": "2026-09-12",
+      "net": {
+        "value": 3100,
+        "currency": "USD"
+      }
+    },
+    {
+      "sequence": 3,
+      "productOrService": {
+        "coding": [
+          {
+            "system": "http://www.ama-assn.org/go/cpt",
+            "code": "71046",
+            "display": "Chest X-ray, 2 views"
+          }
+        ]
+      },
+      "servicedDate": "2026-09-12",
+      "net": {
+        "value": 620,
+        "currency": "USD"
+      }
+    }
+  ]
+}

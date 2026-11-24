@@ -15,6 +15,7 @@ import { resultContext, unitText, verdict } from '../../model/result';
 import { recordTitle } from '../../model/titles';
 import type { ImagingStudy, Json, MedDocument, MedRecord, PersonIndex, Provenance } from '../../model/types';
 import { claimContext, visitKind, visitOf } from '../../model/visits';
+import { partOfEvent } from '../../next/eventView';
 import { rangeBar, resultChart } from '../chart';
 import { button, card, chip, command, driveLink, empty, flagChip, jsonBlock, kv, link, outLink, row, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
@@ -663,5 +664,5 @@ export function itemView(ctx: Ctx, personId: string, id: string): HTMLElement {
   const item = findItem(idx, id);
   if (!item) return h('div', { class: 'stack' }, back, card({}, empty('This record is not in the index. It may have been merged or removed by medrec.')));
   const body = item.type === 'record' ? recordView(ctx, idx, item.record) : item.type === 'document' ? documentView(ctx, idx, item.document) : studyView(ctx, idx, item.study);
-  return h('div', { class: 'stack' }, back, ...body);
+  return h('div', { class: 'stack' }, back, ctx.next ? partOfEvent(ctx, personId, idx, id) : null, ...body);
 }

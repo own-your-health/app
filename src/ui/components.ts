@@ -13,6 +13,8 @@ import { href } from './router';
 export interface Ctx {
   store: Store;
   demo: boolean;
+  /** The redesign, behind ?next: events, and in time Calendar, Money and the rest. */
+  next?: boolean;
   user: { email?: string; name?: string };
   /** drive.file was granted (or demo mode): Refresh can write a request. */
   canWrite: boolean;

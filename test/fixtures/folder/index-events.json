@@ -1,0 +1,1477 @@
+{
+  "schema": "medrec-index/v1",
+  "person": "p_fixtureeventsaaaaaaa",
+  "rev": 1,
+  "documents": [
+    {
+      "id": "d_erdischrgeaaaaaaaaaa",
+      "path": "Documents/erdischargeaaaaaaaa.pdf",
+      "sha256": "erdischargeaaaaaaaa000000000000000000000000000000000000000000000",
+      "md5": "erdischargeaaaaaaaa0000000000000",
+      "size": 1000,
+      "media_type": "application/pdf",
+      "title": "Discharge instructions",
+      "doc_type": "discharge_summary",
+      "date": "2026-03-03",
+      "organization": "Example Hospital",
+      "filed_at": "2026-06-30T08:00:00Z",
+      "provenance": {
+        "source": {
+          "kind": "drive"
+        },
+        "method": "filed",
+        "filed_at": "2026-06-30T08:00:00Z"
+      }
+    },
+    {
+      "id": "d_erbillaaaaaaaaaaaaaa",
+      "path": "Documents/erbillaaaaaaaaaaaaaa.pdf",
+      "sha256": "erbillaaaaaaaaaaaaaa00000000000000000000000000000000000000000000",
+      "md5": "erbillaaaaaaaaaaaaaa000000000000",
+      "size": 1000,
+      "media_type": "application/pdf",
+      "title": "Statement from Example Hospital",
+      "doc_type": "bill",
+      "date": "2026-04-01",
+      "organization": "Example Hospital",
+      "filed_at": "2026-06-30T08:00:00Z",
+      "provenance": {
+        "source": {
+          "kind": "drive"
+        },
+        "method": "filed",
+        "filed_at": "2026-06-30T08:00:00Z"
+      },
+      "statement": {
+        "statement_date": "2026-04-01",
+        "amount_due": {
+          "amount": "200.00",
+          "currency": "USD"
+        }
+      }
+    },
+    {
+      "id": "d_deskreceiptaaaaaaaaa",
+      "path": "Documents/deskreceiptaaaaaaaa.pdf",
+      "sha256": "deskreceiptaaaaaaaa000000000000000000000000000000000000000000000",
+      "md5": "deskreceiptaaaaaaaa0000000000000",
+      "size": 1000,
+      "media_type": "application/pdf",
+      "title": "Receipt",
+      "doc_type": "receipt",
+      "date": "2026-05-05",
+      "organization": "Example Walk-in",
+      "filed_at": "2026-06-30T08:00:00Z",
+      "provenance": {
+        "source": {
+          "kind": "drive"
+        },
+        "method": "filed",
+        "filed_at": "2026-06-30T08:00:00Z"
+      }
+    }
+  ],
+  "records": [
+    {
+      "id": "r_erhospitlaaaaaaaaaaa",
+      "kind": "claim",
+      "key": "claim|erhospitalaaaaaaaaaa",
+      "date": "2026-03-02",
+      "display": "Institutional",
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-06-30T08:00:00Z"
+        }
+      ],
+      "fields": {
+        "provider": "Example Hospital",
+        "insurer": "Example Health Plan",
+        "type": "Institutional",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-03-02",
+          "end": "2026-03-03"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "2000.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "700.00",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "500.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "200.00",
+            "currency": "USD"
+          },
+          "copay": {
+            "amount": "200.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99285",
+              "display": "Emergency visit, high severity"
+            },
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "3000.00",
+                "currency": "USD"
+              },
+              "not_covered": {
+                "amount": "3000.00",
+                "currency": "USD"
+              }
+            },
+            "counted": false,
+            "sequence": 1
+          },
+          {
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99284",
+              "display": "Emergency visit, moderate severity"
+            },
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "2000.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "700.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "500.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "200.00",
+                "currency": "USD"
+              }
+            },
+            "revenue": {
+              "system": "https://www.nubc.org/CodeSystem/RevenueCodes",
+              "code": "0450",
+              "display": "Emergency room"
+            },
+            "sequence": 2
+          }
+        ]
+      }
+    },
+    {
+      "id": "r_erdoctoraaaaaaaaaaaa",
+      "kind": "claim",
+      "key": "claim|erdoctoraaaaaaaaaaaaa",
+      "date": "2026-03-02",
+      "display": "Professional",
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-06-30T08:00:00Z"
+        }
+      ],
+      "fields": {
+        "provider": "Example Emergency Doctors",
+        "insurer": "Example Health Plan",
+        "type": "Professional",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-03-02",
+          "end": "2026-03-02"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "600.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "180.00",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "100.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "80.00",
+            "currency": "USD"
+          },
+          "deductible": {
+            "amount": "80.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99284",
+              "display": "Emergency visit, moderate severity"
+            },
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "600.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "180.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "100.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "80.00",
+                "currency": "USD"
+              }
+            },
+            "sequence": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "r_erxryaaaaaaaaaaaaaaa",
+      "kind": "claim",
+      "key": "claim|erxrayaaaaaaaaaaaaaaa",
+      "date": "2026-03-03",
+      "display": "Professional",
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-06-30T08:00:00Z"
+        }
+      ],
+      "fields": {
+        "provider": "Example Imaging",
+        "insurer": "Example Health Plan",
+        "type": "Professional",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-03-03",
+          "end": "2026-03-03"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "90.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "30.00",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "30.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "0.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "71046",
+              "display": "Chest X-ray, 2 views"
+            },
+            "category": "imaging",
+            "amounts": {
+              "billed": {
+                "amount": "90.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "30.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "30.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "0.00",
+                "currency": "USD"
+              }
+            },
+            "sequence": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "r_erlbaaaaaaaaaaaaaaaa",
+      "kind": "claim",
+      "key": "claim|erlabaaaaaaaaaaaaaaaa",
+      "date": "2026-03-02",
+      "display": "Professional",
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-06-30T08:00:00Z"
+        }
+      ],
+      "fields": {
+        "provider": "Example Lab",
+        "insurer": "Example Health Plan",
+        "type": "Professional",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-03-02",
+          "end": "2026-03-02"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "60.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "10.00",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "10.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "0.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "85025",
+              "display": "Blood count"
+            },
+            "category": "lab",
+            "amounts": {
+              "billed": {
+                "amount": "60.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "10.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "10.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "0.00",
+                "currency": "USD"
+              }
+            },
+            "sequence": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "r_officevisitaaaaaaaaa",
+      "kind": "encounter",
+      "key": "encounter|officevisitaaaaaaaaa",
+      "date": "2026-04-10T09:30:00-04:00",
+      "display": "Annual physical",
+      "status": "finished",
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "mychart",
+            "cli_version": "0.1.0",
+            "organization_id": "example-clinic"
+          },
+          "method": "portal",
+          "filed_at": "2026-06-30T08:00:00Z"
+        }
+      ],
+      "fields": {
+        "class": "AMB",
+        "location": "Example Clinic",
+        "reason": "Check-up"
+      }
+    },
+    {
+      "id": "r_officeresultaaaaaaaa",
+      "kind": "result",
+      "key": "result|officeresultaaaaaaaa",
+      "date": "2026-04-10T10:00:00-04:00",
+      "display": "Glucose",
+      "status": "final",
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "mychart",
+            "cli_version": "0.1.0",
+            "organization_id": "example-clinic"
+          },
+          "method": "portal",
+          "filed_at": "2026-06-30T08:00:00Z"
+        }
+      ],
+      "fields": {
+        "value": {
+          "value": 92,
+          "unit": "mg/dL"
+        }
+      }
+    },
+    {
+      "id": "r_officeclimaaaaaaaaaa",
+      "kind": "claim",
+      "key": "claim|officeclaimaaaaaaaaaa",
+      "date": "2026-04-10",
+      "display": "Professional",
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-06-30T08:00:00Z"
+        }
+      ],
+      "fields": {
+        "provider": "Example Clinic",
+        "insurer": "Example Health Plan",
+        "type": "Professional",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-04-10",
+          "end": "2026-04-10"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "250.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "150.00",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "150.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "0.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99396",
+              "display": "Preventive visit"
+            },
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "250.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "150.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "150.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "0.00",
+                "currency": "USD"
+              }
+            },
+            "sequence": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "r_officelbaaaaaaaaaaaa",
+      "kind": "claim",
+      "key": "claim|officelabaaaaaaaaaaaa",
+      "date": "2026-04-10",
+      "display": "Professional",
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-06-30T08:00:00Z"
+        }
+      ],
+      "fields": {
+        "provider": "Example Lab",
+        "insurer": "Example Health Plan",
+        "type": "Professional",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-04-10",
+          "end": "2026-04-10"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "40.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "8.00",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "8.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "0.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "82947",
+              "display": "Glucose test"
+            },
+            "category": "lab",
+            "amounts": {
+              "billed": {
+                "amount": "40.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "8.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "8.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "0.00",
+                "currency": "USD"
+              }
+            },
+            "sequence": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "r_likelyvisitaaaaaaaaa",
+      "kind": "encounter",
+      "key": "encounter|likelyvisitaaaaaaaaa",
+      "date": "2026-04-20T09:30:00-04:00",
+      "display": "Follow-up",
+      "status": "finished",
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "mychart",
+            "cli_version": "0.1.0",
+            "organization_id": "example-clinic"
+          },
+          "method": "portal",
+          "filed_at": "2026-06-30T08:00:00Z"
+        }
+      ],
+      "fields": {
+        "class": "AMB",
+        "location": "Example Clinic"
+      }
+    },
+    {
+      "id": "r_likelyclimaaaaaaaaaa",
+      "kind": "claim",
+      "key": "claim|likelyclaimaaaaaaaaaa",
+      "date": "2026-04-20",
+      "display": "Professional",
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-06-30T08:00:00Z"
+        }
+      ],
+      "fields": {
+        "provider": "A Sample",
+        "insurer": "Example Health Plan",
+        "type": "Professional",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-04-20",
+          "end": "2026-04-20"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "150.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "90.00",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "65.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "25.00",
+            "currency": "USD"
+          },
+          "copay": {
+            "amount": "25.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99213",
+              "display": "Office visit"
+            },
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "150.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "90.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "65.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "25.00",
+                "currency": "USD"
+              }
+            },
+            "sequence": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "r_portlonlyaaaaaaaaaaa",
+      "kind": "encounter",
+      "key": "encounter|portalonlyaaaaaaaaaa",
+      "date": "2026-04-25T09:30:00-04:00",
+      "display": "Video visit",
+      "status": "finished",
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "mychart",
+            "cli_version": "0.1.0",
+            "organization_id": "example-clinic"
+          },
+          "method": "portal",
+          "filed_at": "2026-06-30T08:00:00Z"
+        }
+      ],
+      "fields": {
+        "class": "VR",
+        "location": "Example Clinic"
+      }
+    },
+    {
+      "id": "r_testsonlyaaaaaaaaaaa",
+      "kind": "claim",
+      "key": "claim|testsonlyaaaaaaaaaaaa",
+      "date": "2026-05-05",
+      "display": "Professional",
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-06-30T08:00:00Z"
+        }
+      ],
+      "fields": {
+        "provider": "Example Lab",
+        "insurer": "Example Health Plan",
+        "type": "Professional",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-05-05",
+          "end": "2026-05-05"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "90.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "20.00",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "20.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "0.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "80061",
+              "display": "Lipid panel"
+            },
+            "category": "lab",
+            "amounts": {
+              "billed": {
+                "amount": "90.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "20.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "20.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "0.00",
+                "currency": "USD"
+              }
+            },
+            "sequence": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "r_testsonlyxryaaaaaaaa",
+      "kind": "claim",
+      "key": "claim|testsonlyxrayaaaaaaaa",
+      "date": "2026-05-05",
+      "display": "Professional",
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-06-30T08:00:00Z"
+        }
+      ],
+      "fields": {
+        "provider": "Example Imaging",
+        "insurer": "Example Health Plan",
+        "type": "Professional",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-05-05",
+          "end": "2026-05-05"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "120.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "40.00",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "40.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "0.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "73610",
+              "display": "X-ray of the ankle"
+            },
+            "category": "imaging",
+            "amounts": {
+              "billed": {
+                "amount": "120.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "40.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "40.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "0.00",
+                "currency": "USD"
+              }
+            },
+            "sequence": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "r_twoofficeoneaaaaaaaa",
+      "kind": "claim",
+      "key": "claim|twoofficeoneaaaaaaaaaaa",
+      "date": "2026-05-12",
+      "display": "Professional",
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-06-30T08:00:00Z"
+        }
+      ],
+      "fields": {
+        "provider": "Example Clinic",
+        "insurer": "Example Health Plan",
+        "type": "Professional",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-05-12",
+          "end": "2026-05-12"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "150.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "90.00",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "90.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "0.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99213",
+              "display": "Office visit"
+            },
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "150.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "90.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "90.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "0.00",
+                "currency": "USD"
+              }
+            },
+            "sequence": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "r_twoofficetwoaaaaaaaa",
+      "kind": "claim",
+      "key": "claim|twoofficetwoaaaaaaaaaaa",
+      "date": "2026-05-12",
+      "display": "Professional",
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-06-30T08:00:00Z"
+        }
+      ],
+      "fields": {
+        "provider": "Example Skin Care",
+        "insurer": "Example Health Plan",
+        "type": "Professional",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-05-12",
+          "end": "2026-05-12"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "150.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "90.00",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "90.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "0.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99213",
+              "display": "Office visit"
+            },
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "150.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "90.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "90.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "0.00",
+                "currency": "USD"
+              }
+            },
+            "sequence": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "r_twoofficelbaaaaaaaaa",
+      "kind": "claim",
+      "key": "claim|twoofficelabaaaaaaaaa",
+      "date": "2026-05-12",
+      "display": "Professional",
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-06-30T08:00:00Z"
+        }
+      ],
+      "fields": {
+        "provider": "Example Lab",
+        "insurer": "Example Health Plan",
+        "type": "Professional",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-05-12",
+          "end": "2026-05-12"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "60.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "10.00",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "10.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "0.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "85025",
+              "display": "Blood count"
+            },
+            "category": "lab",
+            "amounts": {
+              "billed": {
+                "amount": "60.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "10.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "10.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "0.00",
+                "currency": "USD"
+              }
+            },
+            "sequence": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "r_nofcilityoneaaaaaaaa",
+      "kind": "claim",
+      "key": "claim|nofacilityoneaaaaaaaaaa",
+      "date": "2026-06-01",
+      "display": "Professional",
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-06-30T08:00:00Z"
+        }
+      ],
+      "fields": {
+        "provider": "Example Hospitalists",
+        "insurer": "Example Health Plan",
+        "type": "Professional",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-06-01",
+          "end": "2026-06-01"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "400.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "200.00",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "200.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "0.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99223",
+              "display": "Admitted to the hospital, first day"
+            },
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "400.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "200.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "200.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "0.00",
+                "currency": "USD"
+              }
+            },
+            "sequence": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "r_nofcilitytwoaaaaaaaa",
+      "kind": "claim",
+      "key": "claim|nofacilitytwoaaaaaaaaaa",
+      "date": "2026-06-02",
+      "display": "Professional",
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-06-30T08:00:00Z"
+        }
+      ],
+      "fields": {
+        "provider": "Example Hospitalists",
+        "insurer": "Example Health Plan",
+        "type": "Professional",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-06-02",
+          "end": "2026-06-02"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "200.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "100.00",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "100.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "0.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99238",
+              "display": "Day of discharge"
+            },
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "200.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "100.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "100.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "0.00",
+                "currency": "USD"
+              }
+            },
+            "sequence": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "r_shotaaaaaaaaaaaaaaaa",
+      "kind": "claim",
+      "key": "claim|shotaaaaaaaaaaaaaaaaa",
+      "date": "2026-06-20",
+      "display": "Professional",
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-06-30T08:00:00Z"
+        }
+      ],
+      "fields": {
+        "provider": "Example Clinic",
+        "insurer": "Example Health Plan",
+        "type": "Professional",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-06-20",
+          "end": "2026-06-20"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "75.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "45.00",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "45.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "0.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "90686",
+              "display": "Flu vaccine"
+            },
+            "category": "vaccine",
+            "amounts": {
+              "billed": {
+                "amount": "50.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "30.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "30.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "0.00",
+                "currency": "USD"
+              }
+            },
+            "sequence": 1
+          },
+          {
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "90471",
+              "display": "Vaccine given"
+            },
+            "category": "vaccine",
+            "amounts": {
+              "billed": {
+                "amount": "25.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "15.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "15.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "0.00",
+                "currency": "USD"
+              }
+            },
+            "sequence": 2
+          }
+        ]
+      }
+    },
+    {
+      "id": "r_fillaaaaaaaaaaaaaaaa",
+      "kind": "claim",
+      "key": "claim|fillaaaaaaaaaaaaaaaaa",
+      "date": "2026-06-10",
+      "display": "Pharmacy",
+      "documents": [],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "plan",
+            "cli_version": "0.1.0",
+            "organization_id": "example-health-plan"
+          },
+          "method": "portal",
+          "filed_at": "2026-06-30T08:00:00Z"
+        }
+      ],
+      "fields": {
+        "provider": "Example Pharmacy",
+        "insurer": "Example Health Plan",
+        "type": "Pharmacy",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-06-10",
+          "end": "2026-06-10"
+        },
+        "amounts": {
+          "billed": {
+            "amount": "30.00",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "12.00",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "2.00",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "10.00",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "service": {
+              "system": "http://hl7.org/fhir/sid/ndc",
+              "code": "00000-0000-01",
+              "display": "Amoxicillin 500 mg capsule"
+            },
+            "category": "pharmacy",
+            "amounts": {
+              "billed": {
+                "amount": "30.00",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "12.00",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "2.00",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "10.00",
+                "currency": "USD"
+              }
+            },
+            "sequence": 1
+          }
+        ]
+      }
+    }
+  ],
+  "studies": [],
+  "imports": []
+}
