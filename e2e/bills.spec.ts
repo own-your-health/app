@@ -163,7 +163,7 @@ test('a bill’s own page lists its payments, what is left and the statement tha
   await go(page, `#/p/${ROBIN}/r/${docOf('Robin Example', '51.18')}`);
   await expect(kv(page, 'Paid')).toHaveText('$51.18, receipt Apr 20, 2025');
   await expect(kv(page, 'Left to pay')).toHaveText('Nothing');
-  await expect(kv(page, 'Later statement')).toHaveText('Its balance includes this one: Statement from Example Health.pdf');
+  await expect(kv(page, 'Later statement')).toHaveText('Its balance includes this one: Statement from Example Health');
   // One nothing is paid on says nothing of it.
   await go(page, `#/p/${SAM}/r/${docOf('Sam Example', '90.50')}`);
   await expect(kv(page, 'Amount due')).toHaveText('$90.50');

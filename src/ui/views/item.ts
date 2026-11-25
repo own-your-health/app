@@ -454,13 +454,14 @@ function encounterView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   const visit = visitOf(idx, ctx.store.household, idx.person, localDay(ctx.now()), r.id);
   const inVisit = visit ? visitContents(idx, visit) : [];
   const kind = visit ? visitKind(visit) : undefined;
+  const title = recordTitle(r);
   return [
     head(
-      recordTitle(r),
+      title,
       null,
       [kind ?? 'Visit', visit ? visitWhen(visit) : dateText(r.date), fromText(ctx, idx, r)],
       kv([
-        ['Reason', str(r.fields.reason)],
+        ['Reason', str(r.fields.reason) === title ? undefined : str(r.fields.reason)],
         ['With', providerLink(ctx, idx, r.id, ['practitioner'], str(r.fields.practitioner))],
         ['Where', providerLink(ctx, idx, r.id, ['location', 'service_provider'], str(r.fields.location) ?? str(r.fields.service_provider))],
         ['Status', r.status && r.status !== 'finished' ? (statusText(r.status) ?? r.status) : undefined],

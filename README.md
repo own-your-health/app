@@ -94,7 +94,8 @@ carries a dot while a source needs attention) has every source: its
 sign-in, its last load and attempt, and when the Mac loads it next. A
 source's page says in one sentence what happened and gives the medrec
 command to run; what the provider's own tool reported, which can name that
-tool's commands, is folded under **Error details**. When the Mac skips a
+tool's commands, is folded under **Error details**. An earlier try in its
+**Attempts** says what went wrong, and gives no medrec command. When the Mac skips a
 source because it loaded or tried it too recently, the answer says when it
 may load again.
 
@@ -663,6 +664,11 @@ dropped from the address.
   events or without; its claim names the vaccine, not the line for giving it.
   Billing descriptors in capitals ("NEW VISIT LEVEL FOUR") are never
   a headline; they show only in the visit's Details (`src/model/words.ts`).
+  The portal's record of a visit is titled the same way, on its own page and
+  wherever it is named: its name, else its reason, else "Visit". Where its
+  event or a claim lists it as a row, the last is "The portal's record of the
+  visit", as "Visit" would not say which. Search finds it by the source's own
+  name too.
   A portal platform's name ("Example Records (all practices)") is never a
   place; a visit that names no other is at its sign-in's practice
   (`src/model/practices.ts`), and has no place when that is

@@ -25,7 +25,7 @@ import { demoFolderWith, demoJson, manifestWith, privateCase, type Overlay } fro
 
 const TODAY = '2026-11-22';
 /** The paper Sam was given after the endoscopy. */
-const AFTER = 'After your upper endoscopy.pdf';
+const AFTER = 'After your upper endoscopy';
 
 async function load(overlay: Overlay = {}, manifest?: Parameters<typeof demoFolderWith>[1]): Promise<Store> {
   const store = new Store(demoFolderWith(overlay, manifest));
@@ -312,7 +312,7 @@ describe('a person whose list can’t be used is held back', () => {
 });
 
 describe('copies of one statement', () => {
-  const statement = 'Statement from Example Endoscopy Center.pdf';
+  const statement = 'Statement from Example Endoscopy Center';
   /** Sam with two copies of the endoscopy center's statement, medrec's list as one before or after 0.9.6 has it. */
   const withCopies = (documents: string[], ties = false): PersonIndex => {
     const idx = structuredClone(index(SAMPLE, sam));
@@ -371,7 +371,7 @@ describe('what the household marked', () => {
     const p = shared.find((x) => x.doc.id === doc.id)!;
     expect([p.with, p.could, p.why]).toEqual([undefined, undefined, 'No visit listed here is on or near Sep 16, 2026.']);
     // The visit's other paper, its bill, was not marked so, and stays off; its owner has it.
-    const off = ['Statement from Example Lab.pdf', 'Statement from Example Endoscopy Center.pdf'];
+    const off = ['Statement from Example Lab', 'Statement from Example Endoscopy Center'];
     const all = MARKED.household.people.flatMap((x) => papersOf(index(MARKED, x.id), MARKED.household, TODAY, MARKED.indexes));
     expect(all.filter((x) => x.private).map((x) => [documentTitle(x.doc), x.private])).toEqual(off.map((t) => [t, 'household']));
     expect(shared).toHaveLength(all.length - 2);
@@ -389,7 +389,7 @@ describe('what the household marked', () => {
     // A receipt that is not private, for a bill that is.
     const idx = structuredClone(index(SAMPLE, robin));
     if (idx.privacy?.kind !== 'known') throw new Error('not known');
-    const receipt = paper(SAMPLE, robin, 'Payment receipt.pdf').id;
+    const receipt = paper(SAMPLE, robin, 'Payment receipt').id;
     expect(on(idx, receipt)).toEqual(['bill', undefined, 'bill', undefined]);
     for (const d of idx.documents) if (d.doc_type === 'bill') idx.privacy.documents.set(d.id, 'household');
     expect(on(idx, receipt)).toEqual(['bill', undefined, undefined, 'No visit listed here is on or near Apr 20, 2025.']);
@@ -404,7 +404,7 @@ describe('what the household marked', () => {
 
   it('a bill marked private accounts for no share on a shared screen, which lists the visit’s as with no bill', () => {
     const idx = index(MARKED, robin);
-    const bill = paper(MARKED, robin, 'Statement from Example Lab.pdf');
+    const bill = paper(MARKED, robin, 'Statement from Example Lab');
     const mine = events(MARKED).filter((x) => x.person.id === robin);
     const day = mine.find((x) => x.event.papers.some((p) => p.doc.id === bill.id))!.event.start;
     const labs = (shared: boolean) => unbilledShares(idx, mine, shared).filter((u) => u.provider === 'Example Lab' && u.event.event.start === day);

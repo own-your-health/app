@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { categoryOf, claimAmounts, claimLines, claimTitle } from '../src/model/claims';
-import { recordTitle } from '../src/model/titles';
+import { recordTitle, visitTitle } from '../src/model/titles';
 import { toCents } from '../src/model/records';
 import type { MedRecord } from '../src/model/types';
 import { demo, personNamed } from './demo-data';
@@ -38,8 +38,28 @@ describe('a claim title', () => {
 
   it('is how every list names a claim', () => {
     expect(recordTitle(claimOn('2026-11-18'))).toBe('Office visit');
-    const visit = robin.records.find((r) => r.kind === 'encounter')!;
-    expect(recordTitle(visit)).toBe(visit.display);
+  });
+});
+
+describe('a visit’s title', () => {
+  const visit = (over: Partial<MedRecord>): MedRecord => ({ ...robin.records.find((r) => r.kind === 'encounter')!, ...over });
+  const bill = 'YEARLY EXAM RETURNING ADULT';
+
+  it('is the source’s name for it, else its reason, and never billing words', () => {
+    expect(recordTitle(visit({ display: 'Clinic visit', fields: { reason: 'Ankle sprain' } }))).toBe('Clinic visit');
+    expect(recordTitle(visit({ display: bill, fields: { reason: 'Annual physical' } }))).toBe('Annual physical');
+    expect([recordTitle(visit({ display: bill, fields: {} })), recordTitle(visit({ display: bill, fields: { reason: bill } }))]).toEqual(['Visit', 'Visit']);
+    expect(visitTitle(visit({ display: bill, fields: {} }))).toBe('The portal’s record of the visit');
+  });
+
+  it('is its code’s name, else its kind, where the source gives it none', () => {
+    expect(recordTitle(visit({ display: '', code: { display: 'Consultation' }, fields: {} }))).toBe('Consultation');
+    expect(recordTitle(visit({ display: '', code: {}, fields: {} }))).toBe('Visit');
+  });
+
+  it('leaves every other kind of record its source’s name', () => {
+    const procedure = { ...visit({}), kind: 'procedure', display: bill, fields: { reason: 'Annual physical' } };
+    expect([recordTitle(procedure), recordTitle({ ...procedure, display: '', code: {} })]).toEqual([bill, 'Procedure']);
   });
 });
 

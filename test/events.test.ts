@@ -46,8 +46,8 @@ describe('a hospital visit', () => {
 
   it('takes its hospital’s papers from its days, and a bill sent later for exactly its share', () => {
     expect(stay!.papers.map((p) => [documentTitle(p.doc), p.rule, p.confidence])).toEqual([
-      ['Statement from Example Hospital.pdf', 'D3s', 'sure'],
-      ['Leaving the hospital.pdf', 'D2', 'sure'],
+      ['Statement from Example Hospital', 'D3s', 'sure'],
+      ['Leaving the hospital', 'D2', 'sure'],
     ]);
   });
 
@@ -104,7 +104,7 @@ describe('a day of claims', () => {
   it('is one tests event when only labs and imaging billed, with a paper from a practice on no claim, as likely', () => {
     const [tests] = on('2026-04-02');
     expect([tests!.kind, tests!.title, providers(tests!).map((p) => p[0]).sort()]).toEqual(['tests', 'Tests', ['Example Imaging', 'Example Lab']]);
-    expect(tests!.papers.map((p) => [documentTitle(p.doc), p.rule, p.confidence])).toEqual([['Receipt.pdf', 'D3', 'likely']]);
+    expect(tests!.papers.map((p) => [documentTitle(p.doc), p.rule, p.confidence])).toEqual([['Receipt', 'D3', 'likely']]);
   });
 
   it('keeps a lab apart, unsure, when two office visits that day could have ordered it', () => {

@@ -48,7 +48,7 @@ function attemptRow(a: AttemptLine): HTMLElement {
       ),
       h('div', { class: 'row-aside' }, chip(a.outcome.replace(/_/g, ' '), OUTCOME_TONE[a.outcome] ?? 'muted')),
     ),
-    a.error ? errorDetails(a.error) : null,
+    a.error ? errorDetails(a.error, { past: true }) : null,
   );
 }
 

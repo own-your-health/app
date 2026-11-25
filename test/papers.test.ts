@@ -23,20 +23,20 @@ describe('where each paper belongs', () => {
     expect(all.filter((p) => !p.with).map((p) => [documentTitle(p.doc), p.why])).toEqual([
       // Sam has private visits, so a shared screen says what is listed there, not that there was none.
       ['Referral to digestive health', 'No visit listed here is on or near Aug 3, 2026.'],
-      ['scan_0007.png', 'A vaccine record covers many visits.'],
+      ['scan_0007', 'A vaccine record covers many visits.'],
     ]);
   });
 
   it('puts a paper with the visit that holds it, at the visit’s sureness', () => {
-    const summary = titled('Sam Example', 'After your upper endoscopy.pdf');
+    const summary = titled('Sam Example', 'After your upper endoscopy');
     expect([summary.with?.event.kind, summary.with?.how, summary.with?.confidence]).toEqual(['outpatient', 'event', 'sure']);
-    expect(titled('Sam Example', 'Statement from Example Billing.pdf').with?.confidence).toBe('likely');
+    expect(titled('Sam Example', 'Statement from Example Billing').with?.confidence).toBe('likely');
   });
 
   it('puts an explanation of benefits with the visit of the claim that links it, and a receipt with its bill’s', () => {
     const eob = titled('Robin Example', 'Explanation of Benefits');
     expect([eob.with?.how, eob.with?.event.start]).toEqual(['claim', '2026-10-01']);
-    const receipt = titled('Robin Example', 'Payment receipt.pdf');
+    const receipt = titled('Robin Example', 'Payment receipt');
     expect([receipt.with?.how, receipt.with?.event.start, receipt.with?.confidence]).toEqual(['bill', '2025-03-10', 'likely']);
   });
 

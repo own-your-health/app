@@ -110,23 +110,35 @@ export function isMedrecOwnError(e: ErrorInfo | null | undefined): boolean {
 }
 
 /**
+ * The remedy to show with an error: none of medrec's own where its command is
+ * shown already, or was for a try that is past. What medrec asks for now is at
+ * the top of the source's page, and its words are the Mac's ("on this machine").
+ */
+export function shownRemedy(e: ErrorInfo, opts: { commandAbove?: boolean; past?: boolean }): string | undefined {
+  return isMedrecOwnError(e) && (opts.commandAbove || (opts.past && remedyCommand(e))) ? undefined : e.remedy;
+}
+
+/**
  * What the provider's own tool said, folded away. Its words were written for
  * someone running that tool by hand, so they can name commands other than
- * the one medrec asks for.
+ * the one medrec asks for. `commandAbove` is for a page that gives medrec's
+ * command over it, `past` for an earlier try, which asks for nothing now.
  */
-export function errorDetails(e: ErrorInfo, opts: { commandAbove?: boolean } = {}): HTMLElement | null {
+export function errorDetails(e: ErrorInfo, opts: { commandAbove?: boolean; past?: boolean } = {}): HTMLElement | null {
   const said = typeof e.provider_message === 'string' ? e.provider_message.trim() : '';
-  if (!e.message && !e.remedy && !said) return null;
+  const own = isMedrecOwnError(e);
+  const remedy = shownRemedy(e, opts);
+  if (!e.message && !remedy && !said) return null;
   const reported = opts.commandAbove ? 'What the provider’s tool reported. To sign in, run the medrec command above, not the tool’s own.' : 'What the provider’s tool reported.';
   // From medrec 0.7.0 a sign-in that ended has medrec's own message and remedy, and the tool's words apart.
-  const body = isMedrecOwnError(e)
+  const body = own
     ? [
         e.message ? h('p', null, e.message) : null,
-        e.remedy && !opts.commandAbove ? h('p', null, e.remedy) : null,
+        remedy ? h('p', null, remedy) : null,
         said ? h('p', { class: 'muted' }, reported) : null,
         said ? h('p', null, said) : null,
       ]
-    : [opts.commandAbove ? h('p', { class: 'muted' }, reported) : null, e.message ? h('p', null, e.message) : null, e.remedy ? h('p', null, e.remedy) : null];
+    : [opts.commandAbove ? h('p', { class: 'muted' }, reported) : null, e.message ? h('p', null, e.message) : null, remedy ? h('p', null, remedy) : null];
   return h('details', { class: 'error-details' }, h('summary', null, 'Error details'), body, e.code ? h('p', { class: 'muted' }, `Code: ${e.code}`) : null);
 }
 

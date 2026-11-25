@@ -26,9 +26,9 @@ describe('visits with their documents', () => {
       ['2025-09-15', 'Follow-up'],
       ['2025-03-10', 'Annual physical'],
     ]);
-    expect(visits.map(docTitles)).toEqual([['Basic metabolic panel'], ['linked Lipid panel', 'After visit summary', 'Statement from Example Health.pdf'], [], []]);
+    expect(visits.map(docTitles)).toEqual([['Basic metabolic panel'], ['linked Lipid panel', 'After visit summary', 'Statement from Example Health'], [], []]);
     // A statement from another provider, an insurer's EOB, a receipt and a scan from days with no visit stay out.
-    expect(loose.map(documentTitle)).toEqual(['Statement from Example Lab.pdf', 'Explanation of Benefits', 'Payment receipt.pdf', 'Statement from Example Health, April.pdf', 'scan_0007.png']);
+    expect(loose.map(documentTitle)).toEqual(['Statement from Example Lab', 'Explanation of Benefits', 'Payment receipt', 'Statement from Example Health, April', 'scan_0007']);
   });
 
   it('lists what was recorded at the visit by kind, and its claim', () => {
@@ -44,7 +44,7 @@ describe('visits with their documents', () => {
   it('matches a document filed by hand by its day and the practice’s name', () => {
     const sick = timeline('Alex Example').visits[0]!;
     expect(sick.record.display).toBe('Sick visit');
-    expect(docTitles(sick)).toEqual(['Care instructions', 'School note.jpg']);
+    expect(docTitles(sick)).toEqual(['Care instructions', 'School note']);
     expect(sick.recorded.map((g) => [g.kind, g.records.map((r) => r.display)])).toEqual([
       ['condition', ['Ear infection']],
       ['medication', ['Amoxicillin 400 mg/5 mL suspension']],
@@ -84,7 +84,7 @@ describe('visits with their documents', () => {
     const { visits } = timeline('Robin Example', { ...idx, records: [...idx.records, second] });
     const byName = (n: string) => visits.find((v) => v.record.display === n && v.start === '2026-10-01')!;
     expect(docTitles(byName('Diet visit'))).toEqual(['linked Lipid panel']);
-    expect(docTitles(byName('Office visit'))).toEqual(['After visit summary', 'Statement from Example Health.pdf']);
+    expect(docTitles(byName('Office visit'))).toEqual(['After visit summary', 'Statement from Example Health']);
   });
 
   it('leaves out withdrawn records, and visits not yet happened or cancelled', () => {
