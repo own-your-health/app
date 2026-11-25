@@ -1,11 +1,19 @@
-// A household's setup link: the app's address with `?client=<client id>`.
+// A household's setup link: the app's address with `#/setup/<client id>`, and
+// any route after that. A browser sends no server the part after #. A link
+// from before has `?client=<client id>` before the route, and opens the same.
 // Opening it on a phone stores the client id as if it had been typed and goes
 // straight to Google's sign-in. The id is not a secret: an account sees only
 // what Drive shares with it, whoever may sign in through the client.
 
 import { isClientId } from './auth';
 
-export const CLIENT_PARAM = 'client';
+const CLIENT_PARAM = 'client';
+const SETUP = /^#\/setup(?:\/([^/?]*))?(?=[/?]|$)(.*)$/s;
+
+export interface Address {
+  search: string;
+  hash: string;
+}
 
 export type SetupLink =
   | { kind: 'none' }
@@ -17,10 +25,20 @@ export type SetupLink =
   /** This browser uses another client: ask before replacing it. */
   | { kind: 'different'; clientId: string; current: string };
 
-export function readSetupLink(search: string, current: string | null): SetupLink {
-  const params = new URLSearchParams(search);
-  if (!params.has(CLIENT_PARAM)) return { kind: 'none' };
-  const id = (params.get(CLIENT_PARAM) ?? '').trim();
+/** The client the address names, as written; null when it is no setup link. */
+function named({ search, hash }: Address): string | null {
+  const setup = SETUP.exec(hash);
+  if (!setup) return new URLSearchParams(search).get(CLIENT_PARAM);
+  try {
+    return decodeURIComponent(setup[1] ?? '');
+  } catch {
+    return '';
+  }
+}
+
+export function readSetupLink(address: Address, current: string | null): SetupLink {
+  const id = named(address)?.trim();
+  if (id === undefined) return { kind: 'none' };
   if (!isClientId(id)) return { kind: 'invalid' };
   if (!current) return { kind: 'new', clientId: id };
   return id === current ? { kind: 'same', clientId: id } : { kind: 'different', clientId: id, current };
@@ -50,19 +68,21 @@ export function readPaste(text: string, origin: string): Paste {
     return { kind: 'bad' };
   }
   if (url.origin !== origin) return { kind: 'other_site' };
-  const link = readSetupLink(url.search, null);
+  const link = readSetupLink(url, null);
   return link.kind === 'new' ? { kind: 'client', clientId: link.clientId } : { kind: 'bad_link' };
 }
 
-/** The address without `?client=`, keeping any other parameter and the route. */
-export function withoutClient(loc: { pathname: string; search: string; hash: string }): string {
+/** The address without the client, in either form, keeping any other parameter and the route. */
+export function withoutClient(loc: Address & { pathname: string }): string {
   const params = new URLSearchParams(loc.search);
   params.delete(CLIENT_PARAM);
   const rest = params.toString();
-  return `${loc.pathname}${rest ? `?${rest}` : ''}${loc.hash}`;
+  const setup = SETUP.exec(loc.hash);
+  const route = setup?.[2] ?? '';
+  return `${loc.pathname}${rest ? `?${rest}` : ''}${setup ? route && `#${route}` : loc.hash}`;
 }
 
 /** The setup link for another device: `base` is the app's own address. */
 export function setupLinkFor(clientId: string, base: string): string {
-  return `${base}?${CLIENT_PARAM}=${encodeURIComponent(clientId)}`;
+  return `${base}#/setup/${encodeURIComponent(clientId)}`;
 }

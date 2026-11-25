@@ -356,15 +356,80 @@ test('an answered request medrec could not remove is tidied by the app', async (
   ]);
 });
 
+test('a setup link opened over the records keeps them open and goes to its page', async ({ page }) => {
+  await signIn(page);
+  const asked = google.signIns.length;
+  await page.evaluate(() => Object.assign(window, { kept: true }));
+  const open = (hash: string) => page.evaluate((to) => void (location.hash = to), hash);
+  // This browser's own client.
+  await open(`#/setup/${CLIENT}/p/${ROBIN}/medicines`);
+  await expect(page).toHaveURL(new RegExp(`/#/p/${ROBIN}/medicines$`));
+  await expect(page.getByRole('heading', { level: 1, name: 'Robin’s medicines' })).toBeVisible();
+  // No client's id: the app keeps its own, and says so.
+  await open(`#/setup/not-a-client-id/p/${SAM}/medicines`);
+  await expect(page).toHaveURL(new RegExp(`/#/p/${SAM}/medicines$`));
+  await expect(page.locator('.toast-error')).toHaveText('The link you opened has no valid Google client id, so the app kept its own.');
+  await expect(page.getByRole('heading', { level: 1, name: 'Sam’s medicines' })).toBeVisible();
+  // Another client: asked first, and keeping this one goes on with the records.
+  await open(`#/setup/${OTHER_CLIENT}/p/${ROBIN}/medicines`);
+  await expect(page.getByRole('heading', { name: 'Use the client in this link?' })).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/#/p/${ROBIN}/medicines$`));
+  await page.getByRole('button', { name: 'Keep the current one' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Robin’s medicines' })).toBeVisible();
+  // The same page all along, with no other sign-in.
+  expect(await page.evaluate(() => 'kept' in window)).toBe(true);
+  expect(google.signIns).toHaveLength(asked);
+  // And using the other signs in through it.
+  await open(`#/setup/${OTHER_CLIENT}`);
+  await page.getByRole('button', { name: 'Use the link’s client' }).click();
+  await expect.poll(() => google.signIns.at(-1)?.clientId).toBe(OTHER_CLIENT);
+});
+
+test('a setup link leaves private items off again, whichever client and page it names', async ({ page }) => {
+  await signIn(page);
+  const open = (hash: string) => page.evaluate((to) => void (location.hash = to), hash);
+  const PRIVATE = '#/calendar?month=2026-11';
+  const notice = page.locator('.cal-private');
+  const link = (client: string, to: string) => open(`#/setup/${client}${to}`);
+  for (const [client, to] of [[OTHER_CLIENT, ''], [OTHER_CLIENT, '/calendar'], [CLIENT, '/calendar'], ['not-a-client-id', '/calendar']] as const) {
+    await open(PRIVATE);
+    await notice.getByRole('button', { name: 'Show them' }).click();
+    await expect(page.locator('.calendar').getByRole('status')).toHaveText('2 private events now shown.');
+    await link(client, to);
+    if (client === OTHER_CLIENT) await page.getByRole('button', { name: 'Keep the current one' }).click();
+    await expect(page).not.toHaveURL(/setup/);
+    await open(PRIVATE);
+    await expect(notice).toContainText('2 private events (sexual health) are kept off this shared view.');
+  }
+  // The same for private items on a doctor's sheet.
+  const SHEET = `#/health/doctor?who=${SAM}`;
+  await open(SHEET);
+  const include = page.getByRole('button', { name: /^Include \d+ private item/ });
+  await include.click();
+  await expect(page.getByRole('button', { name: 'Leave private items off' })).toBeVisible();
+  await link(OTHER_CLIENT, '');
+  await page.getByRole('button', { name: 'Keep the current one' }).click();
+  await open(SHEET);
+  await expect(include).toBeVisible();
+});
+
+test('a setup link opened before anyone signed in starts the app again with its client', async ({ page }) => {
+  await page.goto('./');
+  await expect(page.locator('input[aria-label="Google OAuth client id or setup link"]')).toBeVisible();
+  await page.evaluate((id) => void (location.hash = `#/setup/${id}`), CLIENT);
+  await expect(page.locator('.row', { hasText: FOLDER_NAME })).toBeVisible();
+  expect(google.signIns).toHaveLength(1);
+});
+
 test('Settings gives the setup link for another device', async ({ page, context, baseURL }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await signIn(page);
   await page.evaluate(() => (location.hash = '#/settings'));
   const card = page.locator('.card', { hasText: 'Setup link for another device' });
-  await expect(card.locator('code.setup-link')).toHaveText(`${baseURL}?client=${CLIENT}`);
+  await expect(card.locator('code.setup-link')).toHaveText(`${baseURL}#/setup/${CLIENT}`);
   await card.getByRole('button', { name: 'Copy' }).click();
   await expect(page.getByText('Setup link copied')).toBeVisible();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(`${baseURL}?client=${CLIENT}`);
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(`${baseURL}#/setup/${CLIENT}`);
 });
 
 test('signing out forgets the token without revoking it, so medrec on the Mac stays signed in', async ({ page }) => {
