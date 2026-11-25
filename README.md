@@ -664,9 +664,11 @@ dropped from the address.
   events or without; its claim names the vaccine, not the line for giving it.
   Billing descriptors in capitals ("NEW VISIT LEVEL FOUR") are never
   a headline; they show only in the visit's Details (`src/model/words.ts`).
-  The portal's record of a visit is titled the same way, on its own page, in
-  search and wherever it is linked: its name, else its reason, else "Visit".
-  Search finds it by the source's own name too.
+  The portal's record of a visit is titled the same way, on its own page and
+  wherever it is named: its name, else its reason, else "Visit". Where its
+  event or a claim lists it as a row, the last is "The portal's record of the
+  visit", as "Visit" would not say which. Search finds it by the source's own
+  name too.
   A portal platform's name ("Example Records (all practices)") is never a
   place; a visit that names no other is at its sign-in's practice
   (`src/model/practices.ts`), and has no place when that is
