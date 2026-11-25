@@ -6,7 +6,8 @@
 
 import { CATEGORY_LABELS, claimAmounts, claimCategory, claimCents, claimTitle, countedLines, type Category } from '../model/claims';
 import { sameProvider } from '../model/providers';
-import { practiceName, str } from '../model/records';
+import { practiceName } from '../model/practices';
+import { str } from '../model/records';
 import type { MedrecRule, Sureness } from '../model/events';
 import { HELD, isHeld, paperPrivate, recordsPrivate } from '../model/private';
 import type { Household, MedDocument, MedRecord, PersonIndex } from '../model/types';

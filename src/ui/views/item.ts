@@ -5,7 +5,7 @@
 
 import { readJson } from '../../folder';
 import { CATEGORY_LABELS, claimAmounts, type ClaimLine, claimLines, claimNotes, claimProvider, revenueText } from '../../model/claims';
-import { conditionName, diagnosisNames, nameList } from '../../model/codeNames';
+import { conditionName, diagnosisNames, nameList, secondTitle } from '../../model/codeNames';
 import { isOutOfRange, rangeFor, resultFlag } from '../../model/flags';
 import { labTest } from '../../model/labtests';
 import { learnMore } from '../../model/learn';
@@ -398,7 +398,7 @@ function conditionView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
       ]),
       learnLink(r, name),
     ),
-    recordTechnical(ctx, idx, r, [], [['The code’s published title', named.title]]),
+    recordTechnical(ctx, idx, r, [], [['The code’s published title', secondTitle(named)]]),
   ];
 }
 
@@ -474,7 +474,7 @@ function claimView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   const a = claimAmounts(r);
   const c = claimContext(idx, ctx.store.household, idx.person, localDay(ctx.now()), r);
   const diagnoses = diagnosisNames(idx, r);
-  const titles = diagnoses.flatMap((d) => d.title ?? []);
+  const titles = diagnoses.flatMap((d) => secondTitle(d) ?? []);
   const words = diagnoses.flatMap((d) => d.source ?? []);
   const docs = r.documents.map((id) => idx.documents.find((d) => d.id === id)).filter((d): d is MedDocument => !!d);
   const start = isObject(r.fields.billable_period) ? str(r.fields.billable_period.start) : undefined;

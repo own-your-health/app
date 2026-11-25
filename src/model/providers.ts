@@ -1,14 +1,19 @@
 // Whether two names are the same provider: bills and claims pair by it, and
 // a visit takes a document filed by hand, or a claim, by it.
 
+const SUFFIXES = new Set(['the', 'inc', 'llc', 'pllc', 'pa', 'pc', 'md', 'corp', 'co']);
+const words = (name: string, between: RegExp) => name.toLowerCase().split(between).filter(Boolean);
+const plain = (xs: string[]) => xs.filter((x) => !SUFFIXES.has(x)).join(' ');
+
 /** A provider's name for comparing: lower case, words only, no "Inc", "LLC" or "The". */
 export function providerKey(name: string | undefined): string {
-  return (name ?? '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .replace(/\b(the|inc|llc|pllc|pa|pc|md|corp|co)\b/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return plain(words(name ?? '', /[^a-z0-9]+/));
+}
+
+/** A name for telling whether two are one, in any script: undefined for no name, which is none's. */
+export function nameKey(name: string | undefined): string | undefined {
+  const all = words((name ?? '').normalize('NFC'), /[^\p{L}\p{M}\p{N}]+/u);
+  return plain(all) || all.join(' ') || undefined;
 }
 
 /** Whether the words of `inner`, run together, are some run of whole words of `outer`, run together. */

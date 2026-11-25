@@ -1,15 +1,17 @@
 // Visits as a timeline: each visit with the documents that belong to it,
 // what was recorded at it, and its claim. A document belongs to a visit
 // when medrec linked it, or when it is dated within the visit (one day, or
-// a stay's days) and comes from the same organization. A record belongs the
-// same way. Each document joins one visit at most. A claim belongs to the
-// visit medrec linked it to, else to one of its days from a provider
-// matching the visit.
+// a stay's days) and comes from the same practice. A record belongs the same
+// way. Each document joins one visit at most. A claim belongs to the visit
+// medrec linked it to, else to one of its days from a provider matching the
+// visit.
 
 import { claimLines, claimProvider, claimResultIds, claimVisitId, isContractClaim } from './claims';
+import { practiceOrId, samePractice, sameSignIn, through, type Through } from './practices';
 import { sameProvider } from './providers';
-import { day, isWithdrawn, organizationName, sortByDateDesc, str } from './records';
-import type { Household, ImagingStudy, MedDocument, MedRecord, PersonIndex } from './types';
+import { day, isWithdrawn, sortByDateDesc, str } from './records';
+import type { Household, ImagingStudy, MedDocument, MedRecord, PersonIndex, Provenance } from './types';
+import { placeName } from './words';
 
 /** FHIR encounter class, in words. */
 export const VISIT_CLASS: Record<string, string> = {
@@ -42,13 +44,13 @@ export interface Visit {
   /** The first day, and for a stay the last. */
   start?: string;
   end?: string;
-  /** The organizations (slugs) whose records name this visit. */
-  organizations: string[];
-  /** Linked by medrec first, then the same days and organization. */
+  /** The sign-ins whose records name this visit. */
+  through: Through[];
+  /** Linked by medrec first, then the same days and practice. */
   documents: { doc: MedDocument; linked: boolean }[];
-  /** Records of the visit's days and organizations, by kind in RECORDED order. */
+  /** Records of the visit's days and practice, by kind in RECORDED order. */
   recorded: { kind: string; records: MedRecord[] }[];
-  /** Claims for it: those medrec linked to it, then the same days from a provider matching the visit's organization or location. */
+  /** Claims for it: those medrec linked to it, then the same days from a provider matching the visit's practice or location. */
   claims: MedRecord[];
   studies: ImagingStudy[];
 }
@@ -64,27 +66,33 @@ function window(r: MedRecord): { start?: string; end?: string } {
 
 const within = (d: string | undefined, v: { start?: string; end?: string }) => !!d && !!v.start && d >= v.start && d <= (v.end ?? v.start);
 
-function orgsOf(r: MedRecord): string[] {
-  return [...new Set(r.provenance.map((p) => p.source.organization_id).filter((x): x is string => !!x))];
+/** The names of a visit's practice and place: never a records connection's, which many practices go by. */
+export function visitPlaces(v: Pick<Visit, 'record' | 'through'>, household: Household, person: string): string[] {
+  const practices = v.through.map((t) => practiceOrId(household, person, t));
+  return [...practices, str(v.record.fields.location), str(v.record.fields.service_provider)].map(placeName).filter((x): x is string => !!x);
 }
 
 /**
  * Visits that happened, newest first, and the documents no visit claims.
- * `household` and `person` name the visit's organizations for matching a
- * document filed by hand, which carries only an organization's name.
+ * `household` and `person` name the visit's practices for matching a document
+ * filed by hand, which carries only an organization's name. Through a sign-in
+ * several practices share, a visit takes what came that way on its days only
+ * when no other visit there could have.
  */
 export function visitTimeline(index: PersonIndex, household: Household, person: string, today: string): { visits: Visit[]; loose: MedDocument[] } {
   const encounters = recentVisits(index, today);
   const docs = new Map(index.documents.map((d) => [d.id, d]));
   const taken = new Set<string>();
   const visits: Visit[] = encounters.map((record) => {
-    const w = window(record);
-    const organizations = orgsOf(record);
-    return { record, ...w, organizations, documents: [], recorded: [], claims: [], studies: [] };
+    return { record, ...window(record), through: through(household, person, record.provenance), documents: [], recorded: [], claims: [], studies: [] };
   });
 
-  const names = (v: Visit) => [...v.organizations.map((o) => organizationName(household, person, o)), str(v.record.fields.location), str(v.record.fields.service_provider)].filter((x): x is string => !!x);
-  const fromVisitOrg = (v: Visit, org: string | undefined, orgName: string | undefined) => (org ? v.organizations.includes(org) : false) || names(v).some((n) => sameProvider(n, orgName));
+  const names = (v: Visit) => visitPlaces(v, household, person);
+  const at = (v: Visit, name: string | undefined) => names(v).some((n) => sameProvider(n, name));
+  const came = (v: Visit, t: Through) => v.through.some((x) => sameSignIn(x, t));
+  const meets = (a: Visit, b: Visit) => !!a.start && !!b.start && a.start <= (b.end ?? b.start) && b.start <= (a.end ?? a.start);
+  const alone = (v: Visit, t: Through) => !visits.some((x) => x !== v && meets(x, v) && came(x, t) && !names(x).some((n) => at(v, n)));
+  const fromVisit = (v: Visit, provenance: Provenance[]) => through(household, person, provenance).some((t) => v.through.some((x) => samePractice(x, t)) || (came(v, t) && alone(v, t)));
 
   // Linked documents first, so a same-day match never takes one medrec linked elsewhere.
   for (const v of visits) {
@@ -98,7 +106,7 @@ export function visitTimeline(index: PersonIndex, household: Household, person: 
   }
   for (const d of sortByDateDesc(index.documents)) {
     if (taken.has(d.id)) continue;
-    const v = visits.find((x) => within(day(d.date), x) && fromVisitOrg(x, d.provenance.source.organization_id, d.organization));
+    const v = visits.find((x) => within(day(d.date), x) && (fromVisit(x, [d.provenance]) || at(x, d.organization)));
     if (v) {
       v.documents.push({ doc: d, linked: false });
       taken.add(d.id);
@@ -118,14 +126,14 @@ export function visitTimeline(index: PersonIndex, household: Household, person: 
   for (const v of visits) {
     const mine = index.records.filter((r) => r !== v.record && !isWithdrawn(r) && within(day(r.date), v));
     for (const kind of RECORDED) {
-      const rs = mine.filter((r) => r.kind === kind && orgsOf(r).some((o) => v.organizations.includes(o)));
+      const rs = mine.filter((r) => r.kind === kind && fromVisit(v, r.provenance));
       if (rs.length) v.recorded.push({ kind, records: rs });
     }
     v.claims = claims.filter((r) => {
       if (isContractClaim(r)) return linkedVisit(r) === v.record.id;
       if (!mine.includes(r)) return false;
       const provider = claimProvider(r);
-      return names(v).some((n) => sameProvider(n, provider));
+      return at(v, provider);
     });
     v.studies = index.studies.filter((s) => within(day(s.date), v));
   }

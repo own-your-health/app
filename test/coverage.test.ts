@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { birthWords, bornClause, coverageChangesIn, coverageHistory, isChange } from '../src/model/coverage';
 import { householdLines, inPeriod } from '../src/model/costs';
 import { parseIndex } from '../src/model/parse';
+import type { Household, PersonIndex } from '../src/model/types';
 import { dateText } from '../src/ui/format';
 import { demo, personNamed } from './demo-data';
 import { fixture } from './helpers';
@@ -17,13 +18,19 @@ describe('a person’s coverage over time', () => {
   const segments = history('robin', robin.id);
 
   it('is each insurer and start, newest first, with one entry for a coverage two sources name', () => {
-    expect(segments.map((s) => [s.insurer, s.plan, s.start, s.end, s.records.map((r) => r.id), s.organizations, s.first])).toEqual([
+    expect(segments.map((s) => [s.insurer, s.plan, s.start, s.end, s.records.map((r) => r.id), s.sources, s.first])).toEqual([
       // The insurer's spelling wins over the portal's.
-      ['Example Health Plan', 'PPO Choice', '2016-05-17', undefined, ['r_aaaaaaaaaaaaaaaaaaaa', 'r_bbbbbbbbbbbbbbbbbbbb'], ['example-health-plan', 'example-health'], false],
-      ['Example Dental', 'Dental Basic', '2014-09-01', '2015-06-30', ['r_dddddddddddddddddddd'], ['example-health'], false],
-      ['EXAMPLE HEALTH PLAN, INC.', 'PPO Choice', '2012-01-01', '2016-05-16', ['r_cccccccccccccccccccc'], ['example-health'], true],
-      ['Example Vision', undefined, undefined, undefined, ['r_ffffffffffffffffffff'], ['example-health'], false],
+      ['Example Health Plan', 'PPO Choice', '2016-05-17', undefined, ['r_aaaaaaaaaaaaaaaaaaaa', 'r_bbbbbbbbbbbbbbbbbbbb'], ['Example Health Plan', 'Example Health'], false],
+      ['Example Dental', 'Dental Basic', '2014-09-01', '2015-06-30', ['r_dddddddddddddddddddd'], ['Example Health'], false],
+      ['EXAMPLE HEALTH PLAN, INC.', 'PPO Choice', '2012-01-01', '2016-05-16', ['r_cccccccccccccccccccc'], ['Example Health'], true],
+      ['Example Vision', undefined, undefined, undefined, ['r_ffffffffffffffffffff'], ['Example Health'], false],
     ]);
+  });
+
+  it('knows the insurer’s own record by its sign-in, where another source shares its id', () => {
+    const two = fixture<{ sources: Household['sources']; index: PersonIndex }>('folder/coverage-two-clis.json');
+    const [only] = coverageHistory(two.index, { ...household, sources: two.sources, organizations: [] }, robin.id);
+    expect([only!.insurer, only!.sources]).toEqual(['Example Plan', ['Example Health', 'Example Plan']]);
   });
 
   it('marks a coverage that started the day someone in the household was born, as a date, not a reason', () => {

@@ -3,16 +3,18 @@
 // medrec 0.9.4 and later), from the published table. A title only labels an
 // item that is shown anyway. The source's words lead where they are plain,
 // with the title in Details; the title leads where the source gives none, a
-// bare code or billing wording in capitals. Search, sorting and grouping use
-// the source's words alone. Without a file that reads and matches the folder,
-// or for a code it does not name, the source's words stand.
+// bare code, billing wording in capitals, or an abbreviation, which is shown
+// beside it. A longer word in capitals leads in sentence case. Search,
+// sorting and grouping use the source's words alone. Without a file that
+// reads and matches the folder, or for a code it does not name, the source's
+// words stand.
 
 import { claimDiagnoses, diagnosisText, type Diagnosis } from './claims';
 import { FolderError, isObject } from './parse';
 import { recordPrivate } from './private';
 import { recordTitle } from './titles';
 import type { MedRecord, PersonIndex } from './types';
-import { plainWords } from './words';
+import { capitalWord, plainWords, sentenceCase } from './words';
 
 export interface CodeNames {
   /** The codes an item that is not private uses, by key. */
@@ -54,43 +56,59 @@ function titleOn(index: PersonIndex, r: MedRecord, system: string | undefined, c
   return index.codeNames.codes.get(key) ?? (recordPrivate(index, r.id) ? index.codeNames.privateCodes.get(key) : undefined);
 }
 
-/** What leads, and what Details add: at most one of the two. */
+/** What leads, and what Details add. */
 export interface Named {
   name: string;
-  /** The code's title, where the source's words lead and it says something else. */
-  title?: string;
-  /** The source's words, where the title leads instead of them. */
+  /** The source's exact words, where the name is not them. */
   source?: string;
+  /** The code's title, where it says something other than the source's words. */
+  title?: string;
+  /** Whether the title is what leads. */
+  titleLeads?: boolean;
 }
 
 const bare = (s: string | undefined) => (s ?? '').replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
 
-/** Whether the source's words can lead: not billing wording in capitals, nor a bare code. */
-const leads = (words: string, code: string | undefined) => !!plainWords(words) && /\p{L}{2,}/u.test(words) && bare(words) !== bare(code);
+/** Whether the source's words are ones a person can read: not billing wording in capitals, nor a bare code. */
+const readable = (words: string, code: string | undefined) => !!plainWords(words) && /\p{L}{2,}/u.test(words) && bare(words) !== bare(code);
 
 /** A title's "unspecified" only says that nothing more is known. */
 const folded = (s: string) => s.toLowerCase().replace(/\bunspecified\b/g, ' ').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 
-/** Which leads, the source's words or the title; `say` is how either is shown. */
-function choose(title: string, words: string | undefined, code: string | undefined, say: (text: string) => string): Named {
-  if (!words) return { name: say(title) };
-  if (!leads(words, code)) return { name: say(title), source: say(words) };
-  return { name: say(words), ...(folded(title) === folded(words) ? {} : { title: say(title) }) };
+/**
+ * Which leads, the source's words or the code's title; `say` is how either is
+ * shown, with the source's abbreviation beside the title it stands for.
+ */
+function choose(title: string | undefined, words: string, code: string | undefined, say: (text: string, beside?: string) => string): Named {
+  const apart = title !== undefined && folded(title) !== folded(words) ? { title: say(title) } : {};
+  const plain = readable(words, code);
+  if (title && !plain) return { name: say(title), source: say(words), ...apart, titleLeads: true };
+  const capitals = plain ? capitalWord(words) : undefined;
+  if (title && apart.title && capitals === 'abbreviation') return { name: say(title, words), source: say(words), ...apart, titleLeads: true };
+  const name = capitals === 'word' ? sentenceCase(words) : words;
+  return { name: say(name), ...(name === words ? {} : { source: say(words) }), ...apart };
 }
 
 /** A condition by the source's words, or by its code's title where they are none a person can read. */
 export function conditionName(index: PersonIndex, r: MedRecord): Named {
-  const title = r.kind === 'condition' ? titleOn(index, r, r.code?.system, r.code?.code) : undefined;
-  return title ? choose(title, r.display || r.code?.display, r.code?.code, (text) => text) : { name: recordTitle(r) };
+  const words = r.display || r.code?.display;
+  if (r.kind !== 'condition') return { name: recordTitle(r) };
+  const title = titleOn(index, r, r.code?.system, r.code?.code);
+  if (!words) return { name: title ?? recordTitle(r) };
+  return choose(title, words, r.code?.code, (text, beside) => (beside ? `${text} (${beside})` : text));
 }
 
-/** In Details: the source's words, else the title, and the title beside words it differs from. */
-export const inDetails = (n: Named): { words: string; title?: string } => ({ words: n.source ?? n.name, title: n.title ?? (n.source ? n.name : undefined) });
+/** The title, where the name does not give it. */
+export const secondTitle = (n: Named): string | undefined => (n.titleLeads ? undefined : n.title);
+
+/** In Details: the source's exact words, else the title, and the title beside words it differs from. */
+export const inDetails = (n: Named): { words: string; title?: string } => ({ words: n.source ?? n.name, title: n.title });
 
 /** A claim's diagnosis with its code, "Ear infection (H66.90)", by the same rule. */
 export function diagnosisName(index: PersonIndex, claim: MedRecord, d: Diagnosis): Named {
   const title = titleOn(index, claim, d.system, d.code);
-  return title ? choose(title, d.display, d.code, (text) => diagnosisText({ ...d, display: text })) : { name: diagnosisText(d) };
+  if (!d.display) return { name: diagnosisText({ ...d, display: title }) };
+  return choose(title, d.display, d.code, (text, beside) => (beside ? `${text} (${beside}, ${d.code})` : diagnosisText({ ...d, display: text })));
 }
 
 /** A claim's diagnoses in the payer's order. */

@@ -5,6 +5,7 @@ import type { Household, ImagingStudy, ImportRun, Json, JsonObject, MedDocument,
 import { parseRange, type Bound } from './flags';
 import { isObject } from './parse';
 import { resultName } from './labtests';
+import { practiceName, practiceOf } from './practices';
 import { placeName } from './words';
 
 export const KIND_LABELS: Record<string, string> = {
@@ -433,36 +434,6 @@ export function extraFields(o: JsonObject, shown: string[]): [string, Json][] {
 
 const ORIGIN_KIND: Record<string, string> = { scan: 'Scanned', media: 'Imaging disc', inbox: 'Filed by hand' };
 
-const trimBase = (base: string | undefined) => base?.replace(/\/+$/, '');
-
-/**
- * The practice a record came through, as medrec names it: its own sign-in's
- * (the household source with its organization, CLI and FHIR base, this
- * person's before another's), else the household's organization of that id.
- * One FHIR base can serve many practices, so the base alone names none.
- * Undefined when nothing names it: an id is not a name.
- */
-export function practiceName(household: Household, person: string, from: Pick<Provenance['source'], 'organization_id' | 'cli' | 'fhir_base'>): string | undefined {
-  const { organization_id: id, cli } = from;
-  if (!id) return undefined;
-  const base = trimBase(from.fhir_base);
-  const named = household.sources.filter((s) => s.organization === id && s.organization_name?.trim() && (!cli || !s.cli || s.cli === cli) && (!base || !s.fhir_base || trimBase(s.fhir_base) === base));
-  const own = named.find((s) => s.person === person) ?? named[0];
-  return own?.organization_name?.trim() ?? household.organizations.find((o) => o.id === id || o.aliases?.includes(id))?.name;
-}
-
-/**
- * A source's name as the household knows it: its organization, by slug, for a
- * source that gives no more than that. Where a record's provenance is at hand,
- * `practiceName` names its practice: one id can belong to two CLIs.
- */
-export function organizationName(household: Household, person: string, slug: string): string {
-  const own = household.sources.find((s) => s.person === person && s.organization === slug && s.organization_name);
-  if (own?.organization_name) return own.organization_name;
-  const org = household.organizations.find((o) => o.id === slug || o.aliases?.includes(slug));
-  return org?.name ?? slug;
-}
-
 /**
  * How many of these records each portal gave, by practice, in the order they
  * come. A record through two sign-ins counts once, for the first practice
@@ -481,13 +452,15 @@ export function portalCounts(records: MedRecord[], household: Household, person:
 
 /**
  * The distinct names of the sources a record or document came from. A bare
- * number is no name, so its CLI stands for it, once for all of its practices
- * that nothing names.
+ * number is no name, nor is an id several practices share, so its CLI stands
+ * for it, once for all of its practices that nothing names.
  */
 export function originNames(provenance: Provenance[], household: Household, person: string): string[] {
   const names = provenance.map(({ source: s }) => {
     if (!s.organization_id) return ORIGIN_KIND[s.kind] ?? s.kind;
-    return practiceName(household, person, s) ?? (/[a-z]/i.test(s.organization_id) ? s.organization_id : (s.cli ?? s.kind));
+    const practice = practiceOf(household, person, s);
+    if (practice.kind === 'named') return practice.name;
+    return practice.kind === 'unnamed' && /[a-z]/i.test(s.organization_id) ? s.organization_id : (s.cli ?? s.kind);
   });
   return [...new Set(names)];
 }

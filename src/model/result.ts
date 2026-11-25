@@ -4,6 +4,7 @@
 
 import { isOutOfRange, rangeFor, resultFlag, type Range, type ResultFlag } from './flags';
 import { panelFor } from './panels';
+import { samePractice, through } from './practices';
 import { day, isWithdrawn, resultSeries, seriesKey, type ResultPoint, type ResultSeries } from './records';
 import { recordTitle } from './titles';
 import type { Household, MedDocument, MedRecord, PersonIndex } from './types';
@@ -64,7 +65,7 @@ export interface ResultContext {
   point?: ResultPoint;
   /** The panel it is in ("Blood count (CBC)"), by its code or category. */
   panel: string;
-  /** Other results from the same day and organization, its own panel first. */
+  /** Other results from the same day and practice, its own panel first. */
   sameDraw: { panel: string; records: MedRecord[] }[];
   visit?: Visit;
   /** The lab report documents and report records it came with. */
@@ -72,16 +73,18 @@ export interface ResultContext {
   reports: MedRecord[];
 }
 
-const orgs = (r: MedRecord) => new Set(r.provenance.map((p) => p.source.organization_id).filter(Boolean));
-
 export function resultContext(index: PersonIndex, household: Household, person: string, today: string, r: MedRecord): ResultContext {
   const series = resultSeries(index).find((s) => s.key === seriesKey(r));
   const point = series?.points.find((p) => p.id === r.id);
   const categoryOf = (x: MedRecord) => (typeof x.fields.category === 'string' ? x.fields.category : undefined);
   const own = panelFor(seriesKey(r), categoryOf(r));
   const d = day(r.date);
-  const mine = orgs(r);
-  const draw = index.records.filter((x) => x !== r && x.kind === 'result' && !isWithdrawn(x) && day(x.date) === d && [...orgs(x)].some((o) => mine.has(o)));
+  // Its visit's records, or those its sign-in shows to be the same practice's.
+  const visit = visitTimeline(index, household, person, today).visits.find((v) => v.recorded.some((g) => g.records.includes(r)));
+  const atVisit = new Set(visit?.recorded.flatMap((g) => g.records));
+  const mine = through(household, person, r.provenance);
+  const together = (x: MedRecord) => atVisit.has(x) || through(household, person, x.provenance).some((t) => mine.some((m) => samePractice(m, t)));
+  const draw = index.records.filter((x) => x !== r && x.kind === 'result' && !isWithdrawn(x) && day(x.date) === d && together(x));
   const byPanel = new Map<string, { panel: string; order: number; records: { r: MedRecord; order: number }[] }>();
   for (const x of draw) {
     const p = panelFor(seriesKey(x), categoryOf(x));
@@ -92,10 +95,9 @@ export function resultContext(index: PersonIndex, household: Household, person: 
   const sameDraw = [...byPanel.values()]
     .sort((a, b) => a.order - b.order)
     .map((g) => ({ panel: g.panel, records: g.records.sort((a, b) => a.order - b.order || recordTitle(a.r).localeCompare(recordTitle(b.r))).map((x) => x.r) }));
-  const visit = visitTimeline(index, household, person, today).visits.find((v) => v.recorded.some((g) => g.records.includes(r)));
   const linked = r.documents.map((id) => index.documents.find((x) => x.id === id)).filter((x): x is MedDocument => !!x);
   const fromVisit = (visit?.documents ?? []).map((x) => x.doc).filter((x) => x.doc_type === 'lab_report' && day(x.date) === d);
   const documents = [...new Map([...linked, ...fromVisit].map((x) => [x.id, x])).values()];
-  const reports = index.records.filter((x) => x.kind === 'report' && !isWithdrawn(x) && day(x.date) === d && [...orgs(x)].some((o) => mine.has(o)));
+  const reports = index.records.filter((x) => x.kind === 'report' && !isWithdrawn(x) && day(x.date) === d && together(x));
   return { series, point, panel: own.name, sameDraw, visit, documents, reports };
 }

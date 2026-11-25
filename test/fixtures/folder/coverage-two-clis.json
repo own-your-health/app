@@ -1,0 +1,15 @@
+{
+  "sources": [
+    {"id": "s_plan", "kind": "fhir", "person": "p_xo4em46i7yj3hphlpajo", "cli": "athena", "organization": "900001", "organization_name": "Example Plan"},
+    {"id": "s_portal", "kind": "fhir", "person": "p_xo4em46i7yj3hphlpajo", "cli": "mychart", "organization": "900001", "organization_name": "Example Health"}
+  ],
+  "index": {
+    "schema": "medrec-index/v1", "person": "p_xo4em46i7yj3hphlpajo", "rev": 1, "documents": [], "studies": [], "imports": [],
+    "records": [
+      {"id": "r_aaaaaaaaaaaaaaaaaaaa", "kind": "coverage", "key": "coverage|a", "date": "2016-05-17", "display": "EXAMPLE PLAN CHOICE", "fields": {"payer": "EXAMPLE PLAN CHOICE", "period": {"start": "2016-05-17"}}, "documents": [],
+       "provenance": [{"source": {"kind": "fhir", "cli": "mychart", "organization_id": "900001"}, "method": "fhir-api", "filed_at": "2026-11-20T08:00:00Z"}]},
+      {"id": "r_bbbbbbbbbbbbbbbbbbbb", "kind": "coverage", "key": "coverage|b", "date": "2016-05-17", "display": "Example Plan", "fields": {"payer": "Example Plan", "period": {"start": "2016-05-17"}}, "documents": [],
+       "provenance": [{"source": {"kind": "fhir", "cli": "athena", "organization_id": "900001"}, "method": "fhir-api", "filed_at": "2026-11-20T08:00:00Z"}]}
+    ]
+  }
+}

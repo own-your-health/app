@@ -1,9 +1,17 @@
 // The practice a record came through: its own sign-in's name, so that two
-// practices on one portal address are told apart, and never an id.
+// practices on one portal address are told apart, and never an id, nor the
+// name of another person's sign-in.
 import { describe, expect, it } from 'vitest';
-import { organizationName, originNames, portalCounts, practiceName } from '../src/model/records';
-import type { Household, MedRecord } from '../src/model/types';
+import { parseMedrecEvents } from '../src/model/events';
+import { practiceName, practiceOf, practiceOrId, sameSignIn } from '../src/model/practices';
+import { nameKey, providerKey } from '../src/model/providers';
+import { originNames, portalCounts } from '../src/model/records';
+import { resultContext } from '../src/model/result';
+import type { Household, MedDocument, MedRecord, PersonIndex } from '../src/model/types';
+import { visitTimeline } from '../src/model/visits';
 import { nameEvent, type CareEvent } from '../src/next/event';
+import { careEvents } from '../src/next/grouping';
+import { fromMedrec } from '../src/next/medrecEvents';
 import { demo } from './demo-data';
 import { fixture } from './helpers';
 
@@ -31,7 +39,7 @@ function placeOf(record: MedRecord): string | undefined {
 describe('a practice’s name', () => {
   const from = (organization_id: string, cli = 'athena') => practiceName(household, PERSON, { organization_id, cli, fhir_base: 'https://athena.example.test/fhir/r4' });
 
-  it('tells two practices on one address apart, whoever’s sign-in it is', () => {
+  it('tells two practices on one address apart', () => {
     expect([from('900001'), from('900002')]).toEqual(['Example Eye Care', 'Example Hearing Clinic']);
   });
 
@@ -80,10 +88,206 @@ describe('the records each portal gave', () => {
   });
 });
 
-describe('a source named by its organization alone', () => {
+describe('a sign-in known by its id alone', () => {
   it('is this person’s own source’s name, else the household’s organization, else the id', () => {
-    // Another CLI's source with the same id is not this person's.
-    expect(organizationName(household, 'p_other', '900001')).toBe('900001');
-    expect([organizationName(household, PERSON, '900001'), organizationName(household, PERSON, '900005')]).toEqual(['Example Eye Care', 'Example Foot Clinic']);
+    const name = (person: string, organization_id: string) => practiceOrId(household, person, { organization_id });
+    expect([name(PERSON, '900002'), name(PERSON, '900005'), name('p_other', '900001')]).toEqual(['Example Hearing Clinic', 'Example Foot Clinic', '900001']);
+  });
+
+  it('is none when two of this person’s sources have the id under different names', () => {
+    expect(practiceOf(household, PERSON, { organization_id: '900001' }).kind).toBe('shared');
+    expect(practiceOrId(household, PERSON, { organization_id: '900001' })).toBeUndefined();
+  });
+
+  it('is nothing without an id', () => {
+    expect(practiceOf(household, PERSON, {})).toEqual({ kind: 'unnamed' });
+    expect(practiceOrId(household, PERSON, { cli: 'athena' })).toBeUndefined();
+  });
+});
+
+describe('two names that are one', () => {
+  it('differ in case, punctuation or "LLC" only, in any script', () => {
+    expect(nameKey('The Example Clinic, LLC')).toBe(nameKey('EXAMPLE CLINIC'));
+    expect(nameKey('Клиника Пример')).toBe(nameKey('КЛИНИКА «ПРИМЕР»'));
+    expect(nameKey('Клиника Пример')).not.toBe(nameKey('Больница Пример'));
+    expect([nameKey('Inc.'), nameKey('—'), nameKey(''), nameKey(undefined)]).toEqual(['inc', undefined, undefined, undefined]);
+  });
+
+  it('compare as providers by their Latin letters alone', () => {
+    expect(['The Example Clinic, LLC', '  Example—Clinic ', 'Клиника', undefined].map(providerKey)).toEqual(['example clinic', 'example clinic', '', '']);
+  });
+});
+
+// Practices that share one organization, CLI and FHIR base, which is all a
+// record says of its source: two of p_one's, and one of p_two's.
+describe('a sign-in several practices share', () => {
+  const shared = fixture<Pick<Household, 'sources' | 'organizations'> & { records: MedRecord[] }>('household/shared-source.json');
+  const home: Household = { ...demo().household, sources: shared.sources, organizations: shared.organizations };
+  const from = (organization_id: string) => ({ organization_id, cli: 'athena', fhir_base: 'https://athena.example.test/fhir/r4' });
+  const record = (id: string, over: Partial<MedRecord> = {}): MedRecord => ({ ...structuredClone(shared.records.find((r) => r.id === id)!), ...over });
+  const person = (...records: MedRecord[]): PersonIndex => ({ schema: 'medrec-index/v1', person: 'p_one', rev: 1, documents: [], records, studies: [], imports: [] });
+  const at = (id: string, location: string) => record(id, { fields: { class: 'AMB', location } });
+
+  it('names none of them for the person who has two there', () => {
+    expect(practiceName(home, 'p_one', from('example-group'))).toBeUndefined();
+    expect(practiceOf(home, 'p_one', from('example-group'))).toEqual({ kind: 'shared', names: ['Example North Clinic', 'Example South Clinic'] });
+    expect(practiceOrId(home, 'p_one', from('example-group'))).toBeUndefined();
+  });
+
+  it('names the one practice of the person who has one there', () => {
+    expect(practiceName(home, 'p_two', from('example-group'))).toBe('Example West Clinic');
+    expect(practiceOrId(home, 'p_two', from('example-group'))).toBe('Example West Clinic');
+  });
+
+  it('never gives one person the name of another’s source, nor the household’s organization named for it', () => {
+    expect(['example-group', 'example-east'].map((o) => practiceName(home, 'p_three', from(o)))).toEqual([undefined, undefined]);
+    expect(practiceOrId(home, 'p_three', from('example-east'))).toBe('example-east');
+    // This person's own source there, through another CLI, is not another's.
+    expect(practiceName(home, 'p_one', { organization_id: 'example-lake', cli: 'mychart' })).toBe('Example Lake Clinic');
+  });
+
+  it('is one practice when the names are one', () => {
+    const same = { ...home, sources: home.sources.map((s) => (s.id === 's_south' ? { ...s, organization_name: 'Example North Clinic, LLC' } : s)) };
+    expect(practiceName(same, 'p_one', from('example-group'))).toBe('Example North Clinic');
+  });
+
+  it('is several practices when their names are not in Latin letters', () => {
+    const named = (id: string, name: string | undefined) => ({ ...home, sources: home.sources.map((s) => (s.id === id ? { ...s, organization_name: name } : s)) });
+    const two = { ...home, sources: named('s_north', 'Клиника Север').sources.map((s) => (s.id === 's_south' ? { ...s, organization_name: 'Клиника Юг' } : s)) };
+    expect(practiceOf(two, 'p_one', from('example-group'))).toEqual({ kind: 'shared', names: ['Клиника Север', 'Клиника Юг'] });
+    // Another person's source with no name does not take the organization's.
+    const unnamed = { ...named('s_east', undefined), organizations: [{ id: 'example-east', name: 'Клиника Восток' }] };
+    expect(practiceName(unnamed, 'p_three', from('example-east'))).toBe('Клиника Восток');
+  });
+
+  it('puts no result of its own day beside another: they may be two practices’', () => {
+    const context = (...records: MedRecord[]) => resultContext(person(...records), home, 'p_one', '2026-12-01', records[0]!);
+    const beside = (...records: MedRecord[]) => context(...records).sameDraw.flatMap((g) => g.records.map((r) => r.id));
+    const on = (r: MedRecord, date: string) => ({ ...r, date });
+    const level = on(record('r_level'), '2026-06-11');
+    expect(beside(record('r_count'), level)).toEqual([]);
+    expect(beside(record('r_count'), level, record('r_morning'), record('r_afternoon'))).toEqual([]);
+    expect(beside(record('r_rate'), on(record('r_rate', { id: 'r_rate_two' }), '2026-06-22'))).toEqual(['r_rate_two']);
+    const named = (name: string) => ({ ...home, sources: home.sources.map((s) => (s.id === 's_lake' ? { ...s, organization_name: name } : s)) });
+    const two = person(record('r_rate'), on(record('r_rate', { id: 'r_rate_two' }), '2026-06-22'));
+    expect(['MyChart (Example Health)', 'athenahealth (all practices)'].map((name) => resultContext(two, named(name), 'p_one', '2026-12-01', two.records[0]!).sameDraw.length)).toEqual([1, 0]);
+    const north = on(record('r_rate', { id: 'r_rate_north' }), '2026-06-22');
+    north.provenance[0]!.source.organization_id = 'example-north';
+    expect(beside(record('r_rate'), north)).toEqual([]);
+    // The day's only visit by it has both, and the report that came with them.
+    const report = record('r_count', { id: 'r_report', kind: 'report' });
+    expect(beside(record('r_count'), level, record('r_morning'))).toEqual(['r_level']);
+    expect([context(record('r_count'), report, record('r_morning')), context(record('r_count'), report)].map((c) => c.reports.map((r) => r.id))).toEqual([['r_report'], []]);
+  });
+
+  it('is shared as far as either record says: one that leaves its CLI out could be either practice’s', () => {
+    const two: Household = { ...home, sources: [
+      { id: 's_a', kind: 'fhir', person: 'p_one', cli: 'athena', organization: 'example-pair', organization_name: 'Example North Clinic' },
+      { id: 's_b', kind: 'fhir', person: 'p_one', cli: 'mychart', organization: 'example-pair', organization_name: 'Example South Clinic' },
+    ] as Household['sources'] };
+    const of = (id: string, cli: string | undefined, over: Partial<MedRecord> = {}) => {
+      const r = record(id, over);
+      r.provenance[0]!.source = { kind: 'fhir', organization_id: 'example-pair', ...(cli ? { cli } : {}) };
+      return r;
+    };
+    const a = of('r_morning', undefined), b = of('r_afternoon', undefined), count = of('r_count', 'athena'), level = of('r_count', undefined, { id: 'r_two' });
+    expect(careEvents(person(a, b), two, '2026-12-01')).toHaveLength(2);
+    const recorded = (...records: MedRecord[]) => Object.fromEntries(visitTimeline(person(...records), two, 'p_one', '2026-12-01').visits.map((v) => [v.record.id, v.recorded.flatMap((g) => g.records.map((r) => r.id))]));
+    expect(recorded(a, b, count)).toEqual({ r_morning: [], r_afternoon: [] });
+    // The visit that gives its CLI is the result's practice.
+    expect(recorded(of('r_morning', 'athena'), b, count)).toEqual({ r_morning: ['r_count'], r_afternoon: [] });
+    expect([resultContext(person(count, level), two, 'p_one', '2026-12-01', count), resultContext(person(count, level), two, 'p_one', '2026-12-01', level)].map((c) => c.sameDraw)).toEqual([[], []]);
+  });
+
+  it('says where a record came from by its CLI, not by an id that may be another practice’s', () => {
+    expect(originNames(record('r_morning').provenance, home, 'p_one')).toEqual(['athena']);
+    expect(originNames(record('r_morning').provenance, home, 'p_two')).toEqual(['Example West Clinic']);
+    expect(originNames(record('r_morning').provenance, home, 'p_three')).toEqual(['example-group']);
+    expect([...portalCounts([record('r_morning')], home, 'p_one')]).toEqual([['Portal', 1]]);
+  });
+
+  it('gives a visit no place but the one it names itself', () => {
+    const place = (r: MedRecord, who: string) => {
+      const e: CareEvent = { id: 'e_x', kind: 'office', start: '2026-06-11', end: '2026-06-11', title: '', claims: [], visits: [{ record: r, rule: 'E1', confidence: 'sure' }], recorded: [], papers: [] };
+      nameEvent(e, home, who);
+      return e.place;
+    };
+    expect([place(record('r_morning'), 'p_one'), place(at('r_morning', 'Example South Clinic'), 'p_one'), place(record('r_morning'), 'p_two')]).toEqual([undefined, 'Example South Clinic', 'Example West Clinic']);
+  });
+
+  it('keeps two visits of one day apart, unless they name one place', () => {
+    const days = (...records: MedRecord[]) => careEvents(person(...records), home, '2026-12-01').map((e) => e.visits.map((v) => v.record.id).sort());
+    expect(days(record('r_morning'), record('r_afternoon'))).toHaveLength(2);
+    expect(days(at('r_morning', 'Example North Clinic'), at('r_afternoon', 'Example South Clinic'))).toHaveLength(2);
+    expect(days(at('r_morning', 'Example North Clinic'), at('r_afternoon', 'Example North Clinic'))).toEqual([['r_afternoon', 'r_morning']]);
+    // The connection's own name, or its id, is no place two visits share.
+    expect(days(at('r_morning', 'athenahealth (all practices)'), at('r_afternoon', 'athenahealth (all practices)'))).toHaveLength(2);
+    // A sign-in of one practice still makes one visit of a day's two, whatever script its name is in.
+    const lake = (name: string) => careEvents(person(record('r_lake'), record('r_lake_two')), { ...home, sources: home.sources.map((s) => (s.id === 's_lake' ? { ...s, organization_name: name } : s)) }, '2026-12-01').length;
+    expect([lake('Example Lake Clinic'), lake('Клиника Озеро')]).toEqual([1, 1]);
+    // A platform's name for one health system is no place, and still one sign-in's.
+    expect([lake('MyChart (Example Health)'), lake('MyChart')]).toEqual([1, 1]);
+    // A records connection's for every practice is not one's.
+    expect([lake('athenahealth (all practices)'), lake('Example Records (All Locations) ')]).toEqual([2, 2]);
+  });
+
+  it('gives a visit what came that way on its day only when no other visit there could have', () => {
+    const recorded = (...records: MedRecord[]) => Object.fromEntries(visitTimeline(person(...records), home, 'p_one', '2026-12-01').visits.map((v) => [v.record.id, v.recorded.flatMap((g) => g.records.map((r) => r.id))]));
+    expect(recorded(record('r_morning'), record('r_later'), record('r_level'))).toEqual({ r_later: ['r_level'], r_morning: [] });
+    expect(recorded(record('r_morning'), record('r_afternoon'), record('r_count'))).toEqual({ r_morning: [], r_afternoon: [] });
+    expect(recorded(at('r_morning', 'Example North Clinic'), at('r_afternoon', 'Example North Clinic'), record('r_count'))).toEqual({ r_morning: ['r_count'], r_afternoon: ['r_count'] });
+    expect(recorded(record('r_lake'), record('r_lake_two'), record('r_rate'))).toEqual({ r_lake: ['r_rate'], r_lake_two: ['r_rate'] });
+  });
+
+  it('gives a paper to no visit by it on a day of two, and to one whose place the paper names', () => {
+    const papers = (a: MedRecord, b: MedRecord, organization?: string) => {
+      const doc = { id: 'd_note', path: 'x', sha256: '', md5: '', size: 1, date: '2026-06-11', doc_type: 'visit_summary', records: [], organization, provenance: record('r_count').provenance[0]! } as unknown as MedDocument;
+      const { visits, loose } = visitTimeline({ ...person(a, b), documents: [doc] }, home, 'p_one', '2026-12-01');
+      return [visits.filter((v) => v.documents.length).map((v) => v.record.id), loose.length];
+    };
+    expect(papers(record('r_morning'), record('r_afternoon'))).toEqual([[], 1]);
+    expect(papers(at('r_morning', 'Example North Clinic'), at('r_afternoon', 'Example South Clinic'), 'Example South Clinic')).toEqual([['r_afternoon'], 0]);
+  });
+
+  it('is told apart from the same id under another CLI', () => {
+    const sign = (cli?: string, fhir_base?: string) => ({ organization_id: 'a', cli, fhir_base });
+    expect([sameSignIn(sign('athena'), sign('mychart')), sameSignIn(sign('athena'), sign()), sameSignIn(sign('athena', 'https://a.test/r4/'), sign('athena', 'https://a.test/r4')), sameSignIn(sign('athena', 'https://a.test/r4'), sign('athena', 'https://b.test/r4')), sameSignIn(sign('athena'), { organization_id: 'b', cli: 'athena' })]).toEqual([false, true, true, false, false]);
+  });
+
+  describe('and the place medrec gives an event', () => {
+    const event = (place: string, records: MedRecord[], who = 'p_one'): string | undefined => {
+      const members = records.map((r) => ({ record: r.id, kind: r.kind, role: r.kind === 'claim' ? 'office' : r.kind === 'encounter' ? 'portal' : 'satellite', rule: 'E0', confidence: 'sure', ...(r.kind === 'claim' ? { provider: r.fields.provider } : {}) }));
+      const file = parseMedrecEvents({ schema: 'medrec-events/v1', person: who, events: [{ id: 'e_aaaaaaaaaaaaaaaaaaaa', kind: 'portal', start: '2026-06-11', end: '2026-06-11', title: 'Visit', place, confidence: 'sure', members, expected: [], could_join: [] }], pending: [] }, who);
+      return fromMedrec(file, { ...person(...records), person: who }, home)[0]!.place;
+    };
+    const claim = (provider: string) => record('r_count', { id: 'r_claim', kind: 'claim', fields: { provider, amounts: {} } });
+
+    it('is dropped when only another person’s source has that name', () => {
+      expect(event('Example East Clinic', [record('r_morning')])).toBeUndefined();
+      expect(event('Example West Clinic', [record('r_morning')])).toBeUndefined();
+    });
+
+    it('is dropped when it is one of several names the sign-in has', () => {
+      expect([event('Example North Clinic', [record('r_morning')]), event('EXAMPLE SOUTH CLINIC, LLC', [record('r_morning')]), event('Example North Clinic', [record('r_count')])]).toEqual([undefined, undefined, undefined]);
+    });
+
+    it('stands when the visit or a claim names it', () => {
+      expect(event('Example East Clinic', [at('r_morning', 'Example East Clinic Lakeside')])).toBe('Example East Clinic');
+      expect(event('Example East Clinic', [record('r_morning'), claim('Example East Clinic Lakeside')])).toBe('Example East Clinic');
+    });
+
+    it('stands when it is this person’s one source’s, or no source’s at all', () => {
+      expect([event('Example Lake Clinic', [record('r_lake')]), event('Example West Clinic', [record('r_morning')], 'p_two'), event('Example Hill Hospital', [record('r_morning')])]).toEqual(['Example Lake Clinic', 'Example West Clinic', 'Example Hill Hospital']);
+      // One sign-in of the visit's tells which of the names it is.
+      const alone = structuredClone(record('r_lake').provenance);
+      alone[0]!.source.organization_id = 'example-north';
+      const both = record('r_morning', { provenance: [...record('r_morning').provenance, ...alone] });
+      expect([event('Example North Clinic', [both]), event('Example South Clinic', [both])]).toEqual(['Example North Clinic', 'Example North Clinic']);
+      expect(event('Example North Clinic', [record('r_count', { provenance: both.provenance })])).toBe('Example North Clinic');
+    });
+
+    it('gives way to what the event’s own records name', () => {
+      expect(event('Example East Clinic', [record('r_morning'), claim('Example Hill Hospital')])).toBe('Example Hill Hospital');
+    });
   });
 });

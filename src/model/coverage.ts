@@ -10,8 +10,9 @@
 // claim that the birth is the reason.
 
 import { dayInPeriod, type CostLine, type PeriodId } from './costs';
+import { practiceOrId } from './practices';
 import { sameProvider } from './providers';
-import { day, isWithdrawn, organizationName, str } from './records';
+import { day, isWithdrawn, str } from './records';
 import type { Household, JsonObject, MedRecord, PersonIndex } from './types';
 import { called } from './people';
 
@@ -26,8 +27,8 @@ export interface CoverageSegment {
   end?: string;
   /** Every record of this coverage, from every source that has one. */
   records: MedRecord[];
-  /** The organizations whose records these are (slugs). */
-  organizations: string[];
+  /** The sources whose records these are, by name. */
+  sources: string[];
   /** The person's earliest coverage in these records. */
   first: boolean;
   /** Someone in the household born the day this coverage started. */
@@ -60,11 +61,10 @@ export function coverageHistory(index: PersonIndex, household: Household, person
     if (g) g.records.push(r);
     else groups.push({ start, records: [r] });
   }
-  const orgName = (slug: string) => organizationName(household, person, slug);
+  const sourcesOf = (r: MedRecord) => r.provenance.map((p) => practiceOrId(household, person, p.source)).filter((x): x is string => !!x);
   const segments = groups.map(({ start, records }): CoverageSegment => {
-    const organizations = [...new Set(records.flatMap((r) => r.provenance.map((p) => p.source.organization_id).filter((o): o is string => !!o)))];
     // The insurer's own record (its source is the insurer) names it; else the first that names it at all.
-    const own = records.find((r) => r.provenance.some((p) => p.source.organization_id && sameProvider(orgName(p.source.organization_id), payerOf(r))));
+    const own = records.find((r) => sourcesOf(r).some((name) => sameProvider(name, payerOf(r))));
     const named = own ?? records.find((r) => payerOf(r)) ?? records[0]!;
     // An end is something a record says; a record without one only says nothing.
     const ends = records.map((r) => periodOf(r).end).filter((e): e is string => !!e);
@@ -76,7 +76,7 @@ export function coverageHistory(index: PersonIndex, household: Household, person
       start,
       end: ends.sort().at(-1),
       records,
-      organizations,
+      sources: [...new Set(records.flatMap(sourcesOf))],
       first: false,
       born: born ? { id: born.id, name: born.name, ...(born.short ? { short: born.short } : {}) } : undefined,
     };
