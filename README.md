@@ -77,7 +77,12 @@ the app and Refresh.
    expected for a household's own client, in Testing or published. Allow both
    permissions.
 3. Choose the records folder. The app lists the folders with a
-   `household.json` that the account can see; you can also paste a folder link.
+   `household.json`, in the account's own Drive and among the 40 folders shared
+   with it last; you can also paste a folder link. Where the account cannot
+   open the folder, the app names the account its owner has to share it with.
+
+An account the folder is shared with as a Viewer reads all of it and asks
+nothing of the Mac: it has no Refresh and no Mark paid, and Settings says why.
 
 Home, Calendar, Money, Health and Papers are tabs: at the bottom of a
 phone's screen, and a row above the page from 640px wide. The bar's menu
@@ -359,10 +364,10 @@ ready** with a **Reload** button when the site has another.
 
 ### Refresh, and sign-ins that need a person
 
-Refresh writes one small request file into the folder's `_requests/`. The Mac
-picks it up on its next pass (every few minutes), loads the sources it names,
-and writes the outcome to `_status/` and `_requests/done/`, which the app
-reads back. The app shows when a request is waiting, when the Mac is late, and
+Refresh writes one small request file into the folder's `_requests/`, which
+takes an account that may add to the folder. The Mac picks it up on its next
+pass (every few minutes), loads the sources it names, and writes the outcome to
+`_status/` and `_requests/done/`, which the app reads back. The app shows when a request is waiting, when the Mac is late, and
 what it answered. Once a request is finished the app reads the records again,
 so what it brought shows without a reload. A read that fails, or that leaves
 out someone whose records are here, changes nothing: it is tried again after

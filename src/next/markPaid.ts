@@ -103,6 +103,12 @@ export function paidControl(ctx: Ctx, idx: PersonIndex, bill: Bill, named = fals
   );
 }
 
+/** Why a bill with something left has no Mark paid, for its own page, where the account may only view the folder. */
+export function viewOnlyNote(ctx: Ctx, idx: PersonIndex, bill: Bill): HTMLElement | null {
+  if (ctx.store.mayRequest || bill.settled || toMark(ctx, idx, bill) <= 0) return null;
+  return h('p', { class: 'small muted' }, 'This account can only view the records folder, so it cannot mark this bill paid.');
+}
+
 /** The payments the household marked on a bill, each with its undo, for the bill's own page. */
 export function markedPayments(ctx: Ctx, idx: PersonIndex, bill: Bill): HTMLElement | null {
   const undoing = new Map(ctx.store.marks.flatMap((m) => (m.request.unpaid?.person === idx.person ? [[m.request.unpaid.payment, m] as const] : [])));

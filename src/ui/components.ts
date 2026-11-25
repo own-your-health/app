@@ -139,8 +139,21 @@ export function driveLink(ctx: Ctx, path: string, label = 'Open in Drive'): HTML
   return a;
 }
 
-/** Refresh for a scope: a button, or the request already waiting with a cancel. */
-export function refreshControl(ctx: Ctx, scope: RequestScope, what: string, opts: { primary?: boolean; named?: boolean } = {}): HTMLElement {
+/** What an account the folder is shared with to view only is told where Refresh would be. */
+const VIEW_ONLY_REFRESH = 'This account can only view the records folder, so it cannot ask the Mac to refresh.';
+
+function viewOnlyLink(): HTMLElement {
+  const to = link({ name: 'settings' }, 'View only');
+  to.setAttribute('aria-label', 'View only: this account cannot ask the Mac to refresh, see Settings');
+  return h('span', { class: 'small' }, to);
+}
+
+/**
+ * Refresh for a scope: a button, or the request already waiting with a cancel,
+ * or why there is none. Null beside a list's rows for an account that may only
+ * view the folder, which the page says once.
+ */
+export function refreshControl(ctx: Ctx, scope: RequestScope, what: string, opts: { primary?: boolean; named?: boolean } = {}): HTMLElement | null {
   const store = ctx.store;
   const held = store.pendingFor(scope);
   if (held) {
@@ -172,6 +185,7 @@ export function refreshControl(ctx: Ctx, scope: RequestScope, what: string, opts
   }
   if (!store.requestsReady) return h('span', { class: 'muted small' }, 'Refresh is not set up on the Mac');
   if (!ctx.canWrite) return h('span', { class: 'muted small' }, 'Refresh needs the Drive file permission (Settings)');
+  if (!store.mayRequest) return opts.primary ? h('span', { class: 'muted small' }, VIEW_ONLY_REFRESH) : opts.named ? viewOnlyLink() : null;
   const refresh = button(
     opts.primary ? `Refresh ${what}` : 'Refresh',
     (ev) => {

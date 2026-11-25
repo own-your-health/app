@@ -52,6 +52,17 @@ describe('Drive', () => {
     expect(calls[0]!.init.referrerPolicy).toBe('no-referrer');
   });
 
+  it('asks for no more pages than the most it is to list', async () => {
+    const pages = () => fakeFetch([json(fixture('drive/children-page1.json')), json(fixture('drive/children-page2.json'))]);
+    const [one, two, all] = [pages(), pages(), pages()];
+    const list = (f: typeof one, max?: number) => new Drive(() => 'tok', f.fetchImpl).list('q', { max }).then((files) => files.map((x) => x.id));
+    const ids = await list(all);
+    const first = (fixture('drive/children-page1.json') as { files: unknown[] }).files.length;
+    expect(first).toBeLessThan(ids.length);
+    expect([await list(one, first), one.calls.length, one.calls[0]!.url.searchParams.get('pageSize')]).toEqual([ids.slice(0, first), 1, String(first)]);
+    expect([await list(two, first + 1), two.calls.length]).toEqual([ids.slice(0, first + 1), 2]);
+  });
+
   it('turns an error into a DriveError with Drive’s reason', async () => {
     const { fetchImpl } = fakeFetch([json(fixture('drive/error-403.json'), 403)]);
     const err = await new Drive(() => 'tok', fetchImpl).get('folder-requests').catch((e: unknown) => e);

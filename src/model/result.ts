@@ -17,7 +17,7 @@ export function unitText(unit: string | undefined): string | undefined {
 
 const num = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 3 });
 
-/** A range in words: "15–500 cells/µL", "under 130 mg/dL", "40 or more mg/dL". */
+/** A range in words: "160–435 K/µL", "under 130 mg/dL", "40 or more mg/dL". */
 export function rangeWords(r: Range, unit: string | undefined): string {
   const u = unitText(r.unit ?? unit);
   const tail = u ? ` ${u}` : '';

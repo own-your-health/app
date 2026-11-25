@@ -65,8 +65,16 @@ export class FakeGoogle {
   failing: string | null = null;
   /** Drive stores the next files the app writes, and its answer is lost. */
   losing = false;
-  /** The folder is shared with the account to view only. */
+  /** The folder is another account's, shared with this one to view only. */
   viewer = false;
+  /** It is shared through a folder alone: Drive's search by name finds none of its files. */
+  throughFolder = false;
+  /** It is not shared with the account: Drive says of it what it says of a folder that is not there. */
+  unshared = false;
+  /** Drive answers no search, or none by name. */
+  searchDown: 'all' | 'by name' | undefined;
+  /** Drive says the account may not add to a folder, though the folder is its own. */
+  saysNo = false;
   /** What the sign-in grants, and so what the token may do; a person can untick a scope on Google's screen. */
   granted = [READ, WRITE];
   /** The client tokeninfo names: another one means a token issued to another app. */
@@ -260,15 +268,18 @@ export class FakeGoogle {
     const unq = (s: string) => s.replace(/\\(.)/g, '$1');
     let found: Node[];
     let m: RegExpExecArray | null;
+    if (this.searchDown === 'all' || (this.searchDown && /^name = /.test(q))) return driveError(route, 503, 'backendError', 'Backend Error');
     if ((m = new RegExp(`^${str} in parents and trashed = false$`).exec(q))) found = this.childrenOf(unq(m[1]!));
-    else if ((m = new RegExp(`^name = ${str} and trashed = false$`).exec(q))) found = [...this.nodes.values()].filter((n) => n.name === unq(m![1]!));
+    else if ((m = new RegExp(`^${str} in parents and name = ${str} and trashed = false$`).exec(q))) found = this.childrenOf(unq(m[1]!)).filter((n) => n.name === unq(m![2]!));
+    else if ((m = new RegExp(`^name = ${str} and trashed = false$`).exec(q))) found = this.throughFolder ? [] : [...this.nodes.values()].filter((n) => n.name === unq(m![1]!));
+    else if (q === `sharedWithMe = true and mimeType = '${FOLDER_MIME}' and trashed = false`) found = this.viewer ? [this.nodes.get(this.rootId)!] : [];
     else return driveError(route, 400, 'invalid', `A query this stand-in does not know: ${q}`);
     return json(route, 200, { files: found.filter((n) => this.sees(n)).map((n) => this.resource(n)) });
   }
 
   /** drive.readonly sees every file; drive.file alone sees only the app's own. */
   private sees(n: Node): boolean {
-    return this.granted.includes(READ) || n.byApp;
+    return !this.unshared && (this.granted.includes(READ) || n.byApp);
   }
 
   private create(route: Route, req: Request): Promise<void> {
@@ -296,7 +307,9 @@ export class FakeGoogle {
       parents: n.parent ? [n.parent] : [],
       ...(n.content !== undefined ? { size: String(n.content.length) } : {}),
       ...(n.md5 !== undefined ? { md5Checksum: n.md5 } : {}),
-      capabilities: { canEdit: n.byApp, canDelete: n.byApp, canAddChildren: n.mimeType === FOLDER_MIME && !this.viewer },
+      capabilities: { canEdit: n.byApp, canDelete: n.byApp, canAddChildren: n.mimeType === FOLDER_MIME && !this.viewer && !this.saysNo },
+      ownedByMe: !this.viewer,
+      owners: [{ displayName: this.viewer ? USER.displayName : this.account.displayName }],
     };
   }
 }

@@ -29,6 +29,7 @@ export interface RecordsFolder {
   /**
    * Whether this account may add a file to `_requests/`: false for one the
    * folder is shared with to view only, undefined when the folder does not say.
+   * The owner of the folder always may.
    */
   mayRequest(): Promise<boolean | undefined>;
   /** Writes `_requests/<name>`; the only write the app makes. */
@@ -63,19 +64,25 @@ export class Unanswered extends Error {}
 /** A refusal stored nothing. With no answer, or a fault of Drive's, it may have. */
 const mayBeStored = (e: unknown): boolean => !(e instanceof DriveError) || e.status >= 500;
 
+/** What a fresh folder keeps. */
+interface Kept {
+  /** Drive's ids for the requests written, by name: the same one sent again is the same file. */
+  ids: Map<string, string>;
+  /** Whether the account owns `_requests/`, asked once where Drive says it may not add to it. */
+  own?: boolean;
+}
+
 export class DriveFolder implements RecordsFolder {
   readonly kind = 'drive' as const;
   private listings = new Map<string, Promise<Map<string, DriveFile>>>();
   /** Files read since they were listed, and Drive's MD5 of each, asked again after the read. */
   private served = new Set<string>();
   private reread = new Map<string, Promise<string | undefined>>();
-
   constructor(
     private readonly drive: Drive,
     readonly id: string,
     readonly name: string,
-    /** Drive's ids for the requests written, by name: the same one sent again is the same file. */
-    private readonly ids = new Map<string, string>(),
+    private readonly kept: Kept = { ids: new Map() },
   ) {}
 
   private listing(dirPath: string, dirId: string): Promise<Map<string, DriveFile>> {
@@ -165,14 +172,21 @@ export class DriveFolder implements RecordsFolder {
 
   async mayRequest(): Promise<boolean | undefined> {
     const dir = await this.resolve(REQUESTS_DIR);
-    return dir?.capabilities?.canAddChildren;
+    const may = dir?.capabilities?.canAddChildren;
+    if (!dir || may !== false) return may;
+    try {
+      this.kept.own ??= (await this.drive.folder(dir.id)).ownedByMe === true;
+    } catch {
+      return undefined;
+    }
+    return this.kept.own ? undefined : false;
   }
 
   async createRequest(name: string, body: unknown): Promise<void> {
     const dir = await this.resolve(REQUESTS_DIR);
     if (!dir || dir.mimeType !== FOLDER_MIME) throw new Error('The records folder has no _requests folder.');
-    const id = this.ids.get(name) ?? (await this.drive.newId());
-    this.ids.set(name, id);
+    const id = this.kept.ids.get(name) ?? (await this.drive.newId());
+    this.kept.ids.set(name, id);
     try {
       await this.create(dir.id, name, body, id);
     } catch (e) {
@@ -217,7 +231,7 @@ export class DriveFolder implements RecordsFolder {
   }
 
   fresh(): DriveFolder {
-    return new DriveFolder(this.drive, this.id, this.name, this.ids);
+    return new DriveFolder(this.drive, this.id, this.name, this.kept);
   }
 }
 

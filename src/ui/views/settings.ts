@@ -55,6 +55,7 @@ export function settingsView(
         ['Folder', ctx.demo ? 'Sample records (invented)' : f.name],
         ['Layout', `household.json format ${ctx.store.household.format}`],
         ['Read', dateTime(new Date(ctx.store.loadedAt).toISOString())],
+        ['This account', ctx.store.mayRequest ? undefined : 'Can only view it: it cannot ask the Mac to refresh, or mark a bill paid. The folder’s owner can make this account an Editor in Google Drive.'],
         ['Refresh on the Mac', status.kind === 'ok' ? `medrec ${refresher?.medrec_version ?? ''}`.trim() : status.kind === 'missing' ? 'Not set up' : 'Unreadable status'],
         ['Visits', visitsText(ctx)],
         ['Private items', privateText(ctx)],
@@ -70,7 +71,7 @@ export function settingsView(
           kv([
             ['Signed in as', [ctx.user.name, ctx.user.email].filter(Boolean).join(' · ') || 'Unknown'],
             ['Read the records', opts.scopes.includes(SCOPE_READ) ? 'Allowed' : 'Not allowed'],
-            ['Ask the Mac', opts.scopes.includes(SCOPE_WRITE) ? 'Allowed' : 'Not allowed: sign in again and tick the box for files this app creates'],
+            ['Ask the Mac', !opts.scopes.includes(SCOPE_WRITE) ? 'Not allowed: sign in again and tick the box for files this app creates' : ctx.store.mayRequest ? 'Allowed' : 'Not in this folder, which this account can only view'],
             ['Client id', opts.clientId ? h('code', { class: 'wrap' }, opts.clientId) : undefined],
           ]),
           h('div', { class: 'actions' }, button('Sign out', () => ctx.signOut()), button('Use another Google client', opts.onChangeClient, { ghost: true })),
@@ -175,7 +176,7 @@ function setupLinkCard(ctx: Ctx, link: string): HTMLElement {
   return card(
     { title: 'Setup link for another device' },
     h('p', null, 'Open this link on another phone or computer to set the app up there: it fills in your Google client and goes straight to sign-in.'),
-    h('p', { class: 'muted small' }, 'It is fine to share with your household. The client id is not a secret, and only the test users listed for your Google client can sign in through it.'),
+    h('p', { class: 'muted small' }, 'Send it to the people in your household, and only to them. The client id is not a secret, and the link opens no records: an account sees only what Google Drive shares with it. While your Google client is in Testing, only its listed test users can sign in; once published, any Google account can, and each counts toward Google’s limit of 100.'),
     h('code', { class: 'wrap setup-link' }, link),
     h(
       'div',

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { Drive, DriveError, type DriveFile } from '../src/drive';
+import { Drive, DriveError, type DriveFile, FOLDER_MIME } from '../src/drive';
 import { DriveFolder, KEPT_TIMES, LOAD_TIMES, readJson, splitPath, Unanswered } from '../src/folder';
 import { DEMO, demoFolder, fixture, json } from './helpers';
 
@@ -199,9 +199,38 @@ describe('DriveFolder', () => {
   });
 
   it('says whether the account may add a request, as Drive’s listing has it', async () => {
-    const may = async (capabilities?: DriveFile['capabilities']) => new DriveFolder(driveWith({ ...ROOT, root: ROOT.root!.map((f) => (f.name === '_requests' ? { ...f, capabilities } : f)) }).drive, 'root', 'x').mayRequest();
+    const requests = ROOT.root!.find((f) => f.name === '_requests')!;
+    const may = async (capabilities?: DriveFile['capabilities']) => new DriveFolder(driveWith({ ...ROOT, root: ROOT.root!.map((f) => (f === requests ? { ...f, capabilities } : f)) }, {}, { [requests.id]: { ...requests, ownedByMe: false } }).drive, 'root', 'x').mayRequest();
     expect([await may({ canAddChildren: true }), await may({ canAddChildren: false }), await may()]).toEqual([true, false, undefined]);
     expect(await new DriveFolder(driveWith({ root: [] }).drive, 'root', 'x').mayRequest()).toBeUndefined();
+  });
+
+  it('may always be asked by the account that owns it, whatever Drive says of adding to it', async () => {
+    let owned: boolean | undefined = true;
+    let fails = false;
+    let asks = 0;
+    const drive = new Drive(() => 'tok', (async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.searchParams.has('q')) return json({ files: [{ id: 'req', name: '_requests', mimeType: FOLDER_MIME, capabilities: { canAddChildren: false } }] });
+      asks += 1;
+      return fails ? json(fixture('drive/error-403.json'), 403) : json({ id: 'req', name: '_requests', mimeType: FOLDER_MIME, ...(owned === undefined ? {} : { ownedByMe: owned }) });
+    }) as typeof fetch);
+    const mine = new DriveFolder(drive, 'root', 'x');
+    expect([await mine.mayRequest(), await mine.mayRequest(), asks]).toEqual([undefined, undefined, 1]);
+    owned = false;
+    expect(await new DriveFolder(drive, 'root', 'x').mayRequest()).toBe(false);
+    owned = undefined;
+    expect(await new DriveFolder(drive, 'root', 'x').mayRequest()).toBe(false);
+    // Not answered, the folder does not say, and it is asked again.
+    fails = true;
+    owned = false;
+    const later = new DriveFolder(drive, 'root', 'x');
+    expect(await later.mayRequest()).toBeUndefined();
+    fails = false;
+    expect(await later.mayRequest()).toBe(false);
+    // Settled, a folder read again keeps it.
+    asks = 0;
+    expect([await later.fresh().mayRequest(), await mine.fresh().mayRequest(), asks]).toEqual([false, undefined, 0]);
   });
 
   it('links to Drive’s viewer', async () => {

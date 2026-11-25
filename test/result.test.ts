@@ -6,7 +6,7 @@ import { demo, personNamed } from './demo-data';
 
 describe('a result’s reading', () => {
   it('says where the value sits against a range in its unit', () => {
-    expect(verdict({ value: 7, unit: 'crystals/uL', range: '2 - 24 crystals/uL' })).toMatchObject({ text: 'Within the lab’s range of 2–24 crystals/µL.', outOfRange: false });
+    expect(verdict({ value: 271, unit: 'K/uL', range: '160 - 435 K/uL' })).toMatchObject({ text: 'Within the lab’s range of 160–435 K/µL.', outOfRange: false });
     expect(verdict({ value: 30.7, unit: 'mm Hg', range: '34.0-46.5 mm Hg' })).toMatchObject({ text: 'Below the lab’s range of 34–46.5 mm Hg.', outOfRange: true });
     expect(verdict({ value: 47, unit: 'mm/h', range: '<22 mm/h' }).text).toBe('Above the lab’s range (under 22 mm/h).');
     expect(verdict({ value: 9, unit: 'mg/L', range: '>=4 mg/L' }).text).toBe('Within the lab’s range (4 mg/L or more).');

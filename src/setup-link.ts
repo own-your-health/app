@@ -1,7 +1,7 @@
 // A household's setup link: the app's address with `?client=<client id>`.
 // Opening it on a phone stores the client id as if it had been typed and goes
-// straight to Google's sign-in. The id is not a secret: only the test users
-// the household listed can sign in through it.
+// straight to Google's sign-in. The id is not a secret: an account sees only
+// what Drive shares with it, whoever may sign in through the client.
 
 import { isClientId } from './auth';
 

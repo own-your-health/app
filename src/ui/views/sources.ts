@@ -285,9 +285,15 @@ export function sourceRow(ctx: Ctx, v: SourceView, opts: { showPerson: boolean }
       'div',
       { class: 'row-extra' },
       h('div', { class: 'source-lines' }, sourceDetail(ctx, v, true)),
-      canRefresh(v) ? h('div', { class: 'row-actions' }, refreshControl(ctx, { source: v.source.id }, v.name)) : null,
+      refreshable(ctx, v),
     ),
   });
+}
+
+/** A row's Refresh, where the account may ask for it. */
+function refreshable(ctx: Ctx, v: SourceView): HTMLElement | null {
+  const control = canRefresh(v) ? refreshControl(ctx, { source: v.source.id }, v.name) : null;
+  return control && h('div', { class: 'row-actions' }, control);
 }
 
 /** The Sources screen: every source and sign-in, the Mac, and Refresh. */

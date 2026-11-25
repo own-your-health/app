@@ -475,6 +475,12 @@ code,
   border-top: 1px solid var(--line);
 }
 
+.status-action a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
 .status-more {
   flex-basis: 100%;
 }

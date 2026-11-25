@@ -92,7 +92,8 @@ test('a setup link signs in, finds the records folder and reads it', async ({ pa
 test('with no records folder yet, the folder screen points to the guide', async ({ page }) => {
   google.removeAsMac('household.json');
   await page.goto(`./?client=${CLIENT}`);
-  await expect(page.getByText(/^No folder with a household\.json was found in this account\. medrec creates one/)).toBeVisible();
+  await expect(page.getByText('No folder with a household.json was found in this account, or in the folders shared with it.')).toBeVisible();
+  await expect(page.getByText('If no one does yet, medrec makes the folder:')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Getting started with medrec' })).toHaveAttribute('href', 'https://github.com/own-your-health/app/blob/main/docs/getting-started.md');
 });
 
