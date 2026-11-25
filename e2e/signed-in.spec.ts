@@ -361,10 +361,10 @@ test('Settings gives the setup link for another device', async ({ page, context,
   await signIn(page);
   await page.evaluate(() => (location.hash = '#/settings'));
   const card = page.locator('.card', { hasText: 'Setup link for another device' });
-  await expect(card.locator('code.setup-link')).toHaveText(`${baseURL}?client=${CLIENT}`);
+  await expect(card.locator('code.setup-link')).toHaveText(`${baseURL}#/setup/${CLIENT}`);
   await card.getByRole('button', { name: 'Copy' }).click();
   await expect(page.getByText('Setup link copied')).toBeVisible();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(`${baseURL}?client=${CLIENT}`);
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(`${baseURL}#/setup/${CLIENT}`);
 });
 
 test('signing out forgets the token without revoking it, so medrec on the Mac stays signed in', async ({ page }) => {

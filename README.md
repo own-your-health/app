@@ -71,7 +71,7 @@ the app and Refresh.
 1. Open https://own-your-health.github.io/app/ and paste your client id (it
    ends in `.apps.googleusercontent.com`). On every other device, open the
    setup link instead: Settings, **Setup link for another device**, which adds
-   `?client=<your client id>` to the address and skips this step.
+   `#/setup/<your client id>` to the address and skips this step.
 2. Sign in with the Google account that holds the records folder, or one it is
    shared with. Google warns that it has not verified the app, which is
    expected for a household's own client, in Testing or published. Allow both
@@ -344,10 +344,13 @@ on them, and `/documents` on their Papers. The person's lists (`/results`,
 `/medicines` and so on) keep their addresses.
 
 A link from Huishouden Health, or any other app, can carry the setup link's
-`?client=<client id>` before the route:
-`https://own-your-health.github.io/app/?client=<client id>#/hh/<id>`. A device
+`setup/<client id>` before the route:
+`https://own-your-health.github.io/app/#/setup/<client id>/hh/<id>`. A device
 that has never opened the app then needs no setup: it signs in and lands on
-the person. The app takes `?client=` out of the address before signing in.
+the person. The app takes the client id out of the address before signing in.
+A browser sends no server what comes after `#`, so the site never receives the
+id from this link. Links made before, with `?client=<client id>` before the
+`#`, still open.
 
 The sign-in lasts an hour. When it ends, the app signs in again on its own, as
 the same account, when you come back to it or it next reads the folder. It

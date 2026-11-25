@@ -107,11 +107,13 @@ another device**. **Copy** (or **Share**, on a phone) gives the app's address
 with your client id in it:
 
 ```
-https://own-your-health.github.io/app/?client=123456789012-abc….apps.googleusercontent.com
+https://own-your-health.github.io/app/#/setup/123456789012-abc….apps.googleusercontent.com
 ```
 
 Opening it on another phone or computer stores the client id, takes it out of
-the address, and goes straight to Google's sign-in, so nobody types the id.
+the address, and goes straight to Google's sign-in, so nobody types the id. A
+browser sends no server what comes after `#`. A link made before, with
+`?client=` and the id before the `#`, still opens.
 If that browser already uses a different client, the app asks before replacing
 it. A link whose id is not a Google client id opens the paste field instead.
 The paste field also takes the whole link: that is how an app added to an

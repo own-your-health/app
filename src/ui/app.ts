@@ -127,14 +127,14 @@ export class App {
       if (this.signInEnded()) return this.renew();
       void this.pollOnce(true);
     });
+    const answer = this.demo ? ({ kind: 'none' } as const) : completeSignIn(location.hash, sessionStorage, Date.now());
+    if (answer.kind !== 'none') history.replaceState(null, '', `${location.pathname}${location.search}${answer.route}`);
+    // A setup link's client leaves the address before anything else runs,
+    // so it is never carried into Google's sign-in or a bookmark.
+    const link = readSetupLink(location, getClientId());
+    if (link.kind !== 'none') history.replaceState(null, '', withoutClient(location));
     if (this.demo) return this.startDemo();
 
-    const answer = completeSignIn(location.hash, sessionStorage, Date.now());
-    if (answer.kind !== 'none') history.replaceState(null, '', `${location.pathname}${location.search}${answer.route}`);
-    // A setup link (?client=) leaves the address before anything else runs,
-    // so it is never carried into Google's sign-in or a bookmark.
-    const link = readSetupLink(location.search, getClientId());
-    if (link.kind !== 'none') history.replaceState(null, '', withoutClient(location));
     if (answer.kind === 'none') {
       switch (link.kind) {
         case 'new':
@@ -477,6 +477,8 @@ export class App {
   }
 
   private onRoute(): void {
+    // A setup link opened where the app already runs changes only the part after #, so nothing loads: start again with it.
+    if (readSetupLink({ search: '', hash: location.hash }, null).kind !== 'none') return location.reload();
     // Private events shown on the calendar, and private items on a doctor’s sheet, are left off again once the page is left.
     const now = parseRoute(location.hash);
     if (now.name !== 'calendar') hidePrivateEvents();
