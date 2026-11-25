@@ -19,8 +19,8 @@ const PERSON = LEE;
 /** Lee's sign-ins, with one that has no id, one no source of anyone's has, and addresses written with their last slash, which the records leave off. */
 const household: Household = {
   ...RULES,
-  sources: [{ id: 's_no_id', kind: 'portal', person: LEE, cli: 'athena', organization_name: 'Example Walk-in Clinic' } as Household['sources'][number], ...RULES.sources.map((s) => ({ ...s, fhir_base: `${s.fhir_base}/` }))],
-  organizations: [{ id: '800005', name: 'Example Heart Clinic' }, ...RULES.organizations],
+  sources: [{ id: 's_no_id', kind: 'portal', person: LEE, cli: 'athena', organization_name: 'Example Dental Studio' } as Household['sources'][number], ...RULES.sources.map((s) => ({ ...s, fhir_base: `${s.fhir_base}/` }))],
+  organizations: [{ id: '800005', name: 'Example Eye Center' }, ...RULES.organizations],
 };
 const BASE = 'https://records.example.net/fhir/r4';
 const visit = recordsOf('Lee').records.find((r) => r.display === 'RETURN VISIT LEVEL TWO')!;
@@ -54,7 +54,7 @@ describe('a practice’s name', () => {
   });
 
   it('falls back to the household’s organization of that id, never to another at its address', () => {
-    expect([from('800005'), from('800003'), from('800009')]).toEqual(['Example Heart Clinic', undefined, undefined]);
+    expect([from('800005'), from('800003'), from('800009')]).toEqual(['Example Eye Center', undefined, undefined]);
   });
 });
 
@@ -97,7 +97,7 @@ describe('the records each portal gave', () => {
 describe('a sign-in known by its id alone', () => {
   it('is this person’s own source’s name, else the household’s organization, else the id', () => {
     const name = (person: string, organization_id: string) => practiceOrId(household, person, { organization_id });
-    expect([name(PERSON, '800002'), name(PERSON, '800005'), name('p_other', '800001')]).toEqual(['Example Hearing Center', 'Example Heart Clinic', '800001']);
+    expect([name(PERSON, '800002'), name(PERSON, '800005'), name('p_other', '800001')]).toEqual(['Example Hearing Center', 'Example Eye Center', '800001']);
   });
 
   it('is none when two of this person’s sources have the id under different names', () => {
@@ -285,7 +285,7 @@ describe('a sign-in several practices share', () => {
     });
 
     it('stands when it is this person’s one source’s, or no source’s at all', () => {
-      expect([event('Example Lake Clinic', [record('r_lake')]), event('Example West Clinic', [record('r_morning')], TONI), event('Example Hill Hospital', [record('r_morning')])]).toEqual(['Example Lake Clinic', 'Example West Clinic', 'Example Hill Hospital']);
+      expect([event('Example Lake Clinic', [record('r_lake')]), event('Example West Clinic', [record('r_morning')], TONI), event('Example Hill Physiotherapy', [record('r_morning')])]).toEqual(['Example Lake Clinic', 'Example West Clinic', 'Example Hill Physiotherapy']);
       // One sign-in of the visit's tells which of the names it is.
       const alone = structuredClone(record('r_lake').provenance);
       alone[0]!.source.organization_id = 'example-north';
@@ -295,7 +295,7 @@ describe('a sign-in several practices share', () => {
     });
 
     it('gives way to what the event’s own records name', () => {
-      expect(event('Example East Clinic', [record('r_morning'), claim('Example Hill Hospital')])).toBe('Example Hill Hospital');
+      expect(event('Example East Clinic', [record('r_morning'), claim('Example Hill Physiotherapy')])).toBe('Example Hill Physiotherapy');
     });
   });
 });

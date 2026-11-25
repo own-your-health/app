@@ -21,9 +21,9 @@ describe('the axis', () => {
 
 describe('the month chart’s layout', () => {
   const cases: [string, number, number][] = [
-    ['a year, the largest month five figures', 11, 2_473_515],
+    ['a year, the largest month five figures', 11, 3_186_240],
     ['two years and a month, one month over a million', 25, 123_456_789],
-    ['one month', 1, 5_750],
+    ['one month', 1, 8_420],
     ['nothing spent', 6, 0],
   ];
 

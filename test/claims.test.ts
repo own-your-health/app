@@ -22,17 +22,17 @@ describe('a claim title', () => {
   });
 
   it('names a service once, and keeps an abbreviation’s capitals', () => {
-    expect(claimTitle(claim([item('99213', 'Office visit'), item('99213', 'office visit'), item('83036', 'HbA1c')]))).toBe('Office visit and HbA1c');
-    expect(claimTitle(claim([item('85025', 'CBC'), item('70551', 'MRI brain')]))).toBe('CBC and MRI brain');
+    expect(claimTitle(claim([item('99347', 'Home visit'), item('99347', 'home visit'), item('94760', 'SpO2')]))).toBe('Home visit and SpO2');
+    expect(claimTitle(claim([item('77080', 'DXA'), item('93306', 'TTE at rest')]))).toBe('DXA and TTE at rest');
   });
 
   it('uses the code when a line has no words', () => {
-    expect(claimTitle(claim([item('99213', null)]))).toBe('99213');
+    expect(claimTitle(claim([item('97110', null)]))).toBe('97110');
   });
 
   it('without lines, uses a name that is more than the type, else the provider', () => {
     expect(claimTitle(claim([]))).toBe('Claim from Example Clinic');
-    expect(claimTitle(claim([], { display: 'Ankle x-ray' }))).toBe('Ankle x-ray');
+    expect(claimTitle(claim([], { display: 'Hearing aid fitting' }))).toBe('Hearing aid fitting');
     expect(claimTitle(claim([], { fields: { type: 'Professional' } }))).toBe('Claim');
   });
 
@@ -66,34 +66,34 @@ describe('claim lines', () => {
   });
 
   it('take medrec’s fixed amount names and category over the payer’s words', () => {
-    const [l] = claimLines(claim([item('99213', 'Office visit', { category: 'lab', amounts: { billed: { amount: '10.00', currency: 'USD' }, you_owe: { amount: '2.00', currency: 'USD' } }, adjudication: [{ category: 'Submitted Amount', amount: { amount: '9.00', currency: 'USD' } }] })]));
-    expect(l!.category).toBe('lab');
-    expect(l!.amounts.billed?.amount).toBe('10.00');
-    expect(l!.amounts.youOwe?.amount).toBe('2.00');
+    const [l] = claimLines(claim([item('99347', 'Home visit', { category: 'supply', amounts: { billed: { amount: '14.00', currency: 'USD' }, you_owe: { amount: '3.00', currency: 'USD' } }, adjudication: [{ category: 'Submitted Amount', amount: { amount: '11.00', currency: 'USD' } }] })]));
+    expect(l!.category).toBe('supply');
+    expect(l!.amounts.billed?.amount).toBe('14.00');
+    expect(l!.amounts.youOwe?.amount).toBe('3.00');
   });
 
   it('trust no inherited name from medrec: a category or amount called "constructor" is not one', () => {
-    const [l] = claimLines(claim([item('99213', 'Office visit', { category: 'constructor', amounts: { constructor: { amount: '1.00', currency: 'USD' }, toString: { amount: '1.00', currency: 'USD' } } })]));
+    const [l] = claimLines(claim([item('99347', 'Home visit', { category: 'constructor', amounts: { constructor: { amount: '4.00', currency: 'USD' }, toString: { amount: '4.00', currency: 'USD' } } })]));
     expect(l!.category).toBe('visit');
     expect(l!.amounts).toEqual({});
   });
 
   it('read a payer’s words the way the claim’s totals do', () => {
-    const words = (category: string) => ({ category, amount: { amount: '5.00', currency: 'USD' } });
-    const r = claim([item('99213', 'Office visit', { adjudication: [words('Paid by plan'), words('Patient pay amount'), words('Copay')] })], {
-      fields: { type: 'Professional', items: [item('99213', 'Office visit', { adjudication: [words('Paid by plan'), words('Patient pay amount'), words('Copay')] })], total: [words('Paid by plan'), words('Patient pay amount'), words('Copay')] },
+    const words = (category: string) => ({ category, amount: { amount: '7.00', currency: 'USD' } });
+    const r = claim([item('99347', 'Home visit', { adjudication: [words('Paid by plan'), words('Patient pay amount'), words('Copay')] })], {
+      fields: { type: 'Professional', items: [item('99347', 'Home visit', { adjudication: [words('Paid by plan'), words('Patient pay amount'), words('Copay')] })], total: [words('Paid by plan'), words('Patient pay amount'), words('Copay')] },
     } as Partial<MedRecord>);
     const [l] = claimLines(r);
-    expect(l!.amounts).toMatchObject({ planPaid: { amount: '5.00' }, youOwe: { amount: '5.00' }, copay: { amount: '5.00' } });
+    expect(l!.amounts).toMatchObject({ planPaid: { amount: '7.00' }, youOwe: { amount: '7.00' }, copay: { amount: '7.00' } });
     const totals = claimAmounts(r);
-    expect(totals.planPaid?.amount).toBe('5.00');
-    expect(totals.yourShare?.amount).toBe('5.00');
-    expect(totals.parts).toEqual([{ name: 'copay', label: 'Copay', amount: { amount: '5.00', currency: 'USD' } }]);
+    expect(totals.planPaid?.amount).toBe('7.00');
+    expect(totals.yourShare?.amount).toBe('7.00');
+    expect(totals.parts).toEqual([{ name: 'copay', label: 'Copay', amount: { amount: '7.00', currency: 'USD' } }]);
   });
 
   it('fall back to the line’s net as what was billed', () => {
-    const [l] = claimLines(claim([item('99213', 'Office visit', { net: { amount: '50.00', currency: 'USD' } })]));
-    expect(l!.amounts.billed?.amount).toBe('50.00');
+    const [l] = claimLines(claim([item('99347', 'Home visit', { net: { amount: '64.00', currency: 'USD' } })]));
+    expect(l!.amounts.billed?.amount).toBe('64.00');
   });
 
   it('are none on a claim without items', () => {
@@ -105,32 +105,32 @@ describe('claim lines', () => {
 // The rows of the category table in medrec's data contract.
 describe('a line’s category', () => {
   it.each([
-    ['99213', 'visit'],
-    ['99396', 'visit'],
-    ['80061', 'lab'],
-    ['36415', 'lab'],
-    ['0001U', 'lab'],
-    ['0002M', 'lab'],
-    ['71046', 'imaging'],
-    ['90686', 'vaccine'],
-    ['90471', 'vaccine'],
-    ['93000', 'medicine'],
-    ['99509', 'medicine'],
-    ['45378', 'procedure'],
-    ['00810', 'anesthesia'],
-    ['J1100', 'drug'],
-    ['E0607', 'supply'],
-    ['D0120', 'dental'],
-    ['G0439', 'other'],
-    ['3074F', 'other'],
-    ['0042T', 'other'],
+    ['99347', 'visit'],
+    ['99283', 'visit'],
+    ['87086', 'lab'],
+    ['36416', 'lab'],
+    ['0041U', 'lab'],
+    ['0012M', 'lab'],
+    ['76705', 'imaging'],
+    ['90750', 'vaccine'],
+    ['90473', 'vaccine'],
+    ['95004', 'medicine'],
+    ['99605', 'medicine'],
+    ['69210', 'procedure'],
+    ['00140', 'anesthesia'],
+    ['J3420', 'drug'],
+    ['E0114', 'supply'],
+    ['D2391', 'dental'],
+    ['G0283', 'other'],
+    ['1125F', 'other'],
+    ['0101T', 'other'],
     [undefined, 'other'],
   ] as const)('%s is %s', (code, category) => {
     expect(categoryOf(code)).toBe(category);
   });
 
   it('is pharmacy on a pharmacy claim or a drug code', () => {
-    expect(categoryOf('00000-0001-01', undefined, 'Pharmacy')).toBe('pharmacy');
-    expect(categoryOf('197361', 'http://www.nlm.nih.gov/research/umls/rxnorm')).toBe('pharmacy');
+    expect(categoryOf('00000-7777-12', undefined, 'Pharmacy')).toBe('pharmacy');
+    expect(categoryOf('198440', 'http://www.nlm.nih.gov/research/umls/rxnorm')).toBe('pharmacy');
   });
 });

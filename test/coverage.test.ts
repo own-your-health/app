@@ -34,9 +34,9 @@ describe('a person’s coverage over time', () => {
   it('is named by its payer, else by what the record is called', () => {
     const dale = recordsOf('Dale');
     const insurer = (payer?: string) =>
-      coverageHistory({ ...dale, records: dale.records.filter((r) => r.kind === 'coverage').map((r) => ({ ...r, display: 'Silver card', fields: { ...r.fields, payer } as MedRecord['fields'] })) }, RULES, ruled('Dale')).map((s) => s.insurer);
+      coverageHistory({ ...dale, records: dale.records.filter((r) => r.kind === 'coverage').map((r) => ({ ...r, display: 'Placeholder card', fields: { ...r.fields, payer } as MedRecord['fields'] })) }, RULES, ruled('Dale')).map((s) => s.insurer);
     expect(insurer('Example Care Plan')).toEqual(['Example Care Plan']);
-    expect(insurer()).toEqual(['Silver card']);
+    expect(insurer()).toEqual(['Placeholder card']);
   });
 
   it('marks a coverage that started the day someone in the household was born, as a date, not a reason', () => {

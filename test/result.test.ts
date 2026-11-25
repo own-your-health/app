@@ -6,33 +6,33 @@ import { demo, personNamed } from './demo-data';
 
 describe('a result’s reading', () => {
   it('says where the value sits against a range in its unit', () => {
-    expect(verdict({ value: 49, unit: 'cells/uL', range: '15 - 500 cells/uL' })).toMatchObject({ text: 'Within the lab’s range of 15–500 cells/µL.', outOfRange: false });
-    expect(verdict({ value: 11.2, unit: 'g/dL', range: '12.0-15.5 g/dL' })).toMatchObject({ text: 'Below the lab’s range of 12–15.5 g/dL.', outOfRange: true });
-    expect(verdict({ value: 162, unit: 'mg/dL', range: '<130 mg/dL' }).text).toBe('Above the lab’s range (under 130 mg/dL).');
-    expect(verdict({ value: 55, unit: 'mg/dL', range: '>=40 mg/dL' }).text).toBe('Within the lab’s range (40 mg/dL or more).');
+    expect(verdict({ value: 7, unit: 'crystals/uL', range: '2 - 24 crystals/uL' })).toMatchObject({ text: 'Within the lab’s range of 2–24 crystals/µL.', outOfRange: false });
+    expect(verdict({ value: 30.7, unit: 'mm Hg', range: '34.0-46.5 mm Hg' })).toMatchObject({ text: 'Below the lab’s range of 34–46.5 mm Hg.', outOfRange: true });
+    expect(verdict({ value: 47, unit: 'mm/h', range: '<22 mm/h' }).text).toBe('Above the lab’s range (under 22 mm/h).');
+    expect(verdict({ value: 9, unit: 'mg/L', range: '>=4 mg/L' }).text).toBe('Within the lab’s range (4 mg/L or more).');
   });
 
   it('takes the lab’s mark as the reading, by the range when they agree', () => {
-    expect(verdict({ value: 162, unit: 'mg/dL', range: '<130 mg/dL', interpretation: 'High' }).text).toBe('Above the lab’s range (under 130 mg/dL).');
-    expect(verdict({ value: 5.6, unit: 'mmol/L', range: '3.5-5.1 mmol/L', interpretation: 'Critical high' }).text).toBe('Above the lab’s range of 3.5–5.1 mmol/L. The lab marked it critical.');
+    expect(verdict({ value: 47, unit: 'mm/h', range: '<22 mm/h', interpretation: 'High' }).text).toBe('Above the lab’s range (under 22 mm/h).');
+    expect(verdict({ value: 71.2, unit: 'mm Hg', range: '34.5-46.5 mm Hg', interpretation: 'Critical high' }).text).toBe('Above the lab’s range of 34.5–46.5 mm Hg. The lab marked it critical.');
     // A mark that disagrees with the range is the lab's to make; say what it said.
-    expect(verdict({ value: 120, unit: 'mg/dL', range: '<130 mg/dL', interpretation: 'High' })).toMatchObject({ text: 'The lab marked it high. Its range is under 130 mg/dL.', outOfRange: true });
-    expect(verdict({ text: 'Positive', interpretation: 'Abnormal' } as never).text).toBe('The lab marked it abnormal.');
+    expect(verdict({ value: 18, unit: 'mm/h', range: '<22 mm/h', interpretation: 'High' })).toMatchObject({ text: 'The lab marked it high. Its range is under 22 mm/h.', outOfRange: true });
+    expect(verdict({ text: 'Cloudy', interpretation: 'Abnormal' } as never).text).toBe('The lab marked it abnormal.');
   });
 
   it('says when there is no range, or one in another unit', () => {
-    expect(verdict({ value: 3 })).toMatchObject({ text: 'The lab gave no range for this result.', outOfRange: false });
-    expect(verdict({ value: 3, unit: 'mg/dL', range: '1-5 mmol/L' }).text).toBe('The lab’s range is 1-5 mmol/L.');
+    expect(verdict({ value: 74 })).toMatchObject({ text: 'The lab gave no range for this result.', outOfRange: false });
+    expect(verdict({ value: 26, unit: 'ng/mL', range: '12-40 nmol/L' }).text).toBe('The lab’s range is 12-40 nmol/L.');
   });
 
   it('writes ranges and units as a lab report prints them', () => {
-    expect(rangeWords(parseRange('<=5')!, 'ug/mL')).toBe('5 µg/mL or less');
-    expect(rangeWords(parseRange('>40')!, undefined)).toBe('over 40');
-    expect(unitText('10*3/uL')).toBe('10*3/µL');
-    expect(unitText('uIU/mL')).toBe('µIU/mL');
-    expect(unitText('umol/L')).toBe('µmol/L');
-    expect(unitText('U/L')).toBe('U/L');
-    expect(unitText('mL/min/{1.73_m2}')).toBe('mL/min/{1.73_m2}');
+    expect(rangeWords(parseRange('<=65')!, 'ug/g')).toBe('65 µg/g or less');
+    expect(rangeWords(parseRange('>7')!, undefined)).toBe('over 7');
+    expect(unitText('10*2/uL')).toBe('10*2/µL');
+    expect(unitText('uIU/L')).toBe('µIU/L');
+    expect(unitText('umol/d')).toBe('µmol/d');
+    expect(unitText('U/h')).toBe('U/h');
+    expect(unitText('mg/h/{70_kg}')).toBe('mg/h/{70_kg}');
   });
 });
 

@@ -24,9 +24,9 @@ describe('the household’s events', () => {
   const { household, indexes } = demo();
   const events = householdEvents(household, (id) => indexes.get(id), '2026-11-22');
   const [robin, sam] = household.people.map((p) => p.id);
-  /** Sam's May visit as a hospital stay of three days; the sample has none. */
+  /** Sam's May visit as a hospital stay of five days; the sample has none. */
   const visit = events.find((x) => x.person.id === sam && x.event.start === '2026-05-20')!;
-  const stay = { ...visit, event: { ...visit.event, kind: 'stay' as const, end: '2026-05-22' } };
+  const stay = { ...visit, event: { ...visit.event, kind: 'stay' as const, end: '2026-05-24' } };
 
   it('come newest first, each with its person’s lane in household order', () => {
     expect(events.map((x) => x.event.start)).toEqual([...events.map((x) => x.event.start)].sort().reverse());
@@ -53,8 +53,8 @@ describe('the household’s events', () => {
 
   it('mark a stay across its days, a fill as a ring and a visit as a dot', () => {
     expect(markShape(stay.event)).toBe('bar');
-    expect(['2026-05-20', '2026-05-21', '2026-05-22'].map((d) => barPart(stay.event, d))).toEqual(['start', 'mid', 'end']);
-    expect(onDay([...events, stay], '2026-05-21')).toEqual([stay]);
+    expect(['2026-05-20', '2026-05-22', '2026-05-24'].map((d) => barPart(stay.event, d))).toEqual(['start', 'mid', 'end']);
+    expect(onDay([...events, stay], '2026-05-22')).toEqual([stay]);
     const fill = events.find((x) => x.event.kind === 'fill')!;
     expect(markShape(fill.event)).toBe('ring');
     expect(markShape(events.find((x) => x.event.kind === 'office')!.event)).toBe('dot');
@@ -72,6 +72,6 @@ describe('the household’s events', () => {
   it('belong to every month they touch', () => {
     expect(inMonth([stay], '2026-05')).toEqual([stay]);
     expect(inMonth([stay], '2026-06')).toEqual([]);
-    expect(inMonth([{ ...stay, event: { ...stay.event, start: '2026-05-30', end: '2026-06-02' } }], '2026-06')).toHaveLength(1);
+    expect(inMonth([{ ...stay, event: { ...stay.event, start: '2026-05-28', end: '2026-06-04' } }], '2026-06')).toHaveLength(1);
   });
 });

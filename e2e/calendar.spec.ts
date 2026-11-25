@@ -46,19 +46,19 @@ test('home leads to the calendar, which opens on this month with a lane per pers
   await expect(page.locator('.event-what')).toHaveText('Ear pain');
 });
 
-/** The sample with Sam's day at the endoscopy center a stay of two nights. */
+/** The sample with Sam's day at the endoscopy center a stay of three nights. */
 const STAY = rewritten({}, ({ name, events }) => {
-  if (name === 'Sam Example') Object.assign(events.events.find((e) => e.start === '2026-09-16')!, { kind: 'inpatient', end: '2026-09-18' });
+  if (name === 'Sam Example') Object.assign(events.events.find((e) => e.start === '2026-09-16')!, { kind: 'inpatient', end: '2026-09-19' });
 });
 
 test('a hospital stay is one bar across its days, in its person’s lane', async ({ page }) => {
   await lay(page, STAY);
   await open(page, '#/calendar?month=2026-09');
-  await expect(page.locator('.cal-month .cal-lane.lane-1 .mark-bar')).toHaveCount(3);
+  await expect(page.locator('.cal-month .cal-lane.lane-1 .mark-bar')).toHaveCount(4);
   const list = card(page, 'What happened in September 2026');
-  await expect(list.locator('.row-title').nth(1)).toHaveText('Hospital stay · 2 nights · Example Endoscopy Center');
+  await expect(list.locator('.row-title').nth(1)).toHaveText('Hospital stay · 3 nights · Example Endoscopy Center');
   await list.locator('.row', { hasText: 'Hospital stay' }).locator('a.row-main').click();
-  await expect(page.locator('.event h1')).toHaveText('Hospital stay · 2 nights');
+  await expect(page.locator('.event h1')).toHaveText('Hospital stay · 3 nights');
 });
 
 test('a private event stays off the Everyone calendar until shown, and on its person’s own', async ({ page }) => {

@@ -51,17 +51,17 @@ describe('visits with their documents', () => {
     ]);
   });
 
-  it('spans a stay’s days, and names its kind only when its name does not', () => {
-    // Sam's May visit made three days long, in a hospital's words, with a medicine given on its last day.
+  it('spans a visit’s days, and names its kind only when its name does not', () => {
+    // Sam's May visit made five days long, in a home nurse's words, with a medicine given on its last day.
     const idx = linking('Sam Example', 'Sports medicine visit', 'Sports medicine visit note');
     const visit = idx.records.find((r) => r.display === 'Sports medicine visit')!;
-    const long: MedRecord = { ...visit, display: 'Inpatient hospital stay', fields: { ...visit.fields, class: 'inpatient', period: { start: '2026-05-20', end: '2026-05-22' } } };
-    const given: MedRecord = { ...idx.records.find((r) => r.kind === 'medication' && r.date === '2026-05-20')!, id: 'r_given', date: '2026-05-22' };
-    const stay = timeline('Sam Example', { ...idx, records: [...idx.records.map((r) => (r === visit ? long : r)), given] }).visits.find((v) => v.record.id === visit.id)!;
-    expect([stay.start, stay.end]).toEqual(['2026-05-20', '2026-05-22']);
-    expect(docTitles(stay)).toEqual(['linked Sports medicine visit note']);
-    expect(stay.recorded.map((g) => [g.kind, g.records.length])).toEqual([['condition', 1], ['medication', 2]]);
-    expect(visitKind(stay)).toBeUndefined();
+    const long: MedRecord = { ...visit, display: 'Nurse home visit', fields: { ...visit.fields, class: 'home health', period: { start: '2026-05-20', end: '2026-05-24' } } };
+    const given: MedRecord = { ...idx.records.find((r) => r.kind === 'medication' && r.date === '2026-05-20')!, id: 'r_given', date: '2026-05-24' };
+    const span = timeline('Sam Example', { ...idx, records: [...idx.records.map((r) => (r === visit ? long : r)), given] }).visits.find((v) => v.record.id === visit.id)!;
+    expect([span.start, span.end]).toEqual(['2026-05-20', '2026-05-24']);
+    expect(docTitles(span)).toEqual(['linked Sports medicine visit note']);
+    expect(span.recorded.map((g) => [g.kind, g.records.length])).toEqual([['condition', 1], ['medication', 2]]);
+    expect(visitKind(span)).toBeUndefined();
     const robin = timeline('Robin Example').visits;
     expect(visitKind(robin.find((v) => v.record.display === 'Office visit')!)).toBeUndefined();
     // Robin's 2025 physical, which its portal names by a billing descriptor.
@@ -80,10 +80,10 @@ describe('visits with their documents', () => {
     const october = idx.records.find((r) => r.kind === 'encounter' && r.date === '2026-10-01')!;
     // A second visit the same day, at the same place, with the lab report linked to it.
     const lab = idx.documents.find((d) => d.title === 'Lipid panel')!;
-    const second: MedRecord = { ...october, id: 'r_second', key: 'encounter|x|2026-10-01', display: 'Lab draw', documents: [lab.id] };
+    const second: MedRecord = { ...october, id: 'r_second', key: 'encounter|x|2026-10-01', display: 'Diet visit', documents: [lab.id] };
     const { visits } = timeline('Robin Example', { ...idx, records: [...idx.records, second] });
     const byName = (n: string) => visits.find((v) => v.record.display === n && v.start === '2026-10-01')!;
-    expect(docTitles(byName('Lab draw'))).toEqual(['linked Lipid panel']);
+    expect(docTitles(byName('Diet visit'))).toEqual(['linked Lipid panel']);
     expect(docTitles(byName('Office visit'))).toEqual(['After visit summary', 'Statement from Example Health.pdf']);
   });
 
@@ -92,7 +92,7 @@ describe('visits with their documents', () => {
     const withdrawn = idx.records.map((r) => (r.kind === 'immunization' && r.date === '2026-10-01' ? { ...r, status: 'entered-in-error' } : r));
     expect(timeline('Robin Example', { ...idx, records: withdrawn }).visits[1]!.recorded.map((g) => g.kind)).toEqual(['result']);
     const october = idx.records.find((r) => r.kind === 'encounter' && r.date === '2026-10-01')!;
-    const later = [{ ...october, id: 'r_planned', date: '2026-12-01', status: 'planned' }, { ...october, id: 'r_future', date: '2026-12-02' }];
+    const later = [{ ...october, id: 'r_planned', date: '2027-02-09', status: 'planned' }, { ...october, id: 'r_future', date: '2027-02-17' }];
     expect(timeline('Robin Example', { ...idx, records: [...idx.records, ...later] }).visits).toHaveLength(4);
   });
 

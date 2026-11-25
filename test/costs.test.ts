@@ -154,7 +154,7 @@ describe('the sample household', () => {
 });
 
 function claim(fields: Record<string, unknown>): MedRecord {
-  return { id: 'r_c1', kind: 'claim', key: 'k', date: '2026-03-02', display: 'Professional', status: 'active', fields: { provider: 'Example Clinic', insurer: 'Example Plan', billable_period: { start: '2026-03-02' }, ...fields }, documents: [], provenance: [] } as unknown as MedRecord;
+  return { id: 'r_c1', kind: 'claim', key: 'k', date: '2025-08-19', display: 'Professional', status: 'active', fields: { provider: 'Example Clinic', insurer: 'Example Meadow Plan', billable_period: { start: '2025-08-19' }, ...fields }, documents: [], provenance: [] } as unknown as MedRecord;
 }
 const total = (pairs: [string, string][]) => pairs.map(([category, amount]) => ({ category, amount: usd(amount) }));
 const indexOf = (records: MedRecord[]) => ({ ...indexes.get(id('Robin Example'))!, records }) as PersonIndex;
@@ -162,27 +162,27 @@ const indexOf = (records: MedRecord[]) => ({ ...indexes.get(id('Robin Example'))
 describe('a claim whose lines do not add up to its totals', () => {
   it('keeps the difference as a line of its own, so the totals stay the claim’s', () => {
     const r = claim({
-      total: total([['Submitted Amount', '300.00'], ['Eligible Amount', '200.00'], ['Benefit Amount', '150.00'], ['Coinsurance', '50.00'], ['Member liability', '50.00']]),
-      items: [{ sequence: 1, service: { system: 'http://www.ama-assn.org/go/cpt', code: '99213', display: 'Office visit' }, adjudication: total([['Submitted Amount', '200.00'], ['Eligible Amount', '120.00'], ['Benefit Amount', '90.00'], ['Coinsurance', '30.00']]) }],
+      total: total([['Submitted Amount', '420.00'], ['Eligible Amount', '260.00'], ['Benefit Amount', '190.00'], ['Coinsurance', '70.00'], ['Member liability', '70.00']]),
+      items: [{ sequence: 1, service: { system: 'http://www.ama-assn.org/go/cpt', code: '97110', display: 'Exercise therapy' }, adjudication: total([['Submitted Amount', '250.00'], ['Eligible Amount', '160.00'], ['Benefit Amount', '120.00'], ['Coinsurance', '40.00']]) }],
     });
     const lines = costLines('p_x', indexOf([r]));
     expect(lines.map((l) => [l.service, l.split, l.cents])).toEqual([
-      ['Office visit', true, { billed: 20000, allowed: 12000, planPaid: 9000, coinsurance: 3000, youOwe: 3000 }],
-      ['Not split by line', false, { billed: 10000, allowed: 8000, planPaid: 6000, coinsurance: 2000, youOwe: 2000 }],
+      ['Exercise therapy', true, { billed: 25000, allowed: 16000, planPaid: 12000, coinsurance: 4000, youOwe: 4000 }],
+      ['Not split by line', false, { billed: 17000, allowed: 10000, planPaid: 7000, coinsurance: 3000, youOwe: 3000 }],
     ]);
-    expect(totals(lines).cents).toEqual({ billed: 30000, allowed: 20000, planPaid: 15000, coinsurance: 5000, youOwe: 5000 });
+    expect(totals(lines).cents).toEqual({ billed: 42000, allowed: 26000, planPaid: 19000, coinsurance: 7000, youOwe: 7000 });
     // A total-only line is never priced as the code.
     expect(comparableCodes([...lines, ...lines])).toHaveLength(1);
   });
 
   it('is one line, named for the claim, when it has no lines at all', () => {
-    const fill = { ...claim({ type: 'Pharmacy', total: total([['Submitted Amount', '40.00'], ['Member liability', '10.00']]) }), display: 'Pharmacy' };
+    const fill = { ...claim({ type: 'Pharmacy', total: total([['Submitted Amount', '52.00'], ['Member liability', '12.00']]) }), display: 'Pharmacy' };
     const lines = costLines('p_x', indexOf([fill]));
-    expect(lines.map((l) => [l.service, l.category, l.cents])).toEqual([['Claim from Example Clinic', 'pharmacy', { billed: 4000, youOwe: 1000 }]]);
+    expect(lines.map((l) => [l.service, l.category, l.cents])).toEqual([['Claim from Example Clinic', 'pharmacy', { billed: 5200, youOwe: 1200 }]]);
   });
 
   it('leaves out a withdrawn claim', () => {
-    expect(costLines('p_x', indexOf([{ ...claim({ total: total([['Member liability', '10.00']]) }), status: 'entered-in-error' }]))).toEqual([]);
+    expect(costLines('p_x', indexOf([{ ...claim({ total: total([['Member liability', '12.00']]) }), status: 'entered-in-error' }]))).toEqual([]);
   });
 });
 

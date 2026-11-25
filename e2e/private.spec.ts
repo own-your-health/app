@@ -240,22 +240,22 @@ const ownPlan = (day: string) =>
   rewritten({}, ({ name, index, list }) => {
     const ids = index.records.filter((r) => r.kind === 'claim').map((r) => r.id);
     if (name === 'Alex Example') for (const id of ids) list.records[id] = { area: 'household', from: 'marks' };
-    for (const r of index.records) if (name === 'Sam Example' && r.kind === 'claim' && r.id in list.records) Object.assign(r, { date: day, fields: { ...r.fields, insurer: 'Example Other Plan', when: day, billable_period: { start: day, end: day }, benefit_period: undefined, items: (r.fields.items as object[]).map((i) => ({ ...i, serviced: day })) } });
+    for (const r of index.records) if (name === 'Sam Example' && r.kind === 'claim' && r.id in list.records) Object.assign(r, { date: day, fields: { ...r.fields, insurer: 'Example Meadow Plan', when: day, billable_period: { start: day, end: day }, benefit_period: undefined, items: (r.fields.items as object[]).map((i) => ({ ...i, serviced: day })) } });
   });
 
 test('a plan only a private claim names is in no words, limits or dates of everyone’s Money', async ({ page }) => {
-  await lay(page, ownPlan('2026-11-21'));
+  await lay(page, ownPlan('2026-11-19'));
   await go(page, '#/money');
   const hero = page.locator('.money-hero');
   await expect(hero).toContainText('from 13 claims for care between Jul 9, 2026 and Nov 18, 2026.');
   await expect(hero).toContainText('Example Pharmacy Benefits');
-  await expect(page.locator('main')).not.toContainText('Example Other Plan');
+  await expect(page.locator('main')).not.toContainText('Example Meadow Plan');
   const deductible = card(page, /^Deductible$/);
   await expect(deductible.locator('.row-title')).toHaveText(['Robin', 'Sam', 'Alex', 'Drew']);
   // Alex's claims are all private, so nothing here says there is one.
   for (const i of [2, 3]) await expect(deductible.locator('.row').nth(i)).toContainText('No claims listed here for this plan year yet.');
   await go(page, '#/costs');
-  await expect(page.locator('main')).not.toContainText('Example Other Plan');
+  await expect(page.locator('main')).not.toContainText('Example Meadow Plan');
   await expect(page.getByRole('group', { name: 'Whose costs' }).getByRole('link')).toHaveText(['Everyone', 'Robin', 'Sam']);
   // On Alex's own address Alex is there to choose.
   const alex = await page.evaluate(async () => ((await (await fetch('./demo/household.json')).json()) as { people: { id: string; name: string }[] }).people.find((p) => p.name === 'Alex Example')!.id);
@@ -266,11 +266,11 @@ test('a plan only a private claim names is in no words, limits or dates of every
   // In a year whose other claims are all one plan's, it stays one plan's. Sam's own Money names the other.
   await page.goto('about:blank');
   await page.unrouteAll();
-  await lay(page, ownPlan('2025-12-27'));
+  await lay(page, ownPlan('2025-11-13'));
   await go(page, '#/money?period=2025');
   await expect(hero).toContainText('The plan’s figures, from 4 claims for care between Mar 10, 2025 and Sep 15, 2025.');
   await go(page, `#/costs?only=person%3A${SAM}&period=2025`);
-  await expect(page.locator('main')).toContainText('Example Other Plan');
+  await expect(page.locator('main')).toContainText('Example Meadow Plan');
 });
 
 test('a deductible that is met says with which claim on its person’s Money, and no day on everyone’s', async ({ page }) => {

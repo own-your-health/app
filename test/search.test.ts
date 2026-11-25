@@ -99,7 +99,7 @@ describe('search', () => {
 
 describe('match ranges', () => {
   it('are in the text’s own characters, accents and all, merged where they overlap', () => {
-    expect(matchRanges('Café au lait', ['cafe'])).toEqual([[0, 4]]);
+    expect(matchRanges('Crème fraîche', ['creme'])).toEqual([[0, 5]]);
     expect(matchRanges('LDL cholesterol, LDL', ['ldl'])).toEqual([
       [0, 3],
       [17, 20],
@@ -137,7 +137,7 @@ describe('concepts', () => {
   it('takes a phrase’s plural as the phrase, for every word', () => {
     for (const [q, id] of <[string, string][]>[['statement', 'bills'], ['statements', 'bills'], ['charge', 'bills'], ['charges', 'bills'], ['prescription', 'meds'], ['prescriptions', 'meds'], ['med', 'meds'], ['lab', 'labs'], ['labs', 'labs'], ['blood test', 'labs'], ['blood tests', 'labs'], ['eobs', 'bills']])
       expect(conceptOf(q)?.concept.id, q).toBe(id);
-    expect(conceptOf('testes')).toBeUndefined();
+    expect(conceptOf('workes')).toBeUndefined();
   });
 
   it('keeps every concept’s words in one table that agrees with itself', () => {

@@ -45,31 +45,31 @@ describe('results by panel', () => {
     ]);
   });
 
-  it('groups a child’s weights and heights as vital signs, a test with no panel apart, and bilirubin with the liver panel', () => {
+  it('groups a child’s weights and heights as vital signs, a test with no panel apart, and urine pH with the urine and kidney panel', () => {
     expect(shape(index('Drew Example'))).toEqual([['Vital signs', 0, ['Weight', 'Height']], ['Other tests', 0, ['Lead, blood']]]);
-    expect(shape(idx([result('1975-2', 'Bilirubin, total', '2026-03-02', 0.7, 'mg/dL', '0.2-1.2 mg/dL')]))).toEqual([['Liver panel', 0, ['Bilirubin']]]);
+    expect(shape(idx([result('5803-2', 'pH, urine', '2025-08-21', 6.4, 'pH', '4.8-7.9 pH')]))).toEqual([['Urine and kidney', 0, ['Urine pH']]]);
   });
 
   it('puts a critical result’s panel ahead of one merely out of range, whatever the dates', () => {
     const records = [
-      result('2823-3', 'Potassium', '2026-11-01', 5.6, 'mmol/L', '3.5-5.1 mmol/L', { interpretation: 'High' }),
-      result('718-7', 'Hemoglobin', '2026-01-01', 6.1, 'g/dL', '12.0-15.5 g/dL', { interpretation: 'Critical low' }),
-      result('2093-3', 'Cholesterol, total', '2026-11-10', 180, 'mg/dL', '<200 mg/dL'),
+      result('5811-5', 'Specific gravity, urine', '2025-09-30', 1.041, '', '1.003-1.030', { interpretation: 'High' }),
+      result('3024-7', 'T4, free', '2025-02-18', 0.2, 'ng/dL', '0.9-1.7 ng/dL', { interpretation: 'Critical low' }),
+      result('2132-9', 'Cobalamin', '2025-10-21', 540, 'pg/mL', '>250 pg/mL'),
     ];
-    expect(shape(idx(records)).map(([name]) => name)).toEqual(['Blood count (CBC)', 'Metabolic panel', 'Cholesterol (lipid panel)']);
+    expect(shape(idx(records)).map(([name]) => name)).toEqual(['Thyroid', 'Urine and kidney', 'Vitamins and iron']);
   });
 
   it('falls back to the category, and to Other tests, for codes outside the table', () => {
     const records = [
-      result('94500-6', 'SARS-CoV-2 RNA', '2026-03-01', 0, '', undefined, { category: 'Laboratory' }),
-      result(undefined, 'Peak flow', '2026-03-01', 410, 'L/min', undefined, { category: 'Vital signs' }),
-      result(undefined, 'Grip strength', '2026-03-01', 1, '', undefined, { category: 'Exam' }),
+      result('1798-8', 'Amylase', '2025-06-12', 61, 'U/L', undefined, { category: 'Laboratory' }),
+      result(undefined, 'Waist size', '2025-06-12', 94, 'cm', undefined, { category: 'Vital signs' }),
+      result(undefined, 'Color vision plates', '2025-06-12', 11, '', undefined, { category: 'Exam' }),
     ];
     expect(shape(idx(records)).map(([name]) => name).sort()).toEqual(['Exam', 'Other tests', 'Vital signs']);
   });
 
   it('places a known code by the table, before its category', () => {
-    const t = { series: { key: `${LOINC}|2160-0`, name: 'Creatinine', points: [] }, latest: { id: 'x', text: '1' } } as unknown as LatestResult;
-    expect(panelOf(t, 'Chemistry')).toMatchObject({ id: 'metabolic' });
+    const t = { series: { key: `${LOINC}|8310-5`, name: 'Temperature', points: [] }, latest: { id: 'x', text: '36.7' } } as unknown as LatestResult;
+    expect(panelOf(t, 'Chemistry')).toMatchObject({ id: 'vitals' });
   });
 });
