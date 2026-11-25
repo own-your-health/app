@@ -11,7 +11,7 @@ import { knownArea } from '../model/private';
 import { sameProvider } from '../model/providers';
 import { day, decimalCents, isWithdrawn, sortByDateDesc, str } from '../model/records';
 import type { Household, MedRecord, PersonIndex } from '../model/types';
-import { sameSignIn } from '../model/practices';
+import { samePractice } from '../model/practices';
 import { recentVisits, visitPlaces, visitTimeline, type Visit } from '../model/visits';
 
 import { eventMoney, eventPrivate, nameEvent, type CareEvent, type ClaimRole, type Confidence, type EventKind, type Rule } from './event';
@@ -248,7 +248,7 @@ export function careEvents(index: PersonIndex, household: Household, today: stri
   };
   const groups: Visit[][] = [];
   for (const v of [...visits].reverse().filter(visitClass)) {
-    const g = groups.find((x) => x[0]!.start === v.start && (x[0]!.through.some((a) => v.through.some((b) => sameSignIn(a, b) && !a.shared && !b.shared)) || visitNames(x[0]!, household, index.person).some((n) => visitNames(v, household, index.person).some((m) => sameProvider(n, m)))));
+    const g = groups.find((x) => x[0]!.start === v.start && (x[0]!.through.some((a) => v.through.some((b) => samePractice(a, b))) || visitNames(x[0]!, household, index.person).some((n) => visitNames(v, household, index.person).some((m) => sameProvider(n, m)))));
     if (g) g.push(v);
     else groups.push([v]);
   }

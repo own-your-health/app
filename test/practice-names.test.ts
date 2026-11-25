@@ -161,10 +161,39 @@ describe('a sign-in several practices share', () => {
   });
 
   it('puts no result of its own day beside another: they may be two practices’', () => {
-    const beside = (a: MedRecord, b: MedRecord) => resultContext(person(a, b), home, 'p_one', '2026-12-01', a).sameDraw.flatMap((g) => g.records.map((r) => r.id));
+    const context = (...records: MedRecord[]) => resultContext(person(...records), home, 'p_one', '2026-12-01', records[0]!);
+    const beside = (...records: MedRecord[]) => context(...records).sameDraw.flatMap((g) => g.records.map((r) => r.id));
     const on = (r: MedRecord, date: string) => ({ ...r, date });
-    expect(beside(record('r_count'), on(record('r_level'), '2026-06-11'))).toEqual([]);
+    const level = on(record('r_level'), '2026-06-11');
+    expect(beside(record('r_count'), level)).toEqual([]);
+    expect(beside(record('r_count'), level, record('r_morning'), record('r_afternoon'))).toEqual([]);
     expect(beside(record('r_rate'), on(record('r_rate', { id: 'r_rate_two' }), '2026-06-22'))).toEqual(['r_rate_two']);
+    const north = on(record('r_rate', { id: 'r_rate_north' }), '2026-06-22');
+    north.provenance[0]!.source.organization_id = 'example-north';
+    expect(beside(record('r_rate'), north)).toEqual([]);
+    // The day's only visit by it has both, and the report that came with them.
+    const report = record('r_count', { id: 'r_report', kind: 'report' });
+    expect(beside(record('r_count'), level, record('r_morning'))).toEqual(['r_level']);
+    expect([context(record('r_count'), report, record('r_morning')), context(record('r_count'), report)].map((c) => c.reports.map((r) => r.id))).toEqual([['r_report'], []]);
+  });
+
+  it('is shared as far as either record says: one that leaves its CLI out could be either practice’s', () => {
+    const two: Household = { ...home, sources: [
+      { id: 's_a', kind: 'fhir', person: 'p_one', cli: 'athena', organization: 'example-pair', organization_name: 'Example North Clinic' },
+      { id: 's_b', kind: 'fhir', person: 'p_one', cli: 'mychart', organization: 'example-pair', organization_name: 'Example South Clinic' },
+    ] as Household['sources'] };
+    const of = (id: string, cli: string | undefined, over: Partial<MedRecord> = {}) => {
+      const r = record(id, over);
+      r.provenance[0]!.source = { kind: 'fhir', organization_id: 'example-pair', ...(cli ? { cli } : {}) };
+      return r;
+    };
+    const a = of('r_morning', undefined), b = of('r_afternoon', undefined), count = of('r_count', 'athena'), level = of('r_count', undefined, { id: 'r_two' });
+    expect(careEvents(person(a, b), two, '2026-12-01')).toHaveLength(2);
+    const recorded = (...records: MedRecord[]) => Object.fromEntries(visitTimeline(person(...records), two, 'p_one', '2026-12-01').visits.map((v) => [v.record.id, v.recorded.flatMap((g) => g.records.map((r) => r.id))]));
+    expect(recorded(a, b, count)).toEqual({ r_morning: [], r_afternoon: [] });
+    // The visit that gives its CLI is the result's practice.
+    expect(recorded(of('r_morning', 'athena'), b, count)).toEqual({ r_morning: ['r_count'], r_afternoon: [] });
+    expect([resultContext(person(count, level), two, 'p_one', '2026-12-01', count), resultContext(person(count, level), two, 'p_one', '2026-12-01', level)].map((c) => c.sameDraw)).toEqual([[], []]);
   });
 
   it('says where a record came from by its CLI, not by an id that may be another practice’s', () => {
@@ -190,8 +219,11 @@ describe('a sign-in several practices share', () => {
     expect(days(at('r_morning', 'Example North Clinic'), at('r_afternoon', 'Example North Clinic'))).toEqual([['r_afternoon', 'r_morning']]);
     // The connection's own name, or its id, is no place two visits share.
     expect(days(at('r_morning', 'athenahealth (all practices)'), at('r_afternoon', 'athenahealth (all practices)'))).toHaveLength(2);
-    // A sign-in of one practice still makes one visit of a day's two.
-    expect(days(record('r_lake'), record('r_lake_two'))).toEqual([['r_lake', 'r_lake_two']]);
+    // A sign-in of one practice still makes one visit of a day's two, whatever script its name is in.
+    const lake = (name: string) => careEvents(person(record('r_lake'), record('r_lake_two')), { ...home, sources: home.sources.map((s) => (s.id === 's_lake' ? { ...s, organization_name: name } : s)) }, '2026-12-01').length;
+    expect([lake('Example Lake Clinic'), lake('Клиника Озеро')]).toEqual([1, 1]);
+    // A records connection's does not: many practices go by it.
+    expect(lake('athenahealth (all practices)')).toBe(2);
   });
 
   it('gives a visit what came that way on its day only when no other visit there could have', () => {

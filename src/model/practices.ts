@@ -5,6 +5,7 @@
 
 import { nameKey } from './providers';
 import type { Household, Provenance } from './types';
+import { placeName } from './words';
 
 /** What a record says of the sign-in it came through. */
 export type SignIn = Pick<Provenance['source'], 'organization_id' | 'cli' | 'fhir_base'>;
@@ -46,6 +47,25 @@ export function practiceName(household: Household, person: string, from: SignIn)
   const p = practiceOf(household, person, from);
   return p.kind === 'named' ? p.name : undefined;
 }
+
+/** A sign-in a record came through. */
+export interface Through extends SignIn {
+  organization_id: string;
+  /** Several practices go by it, so it alone says which of them to none: several of this person's, or a records connection's. */
+  shared: boolean;
+}
+
+/** The sign-ins some provenance names. */
+export function through(household: Household, person: string, provenance: Provenance[]): Through[] {
+  return provenance.flatMap(({ source: { organization_id, cli, fhir_base } }) => {
+    if (!organization_id) return [];
+    const p = practiceOf(household, person, { organization_id, cli, fhir_base });
+    return [{ organization_id, cli, fhir_base, shared: p.kind === 'shared' || (p.kind === 'named' && !placeName(p.name)) }];
+  });
+}
+
+/** Whether a sign-in shows that two records came from one practice. */
+export const samePractice = (a: Through, b: Through): boolean => sameSignIn(a, b) && !a.shared && !b.shared;
 
 /** Its name, else its id when nothing names it: an id several practices share stands for none of them. */
 export function practiceOrId(household: Household, person: string, from: SignIn): string | undefined {

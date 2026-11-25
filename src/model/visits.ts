@@ -7,7 +7,7 @@
 // visit.
 
 import { claimLines, claimProvider, claimResultIds, claimVisitId, isContractClaim } from './claims';
-import { practiceOf, practiceOrId, sameSignIn, type SignIn } from './practices';
+import { practiceOrId, samePractice, sameSignIn, through, type Through } from './practices';
 import { sameProvider } from './providers';
 import { day, isWithdrawn, sortByDateDesc, str } from './records';
 import type { Household, ImagingStudy, MedDocument, MedRecord, PersonIndex, Provenance } from './types';
@@ -39,13 +39,6 @@ export function recentVisits(index: PersonIndex, today: string): MedRecord[] {
   return sortByDateDesc(index.records.filter((r) => r.kind === 'encounter' && !NOT_A_VISIT.has(r.status ?? '') && (!r.date || r.date.slice(0, 10) <= today)));
 }
 
-/** A sign-in a record came through. */
-export interface Through extends SignIn {
-  organization_id: string;
-  /** Several practices of this person's share it, so it alone says which of them to none. */
-  shared: boolean;
-}
-
 export interface Visit {
   record: MedRecord;
   /** The first day, and for a stay the last. */
@@ -73,11 +66,6 @@ function window(r: MedRecord): { start?: string; end?: string } {
 
 const within = (d: string | undefined, v: { start?: string; end?: string }) => !!d && !!v.start && d >= v.start && d <= (v.end ?? v.start);
 
-/** The sign-ins some provenance names. */
-export function through(household: Household, person: string, provenance: Provenance[]): Through[] {
-  return provenance.flatMap(({ source: { organization_id, cli, fhir_base } }) => (organization_id ? [{ organization_id, cli, fhir_base, shared: practiceOf(household, person, { organization_id, cli, fhir_base }).kind === 'shared' }] : []));
-}
-
 /** The names of a visit's practice and place: never a records connection's, which many practices go by. */
 export function visitPlaces(v: Pick<Visit, 'record' | 'through'>, household: Household, person: string): string[] {
   const practices = v.through.map((t) => practiceOrId(household, person, t));
@@ -104,7 +92,7 @@ export function visitTimeline(index: PersonIndex, household: Household, person: 
   const came = (v: Visit, t: Through) => v.through.some((x) => sameSignIn(x, t));
   const meets = (a: Visit, b: Visit) => !!a.start && !!b.start && a.start <= (b.end ?? b.start) && b.start <= (a.end ?? a.start);
   const alone = (v: Visit, t: Through) => !visits.some((x) => x !== v && meets(x, v) && came(x, t) && !names(x).some((n) => at(v, n)));
-  const fromVisit = (v: Visit, provenance: Provenance[]) => through(household, person, provenance).some((t) => came(v, t) && (!t.shared || alone(v, t)));
+  const fromVisit = (v: Visit, provenance: Provenance[]) => through(household, person, provenance).some((t) => v.through.some((x) => samePractice(x, t)) || (came(v, t) && alone(v, t)));
 
   // Linked documents first, so a same-day match never takes one medrec linked elsewhere.
   for (const v of visits) {
