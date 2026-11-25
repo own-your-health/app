@@ -2,10 +2,12 @@
 // belongs together and how sure it is; the app keeps naming and pricing an
 // event from its records (event.ts), so a screen reads the same either way.
 
-import { claimCategory } from '../model/claims';
+import { claimCategory, claimProvider } from '../model/claims';
 import type { MedrecEvent, MedrecEvents } from '../model/events';
 import type { Household, MedDocument, MedRecord, PersonIndex } from '../model/types';
 import { knownArea } from '../model/private';
+import { providerKey, sameProvider } from '../model/providers';
+import { ownNames, str } from '../model/records';
 import { eventPrivate, nameEvent, type CareEvent, type ClaimRole, type EventKind } from './event';
 import { tidyName } from '../model/words';
 
@@ -40,6 +42,23 @@ function kindOf(m: MedrecEvent, visit: MedRecord | undefined): { kind: EventKind
 }
 
 /**
+ * Whether the place medrec gives is the event's. Where a portal names none,
+ * medrec takes it from a source, and before 0.9.6 it can take one that only
+ * shares the record's organization, CLI and FHIR base: another person's, or
+ * another practice of this person's. A place the visit or a claim names is
+ * the event's whatever the sources are called.
+ */
+function placeHolds(place: string, e: CareEvent, household: Household, person: string): boolean {
+  const said = [...e.visits.flatMap((v) => [str(v.record.fields.location), str(v.record.fields.service_provider)]), ...e.claims.flatMap((c) => [c.provider, claimProvider(c.record)])];
+  if (said.some((x) => sameProvider(x, place))) return true;
+  const key = providerKey(place);
+  const named = household.sources.filter((s) => providerKey(s.organization_name) === key);
+  if (named.length && !named.some((s) => s.person === person)) return false;
+  const came = [...e.visits.map((v) => v.record), ...e.recorded].flatMap((r) => r.provenance.map((p) => ownNames(household, person, p.source).map(providerKey)));
+  return came.some((names) => names.length === 1 && names[0] === key) || !came.some((names) => names.length > 1 && names.includes(key));
+}
+
+/**
  * medrec's events as the app's, newest first as medrec orders them. A
  * member whose record or paper is not in the index (events written before
  * an index the store has not checked them against) is left out; another
@@ -70,7 +89,7 @@ export function fromMedrec(file: MedrecEvents, index: PersonIndex, household: Ho
     // A day of vaccine claims only is a vaccine visit, as the app's own grouping makes it.
     e.kind = kind === 'service' && !title && e.claims.length && e.claims.every((c) => claimCategory(c.record) === 'vaccine') ? 'vaccine' : kind;
     if (m.kind === 'stay_no_facility' || m.kind === 'er_no_facility') e.noFacility = true;
-    if (m.place) e.place = m.place;
+    if (m.place && placeHolds(m.place, e, household, index.person)) e.place = m.place;
     if (m.expected.length) e.expected = m.expected;
     if (m.confidence === 'unsure') e.doubt = m.could_join.length > 1 ? `It could be part of any of ${m.could_join.length} other visits` : m.could_join.length ? 'It could be part of another visit' : 'medrec is not sure what it belongs with';
     nameEvent(e, household, index.person, { ...(title ? { title } : {}), ...(m.what ? { what: m.what } : {}), private: !!knownArea(eventPrivate(e, index)) });

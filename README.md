@@ -560,7 +560,13 @@ dropped from the address.
   A portal platform's name ("athenahealth (all practices)") is never a
   place; a visit that names no other is at its sign-in's practice
   (`practiceName` in `src/model/records.ts`), and has no place when that is
-  not known. A store's number is said once. People go by their first name,
+  not known. Only the person's own sources name their practices. Where
+  several of them share one organization, CLI and FHIR base under different
+  names, which is all a record says of its source, they name none, and two
+  visits of a day that came that way are one only when they name one place.
+  A place medrec gives that is only another person's source's name, or one
+  of several the visit's sign-in has, is dropped unless the visit or a claim
+  names it. A store's number is said once. People go by their first name,
   or their full name where two share one, except in Settings and on the
   doctor's sheet (`src/model/people.ts`).
 - **Home** leads with **Needs you**, quiet when nothing does:

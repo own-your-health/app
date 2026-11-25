@@ -9,9 +9,9 @@
 import { claimCategory, claimProvider, claimVisitId, countedLines, isPharmacyClaim } from '../model/claims';
 import { knownArea } from '../model/private';
 import { sameProvider } from '../model/providers';
-import { day, decimalCents, isWithdrawn, organizationName, sortByDateDesc, str } from '../model/records';
+import { day, decimalCents, isWithdrawn, sortByDateDesc, str } from '../model/records';
 import type { Household, MedRecord, PersonIndex } from '../model/types';
-import { recentVisits, visitTimeline, type Visit } from '../model/visits';
+import { recentVisits, sameSignIn, visitPlaces, visitTimeline, type Visit } from '../model/visits';
 
 import { eventMoney, eventPrivate, nameEvent, type CareEvent, type ClaimRole, type Confidence, type EventKind, type Rule } from './event';
 
@@ -221,7 +221,7 @@ function claimEvents(claims: Classified[]): CareEvent[] {
 const VISIT_KINDS = new Set(['ambulatory', 'AMB', 'emergency', 'EMER', 'inpatient', 'IMP', 'observation', 'OBSENC', 'virtual', 'VR', 'home health', 'HH']);
 
 function visitNames(v: Visit, household: Household, person: string): string[] {
-  return [...v.organizations.map((o) => organizationName(household, person, o)), str(v.record.fields.location), str(v.record.fields.service_provider), str(v.record.fields.practitioner)].filter((x): x is string => !!x);
+  return [...visitPlaces(v, household, person), str(v.record.fields.practitioner)].filter((x): x is string => !!x);
 }
 
 const PAPER_TYPES = new Set(['bill', 'receipt', 'discharge_summary', 'visit_summary', 'lab_report', 'imaging_report', 'prescription', 'letter', 'referral', 'other']);
@@ -247,7 +247,7 @@ export function careEvents(index: PersonIndex, household: Household, today: stri
   };
   const groups: Visit[][] = [];
   for (const v of [...visits].reverse().filter(visitClass)) {
-    const g = groups.find((x) => x[0]!.start === v.start && (x[0]!.organizations.some((o) => v.organizations.includes(o)) || visitNames(x[0]!, household, index.person).some((n) => visitNames(v, household, index.person).some((m) => sameProvider(n, m)))));
+    const g = groups.find((x) => x[0]!.start === v.start && (x[0]!.through.some((a) => v.through.some((b) => sameSignIn(a, b) && !a.shared && !b.shared)) || visitNames(x[0]!, household, index.person).some((n) => visitNames(v, household, index.person).some((m) => sameProvider(n, m)))));
     if (g) g.push(v);
     else groups.push([v]);
   }

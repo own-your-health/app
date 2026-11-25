@@ -7,6 +7,7 @@ import { button, card, chip, empty, kv, link, refreshControl, type Ctx } from '.
 import { count, dateTime, duration, relative } from '../format';
 import { canRefresh, errorDetails, HEALTH_TEXT, sourceDetail } from './sources';
 import { called } from '../../model/people';
+import { importsFor } from '../../model/sources';
 
 const OUTCOME_TONE: Record<string, 'ok' | 'error' | 'attention' | 'muted' | 'running'> = {
   ok: 'ok',
@@ -82,7 +83,7 @@ export function sourceView(ctx: Ctx, sourceId: string): HTMLElement {
       });
   };
   loadHistory();
-  const imports = ctx.store.index(v.source.person)?.imports.filter((i) => i.cli === v.source.cli && i.organization === v.source.organization) ?? [];
+  const imports = importsFor(v.source, ctx.store.index(v.source.person)?.imports ?? []);
   return h(
     'div',
     { class: 'stack' },

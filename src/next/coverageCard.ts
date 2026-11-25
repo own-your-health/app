@@ -23,7 +23,7 @@ export function coverageCard(ctx: Ctx, person: string): HTMLElement | null {
   const idx = ctx.store.index(person);
   const segments = idx ? coverageHistory(idx, ctx.store.household, person) : [];
   if (!segments.length) return null;
-  const from = (s: CoverageSegment) => s.organizations.map((o) => organizationName(ctx.store.household, person, o));
+  const from = (s: CoverageSegment) => s.organizations.flatMap((o) => organizationName(ctx.store.household, person, o) ?? []);
   return card(
     { title: 'Coverage', class: 'coverage-history' },
     segments.map((s) => {
