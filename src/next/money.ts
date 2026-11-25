@@ -27,6 +27,8 @@ export type BillVerdict =
   | 'differs'
   /** No claim in these records is for it. */
   | 'no_claim'
+  /** No claim is to come: no insurer is billed for it. */
+  | 'self_pay'
   /** No one claim is for it and medrec does not list it as worth a call: several claims are its visit's, or a later statement repeats an earlier one's balance. */
   | 'unmatched';
 
@@ -131,6 +133,7 @@ function claimsSay(bill: Bill, event: PersonEvent | undefined, asked: number): A
 
 /** A bill as medrec's list has it: worth a call for the reason it gives, and otherwise not, whatever else the claims say. */
 function medrecSays(idx: PersonIndex, bill: Bill, state: BillState, event: PersonEvent | undefined, asked: number): Against {
+  if (state.selfPay) return { claimSaysVisit: false, verdict: 'self_pay' };
   const call = idx.bills?.calls.find((c) => c.document === bill.doc.id);
   const owed = toCents(call?.owed ?? state.owed);
   // A claim from another provider is the visit's: the bill is a billing company's.
@@ -141,6 +144,15 @@ function medrecSays(idx: PersonIndex, bill: Bill, state: BillState, event: Perso
 }
 
 type Judged = Pick<OpenBill, 'verdict' | 'marked'> & { bill: Pick<Bill, 'unread'> };
+
+/** Whether no insurer is billed for what a bill charges for, as medrec has it. A copy's is its first's. */
+export const selfPay = (idx: PersonIndex, d: MedDocument): boolean => !!(idx.bills?.states.get(d.id) ?? idx.bills?.states.get(d.same_statement_as ?? ''))?.selfPay;
+
+/** Whether a bill or receipt can be for a share the claims give: not a bill no insurer is billed for, nor a receipt that paid one. */
+export const billsShares = (idx: PersonIndex, d: MedDocument): boolean => (d.doc_type === 'bill' ? !selfPay(idx, d) : ![...(idx.bills?.states.values() ?? [])].some((s) => s.selfPay && s.payments.some((p) => p.document === d.id)));
+
+/** What no claim is set beside a bill for, in words. */
+export const NO_CLAIM_EXPECTED = 'No claim expected';
 
 /** Whether a bill may be paid: a receipt that can be for it is here, its amount could not be read, and no payment is known or marked. */
 export const mayBePaid = (b: Pick<Judged, 'bill' | 'marked'>): boolean => !b.marked && b.bill.unread.length > 0;
@@ -216,12 +228,13 @@ export interface Unbilled {
  * The shares no paper accounts for yet, newest visit first. A pharmacy takes
  * its share at the counter, so a fill has none. A bill in the visit from a
  * provider with no claim of its own (a billing company) accounts for all of
- * the visit's shares, as does a receipt from the provider on or after it. On
- * a shared screen a private paper accounts for none: a share it left out would
- * say that there is one.
+ * the visit's shares, as does a receipt from the provider on or after it. A
+ * bill no insurer is billed for, or a receipt that paid one, accounts for none,
+ * whoever sent it. On a shared screen a private paper accounts for none: a
+ * share it left out would say that there is one.
  */
 export function unbilledShares(idx: PersonIndex, events: PersonEvent[], shared = false): Unbilled[] {
-  const counts = (d: MedDocument) => !shared || !paperPrivate(idx, d.id);
+  const counts = (d: MedDocument) => billsShares(idx, d) && !(shared && paperPrivate(idx, d.id));
   const receipts = idx.documents.filter((d) => d.doc_type === 'receipt' && counts(d));
   return events.flatMap((x): Unbilled[] => {
     const e = x.event;

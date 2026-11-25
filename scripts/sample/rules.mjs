@@ -270,6 +270,8 @@ export const PAPERS = {
     statement('september, again', '2026-09-02', 'Example Lab', ['Account number: L-2040', 'Amount due: $90.00', 'Please pay by: 10/02/2026', 'Copy'], '2026-08-20'),
     statement('august', '2026-08-11', 'Example Dental', ['Amount due: $120.00']),
     statement('july', '2026-07-20', 'Example Therapy', ['Amount due: $30.00']),
+    // No insurer is billed for this one: it says so.
+    statement('june', '2026-06-08', 'Example Walk-In Clinic', ['Insurance: Self-pay', 'Amount due: $55.00']),
     receipt('lab', '2026-09-20', 'Example Lab', '40.00'),
     receipt('desk', '2026-07-01', 'Example Clinic', '45.00'),
   ],

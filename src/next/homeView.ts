@@ -19,7 +19,7 @@ import { householdEvents, type PersonEvent } from './calendar';
 import { recentCard } from './calendarView';
 import { eventRoute, eventWhen } from './eventView';
 import { markButton, markNote } from './markPaid';
-import { forShared, mayBePaid, openBills, overdueLabel, PAID_ELSEWHERE, partText, worthACall, type OpenBill } from './money';
+import { forShared, mayBePaid, NO_CLAIM_EXPECTED, openBills, overdueLabel, PAID_ELSEWHERE, partText, worthACall, type OpenBill } from './money';
 import { billNotes } from './moneyParts';
 import { heldNotes, privateLine } from './shared';
 import { daysBetween, type DoseVisit, type Refill, type VaccineNeeds } from './needs';
@@ -146,7 +146,7 @@ function billRow(ctx: Ctx, g: BillGroup, today: string): HTMLElement {
         called(p),
         ...(bs.length > 1 ? [count(bs.length, 'bill')] : part),
         due,
-        bs.length === 1 && first.verdict === 'matches' ? 'matches the claim' : null,
+        bs.length > 1 ? null : first.verdict === 'matches' ? 'matches the claim' : first.verdict === 'self_pay' ? NO_CLAIM_EXPECTED.toLowerCase() : null,
         overdue && unpaid ? PAID_ELSEWHERE : null,
       ];
   // A visit's several bills are marked on its page, each beside its own amount.

@@ -14,7 +14,7 @@ import type { Route } from '../ui/router';
 import { paidControl } from './markPaid';
 import { daysBetween } from './needs';
 import { eventRoute, eventWhen } from './eventView';
-import { callsSummary, mayBePaid, overAsked, overdueLabel, PAID_ELSEWHERE, paymentText, partText, toPay, unreadText, worthACall, type OpenBill, type PaidBill } from './money';
+import { callsSummary, mayBePaid, NO_CLAIM_EXPECTED, overAsked, overdueLabel, PAID_ELSEWHERE, paymentText, partText, toPay, unreadText, worthACall, type OpenBill, type PaidBill } from './money';
 import { billNotes, forBill, gather, head, listLine, money, num, privateChip, visitText, type Mine, type MoneyRoute } from './moneyParts';
 import { eventsPage, overviewPage } from './moneyYear';
 import { providerLink } from './providerView';
@@ -51,7 +51,7 @@ function openRow(ctx: Ctx, m: Mine<OpenBill>, today: string, named: boolean): HT
       h(
         'div',
         { class: 'bill-line' },
-        h('div', { class: 'chips' }, b.marked || mayBePaid(b) ? null : dueChip(b, today), b.verdict === 'matches' ? chip('Matches the claim', 'ok') : null, privateChip(b.private)),
+        h('div', { class: 'chips' }, b.marked || mayBePaid(b) ? null : dueChip(b, today), b.verdict === 'matches' ? chip('Matches the claim', 'ok') : b.verdict === 'self_pay' ? chip(NO_CLAIM_EXPECTED, 'muted') : null, privateChip(b.private)),
         h(
           'div',
           { class: 'bill-links' },
@@ -71,6 +71,16 @@ function saysText(b: OpenBill): string {
   return `the ${b.claimSaysVisit ? 'visit’s claims say' : 'claim says'} you owe ${money(b.claimSays)}`;
 }
 
+/** What the bills ready to pay ask, against their claims. */
+export function readyText(bills: Pick<OpenBill, 'verdict'>[]): string {
+  const of = (v: OpenBill['verdict']) => bills.filter((b) => b.verdict === v).length;
+  const [all, matched, none] = [bills.length, of('matches'), of('self_pay')];
+  if (matched === all) return `${all === 1 ? 'asking' : 'each asking'} what its claim says you owe.`;
+  if (none === all) return 'for which no claim is expected.';
+  if (!matched) return 'with no one claim to set beside.';
+  return `${matched} of them asking what ${matched === 1 ? 'its claim says' : 'their claims say'} you owe${none ? `, and ${none} for which no claim is expected` : ''}.`;
+}
+
 /** Bills: each open bill beside its claim, then what is not billed yet, then what is paid. */
 function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLElement {
   const g = gather(ctx, who);
@@ -79,7 +89,6 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
   const maybe = g.open.filter((m) => mayBePaid(m.item));
   const marked = g.open.filter((m) => m.item.marked);
   const check = g.open.filter((m) => worthACall(m.item));
-  const matched = ready.filter((m) => m.item.verdict === 'matches').length;
   const readyCents = ready.reduce((t, m) => t + m.item.cents, 0);
   const unbilledCents = g.unbilled.reduce((t, m) => t + m.item.cents, 0);
   const callsRoute = (bill?: string): Route => ({ name: 'money', view: 'calls', ...(who ? { who } : {}), ...(bill ? { bill } : {}) });
@@ -91,7 +100,7 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
     h(
       'p',
       null,
-      ready.length ? (matched === ready.length ? `${count(ready.length, 'bill')}, ${matched === 1 ? 'asking' : 'each asking'} what its claim says you owe.` : `${count(ready.length, 'bill')}, ${matched ? `${matched} of them asking what ${matched === 1 ? 'its claim says' : 'their claims say'} you owe.` : 'with no one claim to set beside.'}`) : who ? 'No bill that matches its claim is waiting.' : 'No bill listed here matches its claim.',
+      ready.length ? `${count(ready.length, 'bill')}, ${readyText(ready.map((m) => m.item))}` : who ? 'No bill that matches its claim is waiting.' : 'No bill listed here matches its claim.',
       check.length ? [' ', link(callsRoute(), `${count(check.length, 'more bill')} ${check.length === 1 ? 'is' : 'are'} worth a call first.`)] : ready.length && who ? ' None asks for more than the claims say.' : null,
     ),
   );

@@ -45,6 +45,59 @@ const unread = (bill: string): Overlay =>
     Object.assign(bills, { receipts: [] });
   });
 
+/** The sample with a bill of Sam's that no insurer is billed for, from this sender if one is given, and what medrec says was paid on it. */
+const selfPaid = (bill: string, from?: string, paid: object = {}): Overlay =>
+  rewritten({}, ({ name, index, bills }) => {
+    if (name !== 'Sam Example') return;
+    const rest = Object.entries(bills.bills[bill]!).filter(([k]) => k !== 'claim' && k !== 'claim_you_owe');
+    bills.bills[bill] = { ...Object.fromEntries(rest), self_pay: 'stated', ...paid };
+    bills.worth_a_call = bills.worth_a_call.filter((x) => x.bill !== bill);
+    if (from) (index.documents as { id: string; organization?: string }[]).find((d) => d.id === bill)!.organization = from;
+  });
+
+test('a bill no insurer is billed for is to pay, with no claim expected, and not worth a call', async ({ page }) => {
+  const bill = docOf('Sam Example', '120.00');
+  await lay(page, selfPaid(bill));
+  await go(page, '#/money/bills');
+  const row = card(page, 'Due now').locator('.row', { hasText: '$120.00' });
+  await expect(row.locator('.chip')).toHaveText([/^Was due/, 'No claim expected']);
+  await expect(page.locator('.money-hero')).toContainText('4 bills, 3 of them asking what their claims say you owe, and 1 for which no claim is expected.');
+  await expect(page.locator('.money-hero')).not.toContainText('worth a call');
+  await expect(card(page, 'Check before paying')).toHaveCount(0);
+  // Its visit's share is not billed by it.
+  await expect(card(page, 'No bill listed yet').locator('.row', { hasText: '$50.70' })).toHaveCount(1);
+  await go(page, '#/money/calls');
+  await expect(page.locator('.main')).not.toContainText('$120.00');
+
+  await go(page, '#/');
+  await expect(card(page, /^Bills$/).locator('.row', { hasText: '$120.00' }).locator('.row-meta')).toHaveText('Sam · was due Aug 31 · no claim expected · unless it was paid elsewhere');
+
+  await go(page, `#/p/${SAM}/r/${bill}`);
+  await expect(kv(page, 'Claim')).toHaveText('None expected: no insurer is billed for this');
+  await page.locator('.event-part a').click();
+  const bills = card(page, 'Bills and payments');
+  await expect(bills.locator('.row', { hasText: '$120.00' }).locator('.chip')).toHaveText('No claim expected');
+  await expect(bills.locator('.event-gap')).toHaveText('No bill from Example Lab filed yet, for the $50.70 its claim says you owe.');
+  await expect(page.locator('.event-settled')).toHaveText('$50.70 not billed yet');
+
+  // Nor is it where its sender has a claim there, owed or paid.
+  for (const paid of [{}, { paid: [{ from: 'household', on: '2026-11-20', amount: '120.00', currency: 'USD' }], paid_total: '120.00', left: '0.00', settled: true }]) {
+    await lay(page, selfPaid(bill, 'Example Lab', paid));
+    await go(page, `#/p/${SAM}/r/${bill}`);
+    await page.locator('.event-part a').click();
+    await expect(bills.locator('.row', { hasText: '$120.00' }).locator('.chip')).toHaveText('No claim expected');
+    await expect(bills.locator('.event-gap')).toHaveText('No bill from Example Lab filed yet, for the $50.70 its claim says you owe.');
+    await expect(page.locator('.event-settled')).toHaveText('$50.70 not billed yet');
+    await go(page, '#/money/bills');
+    await expect(card(page, 'No bill listed yet').locator('.row', { hasText: '$50.70' })).toHaveCount(1);
+  }
+
+  // One that a claim is for says nothing of the kind.
+  await go(page, `#/p/${SAM}/r/${docOf('Sam Example', '90.50')}`);
+  await expect(kv(page, 'Amount due')).toHaveText('$90.50');
+  await expect(kv(page, 'Claim')).toHaveCount(0);
+});
+
 test('a bill the household marked paid is nowhere open, and one partly paid says what is left', async ({ page }) => {
   await lay(page, paidCase());
   await go(page, '#/');
