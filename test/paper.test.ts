@@ -160,7 +160,7 @@ describe('a paper in HTML', () => {
   it('reads loose markup as a browser does', () => {
     expect(html('&#xd800;&#xdfff;&#xe000;&#x1f600;')).toBe('\ufffd\ufffd\ue000😀');
     // The first of two of one attribute; a span only of a cell.
-    expect(html('<table><tr><td colspan=2 colspan=3>a</table><p colspan=2>b</p>')).toBe('<table><tr><td c2>a</></></><p>b</>');
+    expect(html('<table><tr><td colspan=2 colspan=3>a</table><p colspan=2>b</p><hr colspan=2>c')).toBe('<table><tr><td c2>a</></></><p>b</><hr></>c');
     // An end tag closes nothing outside its cell.
     expect(html('<b>x<table><tr><td>a</b>c</td></table>')).toBe('<strong>x<table><tr><td>ac</></></></>');
     expect(html('<select>\n<option>One</option>\n<option>Two</option></select>')).toBe('One');
