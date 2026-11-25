@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { SAM } from '../test/sample';
+import { ROBIN, SAM } from '../test/sample';
 
 // Money: the year (its four figures, bills to act on, each
 // person's deductible and out-of-pocket limit, the months, the biggest
@@ -185,5 +185,20 @@ test('Money fits a 360px phone in the dark theme', async ({ page }) => {
     await open(page, path);
     await expect(page.locator('main h1')).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  }
+});
+
+test('Money says how many of the bills ready to pay are past due', async ({ page }) => {
+  // On the 10th only Sam's is past due, and Robin's two are to come.
+  await page.clock.setFixedTime(new Date('2026-11-10T20:00:00Z'));
+  for (const [path, title, said] of [
+    ['#/money', '3 bills ready to pay', 'They match their claims. One is past due.'],
+    [`#/money?who=${SAM}`, '1 bill ready to pay', 'It matches its claim. It is past due.'],
+    [`#/money?who=${ROBIN}`, '2 bills ready to pay', 'They match their claims.'],
+  ] as const) {
+    await page.goto(`./?demo${path}`);
+    const ready = card(page, /^Bills$/).locator('.row').first();
+    await expect(ready.locator('.row-title'), path).toHaveText(title);
+    await expect(ready.locator('.row-meta'), path).toHaveText(said);
   }
 });

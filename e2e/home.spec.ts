@@ -50,6 +50,8 @@ test('home leads with what to do now, then the bills and what is coming up, and 
   await expect(stands.locator('.stand-said')).toHaveText(['Last visit Nov 18', 'Last visit Oct 12', 'Last visit Nov 20', 'Last visit Oct 6']);
   await expect(stands.locator('.row-aside')).toHaveText(['2 bills', '2 bills', 'Flu due', 'Dec 14']);
 
+  // The one past due can be marked paid here, its label short as its row names it.
+  await expect(bills.locator('.home-mark button')).toHaveText('Mark paid');
   // A bill worth a call opens Worth a call; a bill to pay opens its visit; the rest are one tap away.
   await bills.locator('.row').first().locator('a.row-main').click();
   await expect(page).toHaveURL(/#\/money\/calls\?bill=d_/);

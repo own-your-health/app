@@ -1,5 +1,5 @@
 // Home: quiet until something needs you. What to do now, the bills, and what
-// is coming up, each three rows at most with the rest one tap away, so its
+// is coming up, each a few rows at most with the rest one tap away, so its
 // length does not grow with how much waits; then where everyone stands and
 // what happened recently. Home is a shared screen: anything private stays off
 // it, and so does everything of a person's while nothing says which of it is
