@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { demoJson } from '../test/helpers';
+import { rewritten } from './alter';
+import { lay } from './lay';
 import { ALEX, DREW, ROBIN, SAM } from '../test/sample';
 
 // A provider's page, from the items that name it: one person's, or
@@ -150,6 +152,39 @@ test('one name in two people’s records is two providers where no identifier sa
   await expect(page.getByRole('group', { name: 'Whose records' }).getByRole('link')).toHaveText(['Everyone', 'Alex']);
   await expect(rows(page, 'Visits').locator('.row-meta').filter({ hasText: 'Drew' })).toHaveCount(0);
   await expect(rows(page, 'May be the same').locator('.row-meta').filter({ hasText: /^Drew · / })).not.toHaveCount(0);
+});
+
+test('an alike name only a private item prints is neither in everyone’s list nor in its count', async ({ page }) => {
+  // Papers of invented names alike to Robin's provider, the last of them private.
+  const NAMED = ['Example Health North', 'Example Health South', 'Example Health East'];
+  const laid = (isPrivate: boolean) =>
+    rewritten({}, (f) => {
+      if (f.name !== 'Robin Example') return;
+      const paper = f.index.documents.find((d) => d.organization === 'Example Health Plan')!;
+      for (const [i, organization] of NAMED.entries()) {
+        const id = `d_${String(i).repeat(20)}`;
+        f.index.documents.push({ ...paper, id, organization });
+        if (isPrivate && i === 2) f.list.documents[id] = 'household';
+      }
+    });
+  const alike = async (all: boolean) => {
+    await page.goto('about:blank');
+    await go(page, providerPath(ROBIN, 'claim', 'provider', 'Example Health', all));
+    const at = card(page, 'May be the same');
+    const count = Number(await at.locator('.card-head .num').innerText());
+    await at.getByRole('button', { name: `Show all ${count} names`, exact: true }).click();
+    const titles = await at.locator('.row-title').allInnerTexts();
+    expect(titles).toHaveLength(count);
+    return titles.sort();
+  };
+  await lay(page, laid(false));
+  const [everyone, own] = [await alike(true), await alike(false)];
+  for (const name of NAMED) for (const list of [everyone, own]) expect(list).toContain(name);
+  await page.unrouteAll();
+  await lay(page, laid(true));
+  expect(await alike(true)).toEqual(everyone.filter((t) => t !== NAMED[2]));
+  await expect(page.locator('main')).not.toContainText(NAMED[2]!);
+  expect(await alike(false)).toEqual(own);
 });
 
 test('everyone’s page of a shared provider names no private item', async ({ page }) => {
