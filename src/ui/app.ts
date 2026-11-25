@@ -11,7 +11,7 @@ import { FolderError } from '../model/parse';
 import { needsAttention } from '../model/sources';
 import type { RequestScope } from '../model/types';
 import { getAccount, getClientId, getFolder, setAccount, setClientId, setFolder } from '../settings';
-import { readSetupLink, setupLinkFor, withoutClient } from '../setup-link';
+import { readSetupLink, setupLinkFor, withoutClient, type SetupLink } from '../setup-link';
 import { button, sheet, type Ctx, type Mark } from './components';
 import { clear, h, icon, s } from './dom';
 import { href, isListSection, moved, parseRoute, type Route } from './router';
@@ -41,6 +41,8 @@ const UNSENT_TEXT: Record<Unsent, string> = {
   paid: 'The payment was not marked: open the bill and tap Mark paid again.',
   undo: 'The payment was not undone: tap Undo again.',
 };
+
+const KEPT_CLIENT = 'The link you opened has no valid Google client id, so the app kept its own.';
 
 const VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '0.0.0';
 
@@ -130,14 +132,14 @@ export class App {
       if (this.signInEnded()) return this.renew();
       void this.pollOnce(true);
     });
+    const answer = this.demo ? ({ kind: 'none' } as const) : completeSignIn(location.hash, sessionStorage, Date.now());
+    if (answer.kind !== 'none') history.replaceState(null, '', `${location.pathname}${location.search}${answer.route}`);
+    // A setup link's client leaves the address before anything else runs,
+    // so it is never carried into Google's sign-in or a bookmark.
+    const link = readSetupLink(location, getClientId());
+    if (link.kind !== 'none') history.replaceState(null, '', withoutClient(location));
     if (this.demo) return this.startDemo();
 
-    const answer = completeSignIn(location.hash, sessionStorage, Date.now());
-    if (answer.kind !== 'none') history.replaceState(null, '', `${location.pathname}${location.search}${answer.route}`);
-    // A setup link (?client=) leaves the address before anything else runs,
-    // so it is never carried into Google's sign-in or a bookmark.
-    const link = readSetupLink(location.search, getClientId());
-    if (link.kind !== 'none') history.replaceState(null, '', withoutClient(location));
     if (answer.kind === 'none') {
       switch (link.kind) {
         case 'new':
@@ -146,20 +148,12 @@ export class App {
         case 'same':
           return getFolder() ? this.signIn(true) : this.signIn(false, true);
         case 'different':
-          return this.show({
-            name: 'message',
-            title: 'Use the client in this link?',
-            text: `This browser signs in through the Google client ${link.current}. The link you opened names ${link.clientId}. Use the link’s client if this device belongs to that household.`,
-            actions: [
-              button('Use the link’s client', () => (setClientId(link.clientId), this.signIn(false, true)), { primary: true }),
-              button('Keep the current one', () => this.resume()),
-            ],
-          });
+          return this.askClient(link, () => this.resume());
         case 'invalid':
           if (!getClientId()) {
             return this.show({ name: 'welcome', error: 'The link you opened has no valid Google client id. Ask for the setup link again, or paste the client id here.' });
           }
-          this.toast('The link you opened has no valid Google client id, so the app kept its own.', 'error');
+          this.toast(KEPT_CLIENT, 'error');
           break;
       }
     }
@@ -177,6 +171,16 @@ export class App {
       return this.show({ name: 'signin', error });
     }
     this.resume();
+  }
+
+  /** A setup link names another client than this browser's: use it only when the person says so. */
+  private askClient(link: Extract<SetupLink, { kind: 'different' }>, keep: () => void): void {
+    this.show({
+      name: 'message',
+      title: 'Use the client in this link?',
+      text: `This browser signs in through the Google client ${link.current}. The link you opened names ${link.clientId}. Use the link’s client if this device belongs to that household.`,
+      actions: [button('Use the link’s client', () => (setClientId(link.clientId), this.signIn(false, true)), { primary: true }), button('Keep the current one', keep)],
+    });
   }
 
   /** Signed out, with a client: sign in again quietly when a folder was chosen before. */
@@ -484,10 +488,20 @@ export class App {
   }
 
   private onRoute(): void {
-    // Private events shown on the calendar, and private items on a doctor’s sheet, are left off again once the page is left.
+    const link = readSetupLink({ search: '', hash: location.hash }, getClientId());
+    if (link.kind !== 'none') {
+      // Only the part after # changed, so nothing loaded: start again with it, unless that would sign the person out for nothing.
+      const ready = this.phase.name === 'ready';
+      const stays = this.demo || (this.token !== null && (link.kind === 'same' || link.kind === 'invalid' || (link.kind === 'different' && ready)));
+      if (!stays) return location.reload();
+      history.replaceState(null, '', withoutClient(location));
+    }
+    // Private events shown on the calendar, and private items on a doctor’s sheet, are left off again once the page is left. A setup link leaves it, whatever page it goes to.
     const now = parseRoute(location.hash);
-    if (now.name !== 'calendar') hidePrivateEvents();
-    leaveOutPrivate(now);
+    if (link.kind !== 'none' || now.name !== 'calendar') hidePrivateEvents();
+    leaveOutPrivate(link.kind === 'none' ? now : { name: 'home' });
+    if (!this.demo && link.kind === 'different') return this.askClient(link, () => this.show({ name: 'ready' }));
+    if (!this.demo && link.kind === 'invalid') this.toast(KEPT_CLIENT, 'error');
     if (this.phase.name === 'ready') {
       this.render();
       window.scrollTo(0, 0);
