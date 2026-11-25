@@ -861,8 +861,9 @@ dropped from the address.
   household marked or said never makes it stale; it is used, and read for
   again, as code names are. Without one the lists go by each record's own
   status, and nothing is said of sources that differ. Where medrec's views list
-  one that is stale, still to come or refused, the lists, Health and the sheet
-  say why; a folder of an earlier medrec has none, and they say nothing.
+  one that is stale, still to come or refused, the lists, Health (everyone's
+  too) and the sheet say why; a folder of an earlier medrec has none, and they
+  say nothing.
 - **Papers** (`#/papers`, a tab, also from each
   person's Health): every paper in the Drive
   folder, newest first by year, each with the visit it belongs to as a

@@ -1654,8 +1654,10 @@ mark {
   margin-top: 6px;
 }
 
+/* It has the record's name, whose words may be long. */
 .learn-more {
   margin-top: 14px;
+  overflow-wrap: anywhere;
 }
 
 .learn-site {

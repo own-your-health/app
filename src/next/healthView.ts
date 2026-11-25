@@ -240,6 +240,7 @@ function everyonePage(ctx: Ctx): HTMLElement {
     return card(
       { title: called(p), actions: chip(cov.words, cov.kind === 'records_and_claims' ? 'ok' : 'attention') },
       h('dl', { class: 'kv health-kv' }, lines.map(([k, val]) => h('div', { class: 'kv-row' }, h('dt', null, k), h('dd', null, val)))),
+      standingNote(ctx, idx),
       h('p', { class: 'small' }, link({ name: 'health', who: p.id }, `${called(p)}’s health`)),
     );
   });

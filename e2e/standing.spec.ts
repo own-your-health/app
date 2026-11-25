@@ -187,7 +187,11 @@ test('why the lists go by each record’s own status is said where medrec’s li
     await go(page, path);
     await expect(page.getByText(why)).toHaveCount(1);
   }
-  for (const path of [`#/p/${ROBIN}/conditions`, `#/health?who=${ROBIN}`, '#/health']) {
+  // Everyone's Health says it of the person whose list it is.
+  await go(page, '#/health');
+  await expect(card(page, /^Alex$/)).toContainText(why);
+  await expect(page.getByText(why)).toHaveCount(1);
+  for (const path of [`#/p/${ROBIN}/conditions`, `#/health?who=${ROBIN}`]) {
     await go(page, path);
     await expect(page.locator('main .card').first()).toBeVisible();
     await expect(page.getByText('what is current could not be read')).toHaveCount(0);
@@ -252,7 +256,7 @@ test('everything fits 360 px, light and dark', async ({ page }) => {
 
 test('a record’s page fits 320 px with a long name and a source not heard', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 780 });
-  await lay(page, standingCase(ALEX, { change: (r) => void (r.display === 'Sample moss' && (r.display = 'Sample chlorobenzylidenemalononitrile')) }));
+  await lay(page, standingCase(ALEX, { change: (r) => void (r.display === 'Sample moss' && (r.display = 'Sample chlorobenzylidenemalononitrileacetophenone')) }));
   await go(page, `#/p/${ALEX}/r/${id('unheardrefuted')}`);
   const head = page.locator('main .card').first();
   await expect(chips(head)).toContainText(['Not every source heard']);
