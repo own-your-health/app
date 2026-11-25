@@ -2551,6 +2551,42 @@ a.cal-day:hover .cal-date {
   margin-top: 4px;
 }
 
+/* What each source says of a row's item, and what stands out of it. */
+.row-said {
+  display: block;
+}
+
+.row-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin-top: 4px;
+}
+
+/* The medicine several prescriptions are rows under. */
+.list-heading {
+  margin: 12px 0 0;
+  font-weight: 600;
+}
+
+/* Every record of a list, one tap away. */
+.list-all > summary {
+  cursor: pointer;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* What each source says of a record. */
+.said-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.said-list li + li {
+  margin-top: 4px;
+}
+
 .health-actions {
   display: flex;
   flex-wrap: wrap;

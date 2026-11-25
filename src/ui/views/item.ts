@@ -10,7 +10,7 @@ import { conditionName, diagnosisNames, nameList, secondTitle } from '../../mode
 import { isOutOfRange, rangeFor, resultFlag } from '../../model/flags';
 import { labTest } from '../../model/labtests';
 import { learnMore } from '../../model/learn';
-import { conditionList, CRITICALITY_TEXT, medicineList, statusText } from '../../model/lists';
+import { allergyList, conditionList, CRITICALITY_TEXT, isFill, medicineList, saidOf, statusText, type ItemStanding } from '../../model/lists';
 import { isObject } from '../../model/parse';
 import { AMOUNT_LABELS, asMoney, docTypeLabel, documentTitle, findItem, formatMoney, importFor, isDoseGiven, KIND_LABELS, LINE_AMOUNT_ORDER, originNames, resultPoint, resultReading, str, studyTitle, toCents, valueText } from '../../model/records';
 import { resultContext, unitText, verdict } from '../../model/result';
@@ -28,6 +28,7 @@ import { button, card, chip, command, dotted, driveLink, empty, flagChip, jsonBl
 import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, dateTime, localDay } from '../format';
 import type { Route } from '../router';
+import { differing, isText, saidLines } from '../standing';
 import { visitContents, visitWhen } from '../visit';
 import { called } from '../../model/people';
 
@@ -351,11 +352,28 @@ function resultView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   ];
 }
 
+/**
+ * A record by its sources' words: what it is, and what each of them says of
+ * it, with the line it is one of where that is current. Null where they are
+ * not known.
+ */
+function standingOf(ctx: Ctx, idx: PersonIndex, r: MedRecord, item: { standing?: ItemStanding } | undefined): { is: string; says: [string, Child | undefined] } | null {
+  const of = idx.standing?.records.get(r.id);
+  if (!of) return null;
+  const s = item?.standing;
+  const today = localDay(ctx.now());
+  // One entered in error is in no list.
+  const lines = saidLines(s ?? saidOf(idx.standing!, { records: [r.id], against: [], unheard: of.unheard }));
+  return { is: isText(of, today, s?.filled), says: ['Each source says', lines.length ? h('ul', { class: 'said-list' }, lines.map((x) => h('li', null, x))) : undefined] };
+}
+
 function medicationView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
-  const { active, past } = medicineList(idx);
-  const m = [...active, ...past].find((x) => x.records.includes(r));
+  const { active, past, onHold, endedByDate } = medicineList(idx, localDay(ctx.now()));
+  const all = [...active, ...onHold, ...endedByDate, ...past];
+  const m = all.find((x) => x.latest === r) ?? all.find((x) => x.records.includes(r));
+  const st = standingOf(ctx, idx, r, m);
   const name = recordTitle(r);
-  const fills = (m?.records ?? []).filter((x) => x.fields.source === 'dispense');
+  const fills = (m?.records ?? []).filter(isFill);
   const qty = (x: MedRecord) => {
     const q = x.fields.quantity;
     return isObject(q) && q.value !== undefined && q.value !== null ? [String(q.value), str(q.unit as Json)].filter(Boolean).join(' ') : undefined;
@@ -363,17 +381,18 @@ function medicationView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   const days = (x: MedRecord) => (typeof x.fields.days_supply === 'number' ? `${x.fields.days_supply} days` : undefined);
   // The record of the medicine that prints the name.
   const named = (field: 'prescriber' | 'pharmacy', text: string | undefined) => providerLink(ctx, idx, (m?.records ?? []).find((x) => tidyName(str(x.fields[field])) === tidyName(text))?.id ?? r.id, [field], text);
-  const state = m ? (m.active ? 'Taking now' : 'Past medicine') : (statusText(r.status) ?? undefined);
+  const state = st ? st.is : idx.standing && isFill(r) ? 'Filled' : m ? (m.active ? 'Taking now' : 'Past medicine') : (statusText(r.status) ?? undefined);
   return [
     head(
       name,
-      null,
+      st ? differing(m?.standing) : null,
       ['Medicine', state, m?.first ? `since ${dateText(m.first)}` : dateText(r.date), fromText(ctx, idx, r)],
       str(r.fields.dosage) ? h('p', { class: 'result-value result-value-text' }, str(r.fields.dosage)) : null,
       kv([
         ['Prescribed by', named('prescriber', m?.prescriber ?? str(r.fields.prescriber))],
         ['Last filled', m?.lastFill ? [dateText(m.lastFill.date), m.lastFill.pharmacy ? [' at ', named('pharmacy', m.lastFill.pharmacy)] : null, m.lastFill.daysSupply ? ` for ${m.lastFill.daysSupply} days` : null] : undefined],
         ['How the records know of it', m?.known.length ? m.known.join(', ') : undefined],
+        ...(st ? [st.says] : []),
       ]),
       learnLink(r, name),
     ),
@@ -388,21 +407,23 @@ function medicationView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
 }
 
 function conditionView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
-  const { active, ended, other } = conditionList(idx);
+  const { active, ended, other } = conditionList(idx, localDay(ctx.now()));
   const i = [...active, ...ended, ...other].find((x) => x.records.includes(r));
+  const st = standingOf(ctx, idx, r, i);
   const name = recordTitle(r);
   const named = conditionName(idx, r);
-  const status = statusText(r.status);
+  const status = st ? st.is : statusText(r.status);
   return [
     head(
       named.name,
-      i?.refuted ? chip('Ruled out', 'muted') : i?.unconfirmed ? chip('Unconfirmed', 'muted') : null,
+      st ? differing(i?.standing) : i?.refuted ? chip('Ruled out', 'muted') : i?.unconfirmed ? chip('Unconfirmed', 'muted') : null,
       ['Condition', status, fromText(ctx, idx, r)],
       kv([
         ['Since', i?.first ? dateText(i.first) : r.date ? dateText(r.date) : undefined],
         ['Ended', i?.ended ? dateText(i.ended) : str(r.fields.abatement) ? fieldValue(r.fields.abatement!) : undefined],
         ['Kind', str(r.fields.category)],
         ['Recorded', i && i.records.length > 1 ? count(i.records.length, 'time') : undefined],
+        ...(st ? [st.says] : []),
       ]),
       learnLink(r, name),
     ),
@@ -411,17 +432,21 @@ function conditionView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
 }
 
 function allergyView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
+  const { current, ended } = allergyList(idx, localDay(ctx.now()));
+  const i = [...current, ...ended].find((x) => x.records.includes(r));
+  const st = standingOf(ctx, idx, r, i);
   const name = recordTitle(r);
   const reactions = Array.isArray(r.fields.reaction) ? r.fields.reaction.filter((x): x is string => typeof x === 'string') : str(r.fields.reaction) ? [str(r.fields.reaction)!] : [];
   const crit = str(r.fields.criticality);
   return [
     head(
       name,
-      null,
-      ['Allergy', statusText(r.status), r.date ? `since ${dateText(r.date)}` : null, fromText(ctx, idx, r)],
+      st ? differing(i?.standing) : null,
+      ['Allergy', st ? st.is : statusText(r.status), r.date ? `since ${dateText(r.date)}` : null, fromText(ctx, idx, r)],
       kv([
         ['Reaction', reactions.length ? reactions.join(', ') : undefined],
         ['Risk', crit && Object.hasOwn(CRITICALITY_TEXT, crit) ? sentence(CRITICALITY_TEXT[crit]!) : crit],
+        ...(st ? [st.says] : []),
       ]),
       learnLink(r, name),
     ),

@@ -47,6 +47,44 @@ export function paidCase(): Overlay {
   return Object.fromEntries(filesUnder(dir).map((f) => [f, readFileSync(join(dir, f), 'utf8')]));
 }
 
+/**
+ * The sample with one of its people having medrec's own standing fixture as
+ * their records, and nothing else: what is current by every source's word,
+ * or, with `standing: false`, the folder as a medrec before 0.9.9 leaves it.
+ * `hidden` names the records medrec's list has as private.
+ */
+export function standingCase(person: string, { standing = true, hidden = [] }: { standing?: boolean; hidden?: string[] } = {}): Overlay {
+  const { people } = demoJson<{ people: { id: string; folder: string }[] }>('household.json');
+  const views = demoJson<{ people: Record<string, { index: string; text: string | null; linked: Record<string, { index: string; text: string | null }>; files: Record<string, string> }> }>('views/views.json');
+  const folder = people.find((p) => p.id === person)!.folder;
+  const v = views.people[person]!;
+  const out: Overlay = {};
+  const md5 = (text: string) => createHash('md5').update(text).digest('hex');
+  const put = (path: string, body: object): string => {
+    const text = JSON.stringify(body);
+    out[path] = text;
+    return md5(text);
+  };
+  v.index = put(`${folder}/index.json`, { ...fixture<object>('standing/medrec/index.json'), person, documents: [], imports: [], studies: [] });
+  v.text = put(`${folder}/text.json`, { schema: 'medrec-text/v1', person, texts: {} });
+  for (const other of Object.values(views.people)) if (other.linked[person]) other.linked[person] = { index: v.index, text: v.text };
+  const view = (file: string, body: object): void => {
+    const before = v.files[`${file}.json`];
+    if (before) out[`views/${person}/${file}.${before.slice(0, 12)}.json`] = null;
+    const text = JSON.stringify(body);
+    v.files[`${file}.json`] = md5(text);
+    out[`views/${person}/${file}.${md5(text).slice(0, 12)}.json`] = text;
+  };
+  const viewNow = (file: string) => demoJson<object>(`views/${person}/${file}.${v.files[`${file}.json`]!.slice(0, 12)}.json`);
+  view('events', { ...viewNow('events'), events: [], pending: [], aliases: [] });
+  view('bills', { ...viewNow('bills'), bills: {}, copy_of: {}, receipts: [], worth_a_call: [], not_billed: [] });
+  view('private', { ...viewNow('private'), records: Object.fromEntries(hidden.map((id) => [id, { area: 'mental_health' }])), documents: {}, events: {}, studies: {}, unreported_studies: [] });
+  for (const file of ['code-names', 'providers'] as const) delete v.files[`${file}.json`];
+  if (standing) view('standing', { ...fixture<object>('standing/medrec/standing.json'), person });
+  out['views/views.json'] = JSON.stringify(views);
+  return out;
+}
+
 /** The sample's manifest with an overlay's files and MD5s, as a folder holding them would give them. */
 export function manifestWith(overlay: Overlay): string {
   const m = demoJson<{ anchor: string; files: string[]; md5: Record<string, string> }>('manifest.json');

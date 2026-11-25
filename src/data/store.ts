@@ -10,7 +10,8 @@ import { parseBills } from '../model/bills';
 import { parseMedrecEvents } from '../model/events';
 import { atLeast, held, isHeld, noList, parsePrivate, type HeldWhy, type Privacy } from '../model/private';
 import { parseCodeNames } from '../model/codeNames';
-import { parseViews, viewOf, type PersonView } from '../model/views';
+import { parseStanding } from '../model/standing';
+import { parseViews, viewOf, type PersonView, type ViewFile } from '../model/views';
 import type { AttemptLine, Household, MarkRequest, PaidMark, PendingMark, Person, PersonIndex, PersonText, RefreshRequest, RefreshStatus, RefusedRequest, RequestScope, UnpaidMark } from '../model/types';
 
 export type StatusRead =
@@ -255,7 +256,7 @@ export class Store {
     const household = this.folder.md5('household.json');
     // Whoever compares with it says why it could not be read; with no view to compare, nobody does.
     household.catch(() => undefined);
-    await Promise.all([this.loadEvents(views, household), this.loadPrivate(views, household), this.loadCodeNames(views, household), this.loadBills(views, household)]);
+    await Promise.all([this.loadEvents(views, household), this.loadPrivate(views, household), this.loadNames(views, household), this.loadBills(views, household)]);
     this.loadedAt = Date.now();
     this.snapshot = JSON.stringify([
       this.household,
@@ -263,7 +264,7 @@ export class Store {
       this.viewsError,
       ...this.household.people.map((p) => {
         const index = this.indexes.get(p.id);
-        return [index?.rev, this.indexErrors.get(p.id), this.eventsNotes.get(p.id), index?.privacy?.kind === 'held' ? index.privacy.text : null, !!index?.codeNames, this.billsNotes.get(p.id)];
+        return [index?.rev, this.indexErrors.get(p.id), this.eventsNotes.get(p.id), index?.privacy?.kind === 'held' ? index.privacy.text : null, !!index?.codeNames, !!index?.standing, this.billsNotes.get(p.id)];
       }),
     ]);
   }
@@ -369,26 +370,33 @@ export class Store {
   }
 
   /**
-   * medrec's names for each person's codes (0.9.4 and later). Without ones
-   * that read and match the folder, the sources' words stand, and nothing
-   * says so; names that may still come are read for again.
+   * medrec's names for each person's codes (0.9.4 and later) and what is
+   * current of theirs by every source's word (0.9.9 and later). Without a file
+   * that reads and matches the folder, the sources' words and statuses stand,
+   * and nothing says so; one that may still come is read for again.
    */
-  private async loadCodeNames(views: Record<string, unknown> | null, household: Promise<string | null | undefined>): Promise<void> {
+  private async loadNames(views: Record<string, unknown> | null, household: Promise<string | null | undefined>): Promise<void> {
     if (views === null) return;
+    const read = async (p: Person, file: ViewFile, put: (raw: unknown) => void) => {
+      try {
+        const view = viewOf(views, p.id, file);
+        if (!view) return;
+        const raw = (await this.viewState(p, view, household)) ? null : await readJson(this.folder, `views/${p.id}/${view.name}`);
+        if (raw === null) this.late.add(`${p.id} ${file}`);
+        else put(raw);
+      } catch (e) {
+        // What is refused stays so until medrec writes it again.
+        if (!(e instanceof FolderError)) this.late.add(`${p.id} ${file}`);
+      }
+    };
     await Promise.all(
-      this.household.people.map(async (p) => {
+      this.household.people.flatMap((p) => {
         const index = this.indexes.get(p.id);
-        if (!index) return;
-        try {
-          const view = viewOf(views, p.id, 'code-names.json');
-          if (!view) return;
-          const raw = (await this.viewState(p, view, household)) ? null : await readJson(this.folder, `views/${p.id}/${view.name}`);
-          if (raw === null) this.late.add(`${p.id} names`);
-          else index.codeNames = parseCodeNames(raw, p.id);
-        } catch (e) {
-          // What is refused stays so until medrec writes it again.
-          if (!(e instanceof FolderError)) this.late.add(`${p.id} names`);
-        }
+        if (!index) return [];
+        return [
+          read(p, 'code-names.json', (raw) => (index.codeNames = parseCodeNames(raw, p.id))),
+          read(p, 'standing.json', (raw) => (index.standing = parseStanding(raw, p.id))),
+        ];
       }),
     );
   }
@@ -431,8 +439,8 @@ export class Store {
       [household, view.household],
       [this.folder.md5(`${p.folder}/index.json`), view.index],
       [this.folder.md5(`${p.folder}/text.json`), view.text],
-      [this.folder.md5(`${p.folder}/overrides.json`), view.overrides],
     ];
+    if (view.overrides !== undefined) read.push([this.folder.md5(`${p.folder}/overrides.json`), view.overrides]);
     if (view.marks !== undefined) read.push([this.folder.md5(`${p.folder}/marks.json`), view.marks]);
     for (const [id, l] of view.linked) {
       const f = folderOf(id)!;

@@ -6,7 +6,7 @@ import { conditionName } from '../../model/codeNames';
 import { originNames, sortByDateDesc, str, studyTitle } from '../../model/records';
 import { isOutOfRange, rangeFor, resultFlag } from '../../model/flags';
 import type { LatestResult } from '../../model/overview';
-import { allergyList, conditionList, CRITICALITY_TEXT, medicineList, statusText, vaccineList, type AllergyItem, type ConditionItem, type MedicineItem } from '../../model/lists';
+import { allergyList, conditionList, CRITICALITY_TEXT, medicineList, statusText, underHeadings, vaccineList, type AllergyItem, type ConditionItem, type ItemStanding, type MedicineItem } from '../../model/lists';
 import { resultGroups } from '../../model/panels';
 import { COMING_UP_DAYS, FLU, fluSeason, SCHEDULE_SOURCE, scheduleDigest, scheduleFor, type DoseState, type FluSeason, type ScheduleRow } from '../../model/schedule';
 import type { Person, PersonIndex, Provenance } from '../../model/types';
@@ -15,6 +15,7 @@ import { button, card, chip, command, empty, flagChip, link, row, type Ctx } fro
 import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, localDay, yearOf } from '../format';
 import { SECTION_LABELS, type ListSection, type Route } from '../router';
+import { isText, isWord, listNotes, prescriptionOf, standingMeta } from '../standing';
 import { called } from '../../model/people';
 
 const PAGE = 200;
@@ -203,39 +204,56 @@ function sourcesText(ctx: Ctx, person: Person, provenance: Provenance[]): string
 const meta = (...parts: (string | null | undefined | false)[]) => parts.filter(Boolean).join(' · ');
 
 /** Unconfirmed, Ruled out, and a status the heading does not say (in the attention colour while active). */
-function conditionChips(i: ConditionItem): HTMLElement | null {
-  const chips = [i.unconfirmed ? chip('Unconfirmed', 'muted') : null, i.refuted ? chip('Ruled out', 'muted') : null, i.statusNote ? chip(i.statusNote, i.isActive ? 'attention' : 'muted') : null].filter((c): c is HTMLElement => !!c);
-  return chips.length ? h('div', { class: 'chips-aside' }, chips) : null;
+const conditionChips = (i: ConditionItem): (HTMLElement | null)[] => [i.unconfirmed ? chip('Unconfirmed', 'muted') : null, i.refuted ? chip('Ruled out', 'muted') : null, i.statusNote ? chip(i.statusNote, i.isActive ? 'attention' : 'muted') : null];
+
+/** A row's words and chips: by what each source says of it, where that is known, else by where its records are from. */
+function saying(ctx: Ctx, person: Person, i: { provenance: Provenance[]; standing?: ItemStanding }, text: string | null, chips: (HTMLElement | null)[]): { meta: Child; aside: Child } {
+  if (i.standing) return { meta: standingMeta(text, i.standing, ...chips), aside: null };
+  const some = chips.filter((c): c is HTMLElement => !!c);
+  return { meta: meta(text, sourcesText(ctx, person, i.provenance)), aside: some.length > 1 ? h('div', { class: 'chips-aside' }, some) : some[0] ?? null };
+}
+
+/** Every record of a kind, one tap away, each with what it is by its sources' words. */
+function allOf<T extends { standing?: ItemStanding }>(ctx: Ctx, title: string, all: T[], render: (x: T, is: HTMLElement | null) => HTMLElement): HTMLElement | null {
+  if (!all.length) return null;
+  const today = localDay(ctx.now());
+  return h('details', { class: 'card list-all' }, h('summary', null, `${title}: ${count(all.length, 'record')}`), all.map((x) => render(x, chip(x.standing ? isWord(x.standing.of, today) : 'Filled', 'muted'))));
 }
 
 function conditionsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
-  const { active, ended, other } = conditionList(idx);
-  const render = (i: ConditionItem) =>
+  const { active, ended, other, all, notes } = conditionList(idx, localDay(ctx.now()));
+  const render = (i: ConditionItem, is: HTMLElement | null = null) =>
     row({
       route: itemRoute(person.id, i.latest.id),
       title: conditionName(idx, i.latest).name,
-      meta: meta(i.ended ? `${i.first ? `${dateText(i.first)} to ` : 'ended '}${dateText(i.ended)}` : sinceText(i), sourcesText(ctx, person, i.provenance)),
-      aside: conditionChips(i),
+      ...saying(ctx, person, i, i.ended ? `${i.first ? `${dateText(i.first)} to ` : 'ended '}${dateText(i.ended)}` : sinceText(i), is ? [is] : conditionChips(i)),
     });
+  if (all) {
+    if (!all.length && !notes?.inError) return card({ title: 'Conditions' }, empty('No conditions recorded.'));
+    return h('div', { class: 'stack' }, card({ title: 'Current' }, active.length ? active.map((i) => render(i)) : empty('No current conditions in these records.'), listNotes(notes)), allOf(ctx, 'All', all, render));
+  }
   if (!active.length && !ended.length && !other.length) return card({ title: 'Conditions' }, empty('No conditions recorded.'));
   return h(
     'div',
     { class: 'stack' },
-    card({ title: 'Active' }, active.length ? active.map(render) : empty('No active conditions recorded.')),
-    ended.length ? card({ title: 'Resolved or inactive' }, ended.map(render)) : null,
-    other.length ? card({ title: 'Ruled out or no status' }, other.map(render)) : null,
+    card({ title: 'Active' }, active.length ? active.map((i) => render(i)) : empty('No active conditions recorded.')),
+    ended.length ? card({ title: 'Resolved or inactive' }, ended.map((i) => render(i))) : null,
+    other.length ? card({ title: 'Ruled out or no status' }, other.map((i) => render(i))) : null,
   );
 }
 
 function allergiesSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
-  const { current, ended } = allergyList(idx);
-  const render = (i: AllergyItem, past: boolean) =>
+  const { current, ended, all, notes } = allergyList(idx, localDay(ctx.now()));
+  const render = (i: AllergyItem, past: boolean, is: HTMLElement | null = null) =>
     row({
       route: itemRoute(person.id, i.latest.id),
       title: i.name,
-      meta: meta(i.reactions.length ? i.reactions.join(', ') : null, i.criticality ? CRITICALITY_TEXT[i.criticality] ?? i.criticality : null, sinceText(i), sourcesText(ctx, person, i.provenance)),
-      aside: past ? chip(statusText(i.latest.status) ?? 'Ended', 'muted') : i.criticality === 'high' ? chip('High risk', 'attention') : null,
+      ...saying(ctx, person, i, meta(i.reactions.length ? i.reactions.join(', ') : null, i.criticality ? CRITICALITY_TEXT[i.criticality] ?? i.criticality : null, sinceText(i)), [is, past ? chip(statusText(i.latest.status) ?? 'Ended', 'muted') : i.criticality === 'high' ? chip('High risk', 'attention') : null]),
     });
+  if (all) {
+    if (!all.length && !notes?.inError) return card({ title: 'Allergies' }, empty('No allergies recorded in these records.'));
+    return h('div', { class: 'stack' }, card({ title: 'Current' }, current.length ? current.map((i) => render(i, false)) : empty('No current allergies in these records.'), listNotes(notes)), allOf(ctx, 'All', all, (i, is) => render(i, false, is)));
+  }
   return h(
     'div',
     { class: 'stack' },
@@ -252,23 +270,46 @@ function medicineWhen(m: MedicineItem, past: boolean): string | null {
 }
 
 function medicinesSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
-  const { active, past } = medicineList(idx);
-  const render = (m: MedicineItem, isPast: boolean) => {
+  const today = localDay(ctx.now());
+  const { active, past, onHold, endedByDate, all, notes } = medicineList(idx, today);
+  const filled = (m: MedicineItem) => {
     const fill = m.lastFill;
+    return fill ? `last filled ${dateText(fill.date)}${fill.pharmacy ? ` at ${fill.pharmacy}` : ''}${fill.daysSupply ? `, ${fill.daysSupply} days` : ''}` : null;
+  };
+  const render = (m: MedicineItem, isPast: boolean, under = false, is: HTMLElement | null = null) => {
+    const dosage = str(m.latest.fields.dosage);
     return row({
       route: itemRoute(person.id, m.latest.id),
-      title: m.name,
-      meta: meta(
-        str(m.latest.fields.dosage),
-        m.prescriber ? `prescribed by ${m.prescriber}` : null,
-        medicineWhen(m, isPast),
-        fill ? `last filled ${dateText(fill.date)}${fill.pharmacy ? ` at ${fill.pharmacy}` : ''}${fill.daysSupply ? `, ${fill.daysSupply} days` : ''}` : null,
-        m.known.length === 1 && m.known[0] === 'reported' ? 'reported, not prescribed in these records' : null,
-        sourcesText(ctx, person, m.provenance),
+      title: under ? (dosage ?? prescriptionOf(m)) : m.name,
+      ...saying(
+        ctx,
+        person,
+        m,
+        meta(
+          under ? null : dosage,
+          m.prescriber ? `prescribed by ${m.prescriber}` : null,
+          m.standing?.group === 'endedByDate' ? isText(m.standing.of, today) : null,
+          medicineWhen(m, isPast || (m.standing !== undefined && !m.active)),
+          under ? null : filled(m),
+          m.known.length === 1 && m.known[0] === 'reported' ? 'reported, not prescribed in these records' : null,
+        ),
+        [is ?? (isPast ? chip(statusText(m.latest.status) ?? 'Past', 'muted') : null)],
       ),
-      aside: isPast ? chip(statusText(m.latest.status) ?? 'Past', 'muted') : null,
     });
   };
+  if (all) {
+    if (!all.length && !notes?.inError) return card({ title: 'Medicines' }, empty('No medicines yet.'));
+    // Prescriptions of one medicine are rows under its name.
+    const rows = (xs: MedicineItem[]) => underHeadings(xs).flatMap((of) => (of.length === 1 ? [render(of[0]!, false)] : [h('p', { class: 'list-heading' }, of[0]!.name, filled(of[0]!) ? h('span', { class: 'small muted' }, ` · ${filled(of[0]!)}`) : null), ...of.map((m) => render(m, false, true))]));
+    return h(
+      'div',
+      { class: 'stack' },
+      card({ title: 'Current' }, active.length ? rows(active) : empty('No current medicines in these records.'), listNotes(notes)),
+      onHold.length ? card({ title: 'On hold' }, rows(onHold)) : null,
+      endedByDate.length ? card({ title: 'Ended by its date' }, rows(endedByDate)) : null,
+      allOf(ctx, 'All', all, (m, is) => render(m, !m.standing, false, is)),
+    );
+  }
   if (!active.length && !past.length) return card({ title: 'Medicines' }, empty('No medicines yet.'));
   return h(
     'div',

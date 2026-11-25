@@ -3,7 +3,7 @@
 // places by now that the records do not show and those coming up, grouped
 // into the visits that give them.
 
-import { medicineList, type MedicineItem } from '../model/lists';
+import { medicineList, recordsOf, type MedicineItem } from '../model/lists';
 import { fluSeason, monthsBetween, scheduleDigest, scheduleFor, type FluSeason, type ScheduleRow } from '../model/schedule';
 import { recordsPrivate } from '../model/private';
 import type { PersonIndex } from '../model/types';
@@ -23,20 +23,24 @@ export interface Refill {
   runsOut: string;
   /** Days from today to that day; negative once past. */
   days: number;
-  /** Why it is private, when a record of the medicine is. */
+  /** Why it is private, when a record of the medicine is: a fill that may not be shown leaves the day unknown. */
   private?: string;
 }
 
 /** Active medicines whose last fill runs out within REFILL_DAYS either side of today, soonest first. */
 export function refillsDue(index: PersonIndex, today: string): Refill[] {
-  return medicineList(index)
+  const asked = new Set<string>();
+  return medicineList(index, today)
     .active.flatMap((m): Refill[] => {
+      // Once for a medicine, however many prescriptions of it are current.
+      if (asked.has(m.heading)) return [];
+      asked.add(m.heading);
       const f = m.lastFill;
       if (!f?.date || !f.daysSupply) return [];
       const runsOut = addDays(f.date, f.daysSupply);
       const days = daysBetween(today, runsOut);
       if (Math.abs(days) > REFILL_DAYS) return [];
-      const area = recordsPrivate(index, m.records.map((r) => r.id));
+      const area = recordsPrivate(index, recordsOf(index, m).map((r) => r.id));
       return [{ medicine: m, runsOut, days, ...(area ? { private: area } : {}) }];
     })
     .sort((a, b) => a.runsOut.localeCompare(b.runsOut));

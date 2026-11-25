@@ -125,7 +125,9 @@ many dates the records hold them on, by the newest record's status in words
 every source that recorded it. A medicine joins its prescription to its
 fills: who prescribed it and the last fill and pharmacy. One only reported
 says so. A vaccine lists every dose, and a dose recorded as not given stands
-apart. The rules are `src/model/lists.ts`, which Health uses too.
+apart. The rules are `src/model/lists.ts`, which Health uses too. With medrec
+0.9.9 and later, what is current is by every source's word instead ("What is
+current", below).
 
 Search needs every word, or "a quoted phrase", somewhere in an item's name,
 its fields (a visit's reason, a medicine's dosage or prescriber, each of a
@@ -830,6 +832,30 @@ dropped from the address.
   `views/views.json` lists is not there yet, is stale or could not be read,
   the records are read again with the same waits as after a Refresh; one the
   app refuses (a newer layout, say) is not waited for.
+- **What is current.** medrec 0.9.9 and later say what is current among a
+  person's conditions, allergies and medicines by what each of their sources
+  says, in `views/<person id>/standing.json` (`src/model/standing.ts`,
+  `src/ui/standing.ts`). No source's word wins: a record is current while any
+  of them says so. A row says what each source says, with the day it was read,
+  and is marked Sources differ where they do and Not every source heard where
+  one's word is not known. A condition's or an allergy's records of one code
+  are one line, named by the newest. Each prescription is its own row, and
+  those of one medicine are under its name, with its last fill. Medicines on
+  hold, and those ended by their date, have groups of their own: the date
+  ended a prescription no source says is stopped, and a fill after it is shown
+  and changes nothing. The rest is under All, a tap away: every record by
+  itself with what it is (ended, ruled out, a draft, a diagnosis from a visit,
+  a medicine known by its fills alone). A list says how many were entered in
+  error, which it leaves out, and names a source that sends no problem list. A
+  record's page says the same of it. Health, its sheet for a doctor, the
+  refills and the care team use these lists. A record that may not be shown is
+  left out before the rest is worked out: its word, its fill and its source
+  are not shown, and it makes no line current or differ. A refill whose
+  medicine has a private record stays off shared screens, since a private fill
+  can be its newest. The file is made from the records alone, so what the
+  household marked or said never makes it stale; it is used, and read for
+  again, as code names are. Without one the lists go by each record's own
+  status, and nothing is said of sources that differ.
 - **Papers** (`#/papers`, a tab, also from each
   person's Health): every paper in the Drive
   folder, newest first by year, each with the visit it belongs to as a

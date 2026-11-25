@@ -9,7 +9,7 @@ import { FolderError, isObject } from './parse';
 export type Md5 = string | null;
 
 /** A view the app reads. */
-export type ViewFile = 'events.json' | 'bills.json' | 'private.json' | 'code-names.json';
+export type ViewFile = 'events.json' | 'bills.json' | 'private.json' | 'code-names.json' | 'standing.json';
 
 export interface PersonView {
   /** `events.<first 12 hex of its MD5>.json`, under views/<person id>/. */
@@ -18,11 +18,13 @@ export interface PersonView {
   household: Md5;
   index: Md5;
   text: Md5;
-  overrides: Md5;
-  /** marks.json's MD5, for the views made from it as well: every one but events.json. */
+  /** overrides.json's MD5, for the views made from it as well: every one but standing.json. */
+  overrides?: Md5;
+  /** marks.json's MD5, for the views made from it as well: every one but events.json and standing.json. */
   marks?: Md5;
   /** provider-state.json's MD5, for the views made from it as well: private.json and code-names.json. */
   providerState?: Md5;
+  /** The linked people whose files it was made from as well; standing.json is made from the person's own. */
   linked: Map<string, { index: Md5; text: Md5 }>;
 }
 
@@ -56,6 +58,8 @@ export function viewOf(views: Record<string, unknown> | null, person: string, fi
   const md5 = md5Of(p.files[file]);
   const [household, index, txt, overrides] = [md5Of(views!.household), md5Of(p.index), md5Of(p.text), md5Of(p.overrides)];
   if (!md5 || household === undefined || index === undefined || txt === undefined || overrides === undefined || !isObject(p.linked)) throw bad();
+  const name = `${file.slice(0, -'.json'.length)}.${md5.slice(0, 12)}.json`;
+  if (file === 'standing.json') return { name, md5, household, index, text: txt, linked: new Map() };
   const marks = md5Of(p.marks);
   const fromMarks = file !== 'events.json';
   if (fromMarks && marks === undefined) throw bad();
@@ -69,6 +73,5 @@ export function viewOf(views: Record<string, unknown> | null, person: string, fi
     if (li === undefined || lt === undefined) throw bad();
     linked.set(id, { index: li, text: lt });
   }
-  const name = `${file.slice(0, -'.json'.length)}.${md5.slice(0, 12)}.json`;
   return { name, md5, household, index, text: txt, overrides, ...(fromMarks ? { marks: marks! } : {}), ...(fromLabels ? { providerState: providerState! } : {}), linked };
 }
