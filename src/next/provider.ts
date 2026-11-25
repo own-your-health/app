@@ -9,9 +9,9 @@ import { isHeld, itemPrivate, knownArea, recordPrivate, recordsPrivate } from '.
 import { sameProvider, type ProviderField } from '../model/providers';
 import { isWithdrawn, originNames } from '../model/records';
 import type { Household, ImagingStudy, MedDocument, MedRecord, PendingMark, PersonIndex } from '../model/types';
-import { householdEvents, type PersonEvent } from './calendar';
+import { asShared, householdEvents, type PersonEvent } from './calendar';
 import type { CareEvent } from './event';
-import { copiesOf, forShared, mayBePaid, openBills, unbilledShares, type OpenBill } from './money';
+import { copiesOf, forShared, mayBePaid, openBills, sharedOpen, unbilledShares, type OpenBill } from './money';
 import { papersOf } from './papers';
 import { Providers, providersNamed, sameName, type Named } from './providerNames';
 
@@ -86,15 +86,20 @@ interface Scope {
   shared: boolean;
   named: Named[];
   events: PersonEvent[];
+  /** Every event of theirs, private ones too, as the page goes by it: what a bill is judged by. */
+  all: PersonEvent[];
   may: (kind: string, person: string, id: string) => boolean;
 }
 
 function scopeOf(of: Records, quiet: Quiet, who: string | undefined): Scope {
   const people = of.household.people.map((p) => p.id).filter((id) => of.indexes.has(id) && (!who || id === who));
   const named = people.flatMap((id) => providersNamed(of.indexes.get(id)!, of.household));
-  if (who) return { people, shared: false, named, events: quiet.events.filter((x) => x.person.id === who), may: () => true };
+  if (who) {
+    const events = quiet.events.filter((x) => x.person.id === who);
+    return { people, shared: false, named, events, all: events, may: () => true };
+  }
   const may = quiet.shared.bind(quiet);
-  return { people, shared: true, named: named.filter((n) => may(n.kind, n.person, n.id)), events: quiet.events.filter((x) => !quiet.event(x)), may };
+  return { people, shared: true, named: named.filter((n) => may(n.kind, n.person, n.id)), events: quiet.events.filter((x) => !quiet.event(x)).map(asShared), all: quiet.events.map(asShared), may };
 }
 
 // ---- The page ---------------------------------------------------------------
@@ -295,14 +300,14 @@ function moneyOf({ of, quiet, scope, ids, billed }: Its): Pick<ProviderPage, 'bi
   for (const person of scope.people) {
     const idx = of.indexes.get(person)!;
     // As Money lists them: on everyone's, no bill says a private receipt paid it.
-    const shown = <T extends { private?: string; event?: PersonEvent; bill?: Bill }>(xs: T[]): T[] => (scope.shared ? forShared(idx, xs) : xs);
-    const asking = new Map(shown(openBills(idx, quiet.events.filter((x) => x.person.id === person), of.today, of.marks)).map((b) => [b.bill.doc.id, b]));
+    const asked = openBills(idx, scope.all.filter((x) => x.person.id === person), of.today, of.marks);
+    const asking = new Map((scope.shared ? sharedOpen(idx, asked) : asked).map((b) => [b.bill.doc.id, b]));
     // Its own bills, by any copy of one, and those medrec matched to a claim of its.
     const mine = billList(idx).filter((b) => scope.may('document', person, b.doc.id) && ([...copiesOf(idx, b)].some((id) => ids.has(at(person, id))) || (b.medrec?.claim !== undefined && billed.has(at(person, b.medrec.claim)))));
     for (const bill of mine) {
       const o = asking.get(bill.doc.id);
       const area = quiet.item('document', person, bill.doc.id);
-      bills.push({ person, item: o ? { bill: o.bill, open: o } : { bill: shown([{ bill }])[0]!.bill }, ...(area ? { private: area } : {}) });
+      bills.push({ person, item: o ? { bill: o.bill, open: o } : { bill: scope.shared ? forShared(idx, [{ bill }])[0]!.bill : bill }, ...(area ? { private: area } : {}) });
       if (o && !o.marked && !mayBePaid(o)) open = add(open, o.cents);
     }
     // A visit's charge holds the claims of every name like its own: only this provider's count.

@@ -39,9 +39,10 @@ describe('open bills', () => {
   });
 
   it('read the same from medrec’s list and, without it, from their visits’ claims', () => {
+    // Only medrec's list says which claim the figure is of.
     for (const name of ['Robin Example', 'Sam Example']) {
       const bare: PersonIndex = { ...index(name), bills: undefined };
-      const read = (idx: PersonIndex) => openBills(idx, events(name), TODAY).map(({ bill, ...b }) => ({ ...b, id: bill.doc.id, event: b.event?.event.id }));
+      const read = (idx: PersonIndex) => openBills(idx, events(name), TODAY).map(({ bill, ...b }) => ({ ...b, saidBy: undefined, id: bill.doc.id, event: b.event?.event.id }));
       expect(read(bare)).toEqual(read(index(name)));
     }
   });

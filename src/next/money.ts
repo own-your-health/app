@@ -44,6 +44,8 @@ export interface OpenBill {
   claimSays?: number;
   /** Whether claimSays is the whole visit's share rather than this provider's. */
   claimSaysVisit: boolean;
+  /** The one claim claimSays is of; without one, it is of the visit's. */
+  saidBy?: string;
   verdict: BillVerdict;
   /** Past its due date, with something left to pay. */
   overdue: boolean;
@@ -64,17 +66,46 @@ export function billPrivate(idx: PersonIndex, doc: MedDocument, event?: PersonEv
   return paperPrivate(idx, doc.id) ?? (event && (inVisit(idx, doc.id) || takenOut(idx, doc.id)) ? undefined : event?.private);
 }
 
-/** What a shared screen shows of some bills: those not private, without the visit of one whose visit is, or a receipt that is. */
-export function forShared<T extends { private?: string; event?: PersonEvent; bill?: Bill }>(idx: PersonIndex, bills: T[]): T[] {
-  const isPrivate = (receipt: MedDocument) => !!paperPrivate(idx, receipt.id);
-  return bills.flatMap((b) => {
-    if (b.private) return [];
-    const shown = { ...b };
-    if (b.event?.private) delete shown.event;
-    if (b.bill) shown.bill = { ...b.bill, unread: b.bill.unread.filter((r) => !isPrivate(r)), payments: b.bill.payments.map((p) => (p.receipt && isPrivate(p.receipt) ? { from: p.from } : p)) };
-    return [shown];
+/** Those not private, each without its visit where that is. */
+function notPrivate<T extends { private?: string; event?: PersonEvent }>(all: T[]): T[] {
+  return all.filter((x) => !x.private).map((x) => {
+    const shown = { ...x };
+    if (x.event?.private) delete shown.event;
+    return shown;
   });
 }
+
+/** What a shared screen shows of some bills: those not private, without the visit of one whose visit is, or a receipt that is. Open ones by sharedOpen. */
+export function forShared<T extends { private?: string; event?: PersonEvent; bill: Bill }>(idx: PersonIndex, bills: T[]): T[] {
+  const isPrivate = (receipt: MedDocument) => !!paperPrivate(idx, receipt.id);
+  return notPrivate(bills).map((b) => ({
+    ...b,
+    bill: { ...b.bill, unread: b.bill.unread.filter((r) => !isPrivate(r)), payments: b.bill.payments.map((p) => (p.receipt && isPrivate(p.receipt) ? { from: p.from } : p)) },
+  }));
+}
+
+/** Whether a claim of a visit is private: with the visit, or left out of it as a shared screen shows it (asShared). */
+const holdsPrivateClaim = (event: PersonEvent | undefined): boolean => !!event && (!!event.private || !!event.event.fewerClaims);
+
+/**
+ * The same of open bills, which say nothing of a private claim: neither what
+ * it says nor that none backs them. `bills` go by the events as shared
+ * screens go by them (sharedEvents).
+ */
+export function sharedOpen(idx: PersonIndex, bills: OpenBill[]): OpenBill[] {
+  const said = bills.map((b): OpenBill => {
+    if (b.claimSays === undefined && b.verdict !== 'no_claim') return b;
+    if (b.saidBy ? !recordPrivate(idx, b.saidBy) : !holdsPrivateClaim(b.event)) return b;
+    const quiet: OpenBill = { ...b, claimSaysVisit: false, verdict: 'unmatched' };
+    delete quiet.claimSays;
+    delete quiet.saidBy;
+    return quiet;
+  });
+  return forShared(idx, said);
+}
+
+/** The same of payments at a visit: each is listed for what the claims say of it alone, so not where a private one says it. */
+export const sharedDesk = (paid: DeskPayment[]): DeskPayment[] => notPrivate(paid.filter((d) => !holdsPrivateClaim(d.event)));
 
 /** Whether a page may speak of a person's bills: a shared one only of those that are not private. */
 export function anyBill(idx: PersonIndex, events: PersonEvent[], shared: boolean): boolean {
@@ -121,7 +152,7 @@ export function openBills(idx: PersonIndex, events: PersonEvent[], today: string
     .sort(byDue);
 }
 
-type Against = Pick<OpenBill, 'claimSays' | 'claimSaysVisit' | 'verdict'>;
+type Against = Pick<OpenBill, 'claimSays' | 'claimSaysVisit' | 'saidBy' | 'verdict'>;
 
 /** A bill against what its visit's claims say, without medrec's list. */
 function claimsSay(bill: Bill, event: PersonEvent | undefined, asked: number): Against {
@@ -138,8 +169,9 @@ function medrecSays(idx: PersonIndex, bill: Bill, state: BillState, event: Perso
   const owed = toCents(call?.owed ?? state.owed);
   // A claim from another provider is the visit's: the bill is a billing company's.
   const claimSaysVisit = !!event && !event.money.charges.some((c) => sameProvider(c.provider, bill.provider));
-  if (call) return owed === undefined ? { claimSaysVisit: false, verdict: 'no_claim' } : { claimSays: owed, claimSaysVisit, verdict: 'differs' };
-  const said: Against = owed === undefined ? claimsSay(bill, event, asked) : { claimSays: owed, claimSaysVisit, verdict: owed === asked ? 'matches' : 'unmatched' };
+  const by = { claimSaysVisit, ...(state.claim ? { saidBy: state.claim } : {}) };
+  if (call) return owed === undefined ? { claimSaysVisit: false, verdict: 'no_claim' } : { claimSays: owed, ...by, verdict: 'differs' };
+  const said: Against = owed === undefined ? claimsSay(bill, event, asked) : { claimSays: owed, ...by, verdict: owed === asked ? 'matches' : 'unmatched' };
   return said.verdict === 'matches' ? said : { claimSaysVisit: false, verdict: 'unmatched' };
 }
 

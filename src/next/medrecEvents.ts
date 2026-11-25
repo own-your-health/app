@@ -5,11 +5,11 @@
 import { claimCategory, claimProvider } from '../model/claims';
 import type { MedrecEvent, MedrecEvents } from '../model/events';
 import type { Household, MedDocument, MedRecord, PersonIndex } from '../model/types';
-import { knownArea } from '../model/private';
+import { knownArea, paperPrivate } from '../model/private';
 import { practiceOf } from '../model/practices';
 import { nameKey, sameProvider } from '../model/providers';
 import { str } from '../model/records';
-import { eventPrivate, nameEvent, type CareEvent, type ClaimRole, type EventKind } from './event';
+import { eventPrivate, nameEvent, withoutPrivate, type CareEvent, type ClaimRole, type EventKind } from './event';
 import { tidyName } from '../model/words';
 
 const KINDS: Record<string, EventKind> = {
@@ -96,7 +96,17 @@ export function fromMedrec(file: MedrecEvents, index: PersonIndex, household: Ho
     if (m.place && placeHolds(m.place, e, household, index.person)) e.place = m.place;
     if (m.expected.length) e.expected = m.expected;
     if (m.confidence === 'unsure') e.doubt = m.could_join.length > 1 ? `It could be part of any of ${m.could_join.length} other visits` : m.could_join.length ? 'It could be part of another visit' : 'medrec is not sure what it belongs with';
-    nameEvent(e, household, index.person, { ...(title ? { title } : {}), ...(m.what ? { what: m.what } : {}), private: !!knownArea(eventPrivate(e, index)) });
+    const given = { ...(title ? { title } : {}), ...(m.what ? { what: m.what } : {}) };
+    const area = eventPrivate(e, index);
+    // A place a private paper says it is at is private, whatever other paper does: which of them gave it is not said.
+    const told = !!m.placeFromAlias && file.aliases.some((a) => a.organization === m.place && paperPrivate(index, a.document));
+    const rest = area ? undefined : (withoutPrivate(e, index) ?? (told ? { ...e } : undefined));
+    nameEvent(e, household, index.person, { ...given, private: !!knownArea(area) });
+    if (rest) {
+      if (told) delete rest.place;
+      nameEvent(rest, household, index.person, given);
+      e.shared = rest;
+    }
     return [e];
   });
 }

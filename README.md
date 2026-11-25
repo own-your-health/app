@@ -635,7 +635,10 @@ dropped from the address.
   `src/next/medrecEvents.ts` makes each member one of the visit's claims,
   portal visits, records or papers, with the rule that placed it and how
   sure that is. What medrec still expects (a bill, the doctors' claims)
-  comes along, and another person's paper (X2) opens under them. An event's address is medrec's id
+  comes along, and another person's paper (X2) opens under them. A place
+  whose `place_from` is `alias` is there because a paper in the file's
+  `aliases` says the clinician works at it: when any paper that says so is
+  private, a shared screen leaves the place out. An event's address is medrec's id
   (`e_…`); any record or paper of it opens it too. For a folder whose
   medrec has not written events yet, the app groups the records itself in
   `src/next/grouping.ts`, by the same rules; that file goes once every
@@ -865,7 +868,12 @@ page count. Papers took the place of each person's list of documents. A
   a line that is the same whether or not anything is private, and so is every
   other word there: a list reads as it would with the private items not in the
   folder, and an empty one always says that nothing is listed. Only Money's
-  totals, months and limits count them. `e2e/private.spec.ts` compares each
+  totals, months and limits count them. A visit that is not private can have
+  parts that are: there it is named, placed and priced by the others, with
+  medrec's own words for it and its place, unless a private paper says the
+  place, and a bill says nothing of a private claim
+  (`withoutPrivate`, `sharedEvents`, `sharedOpen`). `e2e/private.spec.ts`
+  compares each
   screen with the same folder's, its private items renamed and on other days
   of the month, or gone. Search never looks at private items and always says
   so, with how many imaging studies it leaves off because no report judges

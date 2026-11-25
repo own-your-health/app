@@ -15,7 +15,7 @@ import { h } from '../ui/dom';
 import { count, dateText, localDay } from '../ui/format';
 import { href, type Route } from '../ui/router';
 import { legend, yearText } from '../ui/views/costs';
-import { householdEvents } from './calendar';
+import { householdEvents, sharedEvents } from './calendar';
 import { eventRoute, eventWhen } from './eventView';
 import { coverageCard } from './coverageCard';
 import { callsSummary, mayBePaid, toPay } from './money';
@@ -234,9 +234,9 @@ function monthsCard(d: YearData, who: string | undefined): HTMLElement | null {
 /** The period's visits by cost: everyone's leave off those that are private or whose cost is a private claim's. */
 function costsOf(ctx: Ctx, d: YearData, who: string | undefined, order: CostOrder): EventCost[] {
   const store = ctx.store;
-  const events = householdEvents(store.household, (id) => store.index(id), d.today).filter((x) => !who || x.person.id === who);
-  const all = d.chosen ? eventCosts(events, d.lines, d.chosen.id, order) : [];
-  return who ? all : all.filter((c) => !c.event.private && !c.event.event.claims.some((x) => d.quiet.has(x.record.id)));
+  const all = (who ? householdEvents : sharedEvents)(store.household, (id) => store.index(id), d.today);
+  const events = all.filter(who ? (x) => x.person.id === who : (x) => !x.private && !x.event.fewerClaims && !x.event.claims.some((c) => d.quiet.has(c.record.id)));
+  return d.chosen ? eventCosts(events, d.lines, d.chosen.id, order) : [];
 }
 
 /** "$4,181.40 off $6,417.00 charged, 65%": what the network took off, against what was charged. */

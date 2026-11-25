@@ -30,6 +30,8 @@ export interface MedrecEvent {
   title: string;
   what?: string;
   place?: string;
+  /** Whether the place is a practice a paper says its clinician works at (N5). */
+  placeFromAlias?: true;
   confidence: Sureness;
   members: MedrecMember[];
   expected: { what: string; why: string; since?: string }[];
@@ -47,6 +49,8 @@ export interface MedrecEvents {
   person: string;
   events: MedrecEvent[];
   pending: MedrecPending[];
+  /** The practices clinicians were learned to work at, with the paper that says so (N5). */
+  aliases: { organization: string; document: string }[];
   /** The other people's papers these events name (X2), by id; the store fills it in from their indexes. */
   papers: Map<string, { person: string; doc: MedDocument }>;
 }
@@ -95,7 +99,7 @@ export function parseMedrecEvents(raw: unknown, person: string): MedrecEvents {
       end: String(e.end),
       title: text(e.title) ?? '',
       ...(text(e.what) ? { what: text(e.what) } : {}),
-      ...(text(e.place) ? { place: text(e.place) } : {}),
+      ...(text(e.place) ? { place: text(e.place), ...(e.place_from === 'alias' ? { placeFromAlias: true as const } : {}) } : {}),
       confidence: sureness(e.confidence),
       members,
       expected,
@@ -105,5 +109,6 @@ export function parseMedrecEvents(raw: unknown, person: string): MedrecEvents {
   const pending = (Array.isArray(raw.pending) ? raw.pending : []).filter(isObj).flatMap((x): MedrecPending[] =>
     text(x.document) ? [{ document: text(x.document)!, could_join: (Array.isArray(x.could_join) ? x.could_join : []).filter((y): y is string => typeof y === 'string'), rule: (text(x.rule) ?? '') as MedrecRule }] : [],
   );
-  return { person, events, pending, papers: new Map() };
+  const aliases = (Array.isArray(raw.aliases) ? raw.aliases : []).filter(isObj).flatMap((x) => (text(x.organization) && text(x.document) ? [{ organization: text(x.organization)!, document: text(x.document)! }] : []));
+  return { person, events, pending, aliases, papers: new Map() };
 }

@@ -15,11 +15,11 @@ import { count, dateText, localDay, monthDayText } from '../ui/format';
 import { href, type Route } from '../ui/router';
 import { aheadOf, type AheadLine } from './ahead';
 import { aheadRow, signInRow } from './aheadView';
-import { householdEvents, type PersonEvent } from './calendar';
+import { sharedEvents, type PersonEvent } from './calendar';
 import { recentCard } from './calendarView';
 import { eventRoute, eventWhen } from './eventView';
 import { markButton, markNote } from './markPaid';
-import { forShared, mayBePaid, NO_CLAIM_EXPECTED, openBills, overdueLabel, PAID_ELSEWHERE, partText, worthACall, type OpenBill } from './money';
+import { mayBePaid, NO_CLAIM_EXPECTED, openBills, overdueLabel, PAID_ELSEWHERE, partText, sharedOpen, worthACall, type OpenBill } from './money';
 import { billNotes } from './moneyParts';
 import { heldNotes, privateLine } from './shared';
 import { daysBetween, type DoseVisit, type Refill, type VaccineNeeds } from './needs';
@@ -220,7 +220,7 @@ function standing(s: Standing, today: string, error?: string): HTMLElement {
 export function nextHome(ctx: Ctx, signIn: { text: string; route: Route } | undefined): HTMLElement[] {
   const store = ctx.store;
   const today = localDay(ctx.now());
-  const all = householdEvents(store.household, (id) => store.index(id), today);
+  const all = sharedEvents(store.household, (id) => store.index(id), today);
   const owing: Owing[] = [];
   const lines: AheadLine[] = [];
   const stands: HTMLElement[] = [];
@@ -232,7 +232,7 @@ export function nextHome(ctx: Ctx, signIn: { text: string; route: Route } | unde
     }
     const held = whyHeld(idx);
     const mine = all.filter((x) => x.person.id === p.id);
-    const bills = held ? [] : forShared(idx, openBills(idx, mine, today, store.marks));
+    const bills = held ? [] : sharedOpen(idx, openBills(idx, mine, today, store.marks));
     const ahead = aheadOf(p, idx, today, false);
     if (bills.length) owing.push({ person: p, idx, bills });
     lines.push(...ahead);

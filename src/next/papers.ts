@@ -9,7 +9,7 @@ import { billList } from '../model/billing';
 import { HELD, inVisit, paperPrivate, recordPrivate, takenOut } from '../model/private';
 import type { Household, MedDocument, PersonIndex } from '../model/types';
 import { dateText } from '../ui/format';
-import { eventPrivate, type CareEvent, type Confidence } from './event';
+import { eventPrivate, sharedForm, type CareEvent, type Confidence } from './event';
 import { personEvents } from './load';
 
 /** How a paper is with its visit: the visit holds it, a record of the visit links it, or it is the receipt for the visit's bill. */
@@ -50,7 +50,7 @@ const newestFirst = (a: Paper, b: Paper) => (b.doc.date ?? '').localeCompare(a.d
  */
 export function papersOf(index: PersonIndex, household: Household, today: string, indexes: Map<string, PersonIndex>, shared = false): Paper[] {
   const person = index.person;
-  const eventsOf = (idx: PersonIndex) => personEvents(idx, household, today).filter((e) => !shared || !eventPrivate(e, idx));
+  const eventsOf = (idx: PersonIndex) => personEvents(idx, household, today).flatMap((e) => (!shared ? [e] : eventPrivate(e, idx) ? [] : [sharedForm(e)]));
   const events = eventsOf(index);
   const byDoc = new Map<string, { event: CareEvent; person: string; confidence: Confidence }>();
   for (const e of events) for (const p of e.papers) if (!p.person && !byDoc.has(p.doc.id)) byDoc.set(p.doc.id, { event: e, person, confidence: p.confidence });

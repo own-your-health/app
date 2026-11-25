@@ -5,18 +5,20 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { Store } from '../src/data/store';
+import { parseMedrecEvents } from '../src/model/events';
 import { FolderError } from '../src/model/parse';
 import { anyPrivate, atLeast, documentPrivate, HELD, isHeld, itemPrivate, paperPrivate, parsePrivate, recordPrivate, studyPrivate, takenOut, whyHeld } from '../src/model/private';
 import { documentTitle } from '../src/model/records';
 import { find } from '../src/model/search';
 import type { PersonIndex } from '../src/model/types';
 import { viewOf } from '../src/model/views';
-import { householdEvents, shown } from '../src/next/calendar';
-import { eventPrivate } from '../src/next/event';
+import { asShared, householdEvents, shown } from '../src/next/calendar';
+import { eventPrivate, type CareEvent } from '../src/next/event';
 import { careTeam, doctorSheet } from '../src/next/health';
 import { personEvents } from '../src/next/load';
-import { billPrivate, forShared, openBills, unbilledShares } from '../src/next/money';
+import { billPrivate, openBills, sharedDesk, sharedOpen, unbilledShares, type OpenBill } from '../src/next/money';
 import { papersOf, sharedPapers } from '../src/next/papers';
+import { providerPage } from '../src/next/provider';
 import { heldPeople, quietClaims } from '../src/next/shared';
 import { personNamed } from './demo-data';
 import { demoFolderWith, demoJson, manifestWith, privateCase, type Overlay } from './helpers';
@@ -40,6 +42,7 @@ const sam = id('Sam Example');
 const robin = id('Robin Example');
 const index = (store: Store, person: string) => store.index(person)!;
 const viewPath = (person: string) => `views/${person}/${viewOf(demoJson('views/views.json'), person, 'private.json')!.name}`;
+const eventsPath = (person: string) => `views/${person}/${viewOf(demoJson('views/views.json'), person, 'events.json')!.name}`;
 const held = (store: Store) => heldPeople(store).map((x) => x.person.name);
 const why = (store: Store, person = sam) => {
   const p = index(store, person).privacy;
@@ -290,7 +293,7 @@ describe('a person whose list can’t be used is held back', () => {
     // Money.
     const idx = index(UNREADABLE, sam);
     expect(openBills(idx, mine, TODAY)).toHaveLength(2);
-    expect(forShared(idx, openBills(idx, mine, TODAY))).toEqual([]);
+    expect(sharedOpen(idx, openBills(idx, mine, TODAY))).toEqual([]);
     expect(unbilledShares(idx, mine).every((u) => u.private === HELD)).toBe(true);
     const claims = idx.records.filter((r) => r.kind === 'claim').map((r) => r.id);
     expect([...quietClaims(UNREADABLE, TODAY).keys()].sort()).toEqual(claims.sort());
@@ -355,7 +358,7 @@ describe('what the household marked', () => {
     for (const c of scope.claims) expect(recordPrivate(index(MARKED, sam), c.record.id)).toBe('household');
     const bills = openBills(index(MARKED, sam), events(MARKED).filter((x) => x.person.id === sam), TODAY);
     expect(bills.map((b) => [b.bill.provider, b.private])).toEqual([['Example Billing', undefined], ['Example Endoscopy Center', 'household']]);
-    expect(forShared(index(MARKED, sam), bills).map((b) => b.bill.provider)).toEqual(['Example Billing']);
+    expect(sharedOpen(index(MARKED, sam), bills).map((b) => b.bill.provider)).toEqual(['Example Billing']);
     expect(shown(events(MARKED), undefined, false).events.some((x) => x.event.id === scope.id)).toBe(false);
   });
 
@@ -418,16 +421,58 @@ describe('what the household marked', () => {
     expect(unbilledShares(index(SAMPLE, robin), mine, true)).toEqual(unbilledShares(index(SAMPLE, robin), mine));
   });
 
-  it('a bill whose visit alone is private shows without the visit', () => {
+  it('a bill whose visit alone is private shows without the visit, or what the visit’s claims say of it', () => {
     const idx = index(MARKED, sam);
     const scope = events(MARKED).find((x) => x.person.id === sam && x.event.start === day)!;
     const bill = openBills(idx, events(MARKED).filter((x) => x.person.id === sam), TODAY).find((b) => b.event?.event.id === scope.event.id)!;
-    expect(forShared(idx, [bill])).toEqual([]);
+    expect(sharedOpen(idx, [bill])).toEqual([]);
     const cleared = { ...bill };
     delete cleared.private;
-    const shared = { ...cleared };
+    expect([cleared.verdict, cleared.claimSays, cleared.saidBy]).toEqual(['matches', 9050, scope.event.claims.find((c) => c.provider === 'Example Endoscopy Center')!.record.id]);
+    const shared = { ...cleared, claimSaysVisit: false, verdict: 'unmatched' };
     delete shared.event;
-    expect(forShared(idx, [cleared])).toEqual([shared]);
+    delete shared.claimSays;
+    delete shared.saidBy;
+    expect(sharedOpen(idx, [cleared])).toEqual([shared]);
+    // The same where medrec matched no claim, and where it matched one that is not private.
+    const by = (claim: string | undefined) => {
+      const said: OpenBill = { ...cleared };
+      if (claim) said.saidBy = claim;
+      else delete said.saidBy;
+      return said;
+    };
+    const open = idx.records.find((r) => r.kind === 'claim' && !recordPrivate(idx, r.id))!.id;
+    const of = (b: OpenBill) => [b.event, b.verdict, b.claimSays];
+    expect(sharedOpen(idx, [by(undefined), by(open)]).map(of)).toEqual([
+      [undefined, 'unmatched', undefined],
+      [undefined, 'matches', 9050],
+    ]);
+    // Where medrec matched one and gives no share of it, the claims said are the visit's.
+    const shareless = (claim: string) => {
+      const was = index(MARKED, sam);
+      const state = { ...was.bills!.states.get(cleared.bill.doc.id)!, claim };
+      delete state.owed;
+      return { ...was, bills: { ...was.bills!, states: new Map([...was.bills!.states, [cleared.bill.doc.id, state]]) } };
+    };
+    const asked = openBills(shareless(open), [scope], TODAY).find((b) => b.bill.doc.id === cleared.bill.doc.id)!;
+    expect([asked.verdict, asked.claimSays, asked.saidBy]).toEqual(['matches', 9050, undefined]);
+    delete asked.private;
+    expect(sharedOpen(shareless(open), [asked]).map(of)).toEqual([[undefined, 'unmatched', undefined]]);
+    const unbacked = { ...by(undefined), verdict: 'no_claim' as const };
+    delete unbacked.claimSays;
+    expect(sharedOpen(idx, [unbacked]).map((b) => b.verdict)).toEqual(['unmatched']);
+    // Where the visit is not private, the same while a claim of it is, with the visit.
+    const visit = { ...scope, event: { ...scope.event, claims: scope.event.claims.slice(1), fewerClaims: true as const } };
+    delete visit.private;
+    const whole = { ...visit, event: { ...scope.event, shared: visit.event } };
+    expect([visit, asShared(whole), { ...visit, event: scope.event }].flatMap((event) => sharedOpen(idx, [{ ...unbacked, event }])).map((b) => [b.verdict, !!b.event])).toEqual([
+      ['unmatched', true],
+      ['unmatched', true],
+      ['no_claim', true],
+    ]);
+    // A payment at that visit is listed for what its claims say alone, so it is not.
+    const paid = { receipt: cleared.bill.doc, provider: 'Example', cents: 5000, claimSays: 2500, event: cleared.event! };
+    expect([cleared.event!, visit, { ...visit, event: scope.event }].map((event) => sharedDesk([{ ...paid, event }]).length)).toEqual([0, 0, 1]);
   });
 
   it('a visit marked not private shows, though its records stay private', () => {
@@ -439,6 +484,71 @@ describe('what the household marked', () => {
     expect(recordPrivate(index(MARKED, sam), claim)).toBe('sexual_health');
     expect(unbilledShares(index(MARKED, sam), events(MARKED).filter((x) => x.person.id === sam)).find((u) => u.event.event.id === visit.id)!.private).toBe('sexual_health');
     expect(quietClaims(MARKED, TODAY).get(claim)).toBe('sexual_health');
+    // On a shared screen it is medrec's own name and place for it, with nothing of those records: no amount, and not one of their names where medrec gives none.
+    const row = (of: ReturnType<typeof events>) => shown(of, undefined, false).events.find((x) => x.event.id === visit.id)!;
+    expect([row(events(MARKED)).event.title, row(events(MARKED)).event.place, row(events(MARKED)).money.share]).toEqual([visit.title, visit.place, undefined]);
+    expect([row(events(MARKED)).event.claims, row(events(MARKED)).event.visits]).toEqual([[], []]);
+    const idx = structuredClone(index(MARKED, sam));
+    const given = idx.events!.events.find((e) => e.id === visit.id)!;
+    delete given.what;
+    delete given.place;
+    const unnamed = row(householdEvents(MARKED.household, (p) => (p === sam ? idx : undefined), TODAY)).event;
+    expect([unnamed.title, unnamed.place, unnamed.what]).toEqual([visit.title, undefined, undefined]);
+    // Its own person's page, and a calendar that was told to show private items, have all of it.
+    expect(shown(events(MARKED), sam, false).events.find((x) => x.event.id === visit.id)!.event).toEqual(visit);
+    expect(shown(events(MARKED), undefined, true).events.find((x) => x.event.id === visit.id)!.event).toEqual(visit);
+  });
+
+  it('an open visit shows on a shared screen without a place a private paper says it is at', () => {
+    const was = index(SAMPLE, robin).events!.events.find((e) => e.place && e.members.some((m) => m.document))!;
+    const AT = 'Placeholder Practice';
+    const claim = was.members.find((m) => m.kind === 'claim')!.record!;
+    const place = (from: string, paper: string, organization = AT) => {
+      const idx = structuredClone(index(SAMPLE, robin));
+      if (idx.privacy?.kind !== 'known') throw new Error('not known');
+      const [secret, open] = idx.documents.filter((d) => !was.members.some((m) => m.document === d.id));
+      idx.privacy.documents.set(secret!.id, 'household');
+      const raw = demoJson<{ events: { id: string }[]; aliases: object[] }>(eventsPath(robin));
+      Object.assign(raw.events.find((e) => e.id === was.id)!, { place: AT, place_from: from });
+      raw.aliases = [secret!, open!].filter((d) => paper === 'both' || (d === secret) === (paper === 'private')).map((d) => ({ clinician: 'Example', organization, rule: 'N5', document: d.id, confidence: 'likely' }));
+      idx.events = parseMedrecEvents(raw, robin);
+      const e = personEvents(idx, SAMPLE.household, TODAY).find((x) => x.id === was.id)!;
+      const all = householdEvents(SAMPLE.household, (p) => (p === robin ? idx : undefined), TODAY);
+      const page = providerPage({ household: SAMPLE.household, indexes: new Map([[robin, idx]]), today: TODAY, marks: [] }, { person: robin, id: claim, field: 'provider' }, true)!;
+      const on = [asShared(all.find((x) => x.event.id === was.id)!), page.visits.find((v) => v.event.event.id === was.id)!.event];
+      expect(on[1]!.event.place).toBe(on[0]!.event.place);
+      return [e.place, on[0]!.event.place];
+    };
+    // On a shared screen the records name it, as they would had medrec given none.
+    expect(place('alias', 'private')).toEqual([AT, was.place]);
+    // One that says it is enough, whatever other paper does.
+    expect(place('alias', 'both')).toEqual([AT, was.place]);
+    expect([place('alias', 'open'), place('alias', 'private', 'Another practice'), place('portal', 'private')]).toEqual([
+      [AT, AT],
+      [AT, AT],
+      [AT, AT],
+    ]);
+  });
+
+  it('an open visit shows on a shared screen without its private parts, and as it is with none', () => {
+    const all = (idx: PersonIndex) => personEvents(idx, SAMPLE.household, TODAY);
+    const was = all(index(SAMPLE, robin));
+    expect(was.every((e) => !e.shared)).toBe(true);
+    const of = (e: CareEvent) => [...e.claims.map((c) => c.record.id), ...e.visits.map((v) => v.record.id), ...e.recorded.map((r) => r.id), ...e.papers.map((p) => p.doc.id)];
+    const visit = was.find((e) => e.claims.length && e.visits.length && e.recorded.length && e.papers.length)!;
+    for (const id of of(visit)) {
+      const idx = structuredClone(index(SAMPLE, robin));
+      if (idx.privacy?.kind !== 'known') throw new Error('not known');
+      (id.startsWith('d_') ? idx.privacy.documents : idx.privacy.records).set(id, 'household');
+      const event = all(idx).find((e) => e.id === visit.id)!;
+      const { shared, ...own } = event;
+      expect(own, id).toEqual(visit);
+      // A record that is private takes the papers it links with it.
+      expect(of(shared!), id).not.toContain(id);
+      expect(of(visit).filter((x) => !of(shared!).includes(x)).every((x) => x === id || x.startsWith('d_')), id).toBe(true);
+      expect(shared!.fewerClaims, id).toBe(visit.claims.some((c) => c.record.id === id) ? true : undefined);
+      expect(all(idx).filter((e) => e.shared).map((e) => e.id), id).toEqual([visit.id]);
+    }
   });
 
   it('a fill is as private as the record it is named for, whatever its event says', () => {

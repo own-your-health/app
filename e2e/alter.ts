@@ -10,6 +10,7 @@ interface Views {
 interface Member {
   record?: string;
   document?: string;
+  person?: string;
 }
 interface Item extends Json {
   id: string;
@@ -21,7 +22,7 @@ interface Item extends Json {
 export interface PersonFiles {
   name: string;
   index: { records: (Item & { kind?: string; date?: string; fields: Json })[]; documents: Item[] };
-  events: { events: Item[]; pending: (Member & { could_join: string[] })[] };
+  events: { events: Item[]; pending: (Member & { could_join: string[] })[]; aliases?: { organization: string; document: string }[] };
   bills: { bills: Record<string, Json>; worth_a_call: { bill: string }[]; not_billed: { event: string }[] };
   list: { records: Json; documents: Json; events: Json };
 }
@@ -53,6 +54,7 @@ export function rewritten(base: Overlay, change: (files: PersonFiles) => void): 
   return out;
 }
 
+const OTHER = 'Something else entirely';
 const NAMES = new Set(['display', 'title', 'what', 'place', 'provider', 'organization', 'location', 'practitioner', 'prescriber', 'pharmacy', 'reason', 'clinicians', 'account']);
 
 /** A day's neighbour in the same month. */
@@ -66,17 +68,23 @@ function disguised<T extends object>(item: T): T {
   const month = Object.entries(item).find(([k]) => k === 'date' || k === 'start')?.[1] as string | undefined;
   const change = (x: unknown, key = ''): unknown => {
     if (Array.isArray(x)) return x.map((v) => change(v, key));
-    if (typeof x === 'object' && x) return Object.fromEntries(Object.entries(x).map(([k, v]) => [k, change(v, k)]));
+    if (typeof x === 'object' && x) return Object.fromEntries(Object.entries(x).map(([k, v]) => [k, k === 'benefit_period' ? v : change(v, k)]));
     if (typeof x !== 'string') return x;
     if (/^\d{4}-\d{2}-\d{2}$/.test(x)) return month && x.startsWith(month.slice(0, 7)) ? nextTo(x) : x;
-    return NAMES.has(key) ? 'Something else entirely' : x;
+    return NAMES.has(key) ? OTHER : x;
   };
   return change(item) as T;
 }
 
-/** The folder with everyone's private items under other names and days. */
+/** Whether a private paper says where an event is. */
+const toldInPrivate = ({ events, list }: PersonFiles, e: Item): boolean => e.place_from === 'alias' && (events.aliases ?? []).some((a) => a.organization === e.place && a.document in list.documents);
+
+/** The folder with everyone's private items, and the places private papers say, under other names and days. */
 export const renamed = (base: Overlay): Overlay =>
-  rewritten(base, ({ index, events, bills, list }) => {
+  rewritten(base, (files) => {
+    const { index, events, bills, list } = files;
+    for (const e of events.events.filter((x) => toldInPrivate(files, x))) e.place = OTHER;
+    for (const a of events.aliases ?? []) if (a.document in list.documents) a.organization = OTHER;
     const change = <T extends Item>(xs: T[], is: Json): T[] => xs.map((x) => (x.id in is ? disguised(x) : x));
     index.records = change(index.records, list.records);
     index.documents = change(index.documents, list.documents);
@@ -85,9 +93,48 @@ export const renamed = (base: Overlay): Overlay =>
     bills.not_billed = bills.not_billed.map((x) => (x.event in list.events ? disguised(x) : x));
   });
 
+/**
+ * The sample with parts of visits that are not private marked private: the
+ * records of these kinds, as they stay where the household marked a visit not
+ * private, with medrec giving it no place and no words of its own; or, with
+ * none, all but its claims and portal visits. A fill or a vaccine is as
+ * private as its record.
+ */
+export const partsPrivate = (...kinds: string[]): Overlay =>
+  rewritten({}, ({ index, events, list }) => {
+    const kindOf = new Map(index.records.map((r) => [r.id, r.kind ?? '']));
+    const mark = { area: 'mental_health', from: 'records' };
+    for (const e of events.events) {
+      if (e.id in list.events || e.kind === 'fill' || e.kind === 'vaccine') continue;
+      for (const m of e.members ?? []) {
+        const kind = kindOf.get(m.record ?? '') ?? 'paper';
+        if (kinds.length ? !kinds.includes(kind) : kind === 'claim' || kind === 'encounter') continue;
+        if (m.record) list.records[m.record] = mark;
+        else if (m.document && !m.person) list.documents[m.document] = mark;
+      }
+      if (!kinds.length) continue;
+      delete e.what;
+      delete e.place;
+    }
+  });
+
+/** The sample with a private paper all that says where each visit is that is not private. */
+export const placesPrivate = (): Overlay =>
+  rewritten({}, ({ index, events, list }) => {
+    const inEvents = new Set(events.events.flatMap((e) => e.members?.map((m) => m.document) ?? []));
+    const paper = index.documents.find((d) => !inEvents.has(d.id) && !(d.id in list.documents) && d.doc_type !== 'receipt') ?? index.documents.find((d) => d.id in list.documents);
+    if (!paper) return;
+    list.documents[paper.id] = { area: 'mental_health', from: 'documents' };
+    events.aliases = [{ clinician: 'Example', organization: 'Placeholder Practice', rule: 'N5', document: paper.id, confidence: 'likely' } as { organization: string; document: string }];
+    for (const e of events.events) if (e.place && !(e.id in list.events)) Object.assign(e, { place: 'Placeholder Practice', place_from: 'alias' });
+  });
+
 /** The folder with none of them in it. A visit the household marked not private stays as it is when only private records make it one. */
 export const removed = (base: Overlay): Overlay =>
-  rewritten(base, ({ index, events, bills, list }) => {
+  rewritten(base, (files) => {
+    const { index, events, bills, list } = files;
+    for (const e of events.events.filter((x) => toldInPrivate(files, x))) delete e.place;
+    events.aliases = events.aliases?.filter((a) => !(a.document in list.documents));
     const kept: Json = {};
     const gone = (m: Member) => ((m.record ?? '') in list.records && !((m.record ?? '') in kept)) || (m.document ?? '') in list.documents;
     for (const e of events.events) if (!(e.id in list.events) && e.members?.every(gone)) for (const m of e.members) if (m.record) kept[m.record] = list.records[m.record];
