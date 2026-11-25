@@ -2,9 +2,10 @@
 // is, what each source says of it with the day it was read, the sources not
 // heard, and what a list says beside its rows.
 
-import { statusText, type ItemStanding, type ListNotes, type MedicineItem, type SaidBy } from '../model/lists';
+import { isGiven, statusText, type ItemStanding, type ListNotes, type MedicineItem, type SaidBy } from '../model/lists';
 import { groupOn, type Standing } from '../model/standing';
-import { chip } from './components';
+import type { MedRecord, PersonIndex } from '../model/types';
+import { chip, type Ctx } from './components';
 import { h, type Child } from './dom';
 import { dateText } from './format';
 
@@ -71,10 +72,24 @@ export function differChips(s: ItemStanding | undefined): HTMLElement[] {
   return [s.differs ? chip('Sources differ', 'attention') : null, s.unheard.length ? chip('Not every source heard', 'muted') : null].filter((x): x is HTMLElement => !!x);
 }
 
-/** The same as a page's head has them. */
-export function differing(s: ItemStanding | undefined): HTMLElement | null {
-  const chips = differChips(s);
-  return chips.length ? h('div', { class: 'chips-aside' }, chips) : null;
+/** The same as a page's head has them, under its title: beside it, a long name has no room on a phone. */
+export function differing(s: ItemStanding | undefined, ...chips: (HTMLElement | null)[]): HTMLElement | null {
+  const all = [...chips, ...differChips(s)].filter((x): x is HTMLElement => !!x);
+  return all.length ? h('p', { class: 'row-chips' }, all) : null;
+}
+
+/** What a fill is, which has no standing of its own: given, or what its status says. */
+export function fillText(idx: PersonIndex, r: MedRecord): string | undefined {
+  if (idx.standing?.inError.get('medication')?.includes(r.id)) return 'Entered in error';
+  return isGiven(r) ? 'Filled' : (statusText(r.status) ?? undefined);
+}
+
+let groups = 0;
+
+/** Rows under the name they share, one level under the list's own heading: a medicine's prescriptions, and what is said of them all. */
+export function headedRows(level: 'h3' | 'h4', name: string, note: string | null, rows: HTMLElement[]): HTMLElement {
+  const id = `list-group-${++groups}`;
+  return h('div', { role: 'group', 'aria-labelledby': id }, h(level, { class: 'list-heading' }, h('span', { id }, name), note ? h('span', { class: 'small muted' }, ` · ${note}`) : null), rows);
 }
 
 /** What names one of several prescriptions of a medicine, where it gives no dosage. */
@@ -82,6 +97,12 @@ export const prescriptionOf = (m: MedicineItem): string => (m.latest.date ? `Pre
 
 export const inErrorText = (n: number): string => `${n} entered in error, not shown`;
 export const noProblemListText = (source: string, where = 'listed under All'): string => `No problem list from ${source}; diagnoses from visits are ${where}`;
+
+/** Why these lists go by each record's own status although medrec wrote what their sources say. Null where they do not, or it did not. */
+export function standingNote(ctx: Ctx, idx: PersonIndex): HTMLElement | null {
+  const why = ctx.store.standingNotes.get(idx.person);
+  return why ? h('p', { class: 'small muted' }, `${why} Meanwhile each record’s own status says what is current.`) : null;
+}
 
 /** What a list says beside its rows. */
 export function listNotes(notes: ListNotes | undefined, where?: string): HTMLElement[] {

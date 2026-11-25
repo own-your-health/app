@@ -126,7 +126,8 @@ every source that recorded it. A medicine joins its prescription to its
 fills: who prescribed it and the last fill and pharmacy. One only reported
 says so. A vaccine lists every dose, and a dose recorded as not given stands
 apart. The rules are `src/model/lists.ts`, which Health uses too. With medrec
-0.9.9 and later, what is current is by every source's word instead ("What is
+0.9.9 and later, what is current is by every source's word instead, each
+prescription is its own row, and All lists every record by itself ("What is
 current", below).
 
 Search needs every word, or "a quoted phrase", somewhere in an item's name,
@@ -582,8 +583,9 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   (`scripts/sample/moment.c`, built with `cc`), so the same sources give the
   same bytes on every machine. CI runs 0.9.7's Linux build, checked against its
   SHA-256, and compares. Only `views/views.json` and each person's
-  `events.json`, `bills.json`, `private.json` and `code-names.json` are kept:
-  the app reads no other view. medrec keeps the code names from the committed
+  `events.json`, `bills.json`, `private.json` and `code-names.json` are kept.
+  The app also reads `standing.json`, which medrec 0.9.9 and later write, so the
+  0.9.7 sample has none. medrec keeps the code names from the committed
   files, so they need the published table only when someone gains a code or
   their id changes, and the script then says so: set `ICD10CM_ZIP` to the zip
   `medrec tables list` names, downloaded, for that run. `manifest.json` gives
@@ -598,6 +600,9 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   `scripts/sample/rules.mjs`), made by `node scripts/rule-fixtures.mjs`. They
   delete nothing: medrec works in a new temporary folder, and a file no longer
   part of a case is named for a person to remove. CI runs all four scripts.
+  `test/fixtures/standing/medrec/` is medrec's own fixture for readers of
+  `standing.json`, as `tests/fixtures/standing/` of its 0.9.9 has it: no script
+  here writes it, and it is copied again when medrec's changes.
   Written by hand are only Drive's answers, the app's own requests, and files
   medrec never writes: malformed ones, and ones of a later format.
 - The PNG icons in `public/` (for the manifest and the iPhone Home Screen) are
@@ -840,22 +845,24 @@ dropped from the address.
   and is marked Sources differ where they do and Not every source heard where
   one's word is not known. A condition's or an allergy's records of one code
   are one line, named by the newest. Each prescription is its own row, and
-  those of one medicine are under its name, with its last fill. Medicines on
-  hold, and those ended by their date, have groups of their own: the date
-  ended a prescription no source says is stopped, and a fill after it is shown
-  and changes nothing. The rest is under All, a tap away: every record by
-  itself with what it is (ended, ruled out, a draft, a diagnosis from a visit,
-  a medicine known by its fills alone). A list says how many were entered in
-  error, which it leaves out, and names a source that sends no problem list. A
-  record's page says the same of it. Health, its sheet for a doctor, the
-  refills and the care team use these lists. A record that may not be shown is
-  left out before the rest is worked out: its word, its fill and its source
-  are not shown, and it makes no line current or differ. A refill whose
-  medicine has a private record stays off shared screens, since a private fill
-  can be its newest. The file is made from the records alone, so what the
+  those of one medicine are a group under its name, with its last fill.
+  Medicines on hold, and those ended by their date, have groups of their own:
+  the date ended a prescription no source says is stopped, and a fill after it
+  is shown and changes nothing. The rest is under All, a tap away: every record
+  by itself with what it is (ended, ruled out, a draft, a diagnosis from a
+  visit, a medicine known by its fills alone). A list says how many were
+  entered in error, which it leaves out, and names a source that sends no
+  problem list. A record's page says the same of it. Health, its sheet for a
+  doctor, the refills and the care team use these lists. A record that may not
+  be shown is left out before the rest is worked out: its word, its fill and
+  its source are not shown, and it makes no line current or differ. A refill
+  whose medicine has a private record stays off shared screens, since a private
+  fill can be its newest. The file is made from the records alone, so what the
   household marked or said never makes it stale; it is used, and read for
   again, as code names are. Without one the lists go by each record's own
-  status, and nothing is said of sources that differ.
+  status, and nothing is said of sources that differ. Where medrec's views list
+  one that is stale, still to come or refused, the lists, Health and the sheet
+  say why; a folder of an earlier medrec has none, and they say nothing.
 - **Papers** (`#/papers`, a tab, also from each
   person's Health): every paper in the Drive
   folder, newest first by year, each with the visit it belongs to as a

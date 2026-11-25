@@ -7,7 +7,7 @@ import { parseStanding } from '../src/model/standing';
 import type { MedRecord, PersonIndex } from '../src/model/types';
 import { careTeam, currentOf, doctorSheet, healthOf, openTo, privateOf } from '../src/next/health';
 import { refillsDue } from '../src/next/needs';
-import { inErrorText, isText, noProblemListText, saidLines, wordText } from '../src/ui/standing';
+import { fillText, inErrorText, isText, noProblemListText, saidLines, wordText } from '../src/ui/standing';
 
 // The lists a person sees, made from medrec's own fixture for readers
 // (tests/fixtures/standing/ in its repository, unmodified).
@@ -143,6 +143,13 @@ describe('medicines', () => {
     expect(['Vitamin D3 2,000 unit capsule', ' A-b  (2 %) ', 'Crème Ångström İı', 'Łøß Æther Đ', 'e\u0301clair', 'άλφα ½'].map(fold)).toEqual(['vitamin d3 2 000 unit capsule', 'a b 2', 'creme angstrom ii', 'loss aether d', 'eclair', 'άλφα ½']);
   });
 
+  it('say of a fill that it was given, or what it is', () => {
+    const st = idx.standing!;
+    const wrong = { ...idx, standing: { ...st, inError: new Map([['medication', [id('fillafter')]]]) } };
+    expect([fillText(idx, rec('fillafter')), fillText(idx, rec('fillreturned')), fillText(idx, rec('fillerror')), fillText(wrong, rec('fillafter'))]).toEqual(['Filled', 'Cancelled', 'Entered in error', 'Entered in error']);
+    expect(['unknown', undefined, 'on-hold'].map((status) => fillText(idx, { ...rec('fillafter'), status }))).toEqual(['Filled', 'Filled', 'On hold']);
+  });
+
   it('keep a medicine that only fills are known of as past, once', () => {
     const only = { ...idx, records: idx.records.filter((r) => r.id !== id('endsaaaa')) };
     const l = medicineList(only, DAY);
@@ -242,11 +249,32 @@ describe('a doctor’s sheet', () => {
     expect([on.privateLeft, named(on.onHold), find(on.problems, 'Sample rash').standing!.differs]).toEqual([0, ['Sample patch'], true]);
   });
 
+  it('counts a medicine once, however many prescriptions of it are there beside a private fill', () => {
+    const fill: MedRecord = { ...rec('fillafter'), id: 'r_tabletfill', display: 'Sample tablet', code: rec('noendaaaa').code };
+    const more: PersonIndex = { ...idx, records: [...idx.records, fill], privacy: privately('r_tabletfill') };
+    const off = doctorSheet(more, DAY, false);
+    expect([off.privateLeft, off.medicines.filter((m) => m.name === 'Sample tablet').length, [...off.leftFrom]]).toEqual([1, 2, ['medicines']]);
+    // One of them on hold is of the same medicine.
+    const st = idx.standing!;
+    const held = new Map(st.records).set(id('noendtwice'), { ...st.records.get(id('noendtwice'))!, is: 'on_hold' });
+    const both = { ...more, standing: { ...st, records: held } };
+    expect([named(healthOf(both, DAY).onHold), doctorSheet(both, DAY, false).privateLeft]).toEqual([['Sample tablet', 'Sample patch'], 1]);
+  });
+
   it('names who prescribes what is current, by prescriptions that may be shown', () => {
     const prescribed = (x: PersonIndex, stem: string, prescriber: string): PersonIndex => ({ ...x, records: x.records.map((r): MedRecord => (r.id === id(stem) ? { ...r, fields: { ...r.fields, prescriber } } : r)) });
     const p = prescribed(prescribed(idx, 'noendaaaa', 'Dr. Sample One'), 'endsaaaa', 'Dr. Sample Two');
     expect(careTeam(p, DAY).map((m) => [m.name, m.prescribes])).toEqual([['Dr. Sample One', ['Sample tablet']]]);
     expect(careTeam(p, DAY, (r) => r.id !== id('noendaaaa'))).toEqual([]);
+    // Whoever prescribed a fill may have done it for another prescription of the medicine.
+    const fill: MedRecord = { ...rec('fillafter'), id: 'r_tabletfill', date: '2024-06-01', display: 'Sample tablet', code: rec('noendaaaa').code, fields: { source: 'dispense', prescriber: 'Dr. Sample Three' } };
+    const filled = { ...p, records: [...p.records, fill] };
+    expect(medicineList(filled, DAY).active.filter((m) => m.name === 'Sample tablet').map((m) => [m.prescriber, m.lastFill!.date])).toEqual([
+      ['Dr. Sample One', '2024-06-01'],
+      [undefined, '2024-06-01'],
+    ]);
+    expect(careTeam(filled, DAY).map((m) => m.name)).toEqual(['Dr. Sample One']);
+    expect(medicineList({ ...filled, records: filled.records.filter((r) => r.display !== 'Sample tablet' || r.id === 'r_tabletfill') }, DAY).past.find((m) => m.name === 'Sample tablet')!.prescriber).toBe('Dr. Sample Three');
   });
 });
 

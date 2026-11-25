@@ -402,15 +402,16 @@ code,
   margin-bottom: 8px;
 }
 
-/* A paper's title may be a file's name, one long word: its kind goes under it where both do not fit. */
+/* A title may be one long word: a medicine's name, a file's. */
+.card-head h1 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* A paper's kind goes under its title where both do not fit. */
 .card-head-paper {
   flex-wrap: wrap;
   gap: 4px 12px;
-}
-
-.card-head-paper h1 {
-  min-width: 0;
-  overflow-wrap: anywhere;
 }
 
 .subcard {
@@ -2566,6 +2567,8 @@ a.cal-day:hover .cal-date {
 /* The medicine several prescriptions are rows under. */
 .list-heading {
   margin: 12px 0 0;
+  font-size: inherit;
+  line-height: inherit;
   font-weight: 600;
 }
 

@@ -6,7 +6,7 @@
 // shared views, and off the doctor's sheet unless turned on.
 
 import { isOutOfRange } from '../model/flags';
-import { allergyList, conditionList, medicineList, vaccineList, type AllergyItem, type ConditionItem, type ItemStanding, type ListNotes, type May, type MedicineItem, type VaccineItem } from '../model/lists';
+import { allergyList, conditionList, medicineList, vaccineList, type AllergyItem, type ConditionItem, type ItemStanding, type ListItem, type ListNotes, type May, type MedicineItem, type VaccineItem } from '../model/lists';
 import { latestResults, type LatestResult } from '../model/overview';
 import { isWithdrawn, str } from '../model/records';
 import { recordPrivate, recordsPrivate } from '../model/private';
@@ -221,21 +221,24 @@ export function doctorSheet(index: PersonIndex, today: string, withPrivate: bool
     note(section, xs.length - out.length);
     return out;
   };
-  const noted = <T extends { records: MedRecord[]; standing?: ItemStanding }>(section: SheetSection, all: T[], sheet: T[]): T[] => {
-    if (!withPrivate) note(section, all.filter((x) => privateOf(index, x)).length);
-    return sheet;
+  // Several prescriptions of a medicine, and its fills, are one.
+  const noted = <T extends ListItem & { heading?: string }>(section: SheetSection, all: T[]) => {
+    if (!withPrivate) note(section, new Set(all.filter((x) => privateOf(index, x)).map((x) => x.heading ?? x.key)).size);
   };
+  noted('allergies', h.allergies);
+  noted('medicines', [...h.medicines, ...h.onHold, ...h.endedByDate]);
+  noted('problems', h.conditions);
   const byName = <T extends { name: string }>(xs: T[]) => [...xs].sort((a, b) => a.name.localeCompare(b.name));
   const vitals = recent.filter((x) => isVital(index, x));
   const everyone = careTeam(index, today);
   const team = careTeam(index, today, (r) => !recordPrivate(index, r.id));
   if (!withPrivate) note('careTeam', everyone.filter((m) => !team.some((t) => t.name === m.name)).length);
   return {
-    allergies: noted('allergies', h.allergies, shown.allergies),
-    medicines: noted('medicines', h.medicines, byName(shown.medicines)),
-    onHold: noted('medicines', h.onHold, byName(shown.onHold)),
-    endedByDate: noted('medicines', h.endedByDate, byName(shown.endedByDate)),
-    problems: noted('problems', h.conditions, shown.conditions),
+    allergies: shown.allergies,
+    medicines: byName(shown.medicines),
+    onHold: byName(shown.onHold),
+    endedByDate: byName(shown.endedByDate),
+    problems: shown.conditions,
     notes: shown.notes,
     vaccines: keep('vaccines', h.quiet.vaccines, (x) => privateOf(index, x)),
     labs: keep(

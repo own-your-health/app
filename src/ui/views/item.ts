@@ -28,7 +28,7 @@ import { button, card, chip, command, dotted, driveLink, empty, flagChip, jsonBl
 import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, dateTime, localDay } from '../format';
 import type { Route } from '../router';
-import { differing, isText, saidLines } from '../standing';
+import { differing, fillText, isText, saidLines } from '../standing';
 import { visitContents, visitWhen } from '../visit';
 import { called } from '../../model/people';
 
@@ -381,15 +381,19 @@ function medicationView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   const days = (x: MedRecord) => (typeof x.fields.days_supply === 'number' ? `${x.fields.days_supply} days` : undefined);
   // The record of the medicine that prints the name.
   const named = (field: 'prescriber' | 'pharmacy', text: string | undefined) => providerLink(ctx, idx, (m?.records ?? []).find((x) => tidyName(str(x.fields[field])) === tidyName(text))?.id ?? r.id, [field], text);
-  const state = st ? st.is : idx.standing && isFill(r) ? 'Filled' : m ? (m.active ? 'Taking now' : 'Past medicine') : (statusText(r.status) ?? undefined);
+  // By the sources' words a fill is a fact of its own, beside the prescriptions of its medicine.
+  const fill = idx.standing !== undefined && isFill(r);
+  const state = st ? st.is : fill ? fillText(idx, r) : m ? (m.active ? 'Taking now' : 'Past medicine') : (statusText(r.status) ?? undefined);
+  const prescriber = fill ? str(r.fields.prescriber) : (m?.prescriber ?? str(r.fields.prescriber));
   return [
     head(
       name,
+      null,
+      ['Medicine', state, m?.first && !fill ? `since ${dateText(m.first)}` : dateText(r.date), fromText(ctx, idx, r)],
       st ? differing(m?.standing) : null,
-      ['Medicine', state, m?.first ? `since ${dateText(m.first)}` : dateText(r.date), fromText(ctx, idx, r)],
       str(r.fields.dosage) ? h('p', { class: 'result-value result-value-text' }, str(r.fields.dosage)) : null,
       kv([
-        ['Prescribed by', named('prescriber', m?.prescriber ?? str(r.fields.prescriber))],
+        ['Prescribed by', named('prescriber', prescriber)],
         ['Last filled', m?.lastFill ? [dateText(m.lastFill.date), m.lastFill.pharmacy ? [' at ', named('pharmacy', m.lastFill.pharmacy)] : null, m.lastFill.daysSupply ? ` for ${m.lastFill.daysSupply} days` : null] : undefined],
         ['How the records know of it', m?.known.length ? m.known.join(', ') : undefined],
         ...(st ? [st.says] : []),
@@ -416,8 +420,9 @@ function conditionView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   return [
     head(
       named.name,
-      st ? differing(i?.standing) : i?.refuted ? chip('Ruled out', 'muted') : i?.unconfirmed ? chip('Unconfirmed', 'muted') : null,
+      st ? null : i?.refuted ? chip('Ruled out', 'muted') : i?.unconfirmed ? chip('Unconfirmed', 'muted') : null,
       ['Condition', status, fromText(ctx, idx, r)],
+      st ? differing(i?.standing, i?.unconfirmed ? chip('Unconfirmed', 'muted') : null) : null,
       kv([
         ['Since', i?.first ? dateText(i.first) : r.date ? dateText(r.date) : undefined],
         ['Ended', i?.ended ? dateText(i.ended) : str(r.fields.abatement) ? fieldValue(r.fields.abatement!) : undefined],
@@ -441,8 +446,9 @@ function allergyView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   return [
     head(
       name,
-      st ? differing(i?.standing) : null,
+      null,
       ['Allergy', st ? st.is : statusText(r.status), r.date ? `since ${dateText(r.date)}` : null, fromText(ctx, idx, r)],
+      st ? differing(i?.standing) : null,
       kv([
         ['Reaction', reactions.length ? reactions.join(', ') : undefined],
         ['Risk', crit && Object.hasOwn(CRITICALITY_TEXT, crit) ? sentence(CRITICALITY_TEXT[crit]!) : crit],

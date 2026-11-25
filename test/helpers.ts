@@ -47,13 +47,22 @@ export function paidCase(): Overlay {
   return Object.fromEntries(filesUnder(dir).map((f) => [f, readFileSync(join(dir, f), 'utf8')]));
 }
 
+interface StandingRecord {
+  id: string;
+  display: string;
+  date?: string;
+  code?: object;
+  fields: Record<string, unknown>;
+}
+
 /**
  * The sample with one of its people having medrec's own standing fixture as
  * their records, and nothing else: what is current by every source's word,
  * or, with `standing: false`, the folder as a medrec before 0.9.9 leaves it.
- * `hidden` names the records medrec's list has as private.
+ * `hidden` names the records medrec's list has as private; `change` alters
+ * records, `line` what medrec says is one medicine, and `schema` the layout.
  */
-export function standingCase(person: string, { standing = true, hidden = [] }: { standing?: boolean; hidden?: string[] } = {}): Overlay {
+export function standingCase(person: string, { standing = true, hidden = [], schema, change, line }: { standing?: boolean; hidden?: string[]; schema?: string; change?: (r: StandingRecord) => void; line?: (id: string, line: string) => string } = {}): Overlay {
   const { people } = demoJson<{ people: { id: string; folder: string }[] }>('household.json');
   const views = demoJson<{ people: Record<string, { index: string; text: string | null; linked: Record<string, { index: string; text: string | null }>; files: Record<string, string> }> }>('views/views.json');
   const folder = people.find((p) => p.id === person)!.folder;
@@ -65,7 +74,9 @@ export function standingCase(person: string, { standing = true, hidden = [] }: {
     out[path] = text;
     return md5(text);
   };
-  v.index = put(`${folder}/index.json`, { ...fixture<object>('standing/medrec/index.json'), person, documents: [], imports: [], studies: [] });
+  const index = fixture<{ records: StandingRecord[] }>('standing/medrec/index.json');
+  if (change) index.records.forEach(change);
+  v.index = put(`${folder}/index.json`, { ...index, person, documents: [], imports: [], studies: [] });
   v.text = put(`${folder}/text.json`, { schema: 'medrec-text/v1', person, texts: {} });
   for (const other of Object.values(views.people)) if (other.linked[person]) other.linked[person] = { index: v.index, text: v.text };
   const view = (file: string, body: object): void => {
@@ -80,7 +91,9 @@ export function standingCase(person: string, { standing = true, hidden = [] }: {
   view('bills', { ...viewNow('bills'), bills: {}, copy_of: {}, receipts: [], worth_a_call: [], not_billed: [] });
   view('private', { ...viewNow('private'), records: Object.fromEntries(hidden.map((id) => [id, { area: 'mental_health' }])), documents: {}, events: {}, studies: {}, unreported_studies: [] });
   for (const file of ['code-names', 'providers'] as const) delete v.files[`${file}.json`];
-  if (standing) view('standing', { ...fixture<object>('standing/medrec/standing.json'), person });
+  const said = fixture<{ records: Record<string, { line: string }> }>('standing/medrec/standing.json');
+  if (line) for (const [id, r] of Object.entries(said.records)) r.line = line(id, r.line);
+  if (standing) view('standing', { ...said, person, ...(schema ? { schema } : {}) });
   out['views/views.json'] = JSON.stringify(views);
   return out;
 }

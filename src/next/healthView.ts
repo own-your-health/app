@@ -16,7 +16,7 @@ import { button, card, chip, empty, link, row, type Ctx } from '../ui/components
 import { h, icon, type Child } from '../ui/dom';
 import { count, dateText, localDay } from '../ui/format';
 import { href, type Route } from '../ui/router';
-import { isText, listNotes, prescriptionOf, saidLines, standingMeta } from '../ui/standing';
+import { headedRows, isText, listNotes, prescriptionOf, saidLines, standingMeta, standingNote } from '../ui/standing';
 import { eventsCard } from './eventView';
 import { ageWords, refillRow, vaccinesDueRow, visitRow } from './homeView';
 import { coverageOf, currentOf, doctorSheet, healthOf, icdOf, openTo, privateOf, resultPrivate, trendOf, type HealthItems, type SheetSection } from './health';
@@ -103,7 +103,7 @@ function medicineRows(p: Person, idx: PersonIndex, xs: MedicineItem[], from: Fro
   return underHeadings(xs).flatMap((of) => {
     const [first] = of;
     if (of.length === 1) return [medicineRow(p, idx, first!, from, today, undefined, filledText(first!))];
-    return [h('p', { class: 'list-heading' }, first!.name, filledText(first!) ? h('span', { class: 'small muted' }, ` · ${filledText(first!)}`) : null), ...of.map((m) => medicineRow(p, idx, m, from, today, dosageOf(m) ?? prescriptionOf(m), null))];
+    return [headedRows('h4', first!.name, filledText(first!), of.map((m) => medicineRow(p, idx, m, from, today, dosageOf(m) ?? prescriptionOf(m), null)))];
   });
 }
 
@@ -133,7 +133,7 @@ function dueCard(p: Person, idx: PersonIndex, today: string): HTMLElement {
 }
 
 /** Current: conditions, medicines and allergies, each with when it was last recorded. */
-function currentCard(p: Person, idx: PersonIndex, h0: HealthItems, words: string, from: From, today: string): HTMLElement {
+function currentCard(p: Person, idx: PersonIndex, h0: HealthItems, words: string, from: From, today: string, note: HTMLElement | null): HTMLElement {
   const group = (title: string, rows: HTMLElement[], none: string, notes?: ListNotes) => [h('h3', { class: 'health-group' }, title), rows.length ? rows : h('p', { class: 'small muted' }, none), listNotes(notes)];
   const some = (title: string, xs: MedicineItem[]) => (xs.length ? group(title, medicineRows(p, idx, xs, from, today), '') : null);
   return card(
@@ -143,6 +143,7 @@ function currentCard(p: Person, idx: PersonIndex, h0: HealthItems, words: string
     some('On hold', h0.onHold),
     some('Ended by its date', h0.endedByDate),
     group('Allergies', h0.allergies.map((a) => allergyRow(p, idx, a, from)), `No allergies ${words}.`, h0.notes.allergies),
+    note,
   );
 }
 
@@ -192,7 +193,7 @@ function personPage(ctx: Ctx, p: Person, idx: PersonIndex): HTMLElement {
       h('div', { class: 'health-actions' }, link({ name: 'health', view: 'doctor', who: p.id }, 'Hand to a doctor'), link({ name: 'papers', who: p.id }, 'Papers')),
     ),
     dueCard(p, idx, today),
-    currentCard(p, idx, h0, words, from, today),
+    currentCard(p, idx, h0, words, from, today, standingNote(ctx, idx)),
     card({ title: 'Worth noticing' }, h0.noticing.length ? h0.noticing.map((x) => resultRow(p, idx, x, from)) : empty(`No result out of range in the last two years ${words}.`)),
     eventsCard(ctx, p.id, idx, 3),
     quietCard(p, h0),
@@ -220,11 +221,12 @@ function everyonePage(ctx: Ctx): HTMLElement {
         kept.add(`${p.id}|${key(x)}`);
         return false;
       });
-    for (const x of [...h0.conditions, ...h0.medicines, ...h0.onHold, ...h0.endedByDate, ...h0.allergies]) if (privateOf(idx, x)) kept.add(`${p.id}|${x.key}`);
+    for (const x of [...h0.conditions, ...h0.allergies]) if (privateOf(idx, x)) kept.add(`${p.id}|${x.key}`);
+    for (const m of [...h0.medicines, ...h0.onHold, ...h0.endedByDate]) if (privateOf(idx, m)) kept.add(`${p.id}|${m.heading}`);
     const [conditions, medicines, allergies] = [current.conditions, underHeadings(current.medicines), current.allergies];
     const noticing = shared(h0.noticing, (x) => resultPrivate(idx, x), (x) => x.series.key);
     const v = vaccineNeeds(p.birth_date, idx, today);
-    const refills = shared(refillsDue(idx, today), (r) => r.private, (r) => r.medicine.key);
+    const refills = shared(refillsDue(idx, today), (r) => r.private, (r) => r.medicine.heading);
     const dueNames = [...(v?.due ?? []).map((d) => d.name), ...(v?.flu ? ['Flu'] : []), ...refills.map((r) => `${r.medicine.name} refill`)];
     const next = v?.visits[0];
     // Named as on the person's own Due: one dose by name, several by the visit's age.
@@ -322,6 +324,7 @@ function doctorPage(ctx: Ctx, p: Person, idx: PersonIndex): HTMLElement {
     { class: 'stack health doctor' },
     ...head(ctx, `${p.name}’s health summary`, 'Hand this to a doctor: the current picture in a clinician’s terms.', p.id, 'doctor'),
     h('p', { class: 'small' }, meta(p.birth_date ? `Born ${dateText(p.birth_date)} (${ageWords(p.birth_date, today)})` : null, `From ${coverageOf(idx).words.toLowerCase()}, as of ${dateText(today)}`)),
+    standingNote(ctx, idx),
     hidden ? h('div', { class: 'sheet-private' }, h('p', { class: 'small muted' }, h('span', { role: 'status' }, status), ' This is discretion, not security: the files stay readable in the shared Drive folder.'), toggle) : null,
     h('p', { class: 'sheet-print' }, button('Print', () => window.print(), { small: true })),
     shown,

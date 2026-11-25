@@ -112,7 +112,9 @@ export function idsByKind(raw: unknown): Map<string, string[]> {
 
 /** A person's standing.json. Refused when it is not one, is a newer format, or is another person's. */
 export function parseStanding(raw: unknown, person: string): Standings {
-  if (!isObject(raw) || raw.schema !== 'medrec-standing/v1' || raw.person !== person || !isObject(raw.records)) throw new FolderError('malformed', 'it is not medrec’s standing of this person’s records.');
+  if (!isObject(raw) || typeof raw.schema !== 'string' || !raw.schema.startsWith('medrec-standing/')) throw new FolderError('malformed', 'it is not medrec’s standing of a person’s records.');
+  if (raw.schema !== 'medrec-standing/v1') throw new FolderError('newer_format', 'it is written by a newer medrec. Update the app.');
+  if (raw.person !== person || !isObject(raw.records)) throw new FolderError('malformed', 'it is not medrec’s standing of this person’s records.');
   const records = new Map(Object.entries(raw.records).flatMap(([id, x]) => standing(id, x)));
   const order = idsByKind(raw.order);
   return {

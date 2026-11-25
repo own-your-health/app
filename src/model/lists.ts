@@ -288,7 +288,7 @@ const KNOWN: Record<string, string> = { request: 'prescribed', statement: 'repor
 
 export const isFill = (r: MedRecord): boolean => r.kind === 'medication' && r.fields.source === 'dispense';
 /** A fill that was given, as medrec counts them. */
-const isGiven = (r: MedRecord) => !r.status || r.status === 'completed' || r.status === 'unknown';
+export const isGiven = (r: MedRecord) => !r.status || r.status === 'completed' || r.status === 'unknown';
 
 /** Letters with no accent to take off that medrec folds too. */
 const LETTERS: Record<string, string> = { đ: 'd', ø: 'o', ł: 'l', ı: 'i', ß: 'ss', æ: 'ae' };
@@ -351,10 +351,10 @@ function prescriptions(index: PersonIndex, s: ByStanding, may: May): MedicineLis
     const k = headingOf(index, r);
     fills.set(k, [...(fills.get(k) ?? []), r]);
   }
-  // Its own date and words; of its medicine's fills, what they say of the filling.
+  // Its own date, words and prescriber; of its medicine's fills, what they say of the filling: one may be of another prescription.
   const prescription = (i: ListItem): MedicineItem => {
     const heading = i.standing!.of.line;
-    return { ...medicine({ key: i.key, name: i.name, latest: i.latest, records: [i.latest, ...(fills.get(heading) ?? [])], active: i.standing!.group === 'current' }, heading), first: i.first, standing: i.standing };
+    return { ...medicine({ key: i.key, name: i.name, latest: i.latest, records: [i.latest, ...(fills.get(heading) ?? [])], active: i.standing!.group === 'current' }, heading), first: i.first, prescriber: str(i.latest.fields.prescriber), standing: i.standing };
   };
   const all = s.all.map(prescription);
   const prescribed = new Set(all.map((m) => m.heading));

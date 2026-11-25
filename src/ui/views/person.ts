@@ -15,7 +15,7 @@ import { button, card, chip, command, empty, flagChip, link, row, type Ctx } fro
 import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, localDay, yearOf } from '../format';
 import { SECTION_LABELS, type ListSection, type Route } from '../router';
-import { isText, isWord, listNotes, prescriptionOf, standingMeta } from '../standing';
+import { headedRows, isText, isWord, listNotes, prescriptionOf, standingMeta, standingNote } from '../standing';
 import { called } from '../../model/people';
 
 const PAGE = 200;
@@ -226,7 +226,7 @@ function conditionsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElem
     row({
       route: itemRoute(person.id, i.latest.id),
       title: conditionName(idx, i.latest).name,
-      ...saying(ctx, person, i, i.ended ? `${i.first ? `${dateText(i.first)} to ` : 'ended '}${dateText(i.ended)}` : sinceText(i), is ? [is] : conditionChips(i)),
+      ...saying(ctx, person, i, i.ended ? `${i.first ? `${dateText(i.first)} to ` : 'ended '}${dateText(i.ended)}` : sinceText(i), is ? [is, i.unconfirmed ? chip('Unconfirmed', 'muted') : null] : conditionChips(i)),
     });
   if (all) {
     if (!all.length && !notes?.inError) return card({ title: 'Conditions' }, empty('No conditions recorded.'));
@@ -236,7 +236,7 @@ function conditionsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElem
   return h(
     'div',
     { class: 'stack' },
-    card({ title: 'Active' }, active.length ? active.map((i) => render(i)) : empty('No active conditions recorded.')),
+    card({ title: 'Active' }, active.length ? active.map((i) => render(i)) : empty('No active conditions recorded.'), standingNote(ctx, idx)),
     ended.length ? card({ title: 'Resolved or inactive' }, ended.map((i) => render(i))) : null,
     other.length ? card({ title: 'Ruled out or no status' }, other.map((i) => render(i))) : null,
   );
@@ -248,16 +248,16 @@ function allergiesSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLEleme
     row({
       route: itemRoute(person.id, i.latest.id),
       title: i.name,
-      ...saying(ctx, person, i, meta(i.reactions.length ? i.reactions.join(', ') : null, i.criticality ? CRITICALITY_TEXT[i.criticality] ?? i.criticality : null, sinceText(i)), [is, past ? chip(statusText(i.latest.status) ?? 'Ended', 'muted') : i.criticality === 'high' ? chip('High risk', 'attention') : null]),
+      ...saying(ctx, person, i, meta(i.reactions.length ? i.reactions.join(', ') : null, i.criticality ? CRITICALITY_TEXT[i.criticality] ?? i.criticality : null, sinceText(i)), [is ?? (past ? chip(statusText(i.latest.status) ?? 'Ended', 'muted') : null), !past && i.criticality === 'high' ? chip('High risk', 'attention') : null]),
     });
   if (all) {
     if (!all.length && !notes?.inError) return card({ title: 'Allergies' }, empty('No allergies recorded in these records.'));
-    return h('div', { class: 'stack' }, card({ title: 'Current' }, current.length ? current.map((i) => render(i, false)) : empty('No current allergies in these records.'), listNotes(notes)), allOf(ctx, 'All', all, (i, is) => render(i, false, is)));
+    return h('div', { class: 'stack' }, card({ title: 'Current' }, current.length ? current.map((i) => render(i, false)) : empty('No current allergies in these records.'), listNotes(notes)), allOf(ctx, 'All', all, (i, is) => render(i, i.standing?.group !== 'current', is)));
   }
   return h(
     'div',
     { class: 'stack' },
-    card({ title: 'Allergies' }, current.length ? current.map((i) => render(i, false)) : empty('No allergies recorded in these records.')),
+    card({ title: 'Allergies' }, current.length ? current.map((i) => render(i, false)) : empty('No allergies recorded in these records.'), standingNote(ctx, idx)),
     ended.length ? card({ title: 'No longer active' }, ended.map((i) => render(i, true))) : null,
   );
 }
@@ -300,7 +300,7 @@ function medicinesSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLEleme
   if (all) {
     if (!all.length && !notes?.inError) return card({ title: 'Medicines' }, empty('No medicines yet.'));
     // Prescriptions of one medicine are rows under its name.
-    const rows = (xs: MedicineItem[]) => underHeadings(xs).flatMap((of) => (of.length === 1 ? [render(of[0]!, false)] : [h('p', { class: 'list-heading' }, of[0]!.name, filled(of[0]!) ? h('span', { class: 'small muted' }, ` · ${filled(of[0]!)}`) : null), ...of.map((m) => render(m, false, true))]));
+    const rows = (xs: MedicineItem[]) => underHeadings(xs).flatMap((of) => (of.length === 1 ? [render(of[0]!, false)] : [headedRows('h3', of[0]!.name, filled(of[0]!), of.map((m) => render(m, false, true)))]));
     return h(
       'div',
       { class: 'stack' },
@@ -314,7 +314,7 @@ function medicinesSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLEleme
   return h(
     'div',
     { class: 'stack' },
-    card({ title: 'Active' }, active.length ? active.map((m) => render(m, false)) : empty('No active medicines recorded.')),
+    card({ title: 'Active' }, active.length ? active.map((m) => render(m, false)) : empty('No active medicines recorded.'), standingNote(ctx, idx)),
     past.length ? card({ title: 'Past and other' }, past.map((m) => render(m, true))) : null,
   );
 }
