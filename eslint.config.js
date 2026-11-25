@@ -34,6 +34,12 @@ export default tseslint.config(
     rules: noHtmlSinks,
   },
   {
+    // Run in the PDF worker as it is (src/paper/pdf.ts).
+    files: ['src/**/*.js'],
+    languageOptions: { globals: globals.worker },
+    rules: noHtmlSinks,
+  },
+  {
     // Served as they are: public/theme.js runs in the page's head.
     files: ['public/**/*.js'],
     languageOptions: { globals: globals.browser, sourceType: 'script' },

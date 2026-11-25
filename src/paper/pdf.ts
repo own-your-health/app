@@ -17,6 +17,7 @@ import type { PDFDocumentLoadingTask, PDFDocumentProxy, PDFPageProxy, RenderTask
 import workerFile from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 import { AppFileError, appFile } from './files';
 import { LEFT_OUT } from './leftOut';
+import startCode from './pdf-start.js?raw';
 
 /** Where the build puts pdf.js's fonts and character maps, and its readers of older picture formats (vite.config.ts). */
 const FILES = `${import.meta.env.BASE_URL}pdfjs/${__PDFJS_VERSION__}/`;
@@ -59,12 +60,6 @@ const filesAt = (dir: string): string => new URL(`${FILES}${dir}/`, location.hre
 // it does not load leaves the picture out. Loaded as the worker starts, they
 // are there when a page asks.
 const READERS = ['openjpeg_nowasm_fallback.js', 'jbig2_nowasm_fallback.js'];
-const READERS_SAID = 'oyh-readers';
-
-// What pdf.js warns of as it leaves a part of a page out and goes on. A warning
-// may quote the file: it is looked at in the worker, and only that one came is
-// said to this page, not of which page it was.
-const LEFT_OUT_SAID = 'oyh-left-out';
 
 interface Started {
   worker: Worker;
@@ -77,10 +72,7 @@ interface Started {
 
 async function startWorker(signal: AbortSignal, leftOut: () => void): Promise<Started> {
   const code = await appFile(fetched(workerFile, signal).then((res) => res.text()));
-  const loads = READERS.map((f) => `import(${JSON.stringify(filesAt('wasm') + f)})`).join(',');
-  const say = (ok: boolean) => `() => self.postMessage({ ${JSON.stringify(READERS_SAID)}: ${ok} })`;
-  const hear = `console.warn = (w) => { if (${JSON.stringify(LEFT_OUT)}.some((x) => String(w).includes(x))) self.postMessage({ ${JSON.stringify(LEFT_OUT_SAID)}: true }); };`;
-  const url = URL.createObjectURL(new Blob([`${hear}\nPromise.all([${loads}]).then(${say(true)}, ${say(false)});\n`, code], { type: 'text/javascript' }));
+  const url = URL.createObjectURL(new Blob([startCode, code], { type: 'text/javascript' }));
   ours.add(url);
   let worker: Worker;
   try {
@@ -90,13 +82,14 @@ async function startWorker(signal: AbortSignal, leftOut: () => void): Promise<St
   }
   const ready = new Promise<void>((resolve, reject) => {
     worker.addEventListener('message', ({ data }: MessageEvent<Record<string, unknown> | undefined>) => {
-      if (data?.[READERS_SAID] === true) resolve();
-      else if (data?.[READERS_SAID] === false) reject(new AppFileError('A picture reader did not load.'));
-      else if (data?.[LEFT_OUT_SAID]) leftOut();
+      if (data?.['oyh-readers'] === true) resolve();
+      else if (data?.['oyh-readers'] === false) reject(new AppFileError('A picture reader did not load.'));
+      else if (data?.['oyh-left-out']) leftOut();
     });
   });
   const failed = new Promise<never>((_, reject) => worker.addEventListener('error', () => reject(new PdfError('This browser could not start the app’s PDF reader.')), { once: true }));
   for (const p of [ready, failed]) p.catch(() => undefined);
+  worker.postMessage({ 'oyh-start': { readers: READERS.map((f) => filesAt('wasm') + f), leftOut: LEFT_OUT } });
   return {
     worker,
     ready,
@@ -141,7 +134,7 @@ export async function openPdf(bytes: Uint8Array, signal: AbortSignal, leftOut: (
   const { worker, ready, failed, stop } = await starting;
   const aborted = new Promise<never>((_, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true }));
   aborted.catch(() => undefined);
-  // Its warnings may quote the file: the worker's are heard there (LEFT_OUT), and none is logged.
+  // Its warnings may quote the file: the worker's are heard there (pdf-start.js), and none is logged.
   const port = pdfjs.PDFWorker.create({ port: worker, verbosity: pdfjs.VerbosityLevel.WARNINGS });
   const needs: Needs = { missing: undefined };
   /** Its fonts and character maps, from the app's own files. Where one does not load, pdf.js goes on without it, and does not ask again. */
