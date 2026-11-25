@@ -94,6 +94,8 @@ export class Store {
   private runs = 0;
   /** Whether views.json was there to read. */
   private hasViews = false;
+  /** Whose names for codes views.json lists and the folder does not give yet. */
+  private lateNames = new Set<string>();
   /** Who has no index.json: nothing is imported for them yet. */
   private absent = new Set<string>();
   private texts = new Map<string, Promise<PersonText | null>>();
@@ -149,6 +151,7 @@ export class Store {
     this.household = next.household;
     this.indexes = next.indexes;
     this.absent = next.absent;
+    this.lateNames = next.lateNames;
     this.indexErrors = next.indexErrors;
     this.hasViews = next.hasViews;
     this.viewsError = next.viewsError;
@@ -285,7 +288,11 @@ export class Store {
     }
   }
 
-  /** medrec's names for each person's codes (0.9.4 and later). Without ones that read and match the folder, the sources' words stand, and nothing says so. */
+  /**
+   * medrec's names for each person's codes (0.9.4 and later). Without ones
+   * that read and match the folder, the sources' words stand, and nothing
+   * says so; names that may still come are read for again.
+   */
   private async loadCodeNames(views: Record<string, unknown> | null, household: Promise<string | null | undefined>): Promise<void> {
     if (views === null) return;
     await Promise.all(
@@ -294,11 +301,13 @@ export class Store {
         if (!index) return;
         try {
           const view = viewOf(views, p.id, 'code-names.json');
-          if (!view || (await this.viewState(p, view, household))) return;
-          const raw = await readJson(this.folder, `views/${p.id}/${view.name}`);
-          if (raw !== null) index.codeNames = parseCodeNames(raw, p.id);
-        } catch {
-          // The sources' words stand.
+          if (!view) return;
+          const raw = (await this.viewState(p, view, household)) ? null : await readJson(this.folder, `views/${p.id}/${view.name}`);
+          if (raw === null) this.lateNames.add(p.id);
+          else index.codeNames = parseCodeNames(raw, p.id);
+        } catch (e) {
+          // What is refused stays so until medrec writes it again.
+          if (!(e instanceof FolderError)) this.lateNames.add(p.id);
         }
       }),
     );
@@ -386,6 +395,11 @@ export class Store {
   /** Whether a hold may end by itself soon: medrec is writing, or the read failed. */
   holdMayEnd(): boolean {
     return [...this.indexes.values()].some((i) => isHeld(i) && (i.privacy?.kind !== 'held' || MAY_END.has(i.privacy.why)));
+  }
+
+  /** Whether another read may bring something soon: the end of a hold, or the names of someone's codes. */
+  mayBring(): boolean {
+    return this.holdMayEnd() || this.lateNames.size > 0;
   }
 
   /** Whether the Mac's answer to a request is still to come, or to be seen. */

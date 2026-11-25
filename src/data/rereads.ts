@@ -1,7 +1,8 @@
 // When an open app reads its records again: once a request it saw waiting has
 // finished, and while someone's items are held back for a reason that may end
-// soon. A try that fails, or leaves the hold, is followed by others with twice
-// the wait each time, and then by none until the app comes to the front.
+// soon, or the names of their codes are still to come. A try that fails, or
+// leaves that so, is followed by others with twice the wait each time, and
+// then by none until the app comes to the front.
 
 import { FolderError } from '../model/parse';
 import type { Store } from './store';
@@ -26,7 +27,7 @@ export class Rereads {
 
   /** Whether the timer should look now. */
   due(): boolean {
-    return (this.store.owed || this.store.holdMayEnd()) && this.tries < TRIES && this.now() >= this.nextAt;
+    return (this.store.owed || this.store.mayBring()) && this.tries < TRIES && this.now() >= this.nextAt;
   }
 
   /** Reads the records again if that is due; at the front, also while anyone's items are held back for any reason. */
@@ -44,7 +45,7 @@ export class Rereads {
       return;
     }
     this.said = false;
-    if (!this.store.owed && !this.store.holdMayEnd()) this.tries = this.nextAt = 0;
+    if (!this.store.owed && !this.store.mayBring()) this.tries = this.nextAt = 0;
   }
 
   private failed(e: unknown): void {
