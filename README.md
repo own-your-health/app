@@ -645,8 +645,9 @@ dropped from the address.
   when the MD5s in `views/views.json` are the folder's, the person's
   `marks.json` too, as for private items. Without one, or for a code it does
   not name, the source's words show, and nothing says so. While a file
-  `views/views.json` lists is not there yet or could not be read, the records
-  are read again with the same waits as after a Refresh.
+  `views/views.json` lists is not there yet, is stale or could not be read,
+  the records are read again with the same waits as after a Refresh; one the
+  app refuses (a newer layout, say) is not waited for.
 - **Papers** (`#/papers`, a tab, also from Recently on Home and each
   person's Health): every paper in the Drive
   folder, newest first by year, each with the visit it belongs to as a
