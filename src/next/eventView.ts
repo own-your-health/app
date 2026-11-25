@@ -21,7 +21,7 @@ import { href, type Route } from '../ui/router';
 import { eventConfidence, eventMoney, eventOf, kindText, paidAtCounter, eventPrivate, ruleText, type CareEvent, type EventMoney } from './event';
 import { groupedByMedrec, personEvents } from './load';
 import { paidControl } from './markPaid';
-import { paidText, unreadText } from './money';
+import { NO_CLAIM_EXPECTED, paidText, selfPay, unreadText } from './money';
 import { namedOn } from './providerNames';
 import { placeLink, providerRoute } from './providerView';
 import { called } from '../model/people';
@@ -111,7 +111,7 @@ function owedBills(idx: PersonIndex, e: CareEvent, m: EventMoney): { provider: s
   return m.charges
     .filter((c) => (c.share ?? 0) > 0)
     .map((c) => {
-      const bill = bills.find((b) => sameProvider(c.provider, b.provider)) ?? billerOf(m, bills, (b) => b.provider);
+      const bill = bills.find((b) => sameProvider(c.provider, b.provider)) ?? billerOf(m, bills.filter((b) => !b.medrec?.selfPay), (b) => b.provider);
       return { provider: c.provider, share: c.share!, ...(bill ? { bill, now: bill.settled || bill.unread.length ? bill : standsFor(bill, all) } : {}) };
     });
 }
@@ -291,7 +291,7 @@ function billsCard(ctx: Ctx, idx: PersonIndex, e: CareEvent, m: EventMoney): HTM
     const part = bill && !bill.settled && bill.payments.length > 0;
     const ch = m.charges.find((c) => sameProvider(c.provider, d.organization));
     const says = ch?.share;
-    const match = due === undefined || says === undefined ? null : due === says ? chip('Matches the claim', 'ok') : chip(`Claim says ${money(says)}`, bill?.settled ? 'muted' : 'attention');
+    const match = selfPay(idx, d) ? chip(NO_CLAIM_EXPECTED, 'muted') : due === undefined || says === undefined ? null : due === says ? chip('Matches the claim', 'ok') : chip(`Claim says ${money(says)}`, bill?.settled ? 'muted' : 'attention');
     return row({
       route: itemRoute(idx.person, d.id),
       title: d.doc_type === 'receipt' ? `Receipt from ${d.organization ?? 'a provider'}` : `Bill from ${d.organization ?? 'a provider'}`,
@@ -301,7 +301,7 @@ function billsCard(ctx: Ctx, idx: PersonIndex, e: CareEvent, m: EventMoney): HTM
       extra: bill && (d.id === bill.doc.id || !bills.some((x) => x.id === bill.doc.id)) ? paidControl(ctx, idx, bill) : null,
     });
   };
-  const unbilled = billerOf(m, bills.filter((d) => d.doc_type === 'bill'), (d) => d.organization) ? [] : owed.filter((c) => !bills.some((d) => sameProvider(c.provider, d.organization)));
+  const unbilled = billerOf(m, bills.filter((d) => d.doc_type === 'bill' && !selfPay(idx, d)), (d) => d.organization) ? [] : owed.filter((c) => !bills.some((d) => sameProvider(c.provider, d.organization)));
   return card(
     { title: 'Bills and payments' },
     bills.map(billRow),

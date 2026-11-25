@@ -1,7 +1,7 @@
 {
   "schema": "medrec-index/v1",
   "person": "p_zkcd2d4s5sbgiehhueoj",
-  "rev": 10,
+  "rev": 11,
   "documents": [
     {
       "id": "d_cxq32wjwu7if44eetisk",
@@ -697,6 +697,144 @@
         "method": "file",
         "filed_at": "2026-11-13T20:00:00Z",
         "raw_path": "Val Example/Claims/2026/2026-07-20_bill_example_therapy_Statement from Example Therapy, july.pdf",
+        "classified_by": "hand",
+        "filed_by": "medrec 0.9.7"
+      }
+    },
+    {
+      "id": "d_4wvfptbc5eaoqd6cyjqm",
+      "path": "Val Example/Claims/2026/2026-06-08_bill_example_walk_in_clinic_Statement from Example Walk-In Clinic, june.pdf",
+      "sha256": "3595a743d8defd6699971875b607f5c48dc0f4af7926fbe0241655687441bdad",
+      "md5": "a58db5e61e9009f50569498a9c47bb15",
+      "size": 840,
+      "media_type": "application/pdf",
+      "pages": 1,
+      "original_name": "Statement from Example Walk-In Clinic, june.pdf",
+      "doc_type": "bill",
+      "date": "2026-06-08",
+      "organization": "Example Walk-In Clinic",
+      "filed_at": "2026-11-13T20:00:00Z",
+      "origin": {
+        "kind": "file",
+        "name": "Statement from Example Walk-In Clinic, june.pdf",
+        "action": "copied"
+      },
+      "text": {
+        "chars": 105,
+        "engines": [
+          "pdftotext sample"
+        ]
+      },
+      "minhash": [
+        381397369,
+        739486122,
+        1015266352,
+        262715776,
+        23673324,
+        271108563,
+        472134896,
+        96829207,
+        491556184,
+        71955686,
+        720509743,
+        237523206,
+        344463272,
+        205182696,
+        129398837,
+        655233015,
+        126231227,
+        133239434,
+        547738014,
+        184833808,
+        314039642,
+        688913547,
+        268413998,
+        396297138,
+        22532264,
+        170846869,
+        427732633,
+        146046940,
+        67120004,
+        215911993,
+        119259610,
+        88862032,
+        151580951,
+        66714680,
+        383062309,
+        1130452838,
+        104005918,
+        556191451,
+        63644856,
+        580301489,
+        27813286,
+        222302245,
+        54580424,
+        1798359,
+        344168983,
+        400041194,
+        346170027,
+        314292835,
+        66973429,
+        15175548,
+        47665574,
+        256805551,
+        142582757,
+        480701899,
+        163208626,
+        59152072,
+        287524226,
+        76113943,
+        509117317,
+        329912891,
+        21691209,
+        52073791,
+        133484954,
+        132626010
+      ],
+      "classification": {
+        "person": {
+          "proposal": {
+            "value": "p_zkcd2d4s5sbgiehhueoj",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "date": {
+          "proposal": {
+            "value": "2026-06-08",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "doc_type": {
+          "proposal": {
+            "value": "bill",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "organization": {
+          "proposal": {
+            "value": "Example Walk-In Clinic",
+            "score": 99,
+            "confidence": "given"
+          }
+        }
+      },
+      "statement": {
+        "statement_date": "2026-06-08",
+        "amount_due": {
+          "amount": "55.00",
+          "currency": "USD"
+        }
+      },
+      "provenance": {
+        "source": {
+          "kind": "scan"
+        },
+        "method": "file",
+        "filed_at": "2026-11-13T20:00:00Z",
+        "raw_path": "Val Example/Claims/2026/2026-06-08_bill_example_walk_in_clinic_Statement from Example Walk-In Clinic, june.pdf",
         "classified_by": "hand",
         "filed_by": "medrec 0.9.7"
       }

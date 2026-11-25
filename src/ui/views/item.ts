@@ -20,7 +20,7 @@ import { claimContext, visitKind, visitOf } from '../../model/visits';
 import { tidyName } from '../../model/words';
 import { partOfEvent } from '../../next/eventView';
 import { markedPayments, paidControl, viewOnlyNote } from '../../next/markPaid';
-import { paymentText, unreadText } from '../../next/money';
+import { paymentText, selfPay, unreadText } from '../../next/money';
 import { providerLink } from '../../next/providerView';
 import { rangeBar, resultChart } from '../chart';
 import { button, card, chip, command, dotted, driveLink, empty, flagChip, jsonBlock, kv, link, outLink, phoneLink, row, type Ctx } from '../components';
@@ -596,6 +596,7 @@ function documentView(ctx: Ctx, idx: PersonIndex, d: MedDocument): Child[] {
         ['Statement date', d.statement?.statement_date ? dateText(d.statement.statement_date) : undefined],
         ['Paid', d.doc_type === 'receipt' ? (formatMoney(d.statement?.amount_paid) ?? 'The amount could not be read') : bill?.payments.length ? bill.payments.map((p) => paymentText(p, true)).join(', ') : bill ? unreadText(bill.unread) : undefined],
         ['Paid on', d.doc_type === 'receipt' && d.statement?.paid_on ? dateText(d.statement.paid_on) : undefined],
+        ['Claim', d.doc_type === 'bill' && selfPay(idx, d) ? 'None expected: no insurer is billed for this' : undefined],
         ['Left to pay', bill && (bill.settled || bill.payments.length) ? (bill.settled ? 'Nothing' : formatMoney(bill.left)) : undefined],
         ['Later statement', later ? ['Its balance includes this one: ', link({ name: 'item', person: idx.person, id: later.id }, documentTitle(later))] : undefined],
         ['Same statement as', same ? link({ name: 'item', person: idx.person, id: same.id }, documentTitle(same)) : undefined],

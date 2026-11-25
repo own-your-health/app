@@ -674,7 +674,9 @@ dropped from the address.
   claim backs, its figures and the words to say on the phone. It then lists
   the bills that ask less, the payments at a visit above what its claims say,
   and the lines the plan left out of a claim's totals in the last year, which
-  need nothing. Everyone's view leaves private bills off, and a share whose
+  need nothing. A bill no insurer is billed for (medrec's `self_pay`, 0.9.6 and
+  later) is to pay and not worth a call, says "No claim expected", and stands
+  for no share of its visit's. Everyone's view leaves private bills off, and a share whose
   only bill is private is listed there as any with no bill listed. One
   person's view lists them, marked.
 

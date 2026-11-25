@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest';
 import type { BillCall, BillState } from '../src/model/bills';
 import type { MedDocument, PersonIndex } from '../src/model/types';
 import { householdEvents } from '../src/next/calendar';
-import { anyBill, billPrivate, byDue, callsSummary, deskPayments, explainedLines, forShared, mayBePaid, openBills, overAsked, paidBills, paidText, partText, paymentText, toPay, unbilledShares, unreadText, worthACall, type OpenBill } from '../src/next/money';
+import { anyBill, billPrivate, byDue, callsSummary, deskPayments, explainedLines, forShared, mayBePaid, openBills, overAsked, paidBills, paidText, partText, paymentText, selfPay, toPay, unbilledShares, unreadText, worthACall, type OpenBill } from '../src/next/money';
+import { readyText } from '../src/next/moneyView';
 import { demo, personNamed } from './demo-data';
 
 const TODAY = '2026-11-22';
@@ -168,6 +169,32 @@ describe('bills as medrec’s list has them', () => {
     // With no claim of medrec's, the visit's own claims can match it.
     const visit = events(name).map((x) => ({ ...x, money: { ...x.money, charges: x.money.charges.map((c) => ({ ...c, share: 12000 })) } }));
     expect(says(open(state(), [], visit))).toEqual(['matches', 12000, true, false]);
+  });
+
+  it('are to pay, and set beside no claim, where no insurer is billed', () => {
+    for (const calls of [[], call('no_claim'), call('asks_more', '58.00')]) {
+      const b = open(state({ selfPay: true }), calls)!;
+      expect([...says(b), toPay(b)]).toEqual(['self_pay', undefined, false, false, true]);
+    }
+    const idx: PersonIndex = { ...sam, bills: { states: new Map([...sam.bills!.states, [billing!.id, state({ selfPay: true })]]), calls: [], marksUnreadable: false } };
+    // Its visit's shares are another's to bill: it is no billing company's bill for them.
+    expect([shares(name, sam), shares(name, idx)].map((s) => s.filter(([start]) => start === '2026-07-09'))).toEqual([[], [['2026-07-09', 'Example Lab', 5070]]]);
+    expect([selfPay(idx, billing!), selfPay(idx, center!), selfPay(sam, billing!), selfPay({ ...sam, bills: undefined }, billing!)]).toEqual([true, false, false, false]);
+    // A copy of the statement is the same bill; a paper that is in the list itself goes by its own line.
+    expect([selfPay(idx, { ...center!, id: 'd_copy', same_statement_as: billing!.id }), selfPay(idx, { ...center!, same_statement_as: billing!.id })]).toEqual([true, false]);
+  });
+
+  it('say how many ask what their claims say, and for how many none is expected', () => {
+    const text = (...v: OpenBill['verdict'][]) => readyText(v.map((verdict) => ({ verdict })));
+    expect([text('matches'), text('matches', 'matches'), text('self_pay'), text('self_pay', 'self_pay'), text('unmatched'), text('unmatched', 'self_pay')]).toEqual([
+      'asking what its claim says you owe.',
+      'each asking what its claim says you owe.',
+      'for which no claim is expected.',
+      'for which no claim is expected.',
+      'with no one claim to set beside.',
+      'with no one claim to set beside.',
+    ]);
+    expect([text('matches', 'unmatched'), text('matches', 'matches', 'unmatched'), text('matches', 'self_pay')]).toEqual(['1 of them asking what its claim says you owe.', '2 of them asking what their claims say you owe.', '1 of them asking what its claim says you owe, and 1 for which no claim is expected.']);
   });
 
   it('are open with what is left, and not once settled or replaced', () => {
