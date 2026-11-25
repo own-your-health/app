@@ -6,8 +6,9 @@ import { claimCategory, claimProvider } from '../model/claims';
 import type { MedrecEvent, MedrecEvents } from '../model/events';
 import type { Household, MedDocument, MedRecord, PersonIndex } from '../model/types';
 import { knownArea } from '../model/private';
-import { providerKey, sameProvider } from '../model/providers';
-import { ownNames, str } from '../model/records';
+import { practiceOf } from '../model/practices';
+import { nameKey, sameProvider } from '../model/providers';
+import { str } from '../model/records';
 import { eventPrivate, nameEvent, type CareEvent, type ClaimRole, type EventKind } from './event';
 import { tidyName } from '../model/words';
 
@@ -47,15 +48,18 @@ function kindOf(m: MedrecEvent, visit: MedRecord | undefined): { kind: EventKind
  * shares the record's organization, CLI and FHIR base: another person's, or
  * another practice of this person's. A place the visit or a claim names is
  * the event's whatever the sources are called.
+ *
+ * To remove with medrec 0.9.6, which says the source a record came through:
+ * `SignIn` takes that source, and its events need no check.
  */
 function placeHolds(place: string, e: CareEvent, household: Household, person: string): boolean {
   const said = [...e.visits.flatMap((v) => [str(v.record.fields.location), str(v.record.fields.service_provider)]), ...e.claims.flatMap((c) => [c.provider, claimProvider(c.record)])];
   if (said.some((x) => sameProvider(x, place))) return true;
-  const key = providerKey(place);
-  const named = household.sources.filter((s) => providerKey(s.organization_name) === key);
+  const key = nameKey(place);
+  const named = household.sources.filter((s) => key && nameKey(s.organization_name) === key);
   if (named.length && !named.some((s) => s.person === person)) return false;
-  const came = [...e.visits.map((v) => v.record), ...e.recorded].flatMap((r) => r.provenance.map((p) => ownNames(household, person, p.source).map(providerKey)));
-  return came.some((names) => names.length === 1 && names[0] === key) || !came.some((names) => names.length > 1 && names.includes(key));
+  const came = [...e.visits.map((v) => v.record), ...e.recorded].flatMap((r) => r.provenance.map((p) => practiceOf(household, person, p.source)));
+  return came.some((p) => p.kind === 'named' && nameKey(p.name) === key) || !came.some((p) => p.kind === 'shared' && p.names.some((n) => nameKey(n) === key));
 }
 
 /**

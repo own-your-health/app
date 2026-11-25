@@ -2,7 +2,6 @@
 // have had, newest first, and a change that fell on someone's birthday.
 
 import { birthWords, coverageHistory, type CoverageSegment } from '../model/coverage';
-import { organizationName } from '../model/records';
 import { card, row, type Ctx } from '../ui/components';
 import { h } from '../ui/dom';
 import { dateText } from '../ui/format';
@@ -23,12 +22,10 @@ export function coverageCard(ctx: Ctx, person: string): HTMLElement | null {
   const idx = ctx.store.index(person);
   const segments = idx ? coverageHistory(idx, ctx.store.household, person) : [];
   if (!segments.length) return null;
-  const from = (s: CoverageSegment) => s.organizations.flatMap((o) => organizationName(ctx.store.household, person, o) ?? []);
   return card(
     { title: 'Coverage', class: 'coverage-history' },
     segments.map((s) => {
       const born = birthWords(s, dateText);
-      const sources = from(s);
       return row({
         route: { name: 'item', person, id: s.records[0]!.id },
         title: coverageName(s),
@@ -37,7 +34,7 @@ export function coverageCard(ctx: Ctx, person: string): HTMLElement | null {
           'div',
           { class: 'coverage-extra' },
           born ? h('p', { class: 'small coverage-born' }, born) : null,
-          sources.length ? h('p', { class: 'small muted' }, `In records from ${sources.join(' and ')}.`) : null,
+          s.sources.length ? h('p', { class: 'small muted' }, `In records from ${s.sources.join(' and ')}.`) : null,
         ),
       });
     }),

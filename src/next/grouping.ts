@@ -11,7 +11,8 @@ import { knownArea } from '../model/private';
 import { sameProvider } from '../model/providers';
 import { day, decimalCents, isWithdrawn, sortByDateDesc, str } from '../model/records';
 import type { Household, MedRecord, PersonIndex } from '../model/types';
-import { recentVisits, sameSignIn, visitPlaces, visitTimeline, type Visit } from '../model/visits';
+import { sameSignIn } from '../model/practices';
+import { recentVisits, visitPlaces, visitTimeline, type Visit } from '../model/visits';
 
 import { eventMoney, eventPrivate, nameEvent, type CareEvent, type ClaimRole, type Confidence, type EventKind, type Rule } from './event';
 

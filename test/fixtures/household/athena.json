@@ -1,5 +1,6 @@
 {
   "sources": [
+    {"id": "s_no_id", "kind": "portal", "person": "p_one", "cli": "athena", "organization_name": "Example Walk-in Clinic"},
     { "id": "s_one", "kind": "fhir", "person": "p_one", "cli": "athena", "organization": "900001", "organization_name": "Example Eye Care", "fhir_base": "https://athena.example.test/fhir/r4/" },
     { "id": "s_two", "kind": "fhir", "person": "p_one", "cli": "athena", "organization": "900002", "organization_name": "Example Hearing Clinic", "fhir_base": "https://athena.example.test/fhir/r4/" },
     { "id": "s_unnamed", "kind": "fhir", "person": "p_one", "cli": "athena", "organization": "900003", "fhir_base": "https://athena.example.test/fhir/r4/" },

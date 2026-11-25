@@ -7,8 +7,9 @@
 // visit.
 
 import { claimLines, claimProvider, claimResultIds, claimVisitId, isContractClaim } from './claims';
+import { practiceOf, practiceOrId, sameSignIn, type SignIn } from './practices';
 import { sameProvider } from './providers';
-import { day, isWithdrawn, ownNames, practiceName, sortByDateDesc, str, type SignIn } from './records';
+import { day, isWithdrawn, sortByDateDesc, str } from './records';
 import type { Household, ImagingStudy, MedDocument, MedRecord, PersonIndex, Provenance } from './types';
 import { placeName } from './words';
 
@@ -72,19 +73,14 @@ function window(r: MedRecord): { start?: string; end?: string } {
 
 const within = (d: string | undefined, v: { start?: string; end?: string }) => !!d && !!v.start && d >= v.start && d <= (v.end ?? v.start);
 
-function through(household: Household, person: string, provenance: Provenance[]): Through[] {
-  return provenance.flatMap(({ source: { organization_id, cli, fhir_base } }) => (organization_id ? [{ organization_id, cli, fhir_base, shared: ownNames(household, person, { organization_id, cli, fhir_base }).length > 1 }] : []));
-}
-
-/** Whether two records came through one sign-in, as far as each says. */
-export function sameSignIn(a: SignIn, b: SignIn): boolean {
-  const agree = (x: string | undefined, y: string | undefined) => !x || !y || x.replace(/\/+$/, '') === y.replace(/\/+$/, '');
-  return a.organization_id === b.organization_id && agree(a.cli, b.cli) && agree(a.fhir_base, b.fhir_base);
+/** The sign-ins some provenance names. */
+export function through(household: Household, person: string, provenance: Provenance[]): Through[] {
+  return provenance.flatMap(({ source: { organization_id, cli, fhir_base } }) => (organization_id ? [{ organization_id, cli, fhir_base, shared: practiceOf(household, person, { organization_id, cli, fhir_base }).kind === 'shared' }] : []));
 }
 
 /** The names of a visit's practice and place: never a records connection's, which many practices go by. */
 export function visitPlaces(v: Pick<Visit, 'record' | 'through'>, household: Household, person: string): string[] {
-  const practices = v.through.map((t) => practiceName(household, person, t) ?? (t.shared ? undefined : t.organization_id));
+  const practices = v.through.map((t) => practiceOrId(household, person, t));
   return [...practices, str(v.record.fields.location), str(v.record.fields.service_provider)].map(placeName).filter((x): x is string => !!x);
 }
 

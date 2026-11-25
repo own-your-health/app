@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { latestResults } from '../src/model/overview';
 import { isOutOfRange, parseRange, resultFlag } from '../src/model/flags';
 import { recentVisits } from '../src/model/visits';
-import { organizationName, originNames } from '../src/model/records';
+import { practiceName, practiceOrId } from '../src/model/practices';
+import { originNames } from '../src/model/records';
 import type { MedRecord, PersonIndex } from '../src/model/types';
 import { demo, personNamed } from './demo-data';
 
@@ -106,8 +107,8 @@ describe('what is current', () => {
 describe('where a record came from', () => {
   it('names the household’s source for the organization, or says how it was filed', () => {
     const robin = personNamed(household, 'Robin Example');
-    expect(organizationName(household, robin.id, 'example-health')).toBe('Example Health');
-    expect(organizationName(household, robin.id, 'unknown-slug')).toBe('unknown-slug');
+    expect(practiceName(household, robin.id, { organization_id: 'example-health' })).toBe('Example Health');
+    expect(practiceOrId(household, robin.id, { organization_id: 'unknown-slug' })).toBe('unknown-slug');
     const scan = { source: { kind: 'scan' }, method: 'scan', filed_at: '2026-01-01T00:00:00Z', filed_by: 'medrec' };
     const fhir = index('Robin Example').records[0]!.provenance[0]!;
     expect(originNames([fhir, fhir, scan], household, robin.id)).toEqual(['Example Health', 'Scanned']);

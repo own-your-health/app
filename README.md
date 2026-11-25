@@ -559,7 +559,7 @@ dropped from the address.
   a headline; they show only in the visit's Details (`src/model/words.ts`).
   A portal platform's name ("athenahealth (all practices)") is never a
   place; a visit that names no other is at its sign-in's practice
-  (`practiceName` in `src/model/records.ts`), and has no place when that is
+  (`src/model/practices.ts`), and has no place when that is
   not known. Only the person's own sources name their practices. Where
   several of them share one organization, CLI and FHIR base under different
   names, which is all a record says of its source, they name none, and two
