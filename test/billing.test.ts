@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { billList, claimsWithBills, owedByProvider } from '../src/model/billing';
+import { parseBills } from '../src/model/bills';
+import { billList, claimsWithBills, openList, standsFor } from '../src/model/billing';
 import { fromCents, toCents } from '../src/model/records';
 import type { MedDocument, MedRecord, PersonIndex } from '../src/model/types';
 import { demo, personNamed } from './demo-data';
@@ -28,7 +29,13 @@ function claim(provider: string, date: string, share: string): MedRecord {
     provenance: [],
   };
 }
-const only = (records: MedRecord[], documents: MedDocument[]) => ({ ...index('Robin Example'), records, documents }) as PersonIndex;
+const only = (records: MedRecord[], documents: MedDocument[]) => ({ ...index('Robin Example'), bills: undefined, records, documents }) as PersonIndex;
+
+/** The same, with medrec's list of these bills. */
+const listed = (documents: MedDocument[], bills: Record<string, object>) => ({
+  ...only([], documents),
+  bills: parseBills({ schema: 'medrec-bills/v1', person: 'p_x', bills: Object.fromEntries(Object.entries(bills).map(([id, b]) => [id, { currency: 'USD', paid: [], settled: false, ...b }])), worth_a_call: [] }, 'p_x'),
+});
 
 describe('money in cents', () => {
   it('reads and writes decimal strings without floats', () => {
@@ -38,22 +45,29 @@ describe('money in cents', () => {
   });
 });
 
-describe('what is owed', () => {
-  it('takes the newest statement of each provider and account, the paid one apart', () => {
-    const owed = owedByProvider(index('Robin Example'));
-    expect(owed.due.map((o) => [o.provider, o.bill.amount?.amount, o.bill.due])).toEqual([
+const openOf = (idx: PersonIndex) => openList(idx).map((b) => [b.provider, b.left?.amount, b.due]);
+const receiptOf = (org: string, date: string, extra: Partial<MedDocument> = {}) => ({ ...bill(org, date, '0.00'), doc_type: 'receipt', statement: undefined, ...extra });
+
+describe('what is open', () => {
+  it('is what medrec says is left of each bill no later statement replaces, soonest due first', () => {
+    expect(openOf(index('Robin Example'))).toEqual([
       ['Example Health', '53.68', '2026-11-19'],
       ['Example Lab', '19.28', '2026-11-27'],
     ]);
-    expect(owed.total).toEqual(usd('72.96'));
-    expect(owed.paid).toEqual([]);
   });
 
-  it('counts a statement with a receipt after it as paid, and leaves it out of the total', () => {
-    const receipt = { ...bill('Example Health', '2026-11-01', '0.00'), doc_type: 'receipt', statement: undefined };
-    const owed = owedByProvider(only([], [bill('Example Health', '2026-10-20', '53.68'), receipt, bill('Example Lab', '2026-10-28', '19.28')]));
-    expect(owed.paid.map((o) => o.provider)).toEqual(['Example Health']);
-    expect(owed.total).toEqual(usd('19.28'));
+  it('is, without medrec’s list, the newest statement of each provider and account that no receipt follows', () => {
+    const bare: PersonIndex = { ...index('Robin Example'), bills: undefined };
+    expect(openOf(bare)).toEqual(openOf(index('Robin Example')));
+    const papers = [bill('Example Health', '2026-10-20', '53.68'), receiptOf('Example Health', '2026-11-01'), bill('Example Lab', '2026-10-28', '19.28'), bill('Example Lab', '2026-09-28', '40.00')];
+    expect(openOf(only([], papers))).toEqual([['Example Lab', '19.28', undefined]]);
+    const list = billList(only([], papers));
+    expect(list.map((b) => [b.provider, b.date, b.settled, b.replacedBy !== undefined])).toEqual([
+      ['Example Lab', '2026-10-28', false, false],
+      ['Example Health', '2026-10-20', true, false],
+      ['Example Lab', '2026-09-28', false, true],
+    ]);
+    expect(standsFor(list[2]!, list)).toBe(list[0]);
   });
 
   it('leaves out a copy medrec found to be the same statement', () => {
@@ -63,10 +77,91 @@ describe('what is owed', () => {
   });
 });
 
+const account = (d: MedDocument, number: string) => ({ ...d, statement: { ...d.statement, account: number } });
+
+describe('bills by medrec’s list', () => {
+  const [due, second] = [bill('Example Health', '2026-10-20', '53.68'), bill('Example Health', '2026-10-25', '40.00')];
+  const marked = { from: 'household', id: 'o_one', on: '2026-11-18', currency: 'USD' };
+
+  it('have what is left of them, and are settled when medrec says so', () => {
+    const part = listed([due], { [due.id]: { paid: [{ ...marked, amount: '20.00' }], left: '33.68' } });
+    expect(billList(part)[0]).toMatchObject({ settled: false, left: usd('33.68'), payments: [{ from: 'household', on: '2026-11-18', amount: usd('20.00') }] });
+    expect(openOf(part)).toEqual([['Example Health', '33.68', undefined]]);
+    // Neither replaces the other unless medrec says so, and one without a provider is still open.
+    const nameless = { ...second, organization: undefined };
+    expect(openOf(listed([due, second], { [due.id]: { left: '53.68' }, [second.id]: { left: '40.00' } }))).toHaveLength(2);
+    expect(openOf(listed([nameless], { [second.id]: { left: '40.00' } }))).toEqual([[undefined, '40.00', undefined]]);
+    expect(openOf(only([], [nameless]))).toEqual([]);
+    const all = listed([due], { [due.id]: { paid: [{ ...marked, amount: '53.68' }], left: '0.00', settled: true } });
+    expect([billList(all)[0]!.settled, billList(all)[0]!.left, openOf(all)]).toEqual([true, undefined, []]);
+  });
+
+  it('are the later statement’s once it replaces them, however often that happens', () => {
+    const third = bill('Example Health', '2026-11-05', '61.00');
+    const idx = listed([due, second, third], { [due.id]: { left: '53.68', superseded_by: second.id }, [second.id]: { left: '40.00', superseded_by: third.id }, [third.id]: { left: '61.00' } });
+    const list = billList(idx);
+    expect(openOf(idx)).toEqual([['Example Health', '61.00', undefined]]);
+    expect(standsFor(list.find((b) => b.doc.id === due.id)!, list).doc.id).toBe(third.id);
+    // One that is not here replaces nothing.
+    expect(openOf(listed([due], { [due.id]: { left: '53.68', superseded_by: 'd_gone' } }))).toHaveLength(1);
+    // Two that name each other still end.
+    const loop = billList(listed([due, second], { [due.id]: { superseded_by: second.id }, [second.id]: { superseded_by: due.id } }));
+    expect(loop.map((b) => b.replacedBy)).toEqual([due.id, second.id]);
+    expect(standsFor(loop[0]!, loop).doc.organization).toBe('Example Health');
+  });
+
+  it('take a receipt whose amount did not read when it can be for one bill only', () => {
+    const states = { [due.id]: { left: '53.68' }, [second.id]: { left: '40.00' } };
+    const paidWith = (documents: MedDocument[], receipt: MedDocument) => {
+      const idx = listed([...documents, receipt], Object.fromEntries(documents.map((d) => [d.id, states[d.id]!])));
+      return billList(idx).filter((b) => b.settled).map((b) => [b.doc.id, b.payments.map((p) => [p.receipt?.id === receipt.id, p.on, p.amount])]);
+    };
+    const receipt = receiptOf('Example Health', '2026-11-01');
+    expect(paidWith([due], receipt)).toEqual([[due.id, [[true, '2026-11-01', undefined]]]]);
+    // Two bills it could be for, one it is too late or too early for, another provider's: none.
+    expect(paidWith([due, second], receipt)).toEqual([]);
+    expect(paidWith([due], { ...receipt, date: '2027-02-18' })).toEqual([]);
+    expect(paidWith([due], { ...receipt, date: '2027-02-17' })).toHaveLength(1);
+    expect(paidWith([due], { ...receipt, date: '2026-10-19' })).toEqual([]);
+    expect(paidWith([due], { ...receipt, date: '2026-10-20' })).toHaveLength(1);
+    expect(paidWith([due], { ...receipt, organization: 'Example Lab' })).toEqual([]);
+    expect(paidWith([due], { ...receipt, date: undefined })).toEqual([]);
+    // Nor for one with nothing to pay, or one medrec does not list.
+    expect(billList(listed([due, receipt], { [due.id]: { left: '0.00', settled: true } }))[0]!.payments).toEqual([]);
+    const other = account(receiptOf('Example Billing', '2026-11-01'), 'EX-1');
+    expect(billList(only([], [account(due, 'EX-1'), other]))[0]!.settled).toBe(false);
+    // Its account says which, whatever its name; the day it was paid comes before the paper's.
+    expect(paidWith([account(due, 'EX-1'), account(second, 'EX-2')], account(receipt, 'EX-2')).map(([id]) => id)).toEqual([second.id]);
+    expect(paidWith([account(due, 'EX-1')], account({ ...receipt, organization: 'Example Billing' }, 'EX-1'))).toHaveLength(1);
+    expect(paidWith([due], { ...receipt, date: '2027-03-30', statement: { paid_on: '2026-11-02' } })).toHaveLength(1);
+  });
+
+  it('leave a receipt with an amount to medrec, which says which bill it pays', () => {
+    const read = receiptOf('Example Health', '2026-11-01', { statement: { amount_paid: usd('53.68'), paid_on: '2026-11-01' } });
+    expect(openOf(listed([due, read], { [due.id]: { left: '53.68' } }))).toHaveLength(1);
+    const [paid] = billList(listed([due, read], { [due.id]: { paid: [{ from: 'receipt', document: read.id, on: '2026-11-01', amount: '53.68', currency: 'USD' }], left: '0.00', settled: true } }));
+    expect(paid!.payments).toEqual([{ from: 'receipt', document: read.id, on: '2026-11-01', amount: usd('53.68'), receipt: read }]);
+    // A payment marked on a bill says how much was paid, so a receipt that does not adds nothing.
+    const unread = receiptOf('Example Health', '2026-11-03');
+    const [both] = billList(listed([due, unread], { [due.id]: { paid: [{ ...marked, amount: '53.68' }], left: '0.00', settled: true } }));
+    expect(both!.payments.map((p) => p.from)).toEqual(['household']);
+    const [part] = billList(listed([due, unread], { [due.id]: { paid: [{ ...marked, amount: '20.00' }], left: '33.68' } }));
+    expect([part!.settled, part!.left, part!.payments.length]).toEqual([false, usd('33.68'), 1]);
+  });
+
+  it('go by the receipts for one medrec does not list', () => {
+    const idx = listed([due, second, receiptOf('Example Health', '2026-10-30')], { [due.id]: { left: '53.68', paid: [{ ...marked, amount: '1.00' }] } });
+    expect(billList(idx).map((b) => [b.doc.id, !!b.medrec, b.settled])).toEqual([
+      [second.id, false, true],
+      [due.id, true, false],
+    ]);
+  });
+});
+
 describe('claims beside their bills', () => {
   it('pairs each claim with the statement for its share, and says when none has come', () => {
     const { claims, otherBills } = claimsWithBills(index('Robin Example'));
-    const view = claims.map((c) => [c.service, c.provider, c.yourShare?.amount, c.bill?.how, c.bill?.bill.date, c.bill?.bill.receipt ? 'receipt' : null]);
+    const view = claims.map((c) => [c.service, c.provider, c.yourShare?.amount, c.bill?.how, c.bill?.bill.date, c.bill?.bill.payments[0]?.receipt ? 'receipt' : null]);
     expect(view).toEqual([
       ['2026-11-18', 'Example Health', '25.00', undefined, undefined, null],
       ['2026-11-12', 'Example Pharmacy', '10.00', undefined, undefined, null],

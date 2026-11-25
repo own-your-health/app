@@ -4,14 +4,14 @@
 
 import { knownArea } from '../model/private';
 import { formatMoney, fromCents } from '../model/records';
-import type { Person } from '../model/types';
+import type { MedDocument, Person } from '../model/types';
 import { chip, link, type Ctx } from '../ui/components';
 import { h, icon } from '../ui/dom';
 import { count, localDay } from '../ui/format';
 import { href, type Route } from '../ui/router';
 import { householdEvents, type PersonEvent } from './calendar';
 import { eventWhen } from './eventView';
-import { byDue, explainedLines, forShared, openBills, paidBills, unbilledShares, type Explained, type OpenBill, type PaidBill, type Unbilled } from './money';
+import { byDue, deskPayments, explainedLines, forShared, openBills, paidBills, unbilledShares, type DeskPayment, type Explained, type OpenBill, type PaidBill, type Unbilled } from './money';
 import { called } from '../model/people';
 
 export type MoneyRoute = Extract<Route, { name: 'money' }>;
@@ -26,6 +26,9 @@ export interface Mine<T> {
   item: T;
 }
 
+/** The day a receipt says it was paid, else its own. */
+export const paidOn = (receipt: MedDocument): string => receipt.statement?.paid_on ?? receipt.date ?? '';
+
 /** Everyone's bills, or one person's: private ones kept off the shared view, and how many each part left off; those only held back are not counted as private. */
 export function gather(ctx: Ctx, who: string | undefined) {
   const store = ctx.store;
@@ -34,8 +37,9 @@ export function gather(ctx: Ctx, who: string | undefined) {
   const open: Mine<OpenBill>[] = [];
   const unbilled: Mine<Unbilled>[] = [];
   const paid: Mine<PaidBill>[] = [];
+  const desk: Mine<DeskPayment>[] = [];
   const explained: Mine<Explained>[] = [];
-  const hidden = { open: [] as OpenBill[], unbilled: [] as Unbilled[], paid: 0, explained: 0 };
+  const hidden = { open: [] as OpenBill[], unbilled: [] as Unbilled[], paid: 0, desk: 0, explained: 0 };
   let loading = 0;
   for (const p of store.household.people) {
     if (who && p.id !== who) continue;
@@ -53,26 +57,40 @@ export function gather(ctx: Ctx, who: string | undefined) {
     const o = keep(openBills(idx, mine, today), forShared);
     const u = keep(unbilledShares(idx, mine), cleared);
     const pd = keep(paidBills(idx, mine), forShared);
+    const dk = keep(deskPayments(idx, mine), forShared);
     const ex = keep(explainedLines(idx, mine, today), cleared);
     open.push(...o.shown);
     unbilled.push(...u.shown);
     paid.push(...pd.shown);
+    desk.push(...dk.shown);
     explained.push(...ex.shown);
     hidden.open.push(...o.left);
     hidden.unbilled.push(...u.left);
     hidden.paid += pd.left.length;
+    hidden.desk += dk.left.length;
     hidden.explained += ex.left.length;
   }
   open.sort((a, b) => byDue(a.item, b.item));
   unbilled.sort((a, b) => b.item.event.event.start.localeCompare(a.item.event.event.start));
   paid.sort((a, b) => (b.item.bill.date ?? '').localeCompare(a.item.bill.date ?? ''));
+  desk.sort((a, b) => paidOn(b.item.receipt).localeCompare(paidOn(a.item.receipt)));
   explained.sort((a, b) => b.item.event.event.start.localeCompare(a.item.event.event.start));
-  return { today, open, unbilled, paid, explained, hidden, loading };
+  return { today, open, unbilled, paid, desk, explained, hidden, loading };
 }
 
 /** "2 private items are kept off this shared view. Each shows on its person's own view." */
 export function keptNote(n: number, where: string): HTMLElement | null {
   return n ? h('p', { class: 'small muted' }, `${count(n, 'private item')} ${n === 1 ? 'is' : 'are'} kept off this shared view. Each shows on its person’s own ${where}.`) : null;
+}
+
+/** Whose bills go by the receipts alone, or without the household's marks, and why: one line for each. */
+export function billNotes(ctx: Ctx, people: Person[]): HTMLElement[] {
+  return people.flatMap((p) => {
+    const why = ctx.store.billsNotes.get(p.id);
+    const unread = ctx.store.index(p.id)?.bills?.marksUnreadable;
+    if (why) return [h('p', { class: 'small muted' }, `${why} Meanwhile only receipts say which of ${called(p)}’s bills are paid.`)];
+    return unread ? [h('p', { class: 'small muted' }, `The payments marked for ${called(p)} could not be read, so none of them is counted.`)] : [];
+  });
 }
 
 /** A row or card for one bill, so Worth a call can find the one a row named. */

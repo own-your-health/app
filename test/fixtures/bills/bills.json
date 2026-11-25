@@ -1,0 +1,71 @@
+{
+  "schema": "medrec-bills/v1",
+  "person": "p_aaaaaaaaaaaaaaaaaaaa",
+  "bills": {
+    "d_lab": {
+      "organization": "Example Lab",
+      "title": "Statement from Example Lab",
+      "date": "2026-09-02",
+      "currency": "USD",
+      "amount_due": "90.00",
+      "due_date": "2026-10-02",
+      "event": "e_lab",
+      "rule": "D3",
+      "claim": "r_lab",
+      "claim_you_owe": "64.00",
+      "paid": [
+        { "from": "receipt", "document": "d_receipt", "on": "2026-09-20", "amount": "40.00", "currency": "USD" },
+        { "from": "household", "id": "o_one", "on": "2026-09-28", "amount": "10.00", "currency": "USD" },
+        { "from": "household", "id": "o_two", "on": "2026-09-29", "amount": "8.00", "currency": "EUR", "counted": false }
+      ],
+      "paid_total": "50.00",
+      "left": "40.00",
+      "settled": false
+    },
+    "d_dental": {
+      "organization": "Example Dental",
+      "title": "Statement from Example Dental",
+      "date": "2026-08-11",
+      "currency": "USD",
+      "amount_due": "120.00",
+      "paid": [{ "from": "household", "id": "o_three", "on": "2026-08-30", "amount": "120.00", "currency": "USD" }],
+      "paid_total": "120.00",
+      "left": "0.00",
+      "settled": true
+    },
+    "d_clinic": {
+      "organization": "Example Clinic",
+      "title": "Statement from Example Clinic",
+      "date": "2026-07-01",
+      "currency": "USD",
+      "amount_due": "30.00",
+      "paid": [],
+      "paid_total": "0.00",
+      "left": "30.00",
+      "settled": false
+    },
+    "d_earlier": {
+      "organization": "Example Lab",
+      "title": "Statement from Example Lab",
+      "date": "2026-06-02",
+      "currency": "USD",
+      "paid": [],
+      "paid_total": "0.00",
+      "settled": false,
+      "superseded_by": "d_lab"
+    }
+  },
+  "copy_of": { "d_copy": "d_lab" },
+  "receipts": [
+    { "document": "d_desk", "organization": "Example Clinic", "on": "2026-07-01", "amount": "45.00", "currency": "USD", "event": "e_clinic" },
+    { "document": "d_receipt", "organization": "Example Lab", "on": "2026-09-20", "amount": "40.00", "currency": "USD", "bill": "d_lab" }
+  ],
+  "worth_a_call": [
+    { "reason": "asks_more", "bill": "d_lab", "claim": "r_lab", "event": "e_lab", "asked": "90.00", "owed": "64.00", "currency": "USD" },
+    { "reason": "no_claim", "bill": "d_dental", "claim": null, "event": null, "asked": "120.00", "owed": null, "currency": "USD" },
+    { "reason": "no_claim", "bill": "d_clinic", "claim": null, "event": null, "asked": "30.00", "owed": null, "currency": "USD" },
+    { "reason": "a_later_reason", "bill": "d_clinic", "asked": "30.00", "owed": null, "currency": "USD" },
+    { "reason": "desk_copay", "bill": "d_desk", "claim": "r_clinic", "event": "e_clinic", "asked": "45.00", "owed": "25.00", "currency": "USD" }
+  ],
+  "not_billed": []
+}

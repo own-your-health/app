@@ -5,6 +5,7 @@ import { householdEvents } from '../src/next/calendar';
 import { ageWords } from '../src/next/homeView';
 import { openBills } from '../src/next/money';
 import { refillsDue, vaccineNeeds } from '../src/next/needs';
+import type { PersonIndex } from '../src/model/types';
 import { demo, personNamed } from './demo-data';
 
 const TODAY = '2026-11-22';
@@ -31,8 +32,18 @@ describe('open bills', () => {
     ]);
   });
 
-  it('have no claim behind them when no visit takes them', () => {
-    expect(openBills(index('Robin Example'), [], TODAY).map((b) => b.verdict)).toEqual(['no_claim', 'no_claim']);
+  it('have no claim behind them when no visit takes them and medrec lists no claim', () => {
+    const bare: PersonIndex = { ...index('Robin Example'), bills: undefined };
+    expect(openBills(bare, [], TODAY).map((b) => b.verdict)).toEqual(['no_claim', 'no_claim']);
+    expect(openBills(index('Robin Example'), [], TODAY).map((b) => b.verdict)).toEqual(['matches', 'matches']);
+  });
+
+  it('read the same from medrec’s list and, without it, from their visits’ claims', () => {
+    for (const name of ['Robin Example', 'Sam Example']) {
+      const bare: PersonIndex = { ...index(name), bills: undefined };
+      const read = (idx: PersonIndex) => openBills(idx, events(name), TODAY).map(({ bill, ...b }) => ({ ...b, id: bill.doc.id, event: b.event?.event.id }));
+      expect(read(bare)).toEqual(read(index(name)));
+    }
   });
 
   it('carry no private area when neither they nor their visits are private', () => {

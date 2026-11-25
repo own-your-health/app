@@ -143,8 +143,8 @@ describe('a condition', () => {
     expect([inDetails(named), secondTitle(named)]).toEqual([{ words: 'HYPERTENSION', title: HTN }, HTN]);
     const alone = conditionName(idx, { ...r, display: 'ASTHMA', code: undefined });
     expect([alone, inDetails(alone)]).toEqual([{ name: 'Asthma', source: 'ASTHMA' }, { words: 'ASTHMA', title: undefined }]);
-    const same: PersonIndex = { ...idx, codeNames: { codes: new Map([['icd10cm|H53.60', 'Unspecified, asthma']]), privateCodes: new Map() } };
-    expect(conditionName(same, { ...r, display: 'ASTHMA', code: { system: ICD10CM, code: 'H53.60' } })).toEqual({ name: 'Asthma', source: 'ASTHMA' });
+    const same: PersonIndex = { ...idx, codeNames: { codes: new Map([['icd10cm|J45.909', 'Unspecified, asthma']]), privateCodes: new Map() } };
+    expect(conditionName(same, { ...r, display: 'ASTHMA', code: { system: ICD10CM, code: 'J45.909' } })).toEqual({ name: 'Asthma', source: 'ASTHMA' });
     // A code in letters is no word.
     expect(conditionName(idx, { ...r, display: 'WHEEZING', code: { code: 'WHEEZING' } })).toEqual({ name: 'WHEEZING' });
     // Another kind of record is not changed.

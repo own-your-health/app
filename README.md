@@ -174,10 +174,10 @@ document joins one visit at most, and a linked one is never taken by another.
 Every record, in the order it happened, is one tap away. The rules are
 `src/model/visits.ts`.
 
-Money's bills show what each provider's newest statement says is due
-(per provider and account, with a receipt filed after it counted as paid),
-the plan's deductible and out-of-pocket limit so far from the newest claim
-that printed them, and each insurer claim beside its bill: a statement from
+Money's bills show what is left to pay of each, as medrec's list of them
+says (Bills, below), the plan's deductible and out-of-pocket limit so far
+from the newest claim that printed them, and each insurer claim beside its
+bill: a statement from
 the same provider within 120 days after the visit, preferring one whose
 amount is the claim's share. A claim with nothing to pay says so, and one
 with a share but no bill yet says that. A pharmacy fill is not matched to a
@@ -492,15 +492,16 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   to `America/New_York`, so the machine's own medrec setup is never touched and every
   machine writes the same views. CI runs medrec 0.9.5's Linux build,
   checked against its SHA-256. Only `views/views.json` and each person's
-  `events.json`, `private.json` and `code-names.json` are kept: the app
+  `events.json`, `bills.json`, `private.json` and `code-names.json` are kept: the app
   reads no other view. medrec keeps the code names from the committed files,
   so they need the published table only when the sample gains a code: set
   `ICD10CM_ZIP` to the zip `medrec tables list` names, downloaded, for that
   run.
   `manifest.json` gives each file's MD5, as Drive would, for the store's
-  freshness check. No private list is written by hand: the cases the tests
-  lay over the sample (`test/fixtures/private/`) are medrec's too, made by
-  `node scripts/private-fixtures.mjs`. CI runs both scripts.
+  freshness check. No view is written by hand: the cases the tests lay over
+  the sample (`test/fixtures/private/`, and `test/fixtures/bills/paid/` with
+  payments marked) are medrec's too, made by `node scripts/private-fixtures.mjs`
+  and `node scripts/bill-fixtures.mjs`. CI runs all three scripts.
 - The PNG icons in `public/` (for the manifest and the iPhone Home Screen) are
   drawn from `public/icon.svg` by `npm run icons`. Run it after changing the
   icon, and commit them.
@@ -572,10 +573,11 @@ dropped from the address.
 - **Home** leads with **Needs you**, quiet when nothing does:
   - a bill worth a call: one that asks something other than what the
     claims say you owe, or that no claim in these records backs
-    (`src/next/money.ts`; receipts carry no amount yet, so an
-    overpayment can't be found);
-  - bills to pay, one row per visit, overdue first, until a receipt from
-    the provider is filed after the bill;
+    (`src/next/money.ts`);
+  - bills to pay, one row per visit, overdue first, until a receipt or a
+    payment the household marked covers the bill. One partly paid gives what
+    is left; one past its due date says "No payment on file", or "Not all
+    paid";
   - vaccine doses the CDC schedule places by now that the records don't
     show, and this season's flu dose;
   - a refill, from two weeks before the last fill's days' supply runs out
@@ -613,15 +615,28 @@ dropped from the address.
   open bills that ask what their claims say you owe, due date first; those
   to check before paying; the shares the claims say you owe with no bill or
   receipt from the provider yet (a pharmacy's are paid at the counter); and
-  the bills a receipt paid. **Worth a call** (`#/money/calls`) gives each
-  bill that asks more than the claims, or that no claim backs, its figures
-  and the words to say on the phone. It then lists the bills that ask less,
-  and the lines the plan left out of a claim's totals in the last year,
-  which need nothing. Everyone's view leaves private bills off and counts
-  them. One person's view lists them, marked. medrec 0.9.1 and later keep
-  what the household marked paid, receipts' amounts and each bill's phone
-  number in `views/<person id>/bills.json`. The app does not read that file
-  yet: it works the bills out itself (`src/next/money.ts`).
+  the bills paid, by a receipt ("receipt Apr 20, 2025") or by a payment the
+  household marked ("Marked paid, Nov 20, 2026"). **Worth a call**
+  (`#/money/calls`) gives each bill that asks more than the claims, or that no
+  claim backs, its figures and the words to say on the phone. It then lists
+  the bills that ask less, the payments at a visit above what its claims say,
+  and the lines the plan left out of a claim's totals in the last year, which
+  need nothing. Everyone's view leaves private bills off and counts them. One
+  person's view lists them, marked.
+
+  What is paid, what is left, which later statement stands for a bill and
+  what is worth a call come from `views/<person id>/bills.json` (medrec 0.9.1
+  and later; `src/model/bills.ts`), when the MD5s in `views/views.json` are
+  the folder's, the person's `marks.json` too. A settled bill is never open,
+  overdue or worth a call, whatever the list's `worth_a_call` says. Payments
+  in another currency are named, and not taken off. A receipt whose amount
+  medrec could not read is not in its list: it pays the one bill it can be for
+  (same provider or account, dated in the 120 days before it) when nothing
+  else is known to be paid on that bill, and says "amount not read". Without
+  the list, the newest statement of each provider and account with no receipt
+  filed after it is open, its visit's claims say whether it is worth a call,
+  and a line on Home and Money says why the list is not used. A list medrec is
+  still writing is read for again, as code names are.
 - **Health** (`#/health`, from Where everyone stands on Home) gives each
   person a card: what the records can know about them (doctors' records and
   claims, doctors' records only, claims and papers only, or no records

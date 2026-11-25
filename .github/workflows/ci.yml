@@ -54,14 +54,15 @@ jobs:
           node scripts/demo-folder.mjs
           git diff --exit-code -- public/demo
           test -z "$(git status --porcelain -- public/demo)"
-      # So are the private-items cases: medrec writes each list, never a hand.
-      - name: Private-items cases match their generator
+      # So are the private-items and bill cases: medrec writes each list, never a hand.
+      - name: Private-items and bill cases match their generators
         env:
           MEDREC: ${{ runner.temp }}/medrec/medrec
         run: |
           node scripts/private-fixtures.mjs
-          git diff --exit-code -- test/fixtures/private
-          test -z "$(git status --porcelain -- test/fixtures/private)"
+          node scripts/bill-fixtures.mjs
+          git diff --exit-code -- test/fixtures/private test/fixtures/bills
+          test -z "$(git status --porcelain -- test/fixtures/private test/fixtures/bills)"
 
   e2e:
     runs-on: ubuntu-latest

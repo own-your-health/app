@@ -17,7 +17,8 @@ import type { Route } from '../ui/router';
 import { householdEvents, type PersonEvent } from './calendar';
 import { recentCard } from './calendarView';
 import { eventRoute, eventWhen } from './eventView';
-import { forShared, openBills, type OpenBill } from './money';
+import { forShared, openBills, partText, worthACall, type OpenBill } from './money';
+import { billNotes } from './moneyParts';
 import { anyLeftOff, heldNotes, privateCount } from './shared';
 import { daysBetween, refillsDue, vaccineNeeds, type DoseVisit, type Refill, type VaccineNeeds } from './needs';
 import { called } from '../model/people';
@@ -47,6 +48,8 @@ interface Dated {
   el: HTMLElement;
 }
 
+const biller = (b: OpenBill) => b.bill.provider ?? 'a provider';
+
 function callRow(p: Person, b: OpenBill, own: boolean): HTMLElement {
   const says =
     b.claimSays === undefined
@@ -54,8 +57,8 @@ function callRow(p: Person, b: OpenBill, own: boolean): HTMLElement {
       : `the ${b.claimSaysVisit ? 'visit’s claims say' : 'claim says'} you owe ${money(b.claimSays)}`;
   return needRow('Worth a call', 'attention', {
     route: { name: 'money', view: 'calls', bill: b.bill.doc.id, ...(own ? { who: p.id } : {}) },
-    title: b.event ? visitText(b.event) : `Bill from ${b.bill.provider}`,
-    meta: [own ? null : called(p), `${b.bill.provider} asks ${money(b.cents)}; ${says}`, dueText(b)].filter(Boolean).join(' · '),
+    title: b.event ? visitText(b.event) : `Bill from ${biller(b)}`,
+    meta: [own ? null : called(p), `${biller(b)} asks ${money(b.asked)}; ${says}`, partText(b), dueText(b)].filter(Boolean).join(' · '),
     aside: h('span', { class: 'num' }, money(b.cents)),
     ...(b.private ? { private: b.private } : {}),
   });
@@ -72,12 +75,13 @@ function payRows(p: Person, bills: OpenBill[], own: boolean): Dated[] {
     const first = bs[0]!;
     const overdue = bs.some((b) => b.overdue);
     const dues = bs.map((b) => b.bill.due).filter((d): d is string => !!d).sort();
-    const el = needRow(overdue ? 'No payment on file' : bs.length > 1 ? 'Bills to pay' : 'Bill to pay', overdue ? 'attention' : 'soon', {
+    const unpaid = bs.every((b) => !b.bill.payments.length);
+    const el = needRow(overdue ? (unpaid ? 'No payment on file' : 'Not all paid') : bs.length > 1 ? 'Bills to pay' : 'Bill to pay', overdue ? 'attention' : 'soon', {
       route: first.event ? eventRoute(p.id, first.event.event.id) : { name: 'item', person: p.id, id: first.bill.doc.id },
-      title: first.event ? visitText(first.event) : `Bill from ${first.bill.provider}`,
+      title: first.event ? visitText(first.event) : `Bill from ${biller(first)}`,
       meta: [
         own ? null : called(p),
-        ...bs.map((b) => `${b.bill.provider} ${money(b.cents)}`),
+        ...bs.map((b) => [`${biller(b)} ${money(b.cents)}`, partText(b)].filter(Boolean).join(', ')),
         bs.length === 1 && first.verdict === 'matches' ? 'matches the claim' : null,
         dues[0] ? `${overdue ? 'was due' : 'due'} ${dateText(dues[0])}` : null,
       ]
@@ -154,7 +158,7 @@ function standing(s: Standing, today: string, left: boolean, error?: string): HT
   const head = h('h3', { class: 'card-sub stand-name' }, link({ name: 'health', who: p.id }, called(p)));
   if (!s.idx) return h('div', { class: 'stand' }, head, h('p', { class: 'small muted' }, error ?? 'Loading…'));
   if (s.held) return h('div', { class: 'stand' }, head, h('p', { class: 'small muted' }, p.birth_date ? ageWords(p.birth_date, today) : null), h('p', null, 'Left off Home'));
-  const calls = s.bills.filter((b) => b.verdict !== 'matches').length;
+  const calls = s.bills.filter(worthACall).length;
   const owed = s.bills.reduce((t, b) => t + b.cents, 0);
   const v = s.vaccines;
   const dueNow = v ? v.due.length + (v.flu ? 1 : 0) : 0;
@@ -209,8 +213,8 @@ function personNeeds(p: Person, idx: PersonIndex, mine: PersonEvent[], today: st
   const vaccines = vaccineNeeds(p.birth_date, idx, today);
   const vRow = vaccines ? vaccinesDueRow(p, vaccines, own) : null;
   return {
-    calls: bills.filter((b) => b.verdict !== 'matches').map((b) => ({ day: b.bill.due ?? '9999', el: callRow(p, b, own) })),
-    pay: payRows(p, bills.filter((b) => b.verdict === 'matches'), own),
+    calls: bills.filter(worthACall).map((b) => ({ day: b.bill.due ?? '9999', el: callRow(p, b, own) })),
+    pay: payRows(p, bills.filter((b) => !worthACall(b)), own),
     vaccines: vRow ? [vRow] : [],
     refills: refills.map((r) => refillRow(p, r, own)),
     soon: (vaccines?.visits ?? []).map((v) => visitRow(p, v, own)),
@@ -241,7 +245,7 @@ function needsCard(all: PersonNeeds[], notes: HTMLElement[], own?: string): HTML
         )
       : null,
     calls.length || pay.length
-      ? h('p', { class: 'small muted' }, 'A bill stays here until a receipt from its provider is filed after it. ', link({ name: 'money', view: 'bills', ...(own ? { who: own } : {}) }, 'Bills: each one beside its claim'))
+      ? h('p', { class: 'small muted' }, 'A bill stays here until a receipt, or a payment the household marked, covers it. ', link({ name: 'money', view: 'bills', ...(own ? { who: own } : {}) }, 'Bills: each one beside its claim'))
       : null,
     kept ? h('p', { class: 'small muted' }, `${count(kept, 'private item')} ${kept === 1 ? 'is' : 'are'} kept off Home. Each shows on its person’s own Health or Money.`) : null,
     notes,
@@ -266,5 +270,6 @@ export function nextHome(ctx: Ctx, signIn: HTMLElement | null): HTMLElement[] {
     needs.push(n);
     stands.push(standing(n.standing, today, left));
   }
-  return [needsCard(needs, heldNotes(ctx, 'Home'))!, ...(signIn ? [signIn] : []), card({ title: 'Where everyone stands' }, stands, h('p', { class: 'small' }, link({ name: 'health' }, 'Health: what each person has now and what is worth a look'))), recentCard(ctx)];
+  const billed = needs.filter((n) => n.calls.length || n.pay.length).map((n) => n.standing.person);
+  return [needsCard(needs, [...billNotes(ctx, billed), ...heldNotes(ctx, 'Home')])!, ...(signIn ? [signIn] : []), card({ title: 'Where everyone stands' }, stands, h('p', { class: 'small' }, link({ name: 'health' }, 'Health: what each person has now and what is worth a look'))), recentCard(ctx)];
 }

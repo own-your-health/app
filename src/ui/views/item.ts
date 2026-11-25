@@ -4,6 +4,7 @@
 // Technical details, whole, for the data-minded.
 
 import { readJson } from '../../folder';
+import { billList } from '../../model/billing';
 import { CATEGORY_LABELS, claimAmounts, type ClaimLine, claimLines, claimNotes, claimProvider, revenueText } from '../../model/claims';
 import { conditionName, diagnosisNames, nameList, secondTitle } from '../../model/codeNames';
 import { isOutOfRange, rangeFor, resultFlag } from '../../model/flags';
@@ -17,6 +18,7 @@ import { recordTitle, visitTitle } from '../../model/titles';
 import type { ImagingStudy, Json, MedDocument, MedRecord, PersonIndex, Provenance } from '../../model/types';
 import { claimContext, visitKind, visitOf } from '../../model/visits';
 import { partOfEvent } from '../../next/eventView';
+import { paymentText } from '../../next/money';
 import { rangeBar, resultChart } from '../chart';
 import { button, card, chip, command, driveLink, empty, flagChip, jsonBlock, kv, link, outLink, row, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
@@ -573,6 +575,8 @@ function documentView(ctx: Ctx, idx: PersonIndex, d: MedDocument): Child[] {
     { small: true },
   );
   const same = d.same_statement_as ? idx.documents.find((x) => x.id === d.same_statement_as) : undefined;
+  const bill = d.doc_type === 'bill' ? billList(idx).find((b) => b.doc.id === (same ?? d).id) : undefined;
+  const later = bill?.medrec && bill.replacedBy ? idx.documents.find((x) => x.id === bill.replacedBy) : undefined;
   return [
     h(
       'section',
@@ -584,6 +588,10 @@ function documentView(ctx: Ctx, idx: PersonIndex, d: MedDocument): Child[] {
         ['Amount due', formatMoney(d.statement?.amount_due)],
         ['Due', d.statement?.due_date ? dateText(d.statement.due_date) : undefined],
         ['Statement date', d.statement?.statement_date ? dateText(d.statement.statement_date) : undefined],
+        ['Paid', d.doc_type === 'receipt' ? formatMoney(d.statement?.amount_paid) : bill?.payments.length ? bill.payments.map((p) => paymentText(p, true)).join(', ') : undefined],
+        ['Paid on', d.doc_type === 'receipt' && d.statement?.paid_on ? dateText(d.statement.paid_on) : undefined],
+        ['Left to pay', bill && (bill.settled || bill.payments.length) ? (bill.settled ? 'Nothing' : formatMoney(bill.left)) : undefined],
+        ['Later statement', later ? ['Its balance includes this one: ', link({ name: 'item', person: idx.person, id: later.id }, documentTitle(later))] : undefined],
         ['Same statement as', same ? link({ name: 'item', person: idx.person, id: same.id }, documentTitle(same)) : undefined],
         ['Pages', d.pages !== undefined ? String(d.pages) : undefined],
       ]),

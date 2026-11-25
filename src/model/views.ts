@@ -9,7 +9,7 @@ import { FolderError, isObject } from './parse';
 export type Md5 = string | null;
 
 /** A view the app reads. */
-export type ViewFile = 'events.json' | 'private.json' | 'code-names.json';
+export type ViewFile = 'events.json' | 'bills.json' | 'private.json' | 'code-names.json';
 
 export interface PersonView {
   /** `events.<first 12 hex of its MD5>.json`, under views/<person id>/. */
@@ -19,7 +19,7 @@ export interface PersonView {
   index: Md5;
   text: Md5;
   overrides: Md5;
-  /** marks.json's MD5, for private.json and code-names.json, which are made from it as well. */
+  /** marks.json's MD5, for the views made from it as well: every one but events.json. */
   marks?: Md5;
   linked: Map<string, { index: Md5; text: Md5 }>;
 }

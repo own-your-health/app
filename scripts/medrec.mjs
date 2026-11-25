@@ -54,7 +54,7 @@ export function withMedrec(root, steps) {
   }
 }
 
-/** The views the app reads: each person's events, private items and code names, by the name medrec stores them under. */
-export const APP_VIEW = /^(events|private|code-names)\.[0-9a-f]{12}\.json$/;
+/** The views the app reads: each person's events, bills, private items and code names, by the name medrec stores them under. */
+export const APP_VIEW = /^(events|bills|private|code-names)\.[0-9a-f]{12}\.json$/;
 
 export const md5Of = (bytes) => createHash('md5').update(bytes).digest('hex');

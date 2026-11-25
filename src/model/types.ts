@@ -2,6 +2,7 @@
 // docs/data-contract.md). Only the fields the app reads are typed; every
 // object keeps the rest, which the Inspect view shows as it is.
 
+import type { MedrecBills } from './bills';
 import type { CodeNames } from './codeNames';
 import type { MedrecEvents } from './events';
 import type { Privacy } from './private';
@@ -100,6 +101,9 @@ export interface Statement {
   amount_due?: Amount;
   due_date?: string;
   account?: string;
+  /** A receipt's. */
+  amount_paid?: Amount;
+  paid_on?: string;
 }
 
 export interface MedDocument {
@@ -211,6 +215,8 @@ export interface PersonIndex {
   privacy?: Privacy;
   /** The names of these conditions' and claim diagnoses' codes (src/model/codeNames.ts), when the store found them written from this index. */
   codeNames?: CodeNames;
+  /** What medrec says of these bills (src/model/bills.ts), when the store found it written from this index: without it, the receipts say what is paid. */
+  bills?: MedrecBills;
 }
 
 export interface PersonText {
