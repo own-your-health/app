@@ -52,6 +52,10 @@ describe('a line the claim’s totals leave out', () => {
     ]);
     expect(claimLines(marked)[0]!.payerNotes).toEqual(['Q4 -- Another code on this claim stands for this one.']);
     expect(claimNotes(marked)).toEqual(['Z9 -- Part of this went to your deductible.']);
+    // Its mark stands where the app's own rule could not tell which line it is.
+    const either = on(EITHER);
+    const [first, ...rest] = either.fields.items as object[];
+    expect(counted({ ...either, fields: { ...either.fields, items: [{ ...first, counted: false }, ...rest] } as MedRecord['fields'] }).map(([, c]) => c)).toEqual([false, true]);
   });
 
   it('is never named in the claim’s title or kind of care', () => {

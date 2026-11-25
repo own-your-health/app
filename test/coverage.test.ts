@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { birthWords, bornClause, coverageChangesIn, coverageHistory, isChange } from '../src/model/coverage';
 import { householdLines, inPeriod } from '../src/model/costs';
+import type { MedRecord } from '../src/model/types';
 import { dateText } from '../src/ui/format';
 import { demo, personNamed } from './demo-data';
 import { recordsOf, ruled, RULES } from './rules';
@@ -28,6 +29,14 @@ describe('a person’s coverage over time', () => {
   it('knows the insurer’s own record by its sign-in, where another source shares its id', () => {
     const [only] = history('Dale');
     expect([only!.insurer, only!.sources]).toEqual(['Example Care Plan', ['Example Care Plan', 'Example Health']]);
+  });
+
+  it('is named by its payer, else by what the record is called', () => {
+    const dale = recordsOf('Dale');
+    const insurer = (payer?: string) =>
+      coverageHistory({ ...dale, records: dale.records.filter((r) => r.kind === 'coverage').map((r) => ({ ...r, display: 'Silver card', fields: { ...r.fields, payer } as MedRecord['fields'] })) }, RULES, ruled('Dale')).map((s) => s.insurer);
+    expect(insurer('Example Care Plan')).toEqual(['Example Care Plan']);
+    expect(insurer()).toEqual(['Silver card']);
   });
 
   it('marks a coverage that started the day someone in the household was born, as a date, not a reason', () => {

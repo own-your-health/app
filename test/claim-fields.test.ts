@@ -177,6 +177,8 @@ describe('what a claim paid for', () => {
 
   it('is none for medrec’s claim without a link, or with one to a visit not in these records, though a visit matches by day and provider', () => {
     expect(isContractClaim(lostLink)).toBe(true);
+    // Either of the two makes it one.
+    for (const k of ['amounts', 'category']) expect(isContractClaim(without(lostLink, k))).toBe(true);
     expect(visits.some((v) => v.claims.includes(lostLink))).toBe(false);
     expect(claimContext(index, household, PERSON, TODAY, lostLink).visit).toBeUndefined();
     const unlinked = without(lostLink, 'visit');

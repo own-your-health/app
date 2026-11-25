@@ -110,6 +110,17 @@ describe('the sample household', () => {
     ]);
     expect(breakdown(inPlanYear, 'month', names).map((g) => g.key)).toEqual(['2026-07', '2026-09', '2026-10', '2026-11']);
     expect(breakdown(inPlanYear, 'category', names).map((g) => g.label)).toEqual(['Procedures', 'Lab tests', 'Visits', 'Pharmacy', 'Vaccines', 'Other medical services']);
+    // Where no one's share tells them apart, what the plan allowed does, then the name.
+    const free = inPlanYear.map((l) => ({ ...l, cents: { ...l.cents, youOwe: 0, ...(l.provider === 'Example Pediatrics' || l.provider === 'Example Pharmacy' ? { allowed: undefined } : {}) } }));
+    expect(breakdown(free, 'provider', names).map((g) => [g.label, g.cents.allowed])).toEqual([
+      ['Example Endoscopy Center', 90500],
+      ['Example Health', 38090],
+      ['Example Lab', 28940],
+      ['Example Digestive Health', 26200],
+      ['Example Sexual Health Clinic', 14510],
+      ['Example Pediatrics', undefined],
+      ['Example Pharmacy', undefined],
+    ]);
   });
 
   it('spans every month of the period up to now, the quiet ones too', () => {
