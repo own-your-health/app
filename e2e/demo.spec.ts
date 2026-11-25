@@ -65,7 +65,7 @@ test('home says which sign-in needs a person, in one line that opens the source'
   await expect(page.locator('main')).not.toContainText('auth login');
   // The failed load retries on its own, so home only counts it. An answer from hours ago is on the Sources screen.
   const strip = page.locator('.status-strip');
-  await expect(strip.locator('.status-line')).toHaveText(/^Sources: Loaded \d+ hours? ago · 1 failed$/);
+  await expect(strip.locator('.status-line')).toHaveText(/^Loaded \d+ hours? ago · 1 failed$/);
   await expect(strip).not.toContainText('Last refresh request');
   await expect(page.getByRole('button', { name: 'Refresh everything' })).toBeVisible();
   // The bar's menu carries the dot.
@@ -101,7 +101,7 @@ const wordless = () => {
 test('the Sources screen lists every source and sign-in, and opens one', async ({ page }) => {
   await lay(page, wordless());
   await page.goto('./?demo');
-  await page.locator('.status-strip').getByRole('link', { name: /^Sources: Loaded/ }).click();
+  await page.locator('.status-strip').getByRole('link', { name: /^Loaded .* ago, see Sources$/ }).click();
   await expect(page).toHaveURL(/#\/sources$/);
   await expect(page.locator('h1.glance-answer')).toHaveText('1 sign-in needs a person');
   await expect(page.locator('.glance')).toContainText('The Mac checked in');

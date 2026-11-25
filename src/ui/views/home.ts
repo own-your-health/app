@@ -23,11 +23,15 @@ export function homeView(ctx: Ctx): HTMLElement {
   // What the Mac said to a request just made, while none for everything waits; Sources keeps the older answers.
   const answered = store.pendingFor({ all: true }) ? undefined : latestAnswered(store.done, now, JUST_NOW_MS);
 
+  const loaded = latest ? `Loaded ${relative(latest, now)}` : 'Nothing loaded yet';
+  const toSources = link({ name: 'sources' }, loaded);
+  toSources.setAttribute('aria-label', `${loaded}, see Sources`);
+
   // One line on how fresh the records are, with Refresh; a second only for what is not as usual.
   const freshness = h(
     'div',
     { class: 'status-strip' },
-    h('p', { class: 'status-line' }, link({ name: 'sources' }, h('span', { class: 'sr-only' }, 'Sources: '), latest ? `Loaded ${relative(latest, now)}` : 'Nothing loaded yet'), failed ? h('span', { class: 'small error-text' }, ` · ${failed} failed`) : null),
+    h('p', { class: 'status-line' }, toSources, failed ? h('span', { class: 'small error-text' }, ` · ${failed} failed`) : null),
     h('div', { class: 'status-action' }, refreshControl(ctx, { all: true }, 'everything', { named: true })),
     answered ? h('p', { class: 'status-more small muted' }, requestAnswer(answered, { sources: views, people }, now)) : null,
     mac.attention || store.status.kind === 'missing' ? h('p', { class: ['status-more', 'small', mac.attention ? 'attention' : 'muted'] }, mac.text) : null,
