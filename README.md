@@ -864,6 +864,13 @@ dropped from the address.
   one that is stale, still to come or refused, the lists, Health (everyone's
   too) and the sheet say why; a folder of an earlier medrec has none, and they
   say nothing.
+- **About another person.** A chart can hold what is about somebody else: a
+  screening a parent answers about themselves, or a result its source says is
+  another's. medrec 0.9.9 and later name those items by id (`about_another` in
+  `views.json`, `src/model/aboutAnother.ts`). They are left out when the index
+  is read, with every link to them, so no list, total, search, sheet or page
+  has one. Their person's own results and papers say how many there are, and
+  nothing else of them. No shared screen, sheet or list of everyone's says it.
 - **Papers** (`#/papers`, a tab, also from each
   person's Health): every paper in the Drive
   folder, newest first by year, each with the visit it belongs to as a

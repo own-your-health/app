@@ -2,6 +2,7 @@
 // conditions, allergies, immunizations and imaging. Their documents are on
 // Papers.
 
+import { aboutText } from '../../model/aboutAnother';
 import { conditionName } from '../../model/codeNames';
 import { originNames, sortByDateDesc, str, studyTitle } from '../../model/records';
 import { isOutOfRange, rangeFor, resultFlag } from '../../model/flags';
@@ -177,7 +178,8 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
       others.length ? card({ title: `Also in ${group.name}` }, others.map((x) => resultRow(person.id, x))) : null,
     );
   }
-  if (!groups.length) return card({ title: 'Results' }, empty('No results yet.'));
+  const about = idx.about ? h('p', { class: 'small muted' }, `${aboutText(idx.about)}.`) : null;
+  if (!groups.length) return card({ title: 'Results' }, empty('No results yet.'), about);
   return h(
     'div',
     { class: 'stack' },
@@ -187,6 +189,7 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
         g.tests.map((t) => resultRow(person.id, t)),
       ),
     ),
+    about,
   );
 }
 

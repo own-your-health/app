@@ -10,6 +10,7 @@ import { parseBills } from '../model/bills';
 import { parseMedrecEvents } from '../model/events';
 import { atLeast, held, isHeld, noList, parsePrivate, type HeldWhy, type Privacy } from '../model/private';
 import { parseCodeNames } from '../model/codeNames';
+import { aboutAnother, withoutAbout } from '../model/aboutAnother';
 import { parseStanding } from '../model/standing';
 import { parseViews, viewOf, type PersonView, type ViewFile } from '../model/views';
 import type { AttemptLine, Household, MarkRequest, PaidMark, PendingMark, Person, PersonIndex, PersonText, RefreshRequest, RefreshStatus, RefusedRequest, RequestScope, UnpaidMark } from '../model/types';
@@ -256,6 +257,7 @@ export class Store {
   private async loadRecords(): Promise<void> {
     const [views] = await Promise.all([this.readViews(), this.loadIndexes()]);
     this.medrec = typeof views?.medrec === 'string' ? views.medrec : undefined;
+    for (const [id, index] of this.indexes) this.indexes.set(id, withoutAbout(index, aboutAnother(views, id)));
     const household = this.folder.md5('household.json');
     // Whoever compares with it says why it could not be read; with no view to compare, nobody does.
     household.catch(() => undefined);
