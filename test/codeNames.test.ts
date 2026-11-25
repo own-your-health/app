@@ -20,7 +20,7 @@ async function load(overlay: Overlay = {}, manifest?: Parameters<typeof demoFold
 
 const SAMPLE = await load();
 const id = (name: string) => personNamed(SAMPLE.household, name).id;
-const [robin, sam, alex, jamie] = ['Robin Example', 'Sam Example', 'Alex Example', 'Jamie Example'].map(id) as [string, string, string, string];
+const [robin, sam, alex, drew] = ['Robin Example', 'Sam Example', 'Alex Example', 'Drew Example'].map(id) as [string, string, string, string];
 const index = (store: Store, person: string): PersonIndex => store.indexes.get(person)!;
 const condition = (idx: PersonIndex, display: string): MedRecord => idx.records.find((r) => r.kind === 'condition' && r.display === display)!;
 const coded = (idx: PersonIndex, code: string): { claim: MedRecord; d: ReturnType<typeof claimDiagnoses>[number] } => {
@@ -85,7 +85,7 @@ describe('the sample', () => {
   });
 
   it('gives someone with no coded condition or claim no names', () => {
-    expect(index(SAMPLE, jamie).codeNames).toBeUndefined();
+    expect(index(SAMPLE, drew).codeNames).toBeUndefined();
   });
 });
 
@@ -170,7 +170,7 @@ describe('a condition', () => {
     expect(shown({ display: 'HYPERTENSION NOS' })).toEqual({ words: 'HYPERTENSION NOS', title: HTN });
     expect(shown({ display: '', code: { system: ICD10CM, code: 'I10' } })).toEqual({ words: HTN, title: undefined });
     expect(shown({ display: HTN })).toEqual({ words: HTN, title: undefined });
-    expect(shown({ kind: 'procedure', display: 'Knee scope' })).toEqual({ words: 'Knee scope', title: undefined });
+    expect(shown({ kind: 'procedure', display: 'Skin biopsy' })).toEqual({ words: 'Skin biopsy', title: undefined });
   });
 
   it('is said once when the source’s words are the title’s', () => {
@@ -220,37 +220,38 @@ describe('a claim’s diagnosis', () => {
     expect(diagnosisNames(idx, two).map((n) => n.name)).toEqual(['Ear infection (H6690)', 'Encounter for immunization (Z23)']);
   });
 
-  it('in the sample is in capitals on the pharmacy’s claims, and an abbreviation on the older', () => {
+  it('in the sample is in capitals on the pharmacy’s claims, and an abbreviation on the oldest', () => {
     const idx = index(SAMPLE, robin);
     const named = idx.records.filter((r) => r.kind === 'claim').flatMap((r) => diagnosisNames(idx, r).map((n) => [r.date, n.name, n.source]));
-    expect(named.filter(([, name]) => name!.includes('I10')).sort()).toEqual([
-      ['2026-08-14', 'Essential (primary) hypertension (HTN, I10)', 'HTN (I10)'],
-      ['2026-11-12', 'Essential (primary) hypertension (I10)', 'HYPERTENSION NOS (I10)'],
+    expect(named.sort()).toEqual([
+      ['2026-09-08', 'Pure hypercholesterolemia, unspecified (HLD, E78.00)', 'HLD (E78.00)'],
+      ['2026-10-08', 'Pure hypercholesterolemia, unspecified (E78.00)', 'HIGH CHOLESTEROL (E78.00)'],
+      ['2026-11-07', 'Pure hypercholesterolemia, unspecified (E78.00)', 'HYPERCHOLESTEROLEMIA NOS (E78.00)'],
     ]);
   });
 });
 
 describe('a private item’s title', () => {
-  const anxiety = 'Generalized anxiety disorder (F41.1)';
+  const screening = 'Encounter for screening for human immunodeficiency virus [HIV] (Z11.4)';
 
   it('is given to a private record alone', () => {
     const idx = index(SAMPLE, sam);
-    const { claim, d } = coded(idx, 'F41.1');
-    expect(idx.codeNames!.codes.has('icd10cm|F41.1')).toBe(false);
-    expect(diagnosisName(idx, claim, { ...d, display: 'Anxiety' })).toEqual({ name: 'Anxiety (F41.1)', title: anxiety });
-    expect(diagnosisName(idx, claim, { ...d, display: undefined })).toEqual({ name: anxiety });
+    const { claim, d } = coded(idx, 'Z11.4');
+    expect(idx.codeNames!.codes.has('icd10cm|Z11.4')).toBe(false);
+    expect(diagnosisName(idx, claim, { ...d, display: 'HIV screening' })).toEqual({ name: 'HIV screening (Z11.4)', title: screening });
+    expect(diagnosisName(idx, claim, { ...d, display: undefined })).toEqual({ name: screening });
     const open = coded(idx, 'Z13.29').claim;
-    expect(diagnosisName(idx, open, { ...d, display: 'Anxiety' })).toEqual({ name: 'Anxiety (F41.1)' });
-    expect(diagnosisName(idx, open, { ...d, display: undefined })).toEqual({ name: 'F41.1' });
+    expect(diagnosisName(idx, open, { ...d, display: 'HIV screening' })).toEqual({ name: 'HIV screening (Z11.4)' });
+    expect(diagnosisName(idx, open, { ...d, display: undefined })).toEqual({ name: 'Z11.4' });
   });
 
   it('follows the household’s own marks', async () => {
     const idx = index(await load(privateCase('marked')), sam);
-    const { claim, d } = coded(idx, 'S83.241A');
-    expect([idx.codeNames!.codes.has('icd10cm|S83.241A'), idx.codeNames!.privateCodes.has('icd10cm|S83.241A')]).toEqual([false, true]);
-    expect(diagnosisName(idx, claim, { ...d, display: 'Knee' }).title).toBe('Other tear of medial meniscus, current injury, right knee, initial encounter (S83.241A)');
+    const { claim, d } = coded(idx, 'K21.9');
+    expect([idx.codeNames!.codes.has('icd10cm|K21.9'), idx.codeNames!.privateCodes.has('icd10cm|K21.9')]).toEqual([false, true]);
+    expect(diagnosisName(idx, claim, { ...d, display: 'Reflux' }).title).toBe('Gastro-esophageal reflux disease without esophagitis (K21.9)');
     const open = coded(idx, 'Z13.29').claim;
-    expect(diagnosisName(idx, open, { ...d, display: 'Knee' })).toEqual({ name: 'Knee (S83.241A)' });
+    expect(diagnosisName(idx, open, { ...d, display: 'Reflux' })).toEqual({ name: 'Reflux (K21.9)' });
   });
 
   it('is every title of a person whose marks do not read, whose items are all held back', async () => {

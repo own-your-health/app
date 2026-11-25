@@ -12,7 +12,7 @@ const index = (name: string) => indexes.get(personNamed(household, name).id)!;
 
 describe('coverage', () => {
   it('says what the records can know about each person', () => {
-    expect(['Robin Example', 'Sam Example', 'Alex Example', 'Jamie Example'].map((n) => coverageOf(index(n)).kind)).toEqual(['records_and_claims', 'records_and_claims', 'records_and_claims', 'records_only']);
+    expect(['Robin Example', 'Sam Example', 'Alex Example', 'Drew Example'].map((n) => coverageOf(index(n)).kind)).toEqual(['records_and_claims', 'records_and_claims', 'records_and_claims', 'records_only']);
     const sam = index('Sam Example');
     const claimsOnly: PersonIndex = { ...sam, records: sam.records.filter((r) => r.kind === 'claim' || r.kind === 'medication') };
     expect(coverageOf(claimsOnly)).toMatchObject({ kind: 'claims_only', words: 'Claims and papers only' });
@@ -25,8 +25,8 @@ describe('a person’s health', () => {
     const h = healthOf(index('Sam Example'), TODAY);
     expect(h.conditions.map((c) => c.name)).toEqual(['Vitamin D deficiency']);
     expect(h.medicines.map((m) => [m.name, privateOf(index('Sam Example'), m.records) ?? null])).toEqual([
-      ['Nicotine 14 mg/24 hour patch', 'substance_use'],
-      ['Loratadine 10 mg tablet', null],
+      ['Emtricitabine-tenofovir 200-300 mg tablet', 'sexual_health'],
+      ['Famotidine 20 mg tablet', null],
       ['Vitamin D3 2,000 unit capsule', null],
     ]);
     expect(h.allergies.map((a) => a.name)).toEqual(['Peanuts']);
@@ -46,34 +46,34 @@ describe('a person’s health', () => {
 describe('the doctor’s sheet', () => {
   it('leaves private items off unless they are included, and counts them', () => {
     const off = doctorSheet(index('Sam Example'), TODAY, false);
-    expect(off.medicines.map((m) => m.name)).toEqual(['Loratadine 10 mg tablet', 'Vitamin D3 2,000 unit capsule']);
+    expect(off.medicines.map((m) => m.name)).toEqual(['Famotidine 20 mg tablet', 'Vitamin D3 2,000 unit capsule']);
     // The private medicine, and the doctor known only from the private visit.
-    expect(off.careTeam.map((m) => m.name)).not.toContain('Dr. Morgan Placeholder');
+    expect(off.careTeam.map((m) => m.name)).not.toContain('Dr. Avery Sample');
     expect(off.privateLeft).toBe(2);
     const on = doctorSheet(index('Sam Example'), TODAY, true);
-    expect(on.medicines.map((m) => m.name)).toEqual(['Loratadine 10 mg tablet', 'Nicotine 14 mg/24 hour patch', 'Vitamin D3 2,000 unit capsule']);
-    expect(on.careTeam.map((m) => m.name)).toContain('Dr. Morgan Placeholder');
+    expect(on.medicines.map((m) => m.name)).toEqual(['Emtricitabine-tenofovir 200-300 mg tablet', 'Famotidine 20 mg tablet', 'Vitamin D3 2,000 unit capsule']);
+    expect(on.careTeam.map((m) => m.name)).toContain('Dr. Avery Sample');
     expect(on.privateLeft).toBe(0);
   });
 
   it('names the care team: who was seen in two years, newest first, and who prescribes current medicines', () => {
     const team = careTeam(index('Sam Example'), TODAY);
-    expect(team.find((m) => m.name === 'Dr. Casey Placeholder')).toMatchObject({ last: '2026-05-20', place: 'Example Health Orthopedics', prescribes: expect.arrayContaining(['Vitamin D3 2,000 unit capsule', 'Nicotine 14 mg/24 hour patch']) });
-    expect(team.find((m) => m.name === 'Dr. Morgan Placeholder')).toMatchObject({ last: '2026-10-27', prescribes: [] });
+    expect(team.find((m) => m.name === 'Dr. Casey Placeholder')).toMatchObject({ last: '2026-05-20', place: 'Example Health Orthopedics', prescribes: expect.arrayContaining(['Vitamin D3 2,000 unit capsule', 'Famotidine 20 mg tablet']) });
+    expect(team.find((m) => m.name === 'Dr. Avery Sample')).toMatchObject({ last: '2026-11-03', prescribes: ['Emtricitabine-tenofovir 200-300 mg tablet'] });
     const dated = team.filter((m) => m.last).map((m) => m.last!);
     expect(dated).toEqual([...dated].sort().reverse());
     // Two years on, nobody was seen: only the prescribers of current medicines remain.
-    expect(careTeam(index('Sam Example'), '2028-11-01').every((m) => !m.last && m.prescribes.length)).toBe(true);
+    expect(careTeam(index('Sam Example'), '2028-11-04').every((m) => !m.last && m.prescribes.length)).toBe(true);
   });
 
   it('splits vital signs from lab tests, both from the last two years', () => {
-    // Three weights are one test: the sheet gives its newest.
-    const jamie = doctorSheet(index('Jamie Example'), TODAY, false);
-    expect(jamie.vitals.map((x) => [x.series.name, x.latest.date?.slice(0, 10)])).toEqual([
-      ['Weight', '2026-09-29'],
-      ['Oxygen saturation, right hand', '2026-07-29'],
+    // Two weights are one test: the sheet gives its newest.
+    const drew = doctorSheet(index('Drew Example'), TODAY, false);
+    expect(drew.vitals.map((x) => [x.series.name, x.latest.date?.slice(0, 10)])).toEqual([
+      ['Height', '2025-12-16'],
+      ['Weight', '2025-12-16'],
     ]);
-    expect(jamie.labs).toEqual([]);
+    expect(drew.labs.map((x) => x.series.name)).toEqual(['Lead, blood']);
     // Alex's newest weight is from January, inside the two years.
     expect(doctorSheet(index('Alex Example'), TODAY, false).vitals.map((x) => x.series.name)).toEqual(['Weight']);
     expect(doctorSheet(index('Sam Example'), TODAY, false).labs.map((x) => x.series.name)).toContain('Hemoglobin');

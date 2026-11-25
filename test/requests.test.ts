@@ -46,7 +46,7 @@ describe('payments marked', () => {
     expect(paidAmount({ amount: '120.00', currency: 'USD' })).toBe('120.00');
     expect(paidAmount({ amount: '120.00', currency: 'EUR' })).toEqual({ amount: '120.00', currency: 'EUR' });
     expect(markedAmount(paid.paid!)).toEqual({ amount: '120.00', currency: 'USD' });
-    expect(markedAmount(fixture<MarkRequest>('requests/paid-done.json').paid!)).toEqual({ amount: '120.00', currency: 'EUR' });
+    expect(markedAmount(fixture<MarkRequest>('rules/paid-ok.json').paid!)).toEqual({ amount: '8.00', currency: 'EUR' });
   });
 
   it('take an amount as a person types it, above zero with at most two places', () => {

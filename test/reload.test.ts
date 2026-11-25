@@ -58,7 +58,7 @@ describe('reading the records again', () => {
     await store.reload();
     expect(store.index(robin)!.records.some((r) => r.display === 'An invented allergy')).toBe(true);
     // Robin's views are behind, and so are those of the children linked to Robin.
-    expect([store.index(robin)!.events, store.eventsNotes.get(robin)?.kind, heldNames(store), store.holdMayEnd()]).toEqual([undefined, 'behind', [name, 'Alex Example', 'Jamie Example'], true]);
+    expect([store.index(robin)!.events, store.eventsNotes.get(robin)?.kind, heldNames(store), store.holdMayEnd()]).toEqual([undefined, 'behind', [name, 'Alex Example', 'Drew Example'], true]);
     expect(old.records.some((r) => r.display === 'An invented allergy')).toBe(false);
   });
 
@@ -94,7 +94,7 @@ describe('reading the records again', () => {
 
   it('takes someone out when the household no longer lists them, and reads someone it could not before', async () => {
     const household = demoJson<{ people: { name: string }[] }>('household.json');
-    household.people = household.people.filter((p) => p.name !== 'Jamie Example');
+    household.people = household.people.filter((p) => p.name !== 'Drew Example');
     const { store } = await opened({}, { 'household.json': JSON.stringify(household) });
     await store.reload();
     expect([store.household.people.length, store.indexes.size]).toEqual([3, 3]);

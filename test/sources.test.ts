@@ -69,7 +69,9 @@ describe('source views over the sample', () => {
   });
 
   it('fall back to the ImportRun for a source the Mac does not refresh', () => {
-    const v = view('Jamie Example', 'athena');
+    const drew = sourceOf(household, 'Drew Example', 'athena').id;
+    const unset: RefreshStatus = { ...status, sources: status.sources.filter((s) => s.source !== drew) };
+    const v = sourceViews({ household, indexes, status: unset, pending: [], done: [], now: NOW }).find((x) => x.source.id === drew)!;
     expect(v.status).toBeUndefined();
     expect(v.health).toBe('ok');
     expect(v.lastLoad?.importId).toMatch(/^i_/);
@@ -96,10 +98,12 @@ describe('source views over the sample', () => {
 
   it('show an everything request only on sources the Mac refreshes', () => {
     const req = buildRequest({ scope: { all: true }, now: NOW, by: {}, appVersion: '0' });
-    const vs = sourceViews({ household, indexes, status, pending: [req], done: [], now: NOW });
-    // Jamie's practice is not set up for refresh.
-    const notRefreshed = [sourceOf(household, 'Jamie Example', 'athena').id];
-    for (const v of vs) expect(v.pending.length).toBe(notRefreshed.includes(v.source.id) ? 0 : 1);
+    // Drew's practice not set up for refresh.
+    const drew = sourceOf(household, 'Drew Example', 'athena').id;
+    const unset: RefreshStatus = { ...status, sources: status.sources.filter((s) => s.source !== drew) };
+    const vs = sourceViews({ household, indexes, status: unset, pending: [req], done: [], now: NOW });
+    expect(vs.filter((v) => !v.pending.length).map((v) => v.source.id)).toEqual([drew]);
+    expect(vs.every((v) => v.pending.length <= 1)).toBe(true);
   });
 });
 
@@ -121,8 +125,11 @@ describe('headline', () => {
   it('reads plainly when nothing is wrong', () => {
     // Without status.json, health comes from the ImportRuns alone.
     const vs = sourceViews({ household, indexes, pending: [], done: [], now: NOW });
-    expect(headline(vs)).toEqual({ text: '10 sources loaded, 1 not yet', attention: false });
-    expect(headline(vs.filter((v) => v.health === 'ok'))).toEqual({ text: 'All 10 sources loaded', attention: false });
+    expect(headline(vs)).toEqual({ text: 'All 11 sources loaded', attention: false });
+    // One nothing has been loaded from.
+    const drew = sourceOf(household, 'Drew Example', 'athena').person;
+    const none = new Map([...indexes].map(([id, idx]) => [id, id === drew ? { ...idx, imports: [] } : idx]));
+    expect(headline(sourceViews({ household, indexes: none, pending: [], done: [], now: NOW }))).toEqual({ text: '10 sources loaded, 1 not yet', attention: false });
     expect(headline([])).toEqual({ text: 'No sources yet', attention: false });
   });
 });

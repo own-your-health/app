@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { balances, breakdown, codeLines, comparableCodes, costLines, csvText, dayInPeriod, householdLines, inPeriod, monthsSpanned, periods, planYearOf, toCsv, totals, type CostLine } from '../src/model/costs';
-import { parseIndex } from '../src/model/parse';
 import type { MedRecord, PersonIndex } from '../src/model/types';
 import { demo, personNamed } from './demo-data';
-import { fixture } from './helpers';
+import { recordsOf } from './rules';
 
 const { household, indexes } = demo();
 const names = new Map(household.people.map((p) => [p.id, p.name]));
@@ -30,34 +29,34 @@ describe('plan years', () => {
       ['2026-07-01', 'claims'],
     ]);
     // Robin's plans print none.
-    expect([year('Robin Example', '2026-08-14'), year('Robin Example', '2026-10-01')].map((l) => [l.planYear.start, l.planBasis])).toEqual([
+    expect([year('Robin Example', '2026-09-08'), year('Robin Example', '2026-10-01')].map((l) => [l.planYear.start, l.planBasis])).toEqual([
       ['2026-01-01', 'calendar'],
       ['2026-01-01', 'calendar'],
     ]);
   });
 
-  // A coverage that took effect mid-year (a new job, say), claims under
-  // the same plan by another spelling, a plan that prints its benefit period
+  // A coverage that took effect mid-year, claims under the same plan by another
+  // spelling, a plan that prints its benefit period
   // on one claim only, and one whose "benefit period" is a single day.
-  const planYears = parseIndex(fixture('folder/index-plan-years.json'), 'p_aaaaaaaaaaaaaaaaaaaa');
+  const planYears = recordsOf('Pat');
   const yearsOf = (opts?: { planStart?: string }) =>
     Object.fromEntries(costLines('p_x', planYears, opts).map((l) => [`${l.insurer} ${l.date}`, `${l.planYear.start} to ${l.planYear.end}, ${l.planBasis}`]));
 
   it('never start on the day a coverage took effect', () => {
     expect(yearsOf()).toEqual({
-      'Example Health Plan 2026-03-10': '2026-01-01 to 2026-12-31, calendar',
-      'Example Health Plan 2026-11-20': '2026-01-01 to 2026-12-31, calendar',
-      'Example Care Plan 2026-05-01': '2025-07-01 to 2026-06-30, claims',
-      'Example Care Plan 2026-08-01': '2026-07-01 to 2027-06-30, claims',
-      'Example Dental 2026-09-15': '2026-01-01 to 2026-12-31, calendar',
+      'Example Health Plan 2026-02-12': '2026-01-01 to 2026-12-31, calendar',
+      'Example Health Plan 2026-10-05': '2026-01-01 to 2026-12-31, calendar',
+      'Example Care Plan 2026-03-20': '2025-06-01 to 2026-05-31, claims',
+      'Example Care Plan 2026-09-09': '2026-06-01 to 2027-05-31, claims',
+      'Example Dental 2026-08-08': '2026-01-01 to 2026-12-31, calendar',
     });
   });
 
   it('take the start set in Settings for a plan whose claims do not say, and only for that', () => {
     expect(yearsOf({ planStart: '04-01' })).toMatchObject({
-      'Example Health Plan 2026-03-10': '2025-04-01 to 2026-03-31, setting',
-      'Example Health Plan 2026-11-20': '2026-04-01 to 2027-03-31, setting',
-      'Example Care Plan 2026-08-01': '2026-07-01 to 2027-06-30, claims',
+      'Example Health Plan 2026-02-12': '2025-04-01 to 2026-03-31, setting',
+      'Example Health Plan 2026-10-05': '2026-04-01 to 2027-03-31, setting',
+      'Example Care Plan 2026-09-09': '2026-06-01 to 2027-05-31, claims',
     });
   });
 });
@@ -73,16 +72,14 @@ describe('a day in a period', () => {
 
 describe('the sample household', () => {
   it('has a line for each thing each claim paid for, newest first', () => {
-    expect(all).toHaveLength(30);
+    expect(all).toHaveLength(28);
     expect(all.every((l) => l.split)).toBe(true);
-    // Alex's strep test was billed as a costlier one, and Sam's knee scope for both sides of the
-    // joint: the plan paid each as another code and left the billed line out, so it counts nothing.
+    // Sam's doctor billed two procedures of one day: the plan paid one and left the other's line out, so it counts nothing.
     expect(all.filter((l) => l.uncounted).map((l) => [l.date, l.code, l.cents, l.uncounted])).toEqual([
-      ['2026-11-20', '87651', {}, { billed: 13200, notCovered: 13200, youOwe: 13200 }],
-      ['2026-08-26', '29880', {}, { billed: 512000, notCovered: 512000, youOwe: 512000 }],
+      ['2026-09-16', '43235', {}, { billed: 41000, notCovered: 41000, youOwe: 41000 }],
     ]);
     expect(all.map((l) => l.date)).toEqual([...all.map((l) => l.date)].sort().reverse());
-    expect(all.find((l) => l.code === '00000-1111-90')).toMatchObject({ category: 'pharmacy', provider: 'Example Pharmacy', insurer: 'Example Pharmacy Benefits' });
+    expect(all.find((l) => l.code === '00000-2222-30')).toMatchObject({ category: 'pharmacy', provider: 'Example Pharmacy', insurer: 'Example Pharmacy Benefits' });
   });
 
   it('offers this and last plan year, each calendar year, and every year', () => {
@@ -91,9 +88,9 @@ describe('the sample household', () => {
 
   it('totals this plan year across everyone, each person in their own plan’s year', () => {
     expect(totals(inPlanYear)).toEqual({
-      cents: { billed: 745600, allowed: 286810, planPaid: 228664, deductible: 23350, copay: 25000, coinsurance: 9796, youOwe: 58146 },
-      claims: 14,
-      lines: 21,
+      cents: { billed: 519960, allowed: 216955, planPaid: 167169, deductible: 22100, copay: 6500, coinsurance: 21186, youOwe: 49786 },
+      claims: 13,
+      lines: 20,
     });
     // Sam's May visit was last plan year; Robin's Oct 1 claim, this one.
     expect(inPlanYear.some((l) => l.date === '2026-05-20')).toBe(false);
@@ -103,18 +100,16 @@ describe('the sample household', () => {
 
   it('breaks it down by provider, your share first, and by month in order', () => {
     expect(breakdown(inPlanYear, 'provider', names).map((g) => [g.label, g.cents.youOwe, g.claims])).toEqual([
-      ['Example Surgery Center', 17500, 1],
-      ['Example Lab', 14028, 3],
-      ['Example Orthopedic Surgeons', 11250, 1],
+      ['Example Lab', 14748, 4],
+      ['Example Digestive Health', 11620, 1],
+      ['Example Endoscopy Center', 9050, 1],
       ['Example Health', 7868, 2],
-      ['Example Counseling', 3000, 1],
-      ['Example Pediatrics', 2500, 1],
-      ['Example Pharmacy', 2000, 2],
-      ['Example Medical Supply', 0, 2],
-      ['Example Imaging Partners', 0, 1],
+      ['Example Pediatrics', 3000, 1],
+      ['Example Sexual Health Clinic', 2000, 1],
+      ['Example Pharmacy', 1500, 3],
     ]);
-    expect(breakdown(inPlanYear, 'month', names).map((g) => g.key)).toEqual(['2026-07', '2026-08', '2026-10', '2026-11']);
-    expect(breakdown(inPlanYear, 'category', names).map((g) => g.label)).toEqual(['Procedures', 'Lab tests', 'Visits', 'Pharmacy', 'Vaccines', 'Supplies and equipment', 'Imaging', 'Drugs given']);
+    expect(breakdown(inPlanYear, 'month', names).map((g) => g.key)).toEqual(['2026-07', '2026-09', '2026-10', '2026-11']);
+    expect(breakdown(inPlanYear, 'category', names).map((g) => g.label)).toEqual(['Procedures', 'Lab tests', 'Visits', 'Pharmacy', 'Vaccines', 'Other medical services']);
   });
 
   it('spans every month of the period up to now, the quiet ones too', () => {
@@ -128,19 +123,19 @@ describe('the sample household', () => {
 
   it('compares a code billed more than once, across providers and dates', () => {
     const codes = comparableCodes(all);
-    expect(codes.find((c) => c.key === 'CPT:99213')).toMatchObject({ label: 'Office visit', count: 3, providers: 2, minAllowed: 9800, maxAllowed: 12110 });
-    expect(codes.map((c) => c.key)).toContain('NDC:00000-1111-90');
+    expect(codes.find((c) => c.key === 'CPT:99213')).toMatchObject({ label: 'Office visit', count: 3, providers: 2, minAllowed: 11200, maxAllowed: 12110 });
+    expect(codes.map((c) => c.key)).toContain('NDC:00000-2222-30');
     expect(codeLines(all, 'CPT:99213').map((l) => [l.date, l.provider, l.cents.billed, l.cents.allowed])).toEqual([
-      ['2026-11-20', 'Example Pediatrics', 16500, 9800],
       ['2026-11-18', 'Example Health', 18000, 11250],
+      ['2026-11-03', 'Example Sexual Health Clinic', 17000, 11200],
       ['2025-09-15', 'Example Health', 18900, 12110],
     ]);
   });
 
   it('reads each plan’s deductible and out-of-pocket limit from its newest claim in the plan year', () => {
     const got = balances(inPlanYear, records).map((b) => [names.get(b.person), b.insurer, b.planYear.start, b.asOf, b.items.map((i) => [i.label, i.used, i.limit])]);
-    // Counting August's knee procedure, which came before; the newest is the private counseling's.
-    expect(got).toContainEqual(['Sam Example', 'Example Care Plan', '2026-07-01', '2026-10-27', [['Deductible', 23350, 75000], ['Out-of-pocket limit', 43850, 300000]]]);
+    // Counting September's endoscopy, which came before; the newest is the private visit's.
+    expect(got).toContainEqual(['Sam Example', 'Example Care Plan', '2026-07-01', '2026-11-03', [['Deductible', 22100, 75000], ['Out-of-pocket limit', 35490, 300000]]]);
     expect(got).toContainEqual(['Robin Example', 'Example Health Plan', '2026-01-01', '2026-10-01', [['Deductible', 112040, 150000], ['Out-of-pocket limit', 135610, 400000]]]);
     // The pharmacy benefit printed none.
     expect(got.some((b) => b[1] === 'Example Pharmacy Benefits')).toBe(false);
@@ -184,10 +179,10 @@ describe('the CSV', () => {
   const line = (over: Partial<CostLine>): CostLine => ({ ...all[0]!, ...over });
 
   it('has a row for each line, amounts in dollars', () => {
-    const csv = toCsv([all.find((l) => l.code === '87880')!], names);
+    const csv = toCsv([all.find((l) => l.code === '92567')!], names);
     const [head, row, end] = csv.split('\r\n');
     expect(head).toBe('Date,Person,Provider,Insurer,Plan year,Service,Code,Code system,Kind of care,Billed,Allowed,Plan paid,Deductible,Copay,Coinsurance,Not covered,You owe,Claim,Left out by the plan,Revenue code');
-    expect(row).toMatch(/^2026-11-20,Alex Example,Example Pediatrics,Example Care Plan,2026-07-01 to 2027-06-30,Strep test,87880,CPT,Lab test,48\.00,21\.30,21\.30,0\.00,0\.00,0\.00,,0\.00,r_[a-z2-7]{20},,$/);
+    expect(row).toMatch(/^2026-11-20,Alex Example,Example Pediatrics,Example Care Plan,2026-07-01 to 2027-06-30,Eardrum movement test,92567,CPT,Medical service,52\.00,18\.60,18\.60,0\.00,0\.00,0\.00,,0\.00,r_[a-z2-7]{20},,$/);
     expect(end).toBe('');
   });
 

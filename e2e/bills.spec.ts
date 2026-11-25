@@ -2,14 +2,14 @@ import { createHash } from 'node:crypto';
 import { expect, test, type Page } from '@playwright/test';
 import { demoJson, filesUnder, DEMO, paidCase, privateCase, type Overlay } from '../test/helpers';
 import { lay } from './lay';
+import { ROBIN, SAM } from '../test/sample';
+import { rewritten } from './alter';
 
 // Bills as medrec's bills.json has them: payments the household marked, what
 // is left of a bill partly paid, a settled bill that is never open, overdue or
 // worth a call, and what the screens say when the list can't be used. The
 // "paid" case is medrec's own (scripts/bill-fixtures.mjs).
 
-const SAM = 'p_wwezzed7kml67hnp6s7n';
-const ROBIN = 'p_xo4em46i7yj3hphlpajo';
 
 test.beforeEach(({ page }) => page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z')));
 
@@ -27,13 +27,23 @@ interface BillsView {
 /** The folder with one person's bills.json changed, named and checked as medrec would. */
 function withBills(person: string, base: Overlay, change: (bills: BillsView) => void): Overlay {
   const views = (base['views/views.json'] ? JSON.parse(base['views/views.json']) : demoJson('views/views.json')) as { people: Record<string, { files: Record<string, string> }> };
-  const bills = demoJson<BillsView>(billsFile(person));
+  const was = `views/${person}/bills.${views.people[person]!.files['bills.json']!.slice(0, 12)}.json`;
+  const bills = base[was] ? (JSON.parse(base[was]) as BillsView) : demoJson<BillsView>(was);
   change(bills);
   const text = JSON.stringify(bills);
   const md5 = createHash('md5').update(text).digest('hex');
   views.people[person]!.files['bills.json'] = md5;
   return { ...base, 'views/views.json': JSON.stringify(views), [`views/${person}/bills.${md5.slice(0, 12)}.json`]: text };
 }
+
+/** The sample with Robin's one receipt, for this bill, a paper whose amount does not read. */
+const unread = (bill: string): Overlay =>
+  rewritten({}, ({ name, index, bills }) => {
+    if (name !== 'Robin Example') return;
+    for (const d of index.documents as { doc_type?: string; statement?: object }[]) if (d.doc_type === 'receipt') d.statement = { paid_on: '2025-04-20' };
+    Object.assign(bills.bills[bill]!, { paid: [], paid_total: '0.00', left: '51.18', settled: false });
+    Object.assign(bills, { receipts: [] });
+  });
 
 test('a bill the household marked paid is nowhere open, and one partly paid says what is left', async ({ page }) => {
   await lay(page, paidCase());
@@ -43,14 +53,14 @@ test('a bill the household marked paid is nowhere open, and one partly paid says
   await expect(needs).not.toContainText('Example Billing');
   await expect(needs).not.toContainText('Example Lab');
   await expect(needs.locator('.row', { hasText: 'Not all paid' })).toContainText('Robin · Example Health $33.68, $20.00 of $53.68 paid · matches the claim · was due Nov 19, 2026');
-  await expect(needs.locator('.row', { hasText: 'No payment on file' })).toContainText('Example Surgery Center $175.00');
+  await expect(needs.locator('.row', { hasText: 'No payment on file' })).toContainText('Example Endoscopy Center $90.50');
   await expect(needs).toContainText('A bill stays here until a receipt, or a payment the household marked, covers it.');
   const stands = page.locator('.stand', { hasText: 'Sam' });
-  await expect(stands.locator('.kv-row').first()).toHaveText('To pay$175.00 in 1 bill');
+  await expect(stands.locator('.kv-row').first()).toHaveText('To pay$90.50 in 1 bill');
 
   await go(page, '#/money/bills');
   const hero = page.locator('.money-hero');
-  await expect(hero.locator('.money-hero-number')).toHaveText('$208.68');
+  await expect(hero.locator('.money-hero-number')).toHaveText('$124.18');
   await expect(hero).toContainText('2 bills, each asking what its claim says you owe.');
   await expect(hero).not.toContainText('worth a call');
   await expect(card(page, 'Due now').locator('.row').last()).toContainText('$20.00 of $53.68 paid');
@@ -60,9 +70,9 @@ test('a bill the household marked paid is nowhere open, and one partly paid says
   await expect(card(page, /^Paid$/).locator('.row-meta')).toHaveText([
     'Robin · Lab tests, Oct 3, 2026 · $10.00 marked paid, Nov 2, 2026 · $9.28 marked paid, Nov 16, 2026',
     'Sam · Lab tests, Jul 9, 2026 · Marked paid, Nov 20, 2026',
+    'Robin · Office visit, Mar 10, 2025 · receipt Apr 20, 2025',
   ]);
 
-  // medrec 0.9.5 keeps the settled bill among those worth a call; the app does not.
   await go(page, '#/money/calls');
   await expect(page.locator('main')).toContainText('No bill listed here asks for more than the claims say you owe.');
   await expect(page.locator('.call')).toHaveCount(0);
@@ -97,12 +107,12 @@ test('a bill’s own page lists its payments, what is left and the statement tha
   await expect(kv(page, 'Left to pay')).toHaveText('$33.68');
   await expect(kv(page, 'Later statement')).toHaveCount(0);
   await go(page, `#/p/${ROBIN}/r/${docOf('Robin Example', '51.18')}`);
-  await expect(kv(page, 'Paid')).toHaveText('Receipt filed Apr 20, 2025; its amount could not be read');
-  await expect(kv(page, 'Left to pay')).toHaveCount(0);
-  await expect(kv(page, 'Later statement')).toHaveText('Its balance includes this one: Statement from Example Health');
+  await expect(kv(page, 'Paid')).toHaveText('$51.18, receipt Apr 20, 2025');
+  await expect(kv(page, 'Left to pay')).toHaveText('Nothing');
+  await expect(kv(page, 'Later statement')).toHaveText('Its balance includes this one: Statement from Example Health.pdf');
   // One nothing is paid on says nothing of it.
-  await go(page, `#/p/${SAM}/r/${docOf('Sam Example', '175.00')}`);
-  await expect(kv(page, 'Amount due')).toHaveText('$175.00');
+  await go(page, `#/p/${SAM}/r/${docOf('Sam Example', '90.50')}`);
+  await expect(kv(page, 'Amount due')).toHaveText('$90.50');
   await expect(kv(page, 'Paid')).toHaveCount(0);
   await expect(kv(page, 'Left to pay')).toHaveCount(0);
 });
@@ -127,7 +137,7 @@ test('a bill with a receipt whose amount could not be read may be paid, and is n
   const doc = docOf('Robin Example', '51.18');
   await lay(
     page,
-    withBills(ROBIN, {}, (b) => {
+    withBills(ROBIN, unread(doc), (b) => {
       delete b.bills[doc]!.superseded_by;
       b.worth_a_call.push({ reason: 'no_claim', bill: doc, claim: null, event: null, asked: '51.18', owed: null, currency: 'USD' });
     }),
@@ -185,14 +195,14 @@ test('a payment at a visit above its claims is on Worth a call, and a private on
   const receipt = demoJson<{ documents: { id: string; doc_type: string }[] }>('Robin Example/index.json').documents.find((d) => d.doc_type === 'receipt')!.id;
   const desk = (document: string) => ({ reason: 'desk_copay', bill: document, claim: null, event: null, asked: '45.00', owed: '25.00', currency: 'USD' });
   const robins = withBills(ROBIN, privateCase('marked'), (b) => b.worth_a_call.push(desk(receipt)));
-  await lay(page, withBills(SAM, robins, (b) => b.worth_a_call.push(desk(docOf('Sam Example', '175.00')))));
+  await lay(page, withBills(SAM, robins, (b) => b.worth_a_call.push(desk(docOf('Sam Example', '90.50')))));
   await go(page, '#/money/calls');
   const paid = card(page, 'Paid at a visit');
   await expect(paid.locator('.row-title')).toHaveText(['Example Health']);
   await expect(paid.locator('.row-meta')).toHaveText('Robin · receipt Apr 20, 2025 · paid $45.00; the claims say you owe $25.00');
   await expect(paid.locator('.row-aside')).toHaveText('$20.00');
   await go(page, `#/money/calls?who=${SAM}`);
-  await expect(paid.locator('.row-title')).toHaveText(['Example Surgery Center']);
+  await expect(paid.locator('.row-title')).toHaveText(['Example Endoscopy Center']);
   await expect(paid.locator('.chip')).toHaveText('Private');
 });
 

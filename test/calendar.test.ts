@@ -23,36 +23,38 @@ describe('a month', () => {
 describe('the household’s events', () => {
   const { household, indexes } = demo();
   const events = householdEvents(household, (id) => indexes.get(id), '2026-11-22');
-  const [robin, sam, , jamie] = household.people.map((p) => p.id);
+  const [robin, sam] = household.people.map((p) => p.id);
+  /** Sam's May visit as a hospital stay of three days; the sample has none. */
+  const visit = events.find((x) => x.person.id === sam && x.event.start === '2026-05-20')!;
+  const stay = { ...visit, event: { ...visit.event, kind: 'stay' as const, end: '2026-05-22' } };
 
   it('come newest first, each with its person’s lane in household order', () => {
     expect(events.map((x) => x.event.start)).toEqual([...events.map((x) => x.event.start)].sort().reverse());
-    expect(new Set(events.map((x) => `${x.person.name}:${x.lane}`))).toEqual(new Set(['Robin Example:0', 'Sam Example:1', 'Alex Example:2', 'Jamie Example:3']));
+    expect(new Set(events.map((x) => `${x.person.name}:${x.lane}`))).toEqual(new Set(['Robin Example:0', 'Sam Example:1', 'Alex Example:2', 'Drew Example:3']));
     expect(events[0]!.person.id).toBe(personNamed(household, 'Alex Example').id);
   });
 
   it('keep a private event off the shared view, and on its person’s own', () => {
-    // Sam's counseling session, and a fill of a medicine medrec lists as private.
+    // Sam's clinic visit, and a fill of a medicine medrec lists as private.
     const kept = events.filter((x) => x.private);
     expect(kept.map((x) => [x.person.id, x.private, x.event.title, x.event.start])).toEqual([
-      [sam, 'substance_use', 'Nicotine 14 mg/24 hour patch', '2026-10-31'],
-      [sam, 'mental_health', 'Office visit', '2026-10-27'],
+      [sam, 'sexual_health', 'Emtricitabine-tenofovir 200-300 mg tablet', '2026-11-04'],
+      [sam, 'sexual_health', 'Office visit', '2026-11-03'],
     ]);
-    const counseling = kept[1]!;
+    const clinic = kept[1]!;
 
     const everyone = shown(events, undefined, false);
     expect([everyone.events.length, everyone.hidden]).toEqual([events.length - 2, 2]);
-    expect(everyone.events).not.toContain(counseling);
+    expect(everyone.events).not.toContain(clinic);
     expect(shown(events, undefined, true)).toEqual({ events, hidden: 0 });
-    expect(shown(events, sam, false).events).toContain(counseling);
+    expect(shown(events, sam, false).events).toContain(clinic);
     expect(shown(events, robin, false).events.every((x) => x.person.id === robin)).toBe(true);
   });
 
   it('mark a stay across its days, a fill as a ring and a visit as a dot', () => {
-    const birth = events.find((x) => x.person.id === jamie && x.event.kind === 'stay')!;
-    expect([birth.event.start, birth.event.end, markShape(birth.event)]).toEqual(['2026-07-28', '2026-07-30', 'bar']);
-    expect(['2026-07-28', '2026-07-29', '2026-07-30'].map((d) => barPart(birth.event, d))).toEqual(['start', 'mid', 'end']);
-    expect(onDay(events, '2026-07-29')).toEqual([birth]);
+    expect(markShape(stay.event)).toBe('bar');
+    expect(['2026-05-20', '2026-05-21', '2026-05-22'].map((d) => barPart(stay.event, d))).toEqual(['start', 'mid', 'end']);
+    expect(onDay([...events, stay], '2026-05-21')).toEqual([stay]);
     const fill = events.find((x) => x.event.kind === 'fill')!;
     expect(markShape(fill.event)).toBe('ring');
     expect(markShape(events.find((x) => x.event.kind === 'office')!.event)).toBe('dot');
@@ -68,9 +70,8 @@ describe('the household’s events', () => {
   });
 
   it('belong to every month they touch', () => {
-    const stay = events.find((x) => x.event.kind === 'stay')!;
-    expect(inMonth(events, '2026-07')).toContain(stay);
-    expect(inMonth(events, '2026-08')).not.toContain(stay);
-    expect(inMonth([{ ...stay, event: { ...stay.event, start: '2026-07-30', end: '2026-08-02' } }], '2026-08')).toHaveLength(1);
+    expect(inMonth([stay], '2026-05')).toEqual([stay]);
+    expect(inMonth([stay], '2026-06')).toEqual([]);
+    expect(inMonth([{ ...stay, event: { ...stay.event, start: '2026-05-30', end: '2026-06-02' } }], '2026-06')).toHaveLength(1);
   });
 });

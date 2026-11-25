@@ -92,7 +92,7 @@ export function isChange(s: CoverageSegment): s is CoverageSegment & { start: st
   return !!s.start && (!s.first || !!s.born);
 }
 
-/** "the day Jamie was born". Nothing when no one was born the day the coverage started. */
+/** "the day Wren was born". Nothing when no one was born the day the coverage started. */
 export function bornClause(s: CoverageSegment): string | undefined {
   return s.born && s.start ? `the day ${called(s.born)} was born` : undefined;
 }

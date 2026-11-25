@@ -39,7 +39,7 @@ describe('search', () => {
   it('finds words inside a document’s text, with the words around them', () => {
     const hits = search(index, text, 'fasting');
     expect(brief(hits)).toEqual([['Lipid panel', 'text', null]]);
-    expect(hits[0]!.snippet).toContain('Lipid panel, fasting 12 hours');
+    expect(hits[0]!.snippet).toContain('Collected 10/01/2026, fasting 12 hours.');
   });
 
   it('matches a quoted phrase only in that order, and ignores accents', () => {
@@ -58,7 +58,7 @@ describe('search', () => {
     expect(brief(search(index, text, '53.68'))).toEqual(
       expect.arrayContaining([
         ['Preventive visit, flu vaccine and 1 more', 'field', 'Total'],
-        ['Statement from Example Health', 'field', 'Statement'],
+        ['Statement from Example Health.pdf', 'field', 'Statement'],
         ['Explanation of Benefits', 'text', null],
       ]),
     );
@@ -92,8 +92,8 @@ describe('search', () => {
   it('searches everyone at once, naming whose each hit is', () => {
     const hits = searchAll(everyone, 'Example Pediatrics');
     const names = new Set(hits.map((x) => household.people.find((p) => p.id === x.person)!.name));
-    expect([...names].sort()).toEqual(['Alex Example', 'Jamie Example']);
-    expect(searchAll(everyone, 'hep b').map((x) => x.person)).toContain(personNamed(household, 'Jamie Example').id);
+    expect([...names].sort()).toEqual(['Alex Example', 'Drew Example']);
+    expect(searchAll(everyone, 'lead').map((x) => x.person)).toContain(personNamed(household, 'Drew Example').id);
   });
 });
 
@@ -166,11 +166,10 @@ describe('concepts', () => {
   });
 
   it('finds vaccines with the other words, claims and statements for bills, visits, medicines', () => {
-    // The four flu shots, then the immunization record whose text names influenza.
-    expect(find(everyone, 'flu shot').hits.map((x) => [x.kind, x.title, x.where])).toEqual([
-      ...Array(4).fill(['immunization', 'Influenza, seasonal, injectable', 'title']),
-      ['document', 'Immunization history', 'text'],
-    ]);
+    // The nine flu shots, newest first, then the immunization record whose text names influenza.
+    const flu = find(everyone, 'flu shot').hits;
+    expect(flu.slice(0, 9).every((x) => x.kind === 'immunization' && x.title.startsWith('Influenza, seasonal') && x.where === 'title')).toBe(true);
+    expect(flu.slice(9).map((x) => [x.kind, x.title, x.where])).toEqual([['document', 'Immunization history', 'text']]);
     const bills = find(everyone, 'bills').hits;
     expect(new Set(bills.map((x) => x.kind))).toEqual(new Set(['claim', 'document']));
     expect(new Set(bills.filter((x) => x.kind === 'document').map((x) => x.docType))).toEqual(new Set(['Bill', 'Explanation of benefits', 'Receipt']));
@@ -189,7 +188,7 @@ describe('concepts', () => {
     // No lab result or lab report says "statement": the lab's statement is what was meant.
     const f = find(everyone, 'lab statement');
     expect(f).toMatchObject({ how: 'fallback', named: { id: 'labs' }, rest: ['statement'], terms: ['lab', 'statement'] });
-    expect(f.hits.map((x) => x.title)).toContain('Statement from Example Lab');
+    expect(f.hits.map((x) => x.title)).toContain('Statement from Example Lab.pdf');
   });
 });
 

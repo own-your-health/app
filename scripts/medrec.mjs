@@ -7,32 +7,46 @@
 // medrec reads a UTC time's day in the writing machine's zone), so a visit's
 // local days are the same on every machine. MEDREC names the binary, else
 // `medrec` on the PATH.
+//
+// The same steps write the same bytes: the clock stands still at each step's
+// moment, and medrec's ids are drawn from the step (sample/moment.c, which
+// needs a C compiler).
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtempSync } from 'node:fs';
+import { mkdirSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
+const HERE = dirname(fileURLToPath(import.meta.url));
 const MEDREC = process.env.MEDREC ?? 'medrec';
+const MAC = process.platform === 'darwin';
 
-// 0.9.1 dates a portal stay across its days and makes a day's doses one
-// event. 0.9.3 names a visit plainly for its code and makes a day billed only
-// for vaccines a vaccine. 0.9.4 names conditions and claim diagnoses, and
-// 0.9.5 makes a private record's papers and a private report's study private.
-// The sample's checks expect all of it.
-function checkVersion() {
-  const version = execFileSync(MEDREC, ['--version'], { encoding: 'utf8' }).trim().split(/\s+/).at(-1);
-  const [major, minor, patch] = version.split('.').map(Number);
-  if (major === 0 && (minor < 9 || (minor === 9 && patch < 5))) throw new Error(`medrec ${version} writes the sample's views differently: set MEDREC to medrec 0.9.5 or later`);
-}
+// The sample is what this release writes.
+const VERSION = '0.9.7';
 
-/** Runs `steps` with a function that runs medrec on the records in `root`. */
-export function withMedrec(root, steps) {
-  checkVersion();
+/** The moment the sample is as of; the app moves its loads' times from here to now. */
+export const ANCHOR = '2026-11-22T20:00:00Z';
+/** The seconds since 1970 `before` (seconds) the anchor, and that time. */
+export const seconds = (before) => Date.parse(ANCHOR) / 1000 - before;
+export const iso = (before) => new Date(seconds(before) * 1000).toISOString().replace('.000Z', 'Z');
+
+/**
+ * A scratch machine: its home, a folder in it that comes first on medrec's
+ * PATH (`alone` makes it the only one), and `medrec(before, ...args)`, which
+ * runs medrec there `before` the anchor, its profile set up for `root`.
+ */
+export function scratchMachine(root, { alone = false } = {}) {
+  const version = execFileSync(MEDREC, ['-V'], { encoding: 'utf8' }).trim().split(/\s+/)[1];
+  if (version !== VERSION) throw new Error(`medrec ${version} writes the sample differently: set MEDREC to medrec ${VERSION}`);
   const home = mkdtempSync(join(tmpdir(), 'medrec-demo-'));
+  const bin = join(home, 'bin');
+  mkdirSync(bin);
+  const shim = join(home, MAC ? 'moment.dylib' : 'moment.so');
+  execFileSync('cc', ['-O2', '-Wall', '-Werror', ...(MAC ? ['-dynamiclib'] : ['-shared', '-fPIC']), '-o', shim, join(HERE, 'sample', 'moment.c')], { stdio: 'inherit' });
   const env = {
-    PATH: process.env.PATH ?? '/usr/bin:/bin',
+    PATH: alone ? bin : `${bin}:${process.env.PATH ?? '/usr/bin:/bin'}`,
     ...(process.env.TMPDIR ? { TMPDIR: process.env.TMPDIR } : {}),
     HOME: home,
     XDG_CONFIG_HOME: join(home, '.config'),
@@ -44,11 +58,14 @@ export function withMedrec(root, steps) {
     TZ: 'America/New_York',
     LANG: 'C.UTF-8',
     NO_COLOR: '1',
+    [MAC ? 'DYLD_INSERT_LIBRARIES' : 'LD_PRELOAD']: shim,
   };
-  const medrec = (...args) => execFileSync(MEDREC, ['-q', ...args], { env, stdio: ['ignore', 'ignore', 'inherit'] });
-  medrec('profiles', 'add', 'demo');
-  medrec('init', root);
-  steps(medrec);
+  const records = root ?? join(home, 'records');
+  const medrec = (before, ...args) => {
+    const step = `${args.join(' ').replaceAll(records, 'records').replaceAll(home, 'home')} ${before}`;
+    execFileSync(MEDREC, ['-q', ...args], { env: { ...env, SAMPLE_AT: String(seconds(before)), SAMPLE_SEED: step }, stdio: ['ignore', 'ignore', 'inherit'] });
+  };
+  return { home, bin, root: records, medrec };
 }
 
 /** The views the app reads: each person's events, bills, private items and code names, by the name medrec stores them under. */

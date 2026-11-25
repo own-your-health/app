@@ -19,15 +19,16 @@ describe('shares not billed yet', () => {
   it('list each provider’s share with no bill or receipt from them, and none for a fill', () => {
     expect(shares('Robin Example')).toEqual([['2026-11-18', 'Example Health', 2500]]);
     expect(shares('Sam Example')).toEqual([
-      ['2026-10-27', 'Example Counseling', 3000],
+      ['2026-11-03', 'Example Sexual Health Clinic', 2000],
       ['2026-10-12', 'Example Lab', 7030],
-      ['2026-08-26', 'Example Orthopedic Surgeons', 11250],
+      ['2026-09-16', 'Example Digestive Health', 11620],
+      ['2026-09-16', 'Example Lab', 720],
       ['2026-05-20', 'Example Health', 5640],
     ]);
   });
 
   it('carry the privacy of their visit', () => {
-    expect(unbilledShares(index('Sam Example'), events('Sam Example')).map((u) => u.private)).toEqual(['mental_health', undefined, undefined, undefined]);
+    expect(unbilledShares(index('Sam Example'), events('Sam Example')).map((u) => u.private)).toEqual(['sexual_health', undefined, undefined, undefined, undefined]);
   });
 
   it('take a billing company’s bill as the visit’s, and a receipt on or after the visit as paid', () => {
@@ -47,11 +48,14 @@ describe('paid bills', () => {
   const read = (idx: PersonIndex) => paidBills(idx, events('Robin Example')).map((p) => [p.bill.provider, p.cents, p.bill.payments[0]?.receipt?.date, p.event?.event.start]);
 
   it('are those a receipt’s amount covers, not one whose receipt’s amount did not read', () => {
-    expect(read(robin)).toEqual([]);
-    const documents = robin.documents.map((d) => (d.doc_type === 'receipt' ? { ...d, statement: { amount_paid: usd('51.18'), paid_on: '2025-04-20' } } : d));
-    expect(read({ ...robin, documents, bills: undefined })).toEqual([['Example Health', 5118, '2025-04-20', '2025-03-10']]);
+    const paid = [['Example Health', 5118, '2025-04-20', '2025-03-10']];
+    expect(read(robin)).toEqual(paid);
+    const documents = robin.documents.map((d) => (d.doc_type === 'receipt' ? { ...d, statement: undefined } : d));
+    expect([read({ ...robin, bills: undefined }), read({ ...robin, documents, bills: undefined })]).toEqual([paid, []]);
     // medrec's list alone says, when it is here.
-    expect(read({ ...robin, documents })).toEqual([]);
+    const bill = robin.documents.find((d) => d.statement?.amount_due?.amount === '51.18')!;
+    const unpaid = { ...robin.bills!, states: new Map([...robin.bills!.states, [bill.id, { payments: [], settled: false, left: usd('51.18') }]]) };
+    expect([read({ ...robin, documents }), read({ ...robin, bills: unpaid })]).toEqual([paid, []]);
     expect(paidBills(index('Sam Example'), events('Sam Example'))).toEqual([]);
   });
 });
@@ -68,8 +72,8 @@ describe('bills that may be paid', () => {
     expect([worthACall(open(sam)), mayBePaid(open(sam)), toPay(open(sam))]).toEqual([true, false, false]);
     expect([worthACall(open(withReceipt)), mayBePaid(open(withReceipt)), toPay(open(withReceipt))]).toEqual([false, true, false]);
     expect(open(withReceipt).cents).toBe(12000);
-    const surgery = openBills(sam, events(name), TODAY).find((b) => b.bill.doc.id !== billing.id)!;
-    expect([worthACall(surgery), mayBePaid(surgery), toPay(surgery)]).toEqual([false, false, true]);
+    const center = openBills(sam, events(name), TODAY).find((b) => b.bill.doc.id !== billing.id)!;
+    expect([worthACall(center), mayBePaid(center), toPay(center)]).toEqual([false, false, true]);
     for (const [cents, kind] of [[12000, 'asksMore'], [3000, 'asksLess']] as const) {
       expect(callsSummary([{ ...open(sam), asked: cents }], (b) => b)[kind]).toHaveLength(1);
       expect(callsSummary([{ ...open(withReceipt), asked: cents }], (b) => b)).toMatchObject({ asksMore: [], asksLess: [], overCents: 0 });
@@ -132,14 +136,14 @@ describe('worth a call', () => {
     const idx = index('Sam Example');
     const doc = idx.documents.find((d) => d.doc_type === 'bill')!;
     const visit = events('Sam Example').find((x) => x.private && x.event.kind === 'office')!;
-    expect([billPrivate(idx, doc), billPrivate(idx, doc, visit), billPrivate(idx, { ...doc, id: 'd_inanovisitofmedrecsx' }, visit)]).toEqual([undefined, undefined, 'mental_health']);
+    expect([billPrivate(idx, doc), billPrivate(idx, doc, visit), billPrivate(idx, { ...doc, id: 'd_inanovisitofmedrecsx' }, visit)]).toEqual([undefined, undefined, 'sexual_health']);
   });
 });
 
 describe('bills as medrec’s list has them', () => {
   const name = 'Sam Example';
   const sam = index(name);
-  const [billing, surgery] = ['120.00', '175.00'].map((a) => sam.documents.find((d) => d.statement?.amount_due?.amount === a)!);
+  const [billing, center] = ['120.00', '90.50'].map((a) => sam.documents.find((d) => d.statement?.amount_due?.amount === a)!);
   const state = (extra: Partial<BillState> = {}): BillState => ({ payments: [], settled: false, left: usd('120.00'), ...extra });
   /** Sam's bills with one state for the billing company's, and these calls. */
   const open = (s: BillState, calls: BillCall[], evs = events(name)) => {
@@ -160,7 +164,7 @@ describe('bills as medrec’s list has them', () => {
     // A bill in no visit has no visit's claims to speak of.
     expect(says(open(state(), call('asks_more', '64.00'), []))).toEqual(['differs', 6400, false, true]);
     // Another's call is not its own.
-    expect(says(open(state(), [{ ...call('asks_more', '64.00')[0]!, document: surgery!.id }]))[0]).toBe('unmatched');
+    expect(says(open(state(), [{ ...call('asks_more', '64.00')[0]!, document: center!.id }]))[0]).toBe('unmatched');
     // With no claim of medrec's, the visit's own claims can match it.
     const visit = events(name).map((x) => ({ ...x, money: { ...x.money, charges: x.money.charges.map((c) => ({ ...c, share: 12000 })) } }));
     expect(says(open(state(), [], visit))).toEqual(['matches', 12000, true, false]);
@@ -171,7 +175,7 @@ describe('bills as medrec’s list has them', () => {
     expect([part.cents, part.asked, partText(part), overAsked(part)]).toEqual([7000, 12000, '$50.00 of $120.00 paid', 5600]);
     expect(partText(open(state(), [])!)).toBeUndefined();
     expect(open(state({ settled: true, left: usd('0.00') }), call('no_claim'))).toBeUndefined();
-    expect(open(state({ replacedBy: surgery!.id }), call('asks_more', '64.00'))).toBeUndefined();
+    expect(open(state({ replacedBy: center!.id }), call('asks_more', '64.00'))).toBeUndefined();
   });
 
   it('are paid once settled by a payment, not while part is left, nor when they asked for nothing', () => {
@@ -195,17 +199,17 @@ describe('bills as medrec’s list has them', () => {
   });
 
   it('list a payment at a visit above what its claims say', () => {
-    const receipt: MedDocument = { ...billing!, id: 'd_desk', doc_type: 'receipt', organization: 'Example Orthopedic Surgeons', statement: { amount_paid: usd('150.00'), paid_on: '2026-08-26' } };
+    const receipt: MedDocument = { ...billing!, id: 'd_desk', doc_type: 'receipt', organization: 'Example Digestive Health', statement: { amount_paid: usd('150.00'), paid_on: '2026-09-16' } };
     const desk = (c: Partial<BillCall>, extra: Partial<PersonIndex> = {}) =>
-      deskPayments({ ...sam, documents: [...sam.documents, receipt], bills: { states: new Map(), calls: [{ reason: 'desk_copay', document: 'd_desk', asked: usd('150.00'), owed: usd('112.50'), ...c }], marksUnreadable: false }, ...extra }, events(name)).map((d) => [d.provider, d.cents, d.claimSays]);
-    expect(desk({})).toEqual([['Example Orthopedic Surgeons', 15000, 11250]]);
+      deskPayments({ ...sam, documents: [...sam.documents, receipt], bills: { states: new Map(), calls: [{ reason: 'desk_copay', document: 'd_desk', asked: usd('150.00'), owed: usd('116.20'), ...c }], marksUnreadable: false }, ...extra }, events(name)).map((d) => [d.provider, d.cents, d.claimSays]);
+    expect(desk({})).toEqual([['Example Digestive Health', 15000, 11620]]);
     expect([desk({ reason: 'asks_more' }), desk({ document: 'd_gone' }), desk({ asked: undefined }), desk({ owed: undefined }), desk({}, { bills: undefined })]).toEqual([[], [], [], [], []]);
   });
 });
 
 describe('what the plan changed', () => {
   it('lists the left-out lines of the last year with what the visit’s provider is owed in all', () => {
-    expect(explainedLines(index('Sam Example'), events('Sam Example'), TODAY).map((x) => [x.event.event.start, x.provider, x.insurer, x.line.label, x.share])).toEqual([['2026-08-26', 'Example Surgery Center', 'Example Care Plan', 'Knee scope, both sides', 17500]]);
-    expect(explainedLines(index('Sam Example'), events('Sam Example'), '2027-08-27')).toEqual([]);
+    expect(explainedLines(index('Sam Example'), events('Sam Example'), TODAY).map((x) => [x.event.event.start, x.provider, x.insurer, x.line.label, x.share])).toEqual([['2026-09-16', 'Example Digestive Health', 'Example Care Plan', 'Upper endoscopy, look only', 11620]]);
+    expect(explainedLines(index('Sam Example'), events('Sam Example'), '2027-09-17')).toEqual([]);
   });
 });

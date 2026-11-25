@@ -2,16 +2,15 @@ import { expect, test, type Page } from '@playwright/test';
 import { privateCase } from '../test/helpers';
 import { removed, renamed, rewritten } from './alter';
 import { lay } from './lay';
+import { ROBIN, SAM } from '../test/sample';
 
 // Private items on every screen the household shares: off each with medrec's
 // own list, and everything of a person's off while no current list says which
 // of it is private. Their own pages keep all of it. The folder is the sample
 // with what medrec wrote for each case (scripts/private-fixtures.mjs).
 
-const SAM = 'p_wwezzed7kml67hnp6s7n';
-const ROBIN = 'p_xo4em46i7yj3hphlpajo';
 /** Sam's items, private or not, by words only they have. */
-const SAMS = /Example Billing|Example Surgery Center|Example Counseling|Nicotine|Loratadine|Peanuts|Vitamin D|Sports medicine|ankle/i;
+const SAMS = /Example Billing|Example Endoscopy Center|Example Sexual Health|Emtricitabine|Famotidine|Peanuts|Vitamin D|Sports medicine|ankle/i;
 
 let problems: string[] = [];
 
@@ -33,7 +32,7 @@ const WHY = 'The household’s own private marks could not be read.';
 /** Every shared screen, with where its line says the items are left off. */
 const SHARED: [string, string][] = [
   ['#/', 'Home'],
-  ['#/calendar?month=2026-10', 'this shared view'],
+  ['#/calendar?month=2026-11', 'this shared view'],
   ['#/calendar?view=list', 'this shared view'],
   ['#/money', 'the lists on this shared view'],
   ['#/money/bills', 'this shared view'],
@@ -66,14 +65,14 @@ test('someone whose private list can’t be used is left off every shared screen
 test('a person held back keeps every one of their own pages', async ({ page }) => {
   await lay(page, privateCase('unreadable'));
   await go(page, `#/health?who=${SAM}`);
-  await expect(card(page, /^Current$/)).toContainText('Nicotine 14 mg/24 hour patch');
+  await expect(card(page, /^Current$/)).toContainText('Emtricitabine-tenofovir 200-300 mg tablet');
   await expect(card(page, /^Current$/)).toContainText('Peanuts');
   await go(page, `#/money/bills?who=${SAM}`);
   await expect(page.locator('main')).toContainText('Example Billing');
   await go(page, `#/papers?who=${SAM}`);
-  await expect(page.locator('main .paper-place')).toHaveCount(4);
+  await expect(page.locator('main .paper-place')).toHaveCount(5);
   await go(page, `#/calendar?view=list&who=${SAM}`);
-  await expect(page.locator('main')).toContainText('Example Counseling');
+  await expect(page.locator('main')).toContainText('Example Sexual Health Clinic');
   for (const path of [`#/health?who=${SAM}`, `#/money/bills?who=${SAM}`, `#/papers?who=${SAM}`, `#/calendar?view=list&who=${SAM}`]) {
     await go(page, path);
     await expect(heldNote(page)).toHaveCount(0);
@@ -108,7 +107,7 @@ test('the doctor’s sheet of someone held back holds nothing until it is all in
   await expect(page.getByRole('status')).toHaveText(`Sam’s items are left off this sheet until you include them, private ones too. ${WHY}`);
   await page.getByRole('button', { name: 'Include them all' }).click();
   await expect(page.locator('.sheet')).toContainText('Peanuts');
-  await expect(page.locator('.sheet')).toContainText('Nicotine 14 mg/24 hour patch');
+  await expect(page.locator('.sheet')).toContainText('Emtricitabine-tenofovir 200-300 mg tablet');
   await expect(page.getByRole('status')).toHaveText('All Sam’s items are included, private ones too.');
   await page.getByRole('button', { name: 'Leave them off' }).click();
   await expect(page.locator('.sheet')).toHaveCount(0);
@@ -118,7 +117,7 @@ test('a folder whose medrec wrote no views leaves everyone off, in one line', as
   await lay(page, { 'views/views.json': null });
   for (const [path, where] of SHARED) {
     await go(page, path);
-    await expect(heldNote(page), path).toHaveText(`Robin’s, Sam’s, Alex’s and Jamie’s items are left off ${where}. medrec has not written which items are private. medrec 0.9.1 and later does, with its views. Their own pages show them.`);
+    await expect(heldNote(page), path).toHaveText(`Robin’s, Sam’s, Alex’s and Drew’s items are left off ${where}. medrec has not written which items are private. medrec 0.9.1 and later does, with its views. Their own pages show them.`);
   }
   await go(page, '#/');
   await expect(page.locator('main')).not.toContainText('Nothing needs you');
@@ -133,37 +132,37 @@ test('a folder whose medrec wrote no views leaves everyone off, in one line', as
   await expect(page.locator('main')).toContainText('No claims listed here yet.');
   await go(page, '#/calendar?view=list');
   await expect(page.locator('main')).toContainText('Nothing to show here.');
-  await go(page, '#/calendar?month=2026-10');
-  await expect(page.locator('main')).toContainText('Nothing to show in October 2026.');
+  await go(page, '#/calendar?month=2026-11');
+  await expect(page.locator('main')).toContainText('Nothing to show in November 2026.');
   await go(page, '#/settings');
   await expect(page.locator('main')).toContainText('Not listed: everyone’s items are left off shared screens');
 });
 
 test('what the household marked private stays off, and what it marked not private shows', async ({ page }) => {
   await lay(page, privateCase('marked'));
-  // Sam's knee procedure, marked private, with its claims and its bill.
-  for (const path of ['#/', '#/calendar?month=2026-08', '#/money/bills', '#/costs']) {
+  // Sam's endoscopy, marked private, with its claims and its bill.
+  for (const path of ['#/', '#/calendar?month=2026-09', '#/money/bills', '#/costs']) {
     await go(page, path);
-    await expect(page.locator('main'), path).not.toContainText('Example Surgery Center');
+    await expect(page.locator('main'), path).not.toContainText('Example Endoscopy Center');
     await expect(heldNote(page), path).toHaveCount(0);
   }
-  await go(page, '#/calendar?month=2026-08');
+  await go(page, '#/calendar?month=2026-09');
   await expect(page.locator('.cal-private')).toContainText('1 private event (marked private) is kept off this shared view.');
   // Its one paper marked not private shows, without the visit.
   await go(page, '#/papers');
-  const goingHome = page.locator('.row', { hasText: 'Going home after knee surgery' });
-  await expect(goingHome.locator('.paper-place')).toHaveText('With no visit. No visit listed here is on or near Aug 26, 2026.');
-  await expect(page.locator('main')).not.toContainText('Statement from Example Surgery Center');
+  const afterward = page.locator('.row', { hasText: 'After your upper endoscopy' });
+  await expect(afterward.locator('.paper-place')).toHaveText('With no visit. No visit listed here is on or near Sep 16, 2026.');
+  await expect(page.locator('main')).not.toContainText('Statement from Example Endoscopy Center');
   await expect(page.locator('main')).not.toContainText('Statement from Example Lab');
   await expect(page.locator('.private-line')).toHaveText('Private papers are never listed here. Each shows on its person’s own Papers. This is discretion, not security: everyone the Drive folder is shared with can read every file in it.');
   // On Sam's own Papers it names its visit.
   await go(page, `#/papers?who=${SAM}`);
-  await expect(page.locator('.row', { hasText: 'Going home after knee surgery' }).locator('.paper-place')).toContainText('With Hospital visit at Example Surgery Center');
-  // The counseling visit, marked not private, is on the shared calendar; its claim, still private, is on no shared Money list.
-  await go(page, '#/calendar?month=2026-10');
-  await expect(page.locator('.cal-private')).toContainText('1 private event (substance use) is kept off this shared view.');
+  await expect(page.locator('.row', { hasText: 'After your upper endoscopy' }).locator('.paper-place')).toContainText('With Hospital visit at Example Endoscopy Center');
+  // The clinic visit, marked not private, is on the shared calendar; its claim, still private, is on no shared Money list.
+  await go(page, '#/calendar?month=2026-11');
+  await expect(page.locator('.cal-private')).toContainText('1 private event (sexual health) is kept off this shared view.');
   await go(page, '#/money/events');
-  await expect(page.locator('main')).not.toContainText('Example Counseling');
+  await expect(page.locator('main')).not.toContainText('Example Sexual Health');
   // Robin's only allergy is private: the sheet must not say there are none.
   await go(page, `#/health/doctor?who=${ROBIN}`);
   const allergies = page.locator('.sheet-section', { has: page.getByRole('heading', { name: 'Allergies' }) });
@@ -208,7 +207,7 @@ for (const [name, base] of [
     await other.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
     await lay(page, base);
     await lay(other, renamed(base));
-    for (const path of [...SHARED.map(([p]) => p), ...LISTS.map(([p]) => p), '#/calendar?month=2026-08', '#/money?period=plan-1']) {
+    for (const path of [...SHARED.map(([p]) => p), ...LISTS.map(([p]) => p), '#/calendar?month=2026-09', '#/money?period=plan-1']) {
       const [was, is] = await Promise.all([holds(page, path), holds(other, path)]);
       expect(was.join('').length, path).toBeGreaterThan(400);
       expect(is, path).toEqual(was);
@@ -229,8 +228,8 @@ for (const [name, base] of [
       expect(is, path).toEqual(was);
     }
     await go(other, `#/calendar?view=list&who=${SAM}`);
-    await expect(other.locator('main')).toContainText('Loratadine');
-    await expect(other.locator('main')).not.toContainText('Nicotine');
+    await expect(other.locator('main')).toContainText('Famotidine');
+    await expect(other.locator('main')).not.toContainText('Emtricitabine');
     await other.close();
   });
 }
@@ -240,22 +239,22 @@ const ownPlan = (day: string) =>
   rewritten({}, ({ name, index, list }) => {
     const ids = index.records.filter((r) => r.kind === 'claim').map((r) => r.id);
     if (name === 'Alex Example') for (const id of ids) list.records[id] = { area: 'household', from: 'marks' };
-    for (const r of index.records) if (name === 'Sam Example' && r.kind === 'claim' && r.id in list.records) Object.assign(r, { date: day, fields: { ...r.fields, insurer: 'Example Mind Plan', when: day, billable_period: { start: day, end: day }, benefit_period: undefined, items: (r.fields.items as object[]).map((i) => ({ ...i, serviced: day })) } });
+    for (const r of index.records) if (name === 'Sam Example' && r.kind === 'claim' && r.id in list.records) Object.assign(r, { date: day, fields: { ...r.fields, insurer: 'Example Other Plan', when: day, billable_period: { start: day, end: day }, benefit_period: undefined, items: (r.fields.items as object[]).map((i) => ({ ...i, serviced: day })) } });
   });
 
 test('a plan only a private claim names is in no words, limits or dates of everyone’s Money', async ({ page }) => {
   await lay(page, ownPlan('2026-11-21'));
   await go(page, '#/money');
   const hero = page.locator('.money-hero');
-  await expect(hero).toContainText('from 14 claims for care between Jul 9, 2026 and Nov 18, 2026.');
+  await expect(hero).toContainText('from 13 claims for care between Jul 9, 2026 and Nov 18, 2026.');
   await expect(hero).toContainText('Example Pharmacy Benefits');
-  await expect(page.locator('main')).not.toContainText('Example Mind Plan');
+  await expect(page.locator('main')).not.toContainText('Example Other Plan');
   const deductible = card(page, /^Deductible$/);
-  await expect(deductible.locator('.row-title')).toHaveText(['Robin', 'Sam', 'Alex', 'Jamie']);
+  await expect(deductible.locator('.row-title')).toHaveText(['Robin', 'Sam', 'Alex', 'Drew']);
   // Alex's claims are all private, so nothing here says there is one.
   for (const i of [2, 3]) await expect(deductible.locator('.row').nth(i)).toContainText('No claims listed here for this plan year yet.');
   await go(page, '#/costs');
-  await expect(page.locator('main')).not.toContainText('Example Mind Plan');
+  await expect(page.locator('main')).not.toContainText('Example Other Plan');
   await expect(page.getByRole('group', { name: 'Whose costs' }).getByRole('link')).toHaveText(['Everyone', 'Robin', 'Sam']);
   // On Alex's own address Alex is there to choose.
   const alex = await page.evaluate(async () => ((await (await fetch('./demo/household.json')).json()) as { people: { id: string; name: string }[] }).people.find((p) => p.name === 'Alex Example')!.id);
@@ -270,7 +269,7 @@ test('a plan only a private claim names is in no words, limits or dates of every
   await go(page, '#/money?period=2025');
   await expect(hero).toContainText('The plan’s figures, from 4 claims for care between Mar 10, 2025 and Sep 15, 2025.');
   await go(page, `#/costs?only=person%3A${SAM}&period=2025`);
-  await expect(page.locator('main')).toContainText('Example Mind Plan');
+  await expect(page.locator('main')).toContainText('Example Other Plan');
 });
 
 test('a deductible that is met says with which claim on its person’s Money, and no day on everyone’s', async ({ page }) => {
@@ -278,41 +277,41 @@ test('a deductible that is met says with which claim on its person’s Money, an
     page,
     rewritten({}, ({ name, index }) => {
       if (name !== 'Sam Example') return;
-      for (const r of index.records) r.fields = JSON.parse(JSON.stringify(r.fields).replaceAll('"750.00"', '"233.50"'));
+      for (const r of index.records) r.fields = JSON.parse(JSON.stringify(r.fields).replaceAll('"750"', '"221.00"'));
     }),
   );
-  const sam = card(page, /^Deductible$/).locator('.row', { hasText: '$233.50 of $233.50' });
+  const sam = card(page, /^Deductible$/).locator('.row', { hasText: '$221.00 of $221.00' });
   await go(page, '#/money');
   await expect(sam.locator('.chip')).toHaveText('Met');
   await expect(sam).toContainText('As of their plan’s newest claim.');
   await go(page, `#/money?who=${SAM}`);
   await expect(sam.locator('.chip')).toHaveText('Met with the claim for Oct 12, 2026');
-  await expect(sam).toContainText('As of the claim for Oct 27, 2026.');
+  await expect(sam).toContainText('As of the claim for Nov 3, 2026.');
 });
 
 test('everyone’s search never finds a private item, or says whose it is', async ({ page }) => {
-  await go(page, '#/search?q=nicotine');
+  await go(page, '#/search?q=emtricitabine');
   await expect(page.locator('main .row')).toHaveCount(0);
   await expect(page.locator('main')).toContainText('Private items are left off everyone’s results. So is 1 imaging study with no report in these records: nothing says whether it is private. Choose a person to search theirs.');
   await expect(page.locator('main [aria-live]').filter({ hasText: 'match' })).toHaveText(/^0 matches\./);
   // Everyone's chip is there for any words, so a chip says nothing about who has a match.
   const whose = page.getByRole('group', { name: 'Filter by person' });
-  await expect(whose.getByRole('button')).toHaveText(['Everyone', 'Robin', 'Sam', 'Alex', 'Jamie']);
+  await expect(whose.getByRole('button')).toHaveText(['Everyone', 'Robin', 'Sam', 'Alex', 'Drew']);
   await whose.getByRole('button', { name: 'Robin' }).click();
   await expect(page.locator('main')).toContainText('Nothing matches every word.');
   await whose.getByRole('button', { name: 'Sam' }).click();
   await expect(page.locator('main .row')).toHaveCount(2);
-  await expect(page).toHaveURL(/who=p_wwezzed7kml67hnp6s7n/);
+  await expect(page).toHaveURL(new RegExp(`who=${SAM}`));
 });
 
 test('a private provider’s address shows nothing of it on everyone’s costs, and its claim on Sam’s', async ({ page }) => {
   await go(page, `#/costs?only=person%3A${SAM}`);
   const went = card(page, 'Where it went');
-  await went.locator('.row', { hasText: 'Example Counseling' }).locator('a').first().click();
-  await expect(page.locator('main')).toContainText('Provider: Example Counseling');
+  await went.locator('.row', { hasText: 'Example Sexual Health Clinic' }).locator('a').first().click();
+  await expect(page.locator('main')).toContainText('Provider: Example Sexual Health Clinic');
   // The same choice with the person taken off it.
   await page.getByRole('group', { name: 'Whose costs' }).getByRole('link', { name: 'Everyone' }).click();
-  await expect(page.locator('main')).not.toContainText(/counseling/i);
+  await expect(page.locator('main')).not.toContainText(/sexual/i);
   await expect(page.locator('main')).toContainText('Provider: one not listed here');
   await expect(page.locator('main')).toContainText('No claim lines match these choices.');
 });

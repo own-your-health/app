@@ -1,43 +1,50 @@
 // What medrec says of the bills (views/<person id>/bills.json): reading it, and
-// when the store takes it or leaves the receipts to say what is paid. The
-// "paid" case is medrec's own, over the sample (scripts/bill-fixtures.mjs).
+// when the store takes it or leaves the receipts to say what is paid. Both the
+// list read here and the "paid" case are medrec's own (scripts/rule-fixtures.mjs
+// and scripts/bill-fixtures.mjs).
 import { describe, expect, it } from 'vitest';
 import { Store } from '../src/data/store';
 import { parseBills } from '../src/model/bills';
 import { openList } from '../src/model/billing';
 import { FolderError } from '../src/model/parse';
 import { demoFolderWith, demoJson, fixture, paidCase, type Overlay } from './helpers';
+import { ROBIN, SAM } from './sample';
 
-const PERSON = 'p_aaaaaaaaaaaaaaaaaaaa';
-const SAM = 'p_wwezzed7kml67hnp6s7n';
-const ROBIN = 'p_xo4em46i7yj3hphlpajo';
-const raw = () => fixture<Record<string, unknown> & { bills: Record<string, Record<string, unknown>>; worth_a_call: unknown[] }>('bills/bills.json');
+const raw = () => fixture<Record<string, unknown> & { person: string; bills: Record<string, Record<string, unknown>>; worth_a_call: unknown[] }>('rules/bills.json');
+const PERSON = raw().person;
 const usd = (amount: string) => ({ amount, currency: 'USD' });
+const [LAB, DENTAL, THERAPY, EARLIER] = Object.keys(raw().bills) as [string, string, string, string];
 
 describe('reading bills.json', () => {
   it('takes each bill’s payments, what is left, whether it is settled and what replaces it', () => {
     const { states } = parseBills(raw(), PERSON);
-    expect([...states.keys()]).toEqual(['d_lab', 'd_dental', 'd_clinic', 'd_earlier']);
-    expect(states.get('d_lab')).toEqual({
+    expect([...states.keys()]).toEqual([LAB, DENTAL, THERAPY, EARLIER]);
+    const id = expect.stringMatching(/^o_/) as string;
+    expect(states.get(LAB)).toEqual({
       payments: [
-        { from: 'receipt', document: 'd_receipt', on: '2026-09-20', amount: usd('40.00') },
-        { from: 'household', id: 'o_one', on: '2026-09-28', amount: usd('10.00') },
-        { from: 'household', id: 'o_two', on: '2026-09-29', amount: { amount: '8.00', currency: 'EUR' }, apart: true },
+        { from: 'receipt', document: expect.stringMatching(/^d_/) as string, on: '2026-09-20', amount: usd('40.00') },
+        { from: 'household', id, on: '2026-09-28', amount: usd('10.00') },
+        { from: 'household', id, on: '2026-09-29', amount: { amount: '8.00', currency: 'EUR' }, apart: true },
       ],
       left: usd('40.00'),
       settled: false,
       owed: usd('64.00'),
     });
-    expect(states.get('d_dental')).toMatchObject({ settled: true, left: usd('0.00') });
-    expect(states.get('d_earlier')).toEqual({ payments: [], settled: false, replacedBy: 'd_lab' });
+    expect(states.get(DENTAL)).toMatchObject({ settled: true, left: usd('0.00') });
+    expect(states.get(EARLIER)).toEqual({ payments: [], settled: false, replacedBy: LAB });
   });
 
   it('takes what is worth a call, never of a settled bill, nor for a reason it does not know', () => {
-    expect(parseBills(raw(), PERSON).calls).toEqual([
-      { reason: 'asks_more', document: 'd_lab', asked: usd('90.00'), owed: usd('64.00') },
-      { reason: 'no_claim', document: 'd_clinic', asked: usd('30.00') },
-      { reason: 'desk_copay', document: 'd_desk', asked: usd('45.00'), owed: usd('25.00') },
-    ]);
+    const calls = [
+      { reason: 'asks_more', document: LAB, asked: usd('90.00'), owed: usd('64.00') },
+      { reason: 'no_claim', document: THERAPY, asked: usd('30.00') },
+      { reason: 'desk_copay', document: expect.stringMatching(/^d_/) as string, asked: usd('45.00'), owed: usd('25.00') },
+    ];
+    expect(parseBills(raw(), PERSON).calls).toEqual(calls);
+    // A medrec before 0.9.6 also lists a settled one.
+    const before = [{ reason: 'no_claim', bill: DENTAL, claim: null, event: null, asked: '120.00', owed: null, currency: 'USD' }];
+    const later = [{ reason: 'a_later_reason', bill: THERAPY, asked: '30.00', owed: null, currency: 'USD' }];
+    expect(parseBills({ ...raw(), worth_a_call: [...before, ...raw().worth_a_call, ...later] }, PERSON).calls).toEqual(calls);
   });
 
   it('says whether the household’s marks could be read', () => {
@@ -57,16 +64,16 @@ describe('reading bills.json', () => {
     };
     expect(refused(raw())).toBe('read');
     expect(refused({ ...raw(), schema: 'medrec-bills/v2' })).toBe('newer_format');
-    const bill = raw().bills.d_lab!;
-    const changed = (b: Record<string, unknown>) => ({ ...raw(), bills: { d_lab: { ...bill, ...b } } });
-    const malformed = [null, [], 'x', {}, { ...raw(), schema: 'medrec-private/v1' }, { ...raw(), schema: 1 }, { ...raw(), person: 'p_other' }, { ...raw(), bills: undefined }, { ...raw(), worth_a_call: {} }, { ...raw(), bills: { d_lab: null } }, changed({ settled: 'true' }), changed({ paid: {} }), changed({ paid: [null] }), changed({ paid: [{ from: 'elsewhere' }] })];
+    const bill = raw().bills[LAB]!;
+    const changed = (b: Record<string, unknown>) => ({ ...raw(), bills: { [LAB]: { ...bill, ...b } } });
+    const malformed = [null, [], 'x', {}, { ...raw(), schema: 'medrec-private/v1' }, { ...raw(), schema: 1 }, { ...raw(), person: 'p_other' }, { ...raw(), bills: undefined }, { ...raw(), worth_a_call: {} }, { ...raw(), bills: { [LAB]: null } }, changed({ settled: 'true' }), changed({ paid: {} }), changed({ paid: [null] }), changed({ paid: [{ from: 'elsewhere' }] })];
     expect(malformed.map(refused)).toEqual(malformed.map(() => 'malformed'));
   });
 
   it('leaves out an amount that is none', () => {
-    const bill = { ...raw().bills.d_lab!, left: 'forty', claim_you_owe: 64 };
-    const { states, calls } = parseBills({ ...raw(), bills: { d_lab: bill }, worth_a_call: [null, { reason: 'asks_more' }, { reason: 'asks_more', bill: 'd_lab', asked: 'ninety', owed: null }] }, PERSON);
-    expect([states.get('d_lab')!.left, states.get('d_lab')!.owed, calls]).toEqual([undefined, undefined, [{ reason: 'asks_more', document: 'd_lab' }]]);
+    const bill = { ...raw().bills[LAB]!, left: 'forty', claim_you_owe: 64 };
+    const { states, calls } = parseBills({ ...raw(), bills: { [LAB]: bill }, worth_a_call: [null, { reason: 'asks_more' }, { reason: 'asks_more', bill: LAB, asked: 'ninety', owed: null }] }, PERSON);
+    expect([states.get(LAB)!.left, states.get(LAB)!.owed, calls]).toEqual([undefined, undefined, [{ reason: 'asks_more', document: LAB }]]);
   });
 });
 
@@ -90,10 +97,7 @@ describe('the store', () => {
   it('takes the household’s payments with it', async () => {
     const store = await load(paidCase());
     const left = (id: string) => openList(store.index(id)!).map((b) => [b.provider, b.left?.amount]);
-    expect([left(ROBIN), left(SAM)]).toEqual([[['Example Health', '33.68']], [['Example Surgery Center', '175.00']]]);
-    // medrec 0.9.5 keeps a settled bill's row among those worth a call.
-    const sam = Object.keys(paidCase()).find((f) => f.startsWith(`views/${SAM}/bills.`))!;
-    expect((JSON.parse(paidCase()[sam]!) as { worth_a_call: unknown[] }).worth_a_call).toHaveLength(1);
+    expect([left(ROBIN), left(SAM)]).toEqual([[['Example Health', '33.68']], [['Example Endoscopy Center', '90.50']]]);
     expect(store.index(SAM)!.bills!.calls).toEqual([]);
     expect((await load()).snapshot).not.toBe(store.snapshot);
   });

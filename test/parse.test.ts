@@ -7,7 +7,7 @@ import { join } from 'node:path';
 describe('household.json', () => {
   it('reads the sample household', () => {
     const h = parseHousehold(demoJson('household.json'));
-    expect(h.people.map((p) => p.name)).toEqual(['Robin Example', 'Sam Example', 'Alex Example', 'Jamie Example']);
+    expect(h.people.map((p) => p.name)).toEqual(['Robin Example', 'Sam Example', 'Alex Example', 'Drew Example']);
     expect(h.sources).toHaveLength(11);
     expect(h.people[0]!.links?.huishouden_health_person).toBe('hh-demo-robin');
   });
@@ -112,8 +112,8 @@ describe('requests', () => {
   });
 
   it('reads a payment marked, and its undo, pending or answered', () => {
-    for (const f of ['paid', 'paid-done', 'paid-invalid', 'unpaid']) {
-      const raw = fixture<{ id: string }>(`requests/${f}.json`);
+    for (const f of ['requests/paid', 'requests/unpaid', 'rules/paid-ok', 'rules/paid-invalid']) {
+      const raw = fixture<{ id: string }>(`${f}.json`);
       expect(parseMark(raw)?.id).toBe(raw.id);
       expect(parseRequest(raw)).toBeNull();
     }

@@ -1,0 +1,73 @@
+{
+  "schema": "medrec-index/v1",
+  "person": "p_iej7pyuoobrgyobzjxxg",
+  "rev": 2,
+  "documents": [],
+  "records": [
+    {
+      "id": "r_iktrqrh2puzcnzs4dpt7",
+      "kind": "coverage",
+      "key": "coverage|example health plan|2015-09-01",
+      "date": "2015-09-01",
+      "display": "Example Health Plan",
+      "status": "active",
+      "fields": {
+        "when": "2015-09-01",
+        "payer": "Example Health Plan",
+        "period": {
+          "start": "2015-09-01",
+          "end": "9999-12-31"
+        },
+        "relationship": "child",
+        "plan": "Saver 1500"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "uhc",
+            "cli_version": "0.3.6",
+            "organization_id": "example-health-plan",
+            "fhir_base": "https://example-health-plan.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Coverage",
+            "id": "coverage-b686bca6",
+            "last_updated": "2015-09-01T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:03:00Z",
+          "filed_at": "2026-11-14T20:03:00Z",
+          "raw_path": "Wren Example/Records/uhc-example-health-plan/Coverage/coverage-b686bca6.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    }
+  ],
+  "studies": [],
+  "imports": [
+    {
+      "id": "i_d2vfb3qywdoctgjs4boi",
+      "source_dir": "Wren Example/Records/uhc-example-health-plan",
+      "stream_sha256": "6939a376107dd26235e6790f735cda4cb54fe6e70d8f327a360841d1e15cf25c",
+      "stream_bytes": 1187,
+      "cli": "uhc",
+      "cli_version": "0.3.6",
+      "organization": "example-health-plan",
+      "patient_id": "pat-33a4567b",
+      "pulled_at": "2026-11-14T20:03:00Z",
+      "imported_at": "2026-11-14T20:03:00Z",
+      "counts": {
+        "Coverage": 1,
+        "Patient": 1
+      },
+      "records_added": 1,
+      "records_updated": 0,
+      "records_unchanged": 0,
+      "records_older": 0,
+      "resources_written": 2,
+      "resources_unchanged": 0,
+      "documents_added": 0
+    }
+  ]
+}

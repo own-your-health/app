@@ -1,11 +1,8 @@
 // Cases for tests: the sample with something changed in it, as medrec writes
 // it then. A case holds the files that differ from public/demo/, by their
-// path there, so a test lays them over it. medrec writes every one
-// (scripts/medrec.mjs): nothing in a view, or in the marks it is made from,
-// is set by hand.
-//
-// medrec gives a mark its time and a random id, so the marks made once are
-// kept and each run writes the views from them again; --marks makes them anew.
+// path there, so a test lays them over it. medrec writes every one, the same
+// on each run (scripts/medrec.mjs): nothing in a view, or in the marks it is
+// made from, is set by hand.
 //
 // Nothing is deleted. medrec works on a copy of the sample in a new folder
 // under the system's temporary one, which the system clears. A case is
@@ -13,11 +10,10 @@
 // file there that is no longer part of it stops the run, named, for a person
 // to remove.
 
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { APP_VIEW, md5Of, withMedrec } from './medrec.mjs';
+import { APP_VIEW, md5Of, scratchMachine } from './medrec.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const DEMO = join(ROOT, 'public', 'demo');
@@ -40,14 +36,14 @@ export function only(folder, list, fits, what) {
 /** Whether a file of the folder belongs in a case: the marks, and the views the app reads. */
 const inCase = (f) => f.endsWith('marks.json') || f === join('views', 'views.json') || (f.startsWith(`views${sep}`) && APP_VIEW.test(f.split(sep).at(-1)));
 
-/** Writes test/fixtures/<dir>/: what differs from the sample once `before` has changed its folder and `steps` has run medrec on it. */
-export function writeCase(dir, before, steps) {
+/** Writes test/fixtures/<dir>/: what differs from the sample once `before` has changed its folder and medrec has run `steps` on it, at the sample's moment. */
+export function writeCase(dir, steps, before = () => {}) {
   if (!CASES.includes(dir)) throw new Error(`${dir} is not one of the cases' folders`);
   const out = join(FIXTURES, dir);
-  const root = join(mkdtempSync(join(tmpdir(), 'medrec-case-')), 'records');
+  const { root, medrec } = scratchMachine();
   cpSync(DEMO, root, { recursive: true, filter: (f) => relative(DEMO, f) !== 'manifest.json' });
   before(root);
-  withMedrec(root, steps);
+  for (const args of [['profiles', 'add', 'demo'], ['init', root], ...steps, ['views', 'write', '--all']]) medrec(0, ...args);
   const same = (f) => existsSync(join(DEMO, f)) && md5Of(readFileSync(join(DEMO, f))) === md5Of(readFileSync(join(root, f)));
   const keep = filesIn(root).filter((f) => inCase(f) && !same(f));
   for (const f of keep) {
@@ -57,19 +53,4 @@ export function writeCase(dir, before, steps) {
   console.log(`wrote ${keep.length} files under test/fixtures/${dir}/`);
   const extra = filesIn(out).filter((f) => !keep.includes(f));
   if (extra.length) throw new Error(`no longer part of test/fixtures/${dir}/, so remove by hand:\n${extra.map((f) => `  ${f}`).join('\n')}`);
-}
-
-/** A case with the household's marks in it: `marks` are medrec's arguments for each, used when none are kept. */
-export function writeMarked(dir, marks) {
-  const kept = join(FIXTURES, dir);
-  const made = !process.argv.includes('--marks') && existsSync(kept) ? filesIn(kept).filter((f) => f.endsWith('marks.json')) : [];
-  const bytes = made.map((f) => [f, readFileSync(join(kept, f))]);
-  writeCase(
-    dir,
-    (root) => bytes.forEach(([f, b]) => writeFileSync(join(root, f), b)),
-    (medrec) => {
-      if (!bytes.length) for (const args of marks) medrec(...args);
-      medrec('views', 'write', '--all');
-    },
-  );
 }

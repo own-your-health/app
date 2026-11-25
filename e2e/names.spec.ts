@@ -1,12 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
+import { ALEX, ROBIN, SAM } from '../test/sample';
 
 // A condition or a claim's diagnosis in the source's words where they are
 // plain, with its code's published title (medrec's code-names.json) in
 // Details; by the title where the source's are billing words in capitals.
-
-const SAM = 'p_wwezzed7kml67hnp6s7n';
-const ROBIN = 'p_xo4em46i7yj3hphlpajo';
-const ALEX = 'p_bjpnvyvnmxv74q335tk4';
 
 async function open(page: Page, path: string) {
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
@@ -48,20 +45,20 @@ test('a title that says what the source says is not said again', async ({ page }
 
 test('a claim’s diagnosis in capitals gives way to its code’s title, and Details keep it', async ({ page }) => {
   await open(page, `#/costs?period=all&only=person:${ROBIN}`);
-  await card(page, /^\d+ claims$/).locator('.row', { hasText: 'Lisinopril 10 mg tablet, 90 days' }).first().locator('a.row-main').click();
-  await expect(field(page, 'Diagnosis')).toHaveText('Essential (primary) hypertension (I10)');
-  await expect(page.locator('main section.card').first()).not.toContainText('HYPERTENSION');
+  await card(page, /^\d+ claims$/).locator('.row', { hasText: 'Atorvastatin 20 mg tablet, 30 days' }).first().locator('a.row-main').click();
+  await expect(field(page, 'Diagnosis')).toHaveText('Pure hypercholesterolemia, unspecified (E78.00)');
+  await expect(page.locator('main section.card').first()).not.toContainText('HYPERCHOLESTEROLEMIA');
   await details(page);
-  await expect(field(page, 'Diagnosis, in the claim’s words')).toHaveText('HYPERTENSION NOS (I10)');
+  await expect(field(page, 'Diagnosis, in the claim’s words')).toHaveText('HYPERCHOLESTEROLEMIA NOS (E78.00)');
   await expect(field(page, 'Diagnosis, by published title')).toHaveCount(0);
 });
 
 test('a claim’s abbreviation is beside its code’s title, and Details keep it as it was', async ({ page }) => {
   await open(page, `#/costs?period=all&only=person:${ROBIN}`);
-  await card(page, /^\d+ claims$/).locator('.row', { hasText: 'Lisinopril 10 mg tablet, 90 days' }).last().locator('a.row-main').click();
-  await expect(field(page, 'Diagnosis')).toHaveText('Essential (primary) hypertension (HTN, I10)');
+  await card(page, /^\d+ claims$/).locator('.row', { hasText: 'Atorvastatin 20 mg tablet, 30 days' }).last().locator('a.row-main').click();
+  await expect(field(page, 'Diagnosis')).toHaveText('Pure hypercholesterolemia, unspecified (HLD, E78.00)');
   await details(page);
-  await expect(field(page, 'Diagnosis, in the claim’s words')).toHaveText('HTN (I10)');
+  await expect(field(page, 'Diagnosis, in the claim’s words')).toHaveText('HLD (E78.00)');
   await expect(field(page, 'Diagnosis, by published title')).toHaveCount(0);
 });
 

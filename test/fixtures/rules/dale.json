@@ -1,0 +1,131 @@
+{
+  "schema": "medrec-index/v1",
+  "person": "p_yylvutsfhleeg5zqv5l4",
+  "rev": 3,
+  "documents": [],
+  "records": [
+    {
+      "id": "r_44ro4yi7oumn5x3uyy2v",
+      "kind": "coverage",
+      "key": "coverage|example care plan|2018-02-01",
+      "date": "2018-02-01",
+      "display": "Example Care Plan",
+      "status": "active",
+      "fields": {
+        "when": "2018-02-01",
+        "payer": "Example Care Plan",
+        "period": {
+          "start": "2018-02-01"
+        },
+        "relationship": "self"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "kp",
+            "cli_version": "0.4.0",
+            "organization_id": "700001",
+            "fhir_base": "https://fhir.example.com/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Coverage",
+            "id": "coverage-edcc7d03",
+            "last_updated": "2018-02-01T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:04:00Z",
+          "filed_at": "2026-11-14T20:04:00Z",
+          "raw_path": "Dale Example/Records/kp-700001/Coverage/coverage-edcc7d03.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    },
+    {
+      "id": "r_a722pz2eevlnrgyjz7qb",
+      "kind": "coverage",
+      "key": "coverage|example care plan open access|2018-02-01",
+      "date": "2018-02-01",
+      "display": "EXAMPLE CARE PLAN OPEN ACCESS",
+      "status": "active",
+      "fields": {
+        "when": "2018-02-01",
+        "payer": "EXAMPLE CARE PLAN OPEN ACCESS",
+        "period": {
+          "start": "2018-02-01"
+        },
+        "relationship": "self"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "700001",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Coverage",
+            "id": "coverage-78b06916",
+            "last_updated": "2018-02-01T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:05:00Z",
+          "filed_at": "2026-11-14T20:05:00Z",
+          "raw_path": "Dale Example/Records/mychart-700001/Coverage/coverage-78b06916.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    }
+  ],
+  "studies": [],
+  "imports": [
+    {
+      "id": "i_yg46ytict7shqmu6g7ei",
+      "source_dir": "Dale Example/Records/kp-700001",
+      "stream_sha256": "c827efdd652c7a0c2a5918f2dcfe872128c091ee21de52e84e108e7906784d0a",
+      "stream_bytes": 956,
+      "cli": "kp",
+      "cli_version": "0.4.0",
+      "organization": "700001",
+      "patient_id": "pat-8fdd7e1b",
+      "pulled_at": "2026-11-14T20:04:00Z",
+      "imported_at": "2026-11-14T20:04:00Z",
+      "counts": {
+        "Coverage": 1,
+        "Patient": 1
+      },
+      "records_added": 1,
+      "records_updated": 0,
+      "records_unchanged": 0,
+      "records_older": 0,
+      "resources_written": 2,
+      "resources_unchanged": 0,
+      "documents_added": 0
+    },
+    {
+      "id": "i_6a2mqjats5hzo6au747f",
+      "source_dir": "Dale Example/Records/mychart-700001",
+      "stream_sha256": "37827583f45698c7bea4df90cb47cd483b9f2302b58a6a8b7fc287cd281ab192",
+      "stream_bytes": 970,
+      "cli": "mychart",
+      "cli_version": "0.7.1",
+      "organization": "700001",
+      "patient_id": "pat-8037d389",
+      "pulled_at": "2026-11-14T20:05:00Z",
+      "imported_at": "2026-11-14T20:05:00Z",
+      "counts": {
+        "Coverage": 1,
+        "Patient": 1
+      },
+      "records_added": 1,
+      "records_updated": 0,
+      "records_unchanged": 0,
+      "records_older": 0,
+      "resources_written": 2,
+      "resources_unchanged": 0,
+      "documents_added": 0
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 // Words from the records as the screens may show them: a billing descriptor
 // in capitals is never a headline, and a portal platform's name is no place.
 
-/** Billing words in capitals, as an encounter or a claim gives them ("FIRST APPOINTMENT TIER THREE"): never a headline, and shown only in Details. */
+/** Billing words in capitals, as an encounter or a claim gives them ("NEW VISIT LEVEL FOUR"): never a headline, and shown only in Details. */
 export function isDescriptor(text: string): boolean {
   return (text.match(/\p{Lu}{2,}/gu)?.length ?? 0) >= 2 && !/\p{Ll}/u.test(text);
 }
@@ -47,7 +47,7 @@ const PLATFORMS = new Set([
   'veradigm',
 ]);
 
-/** Whether a name is for every practice a records connection serves: "athenahealth (all practices)". */
+/** Whether a name is for every practice a records connection serves: "Example Records (all practices)". */
 export function everyPractice(name: string): boolean {
   return /\(all (practices|locations|sites|clinics)\)$/i.test(name);
 }

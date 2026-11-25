@@ -1,0 +1,598 @@
+{
+  "schema": "medrec-household/v1",
+  "format": 1,
+  "folder_id": "f_mly3vqqoxjbelka3rvb5",
+  "rev": 36,
+  "created_at": "2026-11-12T20:00:00Z",
+  "people": [
+    {
+      "id": "p_wknhoo3uvn3vejlf4ek4",
+      "name": "Riley Example",
+      "folder": "Riley Example",
+      "birth_date": "1971-05-05",
+      "adult": true,
+      "identifiers": [
+        {
+          "source": "labcorp:example-lab",
+          "value": "pat-fb5cf795",
+          "kind": "patient"
+        }
+      ],
+      "created_at": "2026-11-12T20:00:00Z"
+    },
+    {
+      "id": "p_hlk7b35c6vgnblrhrqyl",
+      "name": "Kit Example",
+      "folder": "Kit Example",
+      "birth_date": "1976-03-03",
+      "adult": true,
+      "identifiers": [
+        {
+          "source": "uhc:example-health-plan",
+          "value": "pat-68e1bb55",
+          "kind": "patient"
+        },
+        {
+          "source": "mychart:example-health",
+          "value": "pat-a5e26433",
+          "kind": "patient"
+        }
+      ],
+      "created_at": "2026-11-12T20:00:00Z"
+    },
+    {
+      "id": "p_iej7pyuoobrgyobzjxxg",
+      "name": "Wren Example",
+      "folder": "Wren Example",
+      "birth_date": "2015-09-01",
+      "guardians": [
+        "p_hlk7b35c6vgnblrhrqyl"
+      ],
+      "identifiers": [
+        {
+          "source": "uhc:example-health-plan",
+          "value": "pat-33a4567b",
+          "kind": "patient"
+        }
+      ],
+      "created_at": "2026-11-12T20:00:00Z"
+    },
+    {
+      "id": "p_yylvutsfhleeg5zqv5l4",
+      "name": "Dale Example",
+      "folder": "Dale Example",
+      "birth_date": "1969-02-02",
+      "adult": true,
+      "identifiers": [
+        {
+          "source": "kp:700001",
+          "value": "pat-8fdd7e1b",
+          "kind": "patient"
+        },
+        {
+          "source": "mychart:700001",
+          "value": "pat-8037d389",
+          "kind": "patient"
+        }
+      ],
+      "created_at": "2026-11-12T20:00:00Z"
+    },
+    {
+      "id": "p_m34nxk4cavrnsofgckqn",
+      "name": "Pat Example",
+      "folder": "Pat Example",
+      "birth_date": "1984-04-04",
+      "adult": true,
+      "identifiers": [
+        {
+          "source": "kp:example-care-plan",
+          "value": "pat-390968a7",
+          "kind": "patient"
+        }
+      ],
+      "created_at": "2026-11-12T20:00:00Z"
+    },
+    {
+      "id": "p_opurnp3lcyps6k7qo57l",
+      "name": "Quinn Example",
+      "folder": "Quinn Example",
+      "birth_date": "1979-06-06",
+      "adult": true,
+      "identifiers": [
+        {
+          "source": "uhc:example-health-plan",
+          "value": "pat-7079ed91",
+          "kind": "patient"
+        }
+      ],
+      "created_at": "2026-11-12T20:00:00Z"
+    },
+    {
+      "id": "p_xtnlgl5ylgpnxwxxonbm",
+      "name": "Noor Example",
+      "folder": "Noor Example",
+      "birth_date": "1966-08-08",
+      "adult": true,
+      "identifiers": [
+        {
+          "source": "kp:example-care-plan",
+          "value": "pat-fe3a9a46",
+          "kind": "patient"
+        },
+        {
+          "source": "mychart:example-health",
+          "value": "pat-f2c5f11c",
+          "kind": "patient"
+        }
+      ],
+      "created_at": "2026-11-12T20:00:00Z"
+    },
+    {
+      "id": "p_fed7xoz7sq7kj3m27sjn",
+      "name": "Lee Example",
+      "folder": "Lee Example",
+      "birth_date": "1973-09-09",
+      "adult": true,
+      "identifiers": [
+        {
+          "source": "athena:800001",
+          "value": "pat-364b056e",
+          "kind": "patient"
+        },
+        {
+          "source": "athena:800002",
+          "value": "pat-4a64e46d",
+          "kind": "patient"
+        },
+        {
+          "source": "athena:800003",
+          "value": "pat-686945a9",
+          "kind": "patient"
+        },
+        {
+          "source": "athena:800004",
+          "value": "pat-ad2e492d",
+          "kind": "patient"
+        },
+        {
+          "source": "mychart:800001",
+          "value": "pat-8900a8c2",
+          "kind": "patient"
+        },
+        {
+          "source": "athena:example-group",
+          "value": "pat-853f0d7e",
+          "kind": "patient"
+        },
+        {
+          "source": "athena:example-group",
+          "value": "pat-abda62c0",
+          "kind": "patient"
+        },
+        {
+          "source": "athena:example-lake",
+          "value": "pat-106fdaf4",
+          "kind": "patient"
+        },
+        {
+          "source": "athena:example-north",
+          "value": "pat-353ab676",
+          "kind": "patient"
+        }
+      ],
+      "created_at": "2026-11-12T20:00:00Z"
+    },
+    {
+      "id": "p_ogkck32jchufpkizmrbs",
+      "name": "Toni Example",
+      "folder": "Toni Example",
+      "birth_date": "1975-10-10",
+      "adult": true,
+      "identifiers": [
+        {
+          "source": "athena:example-group",
+          "value": "pat-ee416ade",
+          "kind": "patient"
+        },
+        {
+          "source": "athena:example-east",
+          "value": "pat-ccc12d30",
+          "kind": "patient"
+        }
+      ],
+      "created_at": "2026-11-12T20:00:00Z"
+    },
+    {
+      "id": "p_keo67qn5tfqbookluobg",
+      "name": "Wyn Example",
+      "folder": "Wyn Example",
+      "birth_date": "1988-11-11",
+      "adult": true,
+      "identifiers": [
+        {
+          "source": "uhc:example-health-plan",
+          "value": "pat-63241757",
+          "kind": "patient"
+        },
+        {
+          "source": "mychart:example-health",
+          "value": "pat-f8ce30c5",
+          "kind": "patient"
+        }
+      ],
+      "created_at": "2026-11-12T20:00:00Z"
+    },
+    {
+      "id": "p_zkcd2d4s5sbgiehhueoj",
+      "name": "Val Example",
+      "folder": "Val Example",
+      "birth_date": "1963-12-12",
+      "adult": true,
+      "identifiers": [
+        {
+          "source": "uhc:example-health-plan",
+          "value": "pat-57223d94",
+          "kind": "patient"
+        }
+      ],
+      "created_at": "2026-11-12T20:00:00Z"
+    }
+  ],
+  "organizations": [
+    {
+      "id": "g_oehx25gtja4ne4d5cwvm",
+      "name": "Example Lab",
+      "fhir_base": "https://example-lab.example"
+    },
+    {
+      "id": "g_s77oxzzuomsiu33vdxok",
+      "name": "Example Health Plan",
+      "fhir_base": "https://example-health-plan.example"
+    },
+    {
+      "id": "g_vyakqjsg6fiuu753v4gn",
+      "name": "Example Health",
+      "fhir_base": "https://fhir.example.org/r4"
+    },
+    {
+      "id": "g_lgp6t5gaj2k452775kml",
+      "name": "Example Care Plan",
+      "fhir_base": "https://fhir.example.com/r4"
+    },
+    {
+      "id": "g_ktjtn3ntcr6wketqwcpo",
+      "name": "Example Foot Care",
+      "fhir_base": "https://records.example.net/fhir/r4"
+    },
+    {
+      "id": "g_ew5a5kprwk5bgcbgcykk",
+      "name": "Example Hearing Center",
+      "fhir_base": "https://records.example.net/fhir/r4"
+    },
+    {
+      "id": "g_mlxzo47iglzibzozks5t",
+      "name": " ",
+      "fhir_base": "https://records.example.net/fhir/r4"
+    },
+    {
+      "id": "g_wiepg7gubkvmri3h63ul",
+      "name": "Example Records (all practices)",
+      "fhir_base": "https://records.example.net/fhir/r4"
+    },
+    {
+      "id": "g_hksdikxnvdlwday2w2ee",
+      "name": "Example North Clinic",
+      "fhir_base": "https://records.example.net/fhir/r4"
+    },
+    {
+      "id": "g_bg7jhi7y7daolgb5qujc",
+      "name": "Example South Clinic",
+      "fhir_base": "https://records.example.net/fhir/r4"
+    },
+    {
+      "id": "g_p6ywx6x6wnawywph5xht",
+      "name": "Example Lake Clinic",
+      "fhir_base": "https://records.example.net/fhir/r4"
+    },
+    {
+      "id": "g_qporjphg4t2cz6qiqgd5",
+      "name": "Example West Clinic",
+      "fhir_base": "https://records.example.net/fhir/r4"
+    },
+    {
+      "id": "g_oil27mzpem24gjss4jud",
+      "name": "Example East Clinic",
+      "fhir_base": "https://records.example.net/fhir/r4"
+    }
+  ],
+  "sources": [
+    {
+      "id": "s_72pkjzacyzr6tskfjceo",
+      "kind": "portal",
+      "person": "p_wknhoo3uvn3vejlf4ek4",
+      "cli": "labcorp",
+      "organization": "example-lab",
+      "organization_name": "Example Lab",
+      "fhir_base": "https://example-lab.example",
+      "patient_id": "pat-fb5cf795",
+      "patient_label": "Riley Example",
+      "last_pull": "2026-11-14T20:00:00Z"
+    },
+    {
+      "id": "s_blk64fyzj2ezxyhd7jfs",
+      "kind": "portal",
+      "person": "p_hlk7b35c6vgnblrhrqyl",
+      "cli": "uhc",
+      "organization": "example-health-plan",
+      "organization_name": "Example Health Plan",
+      "fhir_base": "https://example-health-plan.example",
+      "patient_id": "pat-68e1bb55",
+      "patient_label": "Kit Example",
+      "last_pull": "2026-11-14T20:01:00Z"
+    },
+    {
+      "id": "s_fxcomj2ekqdgcjyzzxg5",
+      "kind": "fhir",
+      "person": "p_hlk7b35c6vgnblrhrqyl",
+      "cli": "mychart",
+      "organization": "example-health",
+      "organization_name": "Example Health",
+      "fhir_base": "https://fhir.example.org/r4",
+      "patient_id": "pat-a5e26433",
+      "patient_label": "Kit Example",
+      "last_pull": "2026-11-14T20:02:00Z"
+    },
+    {
+      "id": "s_yhjhayjsdbrh2bekeaed",
+      "kind": "portal",
+      "person": "p_iej7pyuoobrgyobzjxxg",
+      "cli": "uhc",
+      "organization": "example-health-plan",
+      "organization_name": "Example Health Plan",
+      "fhir_base": "https://example-health-plan.example",
+      "patient_id": "pat-33a4567b",
+      "patient_label": "Wren Example",
+      "last_pull": "2026-11-14T20:03:00Z"
+    },
+    {
+      "id": "s_udgepvwxirqvyuzpf6dv",
+      "kind": "fhir",
+      "person": "p_yylvutsfhleeg5zqv5l4",
+      "cli": "kp",
+      "organization": "700001",
+      "organization_name": "Example Care Plan",
+      "fhir_base": "https://fhir.example.com/r4",
+      "patient_id": "pat-8fdd7e1b",
+      "patient_label": "Dale Example",
+      "last_pull": "2026-11-14T20:04:00Z"
+    },
+    {
+      "id": "s_zlcnzwc4aw7j37trepst",
+      "kind": "fhir",
+      "person": "p_yylvutsfhleeg5zqv5l4",
+      "cli": "mychart",
+      "organization": "700001",
+      "organization_name": "Example Health",
+      "fhir_base": "https://fhir.example.org/r4",
+      "patient_id": "pat-8037d389",
+      "patient_label": "Dale Example",
+      "last_pull": "2026-11-14T20:05:00Z"
+    },
+    {
+      "id": "s_n5t7lgt6cjv5hfcwr76j",
+      "kind": "fhir",
+      "person": "p_m34nxk4cavrnsofgckqn",
+      "cli": "kp",
+      "organization": "example-care-plan",
+      "organization_name": "Example Care Plan",
+      "fhir_base": "https://fhir.example.com/r4",
+      "patient_id": "pat-390968a7",
+      "patient_label": "Pat Example",
+      "last_pull": "2026-11-14T20:06:00Z"
+    },
+    {
+      "id": "s_inli4d5osqqxrlz2pvwl",
+      "kind": "portal",
+      "person": "p_opurnp3lcyps6k7qo57l",
+      "cli": "uhc",
+      "organization": "example-health-plan",
+      "organization_name": "Example Health Plan",
+      "fhir_base": "https://example-health-plan.example",
+      "patient_id": "pat-7079ed91",
+      "patient_label": "Quinn Example",
+      "last_pull": "2026-11-14T20:07:00Z"
+    },
+    {
+      "id": "s_zjeh2zmxn6fbpqe2uhdp",
+      "kind": "fhir",
+      "person": "p_xtnlgl5ylgpnxwxxonbm",
+      "cli": "kp",
+      "organization": "example-care-plan",
+      "organization_name": "Example Care Plan",
+      "fhir_base": "https://fhir.example.com/r4",
+      "patient_id": "pat-fe3a9a46",
+      "patient_label": "Noor Example",
+      "last_pull": "2026-11-14T20:08:00Z"
+    },
+    {
+      "id": "s_smzllyv3qjfsnacmzrqi",
+      "kind": "fhir",
+      "person": "p_xtnlgl5ylgpnxwxxonbm",
+      "cli": "mychart",
+      "organization": "example-health",
+      "organization_name": "Example Health",
+      "fhir_base": "https://fhir.example.org/r4",
+      "patient_id": "pat-f2c5f11c",
+      "patient_label": "Noor Example",
+      "last_pull": "2026-11-14T20:09:00Z"
+    },
+    {
+      "id": "s_63rdofp5y4uwyxbszw4v",
+      "kind": "fhir",
+      "person": "p_fed7xoz7sq7kj3m27sjn",
+      "cli": "athena",
+      "organization": "800001",
+      "organization_name": "Example Foot Care",
+      "fhir_base": "https://records.example.net/fhir/r4",
+      "patient_id": "pat-364b056e",
+      "patient_label": "Lee Example",
+      "last_pull": "2026-11-14T20:10:00Z"
+    },
+    {
+      "id": "s_axksk4dmgjfoewvv5j6b",
+      "kind": "fhir",
+      "person": "p_fed7xoz7sq7kj3m27sjn",
+      "cli": "athena",
+      "organization": "800002",
+      "organization_name": "Example Hearing Center",
+      "fhir_base": "https://records.example.net/fhir/r4",
+      "patient_id": "pat-4a64e46d",
+      "patient_label": "Lee Example",
+      "last_pull": "2026-11-14T20:11:00Z"
+    },
+    {
+      "id": "s_p5txiaa33vxakcs7ychr",
+      "kind": "fhir",
+      "person": "p_fed7xoz7sq7kj3m27sjn",
+      "cli": "athena",
+      "organization": "800003",
+      "organization_name": " ",
+      "fhir_base": "https://records.example.net/fhir/r4",
+      "patient_id": "pat-686945a9",
+      "patient_label": "Lee Example",
+      "last_pull": "2026-11-14T20:12:00Z"
+    },
+    {
+      "id": "s_lvyrnlwwrnfgoycsjq3e",
+      "kind": "fhir",
+      "person": "p_fed7xoz7sq7kj3m27sjn",
+      "cli": "athena",
+      "organization": "800004",
+      "organization_name": "Example Records (all practices)",
+      "fhir_base": "https://records.example.net/fhir/r4",
+      "patient_id": "pat-ad2e492d",
+      "patient_label": "Lee Example",
+      "last_pull": "2026-11-14T20:13:00Z"
+    },
+    {
+      "id": "s_mi266fe724qwf2kl2rlq",
+      "kind": "fhir",
+      "person": "p_fed7xoz7sq7kj3m27sjn",
+      "cli": "mychart",
+      "organization": "800001",
+      "organization_name": "Example Health",
+      "fhir_base": "https://fhir.example.org/r4",
+      "patient_id": "pat-8900a8c2",
+      "patient_label": "Lee Example",
+      "last_pull": "2026-11-14T20:14:00Z"
+    },
+    {
+      "id": "s_4xf4nlrluqwjmu5jqtdv",
+      "kind": "fhir",
+      "person": "p_fed7xoz7sq7kj3m27sjn",
+      "cli": "athena",
+      "organization": "example-group",
+      "organization_name": "Example North Clinic",
+      "fhir_base": "https://records.example.net/fhir/r4",
+      "patient_id": "pat-853f0d7e",
+      "patient_label": "Lee Example",
+      "last_pull": "2026-11-14T20:15:00Z"
+    },
+    {
+      "id": "s_fx7k2jbq5zhmlylng4an",
+      "kind": "fhir",
+      "person": "p_fed7xoz7sq7kj3m27sjn",
+      "cli": "athena",
+      "organization": "example-group",
+      "organization_name": "Example South Clinic",
+      "fhir_base": "https://records.example.net/fhir/r4",
+      "patient_id": "pat-abda62c0",
+      "patient_label": "Lee Example",
+      "last_pull": "2026-11-14T20:16:00Z"
+    },
+    {
+      "id": "s_izzzx55gsdqe7fnqeah5",
+      "kind": "fhir",
+      "person": "p_fed7xoz7sq7kj3m27sjn",
+      "cli": "athena",
+      "organization": "example-lake",
+      "organization_name": "Example Lake Clinic",
+      "fhir_base": "https://records.example.net/fhir/r4",
+      "patient_id": "pat-106fdaf4",
+      "patient_label": "Lee Example",
+      "last_pull": "2026-11-14T20:17:00Z"
+    },
+    {
+      "id": "s_5k2zdo6pfifxoksdkfck",
+      "kind": "fhir",
+      "person": "p_fed7xoz7sq7kj3m27sjn",
+      "cli": "athena",
+      "organization": "example-north",
+      "organization_name": "Example North Clinic",
+      "fhir_base": "https://records.example.net/fhir/r4",
+      "patient_id": "pat-353ab676",
+      "patient_label": "Lee Example",
+      "last_pull": "2026-11-14T20:18:00Z"
+    },
+    {
+      "id": "s_zludauue5h65x4vxxipo",
+      "kind": "fhir",
+      "person": "p_ogkck32jchufpkizmrbs",
+      "cli": "athena",
+      "organization": "example-group",
+      "organization_name": "Example West Clinic",
+      "fhir_base": "https://records.example.net/fhir/r4",
+      "patient_id": "pat-ee416ade",
+      "patient_label": "Toni Example",
+      "last_pull": "2026-11-14T20:19:00Z"
+    },
+    {
+      "id": "s_kli3ko4t6dn37juo4wr4",
+      "kind": "fhir",
+      "person": "p_ogkck32jchufpkizmrbs",
+      "cli": "athena",
+      "organization": "example-east",
+      "organization_name": "Example East Clinic",
+      "fhir_base": "https://records.example.net/fhir/r4",
+      "patient_id": "pat-ccc12d30",
+      "patient_label": "Toni Example",
+      "last_pull": "2026-11-14T20:20:00Z"
+    },
+    {
+      "id": "s_hzsvkm6nl4wubfoaouvc",
+      "kind": "portal",
+      "person": "p_keo67qn5tfqbookluobg",
+      "cli": "uhc",
+      "organization": "example-health-plan",
+      "organization_name": "Example Health Plan",
+      "fhir_base": "https://example-health-plan.example",
+      "patient_id": "pat-63241757",
+      "patient_label": "Wyn Example",
+      "last_pull": "2026-11-14T20:21:00Z"
+    },
+    {
+      "id": "s_3k4yzntaepnkusfy2t52",
+      "kind": "fhir",
+      "person": "p_keo67qn5tfqbookluobg",
+      "cli": "mychart",
+      "organization": "example-health",
+      "organization_name": "Example Health",
+      "fhir_base": "https://fhir.example.org/r4",
+      "patient_id": "pat-f8ce30c5",
+      "patient_label": "Wyn Example",
+      "last_pull": "2026-11-14T20:22:00Z"
+    },
+    {
+      "id": "s_7xrvizzxs7fmrb4fok2y",
+      "kind": "portal",
+      "person": "p_zkcd2d4s5sbgiehhueoj",
+      "cli": "uhc",
+      "organization": "example-health-plan",
+      "organization_name": "Example Health Plan",
+      "fhir_base": "https://example-health-plan.example",
+      "patient_id": "pat-57223d94",
+      "patient_label": "Val Example",
+      "last_pull": "2026-11-14T20:23:00Z"
+    }
+  ]
+}

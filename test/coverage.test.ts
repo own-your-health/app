@@ -1,41 +1,38 @@
 import { describe, expect, it } from 'vitest';
 import { birthWords, bornClause, coverageChangesIn, coverageHistory, isChange } from '../src/model/coverage';
 import { householdLines, inPeriod } from '../src/model/costs';
-import { parseIndex } from '../src/model/parse';
-import type { Household, PersonIndex } from '../src/model/types';
 import { dateText } from '../src/ui/format';
 import { demo, personNamed } from './demo-data';
-import { fixture } from './helpers';
+import { recordsOf, ruled, RULES } from './rules';
 
 const { household, indexes } = demo();
-const robin = personNamed(household, 'Robin Example');
-// Someone born on a day a coverage started: the sample has no such day.
-const casey = { id: 'p_bbbbbbbbbbbbbbbbbbbb', name: 'Casey Example', short: 'Casey', folder: 'Casey Example', birth_date: '2016-05-17' };
-const withCasey = { ...household, people: [...household.people, casey] };
-const history = (name: 'robin' | 'casey', id: string) => coverageHistory(parseIndex(fixture(`folder/index-coverage-${name}.json`), id), withCasey, id);
+/** Someone's coverages in the rules' household, where Wren was born the day one started: the sample has no such day. */
+const history = (first: string) => coverageHistory(recordsOf(first), RULES, ruled(first));
 
 describe('a person’s coverage over time', () => {
-  const segments = history('robin', robin.id);
+  const segments = history('Kit');
 
   it('is each insurer and start, newest first, with one entry for a coverage two sources name', () => {
-    expect(segments.map((s) => [s.insurer, s.plan, s.start, s.end, s.records.map((r) => r.id), s.sources, s.first])).toEqual([
+    expect(segments.map((s) => [s.insurer, s.plan, s.start, s.end, s.records.length, s.sources, s.first])).toEqual([
       // The insurer's spelling wins over the portal's.
-      ['Example Health Plan', 'PPO Choice', '2016-05-17', undefined, ['r_aaaaaaaaaaaaaaaaaaaa', 'r_bbbbbbbbbbbbbbbbbbbb'], ['Example Health Plan', 'Example Health'], false],
-      ['Example Dental', 'Dental Basic', '2014-09-01', '2015-06-30', ['r_dddddddddddddddddddd'], ['Example Health'], false],
-      ['EXAMPLE HEALTH PLAN, INC.', 'PPO Choice', '2012-01-01', '2016-05-16', ['r_cccccccccccccccccccc'], ['Example Health'], true],
-      ['Example Vision', undefined, undefined, undefined, ['r_ffffffffffffffffffff'], ['Example Health'], false],
+      ['Example Health Plan', 'Saver 1500', '2015-09-01', undefined, 2, ['Example Health Plan', 'Example Health'], false],
+      ['Example Vision', 'Vision Plus', '2011-02-01', '2013-01-31', 1, ['Example Health'], false],
+      ['EXAMPLE HEALTH PLAN, INC.', 'Saver 1500', '2009-07-01', '2015-08-31', 1, ['Example Health'], true],
+      ['Example Dental', undefined, undefined, undefined, 1, ['Example Health'], false],
     ]);
+    // One entered in error is none.
+    const ids = segments.flatMap((s) => s.records.map((r) => r.id));
+    expect(recordsOf('Kit').records.filter((r) => !ids.includes(r.id)).map((r) => r.status)).toEqual(['entered-in-error']);
   });
 
   it('knows the insurer’s own record by its sign-in, where another source shares its id', () => {
-    const two = fixture<{ sources: Household['sources']; index: PersonIndex }>('folder/coverage-two-clis.json');
-    const [only] = coverageHistory(two.index, { ...household, sources: two.sources, organizations: [] }, robin.id);
-    expect([only!.insurer, only!.sources]).toEqual(['Example Plan', ['Example Health', 'Example Plan']]);
+    const [only] = history('Dale');
+    expect([only!.insurer, only!.sources]).toEqual(['Example Care Plan', ['Example Care Plan', 'Example Health']]);
   });
 
   it('marks a coverage that started the day someone in the household was born, as a date, not a reason', () => {
-    expect(segments.map((s) => s.born?.name)).toEqual(['Casey Example', undefined, undefined, undefined]);
-    expect(birthWords(segments[0]!, dateText)).toBe('Changed on May 17, 2016, the day Casey was born.');
+    expect(segments.map((s) => s.born?.name)).toEqual(['Wren Example', undefined, undefined, undefined]);
+    expect(birthWords(segments[0]!, dateText)).toBe('Changed on Sep 1, 2015, the day Wren was born.');
     expect(segments.slice(1).map((s) => birthWords(s, dateText))).toEqual([undefined, undefined, undefined]);
   });
 
@@ -44,13 +41,13 @@ describe('a person’s coverage over time', () => {
   });
 
   it('gives the birthday clause on its own, for a sentence of another shape', () => {
-    expect(segments.map(bornClause)).toEqual(['the day Casey was born', undefined, undefined, undefined]);
+    expect(segments.map(bornClause)).toEqual(['the day Wren was born', undefined, undefined, undefined]);
   });
 
   it('says a child’s own first coverage started the day they were born', () => {
-    const [own] = history('casey', casey.id);
+    const [own] = history('Wren');
     expect([own!.first, own!.relationship, isChange(own!)]).toEqual([true, 'child', true]);
-    expect(birthWords(own!, dateText)).toBe('Started on May 17, 2016, the day Casey was born.');
+    expect(birthWords(own!, dateText)).toBe('Started on Sep 1, 2015, the day Wren was born.');
   });
 });
 
@@ -66,9 +63,9 @@ describe('coverage changes inside a cost period', () => {
     ).map(({ person, change }) => [household.people.find((p) => p.id === person)?.name, change.insurer, change.start]);
 
   it('names each change in the plan years, calendar year or years shown, judged by that person’s own lines', () => {
-    expect(changes('plan')).toEqual([['Robin Example', 'Example Health Plan', '2026-03-01']]);
-    expect(changes('2026')).toEqual([['Robin Example', 'Example Health Plan', '2026-03-01']]);
-    expect(changes('all')).toEqual([['Robin Example', 'Example Health Plan', '2026-03-01']]);
+    expect(changes('plan')).toEqual([['Robin Example', 'Example Health Plan', '2026-01-01']]);
+    expect(changes('2026')).toEqual([['Robin Example', 'Example Health Plan', '2026-01-01']]);
+    expect(changes('all')).toEqual([['Robin Example', 'Example Health Plan', '2026-01-01']]);
     // Robin's last plan year was 2025, before the change.
     expect(changes('plan-1')).toEqual([]);
     expect(changes('2025')).toEqual([]);

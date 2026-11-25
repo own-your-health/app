@@ -1,0 +1,580 @@
+{
+  "schema": "medrec-index/v1",
+  "person": "p_fed7xoz7sq7kj3m27sjn",
+  "rev": 10,
+  "documents": [],
+  "records": [
+    {
+      "id": "r_ai2tvlhpu6nc6kvef5dx",
+      "kind": "encounter",
+      "key": "encounter|return visit level two|2026-03-31",
+      "date": "2026-03-31",
+      "code": {
+        "display": "RETURN VISIT LEVEL TWO"
+      },
+      "display": "RETURN VISIT LEVEL TWO",
+      "status": "finished",
+      "fields": {
+        "when": "2026-03-31T15:00:00Z",
+        "class": "ambulatory",
+        "service_provider": "Example Records (all practices)",
+        "period": {
+          "start": "2026-03-31T15:00:00Z"
+        }
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "athena",
+            "cli_version": "0.6.1",
+            "organization_id": "800001",
+            "fhir_base": "https://records.example.net/fhir/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Encounter",
+            "id": "encounter-5bc729bf",
+            "last_updated": "2026-03-31T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:10:00Z",
+          "filed_at": "2026-11-14T20:10:00Z",
+          "raw_path": "Lee Example/Records/athena-800001/Encounter/encounter-5bc729bf.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    },
+    {
+      "id": "r_2bcvarigwumj7c3jofxv",
+      "kind": "encounter",
+      "key": "encounter|morning visit|2026-04-21",
+      "date": "2026-04-21",
+      "code": {
+        "display": "Morning visit"
+      },
+      "display": "Morning visit",
+      "status": "finished",
+      "fields": {
+        "when": "2026-04-21T15:00:00Z",
+        "class": "ambulatory",
+        "period": {
+          "start": "2026-04-21T15:00:00Z"
+        }
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "athena",
+            "cli_version": "0.6.1",
+            "organization_id": "example-group",
+            "fhir_base": "https://records.example.net/fhir/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Encounter",
+            "id": "encounter-4d296d42",
+            "last_updated": "2026-04-21T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:15:00Z",
+          "filed_at": "2026-11-14T20:15:00Z",
+          "raw_path": "Lee Example/Records/athena-example-group/Encounter/encounter-4d296d42.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    },
+    {
+      "id": "r_qzhfx7znigeek4dsckgt",
+      "kind": "encounter",
+      "key": "encounter|later visit|2026-04-30",
+      "date": "2026-04-30",
+      "code": {
+        "display": "Later visit"
+      },
+      "display": "Later visit",
+      "status": "finished",
+      "fields": {
+        "when": "2026-04-30T15:00:00Z",
+        "class": "ambulatory",
+        "period": {
+          "start": "2026-04-30T15:00:00Z"
+        }
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "athena",
+            "cli_version": "0.6.1",
+            "organization_id": "example-group",
+            "fhir_base": "https://records.example.net/fhir/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Encounter",
+            "id": "encounter-88a43857",
+            "last_updated": "2026-04-30T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:15:00Z",
+          "filed_at": "2026-11-14T20:15:00Z",
+          "raw_path": "Lee Example/Records/athena-example-group/Encounter/encounter-88a43857.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    },
+    {
+      "id": "r_lyqi2byxyak3yaxs4o76",
+      "kind": "result",
+      "key": "result|http://loinc.org|6690-2|2026-04-21",
+      "date": "2026-04-21",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "6690-2",
+        "display": "Count"
+      },
+      "display": "Count",
+      "status": "final",
+      "fields": {
+        "when": "2026-04-21",
+        "value": {
+          "value": 5,
+          "unit": "unit",
+          "system": "http://unitsofmeasure.org"
+        },
+        "category": "Laboratory"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "athena",
+            "cli_version": "0.6.1",
+            "organization_id": "example-group",
+            "fhir_base": "https://records.example.net/fhir/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-1572d1dc",
+            "last_updated": "2026-04-21T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:15:00Z",
+          "filed_at": "2026-11-14T20:15:00Z",
+          "raw_path": "Lee Example/Records/athena-example-group/Observation/observation-1572d1dc.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    },
+    {
+      "id": "r_grcahag5txmd263t3ufw",
+      "kind": "encounter",
+      "key": "encounter|afternoon visit|2026-04-21",
+      "date": "2026-04-21",
+      "code": {
+        "display": "Afternoon visit"
+      },
+      "display": "Afternoon visit",
+      "status": "finished",
+      "fields": {
+        "when": "2026-04-21T15:00:00Z",
+        "class": "ambulatory",
+        "period": {
+          "start": "2026-04-21T15:00:00Z"
+        }
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "athena",
+            "cli_version": "0.6.1",
+            "organization_id": "example-group",
+            "fhir_base": "https://records.example.net/fhir/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Encounter",
+            "id": "encounter-d01d7fcc",
+            "last_updated": "2026-04-21T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:16:00Z",
+          "filed_at": "2026-11-14T20:16:00Z",
+          "raw_path": "Lee Example/Records/athena-example-group/Encounter/encounter-d01d7fcc.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    },
+    {
+      "id": "r_k4pexufiwrof2cblnyyk",
+      "kind": "result",
+      "key": "result|http://loinc.org|2160-0|2026-04-30",
+      "date": "2026-04-30",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "2160-0",
+        "display": "Level"
+      },
+      "display": "Level",
+      "status": "final",
+      "fields": {
+        "when": "2026-04-30",
+        "value": {
+          "value": 5,
+          "unit": "unit",
+          "system": "http://unitsofmeasure.org"
+        },
+        "category": "Laboratory"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "athena",
+            "cli_version": "0.6.1",
+            "organization_id": "example-group",
+            "fhir_base": "https://records.example.net/fhir/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-a067c23b",
+            "last_updated": "2026-04-30T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:16:00Z",
+          "filed_at": "2026-11-14T20:16:00Z",
+          "raw_path": "Lee Example/Records/athena-example-group/Observation/observation-a067c23b.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    },
+    {
+      "id": "r_cj3m75qd65baeisen4fq",
+      "kind": "encounter",
+      "key": "encounter|lake visit|2026-05-05",
+      "date": "2026-05-05",
+      "code": {
+        "display": "Lake visit"
+      },
+      "display": "Lake visit",
+      "status": "finished",
+      "fields": {
+        "when": "2026-05-05T15:00:00Z",
+        "class": "ambulatory",
+        "period": {
+          "start": "2026-05-05T15:00:00Z"
+        }
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "athena",
+            "cli_version": "0.6.1",
+            "organization_id": "example-lake",
+            "fhir_base": "https://records.example.net/fhir/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Encounter",
+            "id": "encounter-a4462e2d",
+            "last_updated": "2026-05-05T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:17:00Z",
+          "filed_at": "2026-11-14T20:17:00Z",
+          "raw_path": "Lee Example/Records/athena-example-lake/Encounter/encounter-a4462e2d.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    },
+    {
+      "id": "r_coaxpmmug6scymzuni6l",
+      "kind": "encounter",
+      "key": "encounter|second lake visit|2026-05-05",
+      "date": "2026-05-05",
+      "code": {
+        "display": "Second lake visit"
+      },
+      "display": "Second lake visit",
+      "status": "finished",
+      "fields": {
+        "when": "2026-05-05T15:00:00Z",
+        "class": "ambulatory",
+        "period": {
+          "start": "2026-05-05T15:00:00Z"
+        }
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "athena",
+            "cli_version": "0.6.1",
+            "organization_id": "example-lake",
+            "fhir_base": "https://records.example.net/fhir/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Encounter",
+            "id": "encounter-a0d81191",
+            "last_updated": "2026-05-05T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:17:00Z",
+          "filed_at": "2026-11-14T20:17:00Z",
+          "raw_path": "Lee Example/Records/athena-example-lake/Encounter/encounter-a0d81191.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    },
+    {
+      "id": "r_7tfimiyed2zq5zovqx2z",
+      "kind": "result",
+      "key": "result|http://loinc.org|30341-2|2026-05-05",
+      "date": "2026-05-05",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "30341-2",
+        "display": "Rate"
+      },
+      "display": "Rate",
+      "status": "final",
+      "fields": {
+        "when": "2026-05-05",
+        "value": {
+          "value": 5,
+          "unit": "unit",
+          "system": "http://unitsofmeasure.org"
+        },
+        "category": "Laboratory"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "athena",
+            "cli_version": "0.6.1",
+            "organization_id": "example-lake",
+            "fhir_base": "https://records.example.net/fhir/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-7847388c",
+            "last_updated": "2026-05-05T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:17:00Z",
+          "filed_at": "2026-11-14T20:17:00Z",
+          "raw_path": "Lee Example/Records/athena-example-lake/Observation/observation-7847388c.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    }
+  ],
+  "studies": [],
+  "imports": [
+    {
+      "id": "i_p3pqe6hxtzqwc43ht4na",
+      "source_dir": "Lee Example/Records/athena-800001",
+      "stream_sha256": "327e32d03839aa9f8894240940230bcea5b480878871f4a7cd5346df0c2161aa",
+      "stream_bytes": 1037,
+      "cli": "athena",
+      "cli_version": "0.6.1",
+      "organization": "800001",
+      "patient_id": "pat-364b056e",
+      "pulled_at": "2026-11-14T20:10:00Z",
+      "imported_at": "2026-11-14T20:10:00Z",
+      "counts": {
+        "Encounter": 1,
+        "Patient": 1
+      },
+      "records_added": 1,
+      "records_updated": 0,
+      "records_unchanged": 0,
+      "records_older": 0,
+      "resources_written": 2,
+      "resources_unchanged": 0,
+      "documents_added": 0
+    },
+    {
+      "id": "i_e35gwow4cw7mbxk4rkpr",
+      "source_dir": "Lee Example/Records/athena-800002",
+      "stream_sha256": "92f3545c724740c78bcadae72ade428dd40a581147733e9c6da5376a02996fd9",
+      "stream_bytes": 652,
+      "cli": "athena",
+      "cli_version": "0.6.1",
+      "organization": "800002",
+      "patient_id": "pat-4a64e46d",
+      "pulled_at": "2026-11-14T20:11:00Z",
+      "imported_at": "2026-11-14T20:11:00Z",
+      "counts": {
+        "Patient": 1
+      },
+      "records_added": 0,
+      "records_updated": 0,
+      "records_unchanged": 0,
+      "records_older": 0,
+      "resources_written": 1,
+      "resources_unchanged": 0,
+      "documents_added": 0
+    },
+    {
+      "id": "i_5lbgzbm5fwke77yl24ta",
+      "source_dir": "Lee Example/Records/athena-800003",
+      "stream_sha256": "04d619cd9e12c082454fafe24da291a1f2eddaff23adfc0412beb6cab4d6bc16",
+      "stream_bytes": 631,
+      "cli": "athena",
+      "cli_version": "0.6.1",
+      "organization": "800003",
+      "patient_id": "pat-686945a9",
+      "pulled_at": "2026-11-14T20:12:00Z",
+      "imported_at": "2026-11-14T20:12:00Z",
+      "counts": {
+        "Patient": 1
+      },
+      "records_added": 0,
+      "records_updated": 0,
+      "records_unchanged": 0,
+      "records_older": 0,
+      "resources_written": 1,
+      "resources_unchanged": 0,
+      "documents_added": 0
+    },
+    {
+      "id": "i_aoy2zfjvaj4uhepovoik",
+      "source_dir": "Lee Example/Records/athena-800004",
+      "stream_sha256": "1c1eeacc30fdc80550b2389452c34542a828b9b3f4c4edd88e2d03daf361f91a",
+      "stream_bytes": 661,
+      "cli": "athena",
+      "cli_version": "0.6.1",
+      "organization": "800004",
+      "patient_id": "pat-ad2e492d",
+      "pulled_at": "2026-11-14T20:13:00Z",
+      "imported_at": "2026-11-14T20:13:00Z",
+      "counts": {
+        "Patient": 1
+      },
+      "records_added": 0,
+      "records_updated": 0,
+      "records_unchanged": 0,
+      "records_older": 0,
+      "resources_written": 1,
+      "resources_unchanged": 0,
+      "documents_added": 0
+    },
+    {
+      "id": "i_phdouqa37hdhba4senvo",
+      "source_dir": "Lee Example/Records/mychart-800001",
+      "stream_sha256": "feb1b4fd407c6e98cbac1c40167a114d44b00d1161a216bc30f0e1fd927ac69c",
+      "stream_bytes": 635,
+      "cli": "mychart",
+      "cli_version": "0.7.1",
+      "organization": "800001",
+      "patient_id": "pat-8900a8c2",
+      "pulled_at": "2026-11-14T20:14:00Z",
+      "imported_at": "2026-11-14T20:14:00Z",
+      "counts": {
+        "Patient": 1
+      },
+      "records_added": 0,
+      "records_updated": 0,
+      "records_unchanged": 0,
+      "records_older": 0,
+      "resources_written": 1,
+      "resources_unchanged": 0,
+      "documents_added": 0
+    },
+    {
+      "id": "i_ys65rfdkbkgtrroy6yqv",
+      "source_dir": "Lee Example/Records/athena-example-group",
+      "stream_sha256": "d65b264e9913624ea9d6ce3e6b1744b4c027d801246c0b269a0e243d9733e815",
+      "stream_bytes": 1768,
+      "cli": "athena",
+      "cli_version": "0.6.1",
+      "organization": "example-group",
+      "patient_id": "pat-853f0d7e",
+      "pulled_at": "2026-11-14T20:15:00Z",
+      "imported_at": "2026-11-14T20:15:00Z",
+      "counts": {
+        "Encounter": 2,
+        "Observation": 1,
+        "Patient": 1
+      },
+      "records_added": 3,
+      "records_updated": 0,
+      "records_unchanged": 0,
+      "records_older": 0,
+      "resources_written": 4,
+      "resources_unchanged": 0,
+      "documents_added": 0
+    },
+    {
+      "id": "i_4qogz7265rxhc3c4fhak",
+      "source_dir": "Lee Example/Records/athena-example-group",
+      "stream_sha256": "05ad49b0eb32db66896f1a6c7248f27efad040f708c1132c3b210c3a2eb96389",
+      "stream_bytes": 1469,
+      "cli": "athena",
+      "cli_version": "0.6.1",
+      "organization": "example-group",
+      "patient_id": "pat-abda62c0",
+      "pulled_at": "2026-11-14T20:16:00Z",
+      "imported_at": "2026-11-14T20:16:00Z",
+      "counts": {
+        "Encounter": 1,
+        "Observation": 1,
+        "Patient": 1
+      },
+      "records_added": 2,
+      "records_updated": 0,
+      "records_unchanged": 0,
+      "records_older": 0,
+      "resources_written": 3,
+      "resources_unchanged": 0,
+      "documents_added": 0
+    },
+    {
+      "id": "i_lnkixv4cn5oa5ctzmeja",
+      "source_dir": "Lee Example/Records/athena-example-lake",
+      "stream_sha256": "04c3855b820d9693262f515fef290cff7cf8a899d64e47cad515b435797e9dbd",
+      "stream_bytes": 1768,
+      "cli": "athena",
+      "cli_version": "0.6.1",
+      "organization": "example-lake",
+      "patient_id": "pat-106fdaf4",
+      "pulled_at": "2026-11-14T20:17:00Z",
+      "imported_at": "2026-11-14T20:17:00Z",
+      "counts": {
+        "Encounter": 2,
+        "Observation": 1,
+        "Patient": 1
+      },
+      "records_added": 3,
+      "records_updated": 0,
+      "records_unchanged": 0,
+      "records_older": 0,
+      "resources_written": 4,
+      "resources_unchanged": 0,
+      "documents_added": 0
+    },
+    {
+      "id": "i_de6go7mrrsuhxxvaqaer",
+      "source_dir": "Lee Example/Records/athena-example-north",
+      "stream_sha256": "73eac68a27063e07b86342606a0bfdfa91f9b361cc93dd266aca137d2e5bae18",
+      "stream_bytes": 664,
+      "cli": "athena",
+      "cli_version": "0.6.1",
+      "organization": "example-north",
+      "patient_id": "pat-353ab676",
+      "pulled_at": "2026-11-14T20:18:00Z",
+      "imported_at": "2026-11-14T20:18:00Z",
+      "counts": {
+        "Patient": 1
+      },
+      "records_added": 0,
+      "records_updated": 0,
+      "records_unchanged": 0,
+      "records_older": 0,
+      "resources_written": 1,
+      "resources_unchanged": 0,
+      "documents_added": 0
+    }
+  ]
+}

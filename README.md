@@ -154,8 +154,8 @@ Results come in groups by kind:
   value and how many results it has, and opens its history;
 - a claim shows its provider and what you owe (your share, when the payer
   gives only its parts), and the line or diagnosis that matched
-  ("Diagnosis: Strep throat (J02.0)"). The ids and amounts medrec gives a
-  claim are not searched as words.
+  ("Diagnosis: Otitis media, unspecified (H66.90)"). The ids and amounts
+  medrec gives a claim are not searched as words.
 
 Each person's `text.json` is read from Drive once a search is coming (the
 search page opens, or the home screen's search field is chosen), so it
@@ -486,27 +486,36 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
 - Plain TypeScript, built by Vite, with no runtime dependencies.
 - The browser tests serve the build on port 4317. `E2E_PORT=<port> npm run e2e`
   moves it when another project's preview holds that port.
-- The sample folder in `public/demo/` comes from `scripts/demo-folder.mjs`.
-  Run `node scripts/demo-folder.mjs` after changing it, and commit both. It
-  ends by running medrec 0.9.5 or later over the folder to write its views
-  (`MEDREC=<path to medrec>`, else `medrec` on the PATH), under a scratch
-  home and profile with only the variables it needs and the time zone set
-  to `America/New_York`, so the machine's own medrec setup is never touched and every
-  machine writes the same views. CI runs medrec 0.9.5's Linux build,
-  checked against its SHA-256. Only `views/views.json` and each person's
-  `events.json`, `bills.json`, `private.json` and `code-names.json` are kept: the app
-  reads no other view. medrec keeps the code names from the committed files,
-  so they need the published table only when the sample gains a code: set
-  `ICD10CM_ZIP` to the zip `medrec tables list` names, downloaded, for that
-  run.
-  `manifest.json` gives each file's MD5, as Drive would, for the store's
-  freshness check. No view is written by hand: the cases the tests lay over
-  the sample (`test/fixtures/private/`, and `test/fixtures/bills/paid/` with
-  payments marked) are medrec's too, made by `node scripts/private-fixtures.mjs`
-  and `node scripts/bill-fixtures.mjs`. Those two delete nothing: medrec works
-  in a new temporary folder, each case is written only into its own, and a
-  file no longer part of one is named for a person to remove. CI runs all
-  three scripts.
+- The sample folder in `public/demo/` is what medrec 0.9.7 writes of the
+  invented records in `scripts/sample/`: raw FHIR that stand-ins for the
+  provider CLIs serve, papers and images. `scripts/demo-folder.mjs` puts those
+  where medrec reads them and sets no field medrec writes.
+  `MEDREC=<path to medrec 0.9.7> node scripts/demo-folder.mjs <a new folder>`
+  writes it to a folder that does not exist yet; move `public/demo` away, that
+  folder into its place, and commit it with what changed. Another medrec writes
+  the sample differently, so the script refuses it. medrec runs under a scratch
+  home and profile with only the variables it needs, so the machine's own
+  medrec setup is never touched. The time zone is `America/New_York`, the clock
+  stands still at each step's moment, and medrec's ids come from the step
+  (`scripts/sample/moment.c`, built with `cc`), so the same sources give the
+  same bytes on every machine. CI runs 0.9.7's Linux build, checked against its
+  SHA-256, and compares. Only `views/views.json` and each person's
+  `events.json`, `bills.json`, `private.json` and `code-names.json` are kept:
+  the app reads no other view. medrec keeps the code names from the committed
+  files, so they need the published table only when the sample gains a code:
+  set `ICD10CM_ZIP` to the zip `medrec tables list` names, downloaded, for that
+  run. `manifest.json` gives each file's MD5, as Drive would, for the store's
+  freshness check.
+- What the tests read besides the sample is medrec's too: the cases laid over
+  it (`test/fixtures/private/`, and `test/fixtures/bills/paid/` with payments
+  marked), made by `node scripts/private-fixtures.mjs` and
+  `node scripts/bill-fixtures.mjs` once the sample is in place, and the records
+  that give each reading rule a case (`test/fixtures/rules/`, from
+  `scripts/sample/rules.mjs`), made by `node scripts/rule-fixtures.mjs`. They
+  delete nothing: medrec works in a new temporary folder, and a file no longer
+  part of a case is named for a person to remove. CI runs all four scripts.
+  Written by hand are only Drive's answers, the app's own requests, and files
+  medrec never writes: malformed ones, and ones of a later format.
 - The PNG icons in `public/` (for the manifest and the iPhone Home Screen) are
   drawn from `public/icon.svg` by `npm run icons`. Run it after changing the
   icon, and commit them.
@@ -557,13 +566,13 @@ dropped from the address.
   the claims' services, the first that is plain and says more than the
   title. A private visit goes by the portal's own name for it before
   medrec's `what`, which can be its reason. A fill is named for its drug, from the pharmacy's
-  record before a claim's word for any drug ("Prescription drug"). A
+  record before a claim's word for any drug ("Medication"). A
   vaccine is named for its dose, and a day of several doses for how many.
   A day whose claims are all for vaccines is a vaccine visit, with medrec's
   events or without; its claim names the vaccine, not the line for giving it.
-  Billing descriptors in capitals ("FIRST APPOINTMENT TIER THREE") are never
+  Billing descriptors in capitals ("NEW VISIT LEVEL FOUR") are never
   a headline; they show only in the visit's Details (`src/model/words.ts`).
-  A portal platform's name ("athenahealth (all practices)") is never a
+  A portal platform's name ("Example Records (all practices)") is never a
   place; a visit that names no other is at its sign-in's practice
   (`src/model/practices.ts`), and has no place when that is
   not known. Only the person's own sources name their practices. Where
@@ -797,12 +806,11 @@ page count. Papers took the place of each person's list of documents. A
 - A visit's address names a record in it. Any record or paper of the visit
   opens it, so a saved address still works after records arrive and the
   visit is led by another one.
-- The sample's Sam had a knee procedure: five claims from four providers, a
-  line the plan left out of its totals, a bill that matches its claim and a
-  surgeon's bill not yet filed. Sam also has a video counseling session that
-  medrec's list makes private by its codes, with its claim, whose copay is
-  not billed yet, a nicotine patch that it makes private by the medicine, and
-  a loratadine refill due.
+- The sample's Sam had an upper endoscopy: claims from three providers, a line
+  the plan left out of its totals, and a bill that matches its claim. Sam also
+  has a clinic visit that medrec's list makes private by its provider, and its
+  claim by its codes, whose copay is not billed yet; a prescription it makes
+  private by the medicine; and a famotidine refill due.
 
 Unofficial. Not affiliated with or endorsed by Google.
 

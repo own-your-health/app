@@ -19,7 +19,7 @@ describe('open bills', () => {
     const sam = openBills(index('Sam Example'), events('Sam Example'), TODAY);
     expect(sam.map((b) => [b.bill.provider, b.cents, b.verdict, b.claimSays, b.claimSaysVisit, b.overdue])).toEqual([
       ['Example Billing', 12000, 'differs', 5070, true, true],
-      ['Example Surgery Center', 17500, 'matches', 17500, false, true],
+      ['Example Endoscopy Center', 9050, 'matches', 9050, false, true],
     ]);
     expect(sam[0]!.event?.event.title).toBe('Lab tests');
   });
@@ -55,29 +55,34 @@ describe('refills', () => {
   it('show from two weeks before a supply runs out to two weeks after, soonest first, private ones marked', () => {
     const sam = refillsDue(index('Sam Example'), TODAY);
     expect(sam.map((r) => [r.medicine.name, r.runsOut, r.days, r.private])).toEqual([
-      ['Loratadine 10 mg tablet', '2026-11-24', 2, undefined],
-      ['Nicotine 14 mg/24 hour patch', '2026-11-28', 6, 'substance_use'],
+      ['Famotidine 20 mg tablet', '2026-11-28', 6, undefined],
+      ['Emtricitabine-tenofovir 200-300 mg tablet', '2026-12-04', 12, 'sexual_health'],
     ]);
-    expect(refillsDue(index('Sam Example'), '2026-12-12').map((r) => r.days)).toEqual([-14]);
-    expect(refillsDue(index('Sam Example'), '2026-12-13')).toEqual([]);
+    expect(refillsDue(index('Sam Example'), '2026-12-18').map((r) => r.days)).toEqual([-14]);
+    expect(refillsDue(index('Sam Example'), '2026-12-19')).toEqual([]);
   });
 
   it('wait until the last fill nears its end', () => {
     expect(refillsDue(index('Robin Example'), TODAY)).toEqual([]);
+    expect(refillsDue(index('Robin Example'), '2026-12-01').map((r) => [r.medicine.name, r.runsOut, r.days])).toEqual([['Atorvastatin 20 mg tablet', '2026-12-07', 6]]);
     expect(refillsDue(index('Robin Example'), '2027-02-01').map((r) => [r.medicine.name, r.runsOut, r.days])).toEqual([['Lisinopril 10 mg tablet', '2027-02-10', 9]]);
   });
 });
 
 describe('vaccine doses', () => {
-  it('group a baby’s coming doses into the visits that give them', () => {
-    const jamie = person('Jamie Example');
-    const v = vaccineNeeds(jamie.birth_date, index('Jamie Example'), TODAY)!;
-    expect(v.due).toEqual([]);
-    expect(v.flu).toBeUndefined();
-    expect(v.visits.map((x) => [x.from, x.days, x.months, x.doses.map((d) => d.id).sort()])).toEqual([
-      ['2026-11-28', 6, 4, ['dtap', 'hib', 'ipv', 'pcv', 'rota']],
-      ['2027-01-28', 67, 6, ['hepb']],
-    ]);
+  it('group a child’s coming doses into the visits that give them', () => {
+    const drew = person('Drew Example');
+    /** Drew's doses as of a day. */
+    const asOf = (day: string) => {
+      const idx = index('Drew Example');
+      return vaccineNeeds(drew.birth_date, { ...idx, records: idx.records.filter((r) => r.date! <= day) }, day)!;
+    };
+    const visits = (day: string) => asOf(day).visits.map((x) => [x.from, x.days, x.months, x.doses.map((d) => d.id).sort()]);
+    expect([asOf(TODAY).due, asOf(TODAY).flu]).toEqual([[], undefined]);
+    expect(visits(TODAY)).toEqual([['2026-12-14', 22, 48, ['dtap', 'ipv', 'mmr', 'var']]]);
+    expect(visits('2023-11-30')).toEqual([['2023-12-14', 14, 12, ['hepa', 'hib', 'mmr', 'pcv', 'var']]]);
+    // Once the day comes, they are due.
+    expect([asOf('2026-12-14').due.map((d) => d.id).sort(), visits('2026-12-14')]).toEqual([['dtap', 'ipv', 'mmr', 'var'], []]);
   });
 
   it('say this season’s flu dose is missing for a child, and nothing for an adult', () => {
