@@ -11,11 +11,12 @@
 //
 // pdf.js draws what it can of a page and says nothing of the rest. So a file of
 // the app's that a page needs and does not get is a failure here, not a page
-// with something missing, and a picture it left out is said.
+// with something missing, and that it left a part of one out is said.
 
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist';
 import workerFile from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 import { AppFileError, appFile } from './files';
+import { LEFT_OUT } from './leftOut';
 
 /** Where the build puts pdf.js's fonts and character maps, and its readers of older picture formats (vite.config.ts). */
 const FILES = `${import.meta.env.BASE_URL}pdfjs/${__PDFJS_VERSION__}/`;
@@ -60,11 +61,26 @@ const filesAt = (dir: string): string => new URL(`${FILES}${dir}/`, location.hre
 const READERS = ['openjpeg_nowasm_fallback.js', 'jbig2_nowasm_fallback.js'];
 const READERS_SAID = 'oyh-readers';
 
-async function startWorker(signal: AbortSignal): Promise<{ worker: Worker; ready: Promise<void>; stop: () => void }> {
+// What pdf.js warns of as it leaves a part of a page out and goes on. A warning
+// may quote the file: it is looked at in the worker, and only that one came is
+// said to this page, not of which page it was.
+const LEFT_OUT_SAID = 'oyh-left-out';
+
+interface Started {
+  worker: Worker;
+  /** Its picture readers are there. */
+  ready: Promise<void>;
+  /** It did not start, or broke off. */
+  failed: Promise<never>;
+  stop: () => void;
+}
+
+async function startWorker(signal: AbortSignal, leftOut: () => void): Promise<Started> {
   const code = await appFile(fetched(workerFile, signal).then((res) => res.text()));
   const loads = READERS.map((f) => `import(${JSON.stringify(filesAt('wasm') + f)})`).join(',');
   const say = (ok: boolean) => `() => self.postMessage({ ${JSON.stringify(READERS_SAID)}: ${ok} })`;
-  const url = URL.createObjectURL(new Blob([`Promise.all([${loads}]).then(${say(true)}, ${say(false)});\n`, code], { type: 'text/javascript' }));
+  const hear = `console.warn = (w) => { if (${JSON.stringify(LEFT_OUT)}.some((x) => String(w).includes(x))) self.postMessage({ ${JSON.stringify(LEFT_OUT_SAID)}: true }); };`;
+  const url = URL.createObjectURL(new Blob([`${hear}\nPromise.all([${loads}]).then(${say(true)}, ${say(false)});\n`, code], { type: 'text/javascript' }));
   ours.add(url);
   let worker: Worker;
   try {
@@ -76,12 +92,15 @@ async function startWorker(signal: AbortSignal): Promise<{ worker: Worker; ready
     worker.addEventListener('message', ({ data }: MessageEvent<Record<string, unknown> | undefined>) => {
       if (data?.[READERS_SAID] === true) resolve();
       else if (data?.[READERS_SAID] === false) reject(new AppFileError('A picture reader did not load.'));
+      else if (data?.[LEFT_OUT_SAID]) leftOut();
     });
   });
-  ready.catch(() => undefined);
+  const failed = new Promise<never>((_, reject) => worker.addEventListener('error', () => reject(new PdfError('This browser could not start the app’s PDF reader.')), { once: true }));
+  for (const p of [ready, failed]) p.catch(() => undefined);
   return {
     worker,
     ready,
+    failed,
     stop: () => {
       worker.terminate();
       URL.revokeObjectURL(url);
@@ -92,15 +111,12 @@ async function startWorker(signal: AbortSignal): Promise<{ worker: Worker; ready
 /** Why a PDF was not opened, in words for the page. */
 export class PdfError extends Error {}
 
-/** Pictures left out: none, the page's own, or one that pages share, this one or another. */
-export type LeftOut = 'none' | 'own' | 'shared';
-
 export interface PdfPage {
   /** Its size at 72 to the inch. */
   width: number;
   height: number;
-  /** Draws it on a canvas, at so many pixels across, and says which pictures were left out, as they do not read. */
-  draw(canvas: HTMLCanvasElement, pixels: number, signal: AbortSignal): Promise<LeftOut>;
+  /** Draws it on a canvas, at so many pixels across, and says whether each picture of its own was drawn. */
+  draw(canvas: HTMLCanvasElement, pixels: number, signal: AbortSignal): Promise<boolean>;
   /** Puts its words over it, at their places, for a page this wide. */
   words(box: HTMLElement, width: number, signal: AbortSignal): Promise<void>;
   /** Lets go of what was read to draw it. */
@@ -113,23 +129,20 @@ export interface Pdf {
   close(): void;
 }
 
-/** Opens a PDF. The bytes go to the worker, and `signal` ends it. */
-export async function openPdf(bytes: Uint8Array, signal: AbortSignal): Promise<Pdf> {
-  const starting = startWorker(signal);
+/** Opens a PDF. The bytes go to the worker, and `signal` ends it. `leftOut` hears that a part of a page was not drawn. */
+export async function openPdf(bytes: Uint8Array, signal: AbortSignal, leftOut: () => void): Promise<Pdf> {
+  const starting = startWorker(signal, leftOut);
   // Heard below, once pdf.js is here.
   starting.catch(() => undefined);
   const pdfjs = await appFile(import('pdfjs-dist/legacy/build/pdf.mjs')).catch((e: unknown) => {
     void starting.then((w) => w.stop()).catch(() => undefined);
     throw e;
   });
-  const { worker, ready, stop } = await starting;
-  const failed = new Promise<never>((_, reject) => {
-    worker.addEventListener('error', () => reject(new PdfError('This browser could not start the app’s PDF reader.')), { once: true });
-    signal.addEventListener('abort', () => reject(signal.reason), { once: true });
-  });
-  failed.catch(() => undefined);
-  // Its warnings may quote the file: none is logged.
-  const port = pdfjs.PDFWorker.create({ port: worker, verbosity: 0 });
+  const { worker, ready, failed, stop } = await starting;
+  const aborted = new Promise<never>((_, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true }));
+  aborted.catch(() => undefined);
+  // Its warnings may quote the file: the worker's are heard there (LEFT_OUT), and none is logged.
+  const port = pdfjs.PDFWorker.create({ port: worker, verbosity: pdfjs.VerbosityLevel.WARNINGS });
   const needs: Needs = { missing: undefined };
   /** Its fonts and character maps, from the app's own files. Where one does not load, pdf.js goes on without it, and does not ask again. */
   class Files {
@@ -162,7 +175,7 @@ export async function openPdf(bytes: Uint8Array, signal: AbortSignal): Promise<P
       useSystemFonts: false,
       enableXfa: false,
       disableWorkerRendering: true,
-      verbosity: 0,
+      verbosity: pdfjs.VerbosityLevel.ERRORS,
     });
     return task.promise;
   };
@@ -182,7 +195,7 @@ export async function openPdf(bytes: Uint8Array, signal: AbortSignal): Promise<P
   signal.addEventListener('abort', close, { once: true });
   let doc: PDFDocumentProxy;
   try {
-    doc = await Promise.race([read(), failed]);
+    doc = await Promise.race([read(), failed, aborted]);
   } catch (e) {
     close();
     if (e instanceof PdfError || e instanceof AppFileError || signal.aborted) throw e;
@@ -222,7 +235,7 @@ function pdfPage(pdfjs: typeof import('pdfjs-dist'), needs: Needs, page: PDFPage
       signal.addEventListener('abort', () => task.cancel(), { once: true });
       await task.promise;
       if (needs.missing) throw needs.missing;
-      return lacksPicture(page.objs) ? 'own' : lacksPicture(page.commonObjs) ? 'shared' : 'none';
+      return !lacksPicture(page.objs);
     },
     async words(box, width, signal) {
       const viewport = at(width);

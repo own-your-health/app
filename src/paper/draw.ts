@@ -124,13 +124,20 @@ async function drawPdf(place: Place, read: Uint8Array): Promise<void> {
   const { openPdf, PdfError } = await appFile(import('./pdf'));
   let pdf: Pdf;
   let first: PdfPage;
+  let pages = '';
+  let lacks = '';
+  const say = () => (place.status.textContent = `${pages}${lacks}`);
   try {
-    pdf = await openPdf(read, place.signal);
+    pdf = await openPdf(read, place.signal, () => {
+      lacks = '. Something in this paper could not be drawn here. Open it in Drive to see it whole.';
+      if (pages) say();
+    });
     first = await pdf.page(1);
   } catch (e) {
     throw e instanceof PdfError ? new NotShown(`${e.message} ${NOT_SHOWN}`) : e;
   }
-  place.status.textContent = count(pdf.pages, 'page');
+  pages = count(pdf.pages, 'page');
+  say();
   const slots = Array.from({ length: pdf.pages }, (_, i) => new Slot(pdf, i + 1, place, i === 0 ? first : undefined));
   for (const s of slots) s.shape(first);
   // Sharp again once the size settles.
@@ -156,7 +163,7 @@ async function drawPdf(place: Place, read: Uint8Array): Promise<void> {
 /** One page of a PDF: its place, and the page drawn there while it is near. */
 class Slot {
   readonly el: HTMLElement;
-  /** Above the page, where a picture is left out. */
+  /** Above the page, where a picture of its own is left out. */
   readonly note: HTMLElement;
   private drawing: AbortController | null = null;
   private isNear = false;
@@ -170,7 +177,7 @@ class Slot {
     private page?: PdfPage,
   ) {
     this.el = h('div', { class: 'paper-page', role: 'group', 'aria-label': `Page ${n} of ${pdf.pages}` });
-    this.note = h('p', { class: 'paper-note small attention', role: 'status', hidden: true });
+    this.note = h('p', { class: 'paper-note small attention', hidden: true }, `A picture on page ${n} could not be drawn here.`);
   }
 
   shape(page: PdfPage): void {
@@ -215,10 +222,9 @@ class Slot {
       if (!width) return;
       const canvas = h('canvas', { class: 'paper-canvas', 'aria-hidden': 'true' });
       const words = h('div', { class: 'textLayer' });
-      const out = await this.page.draw(canvas, width, mine.signal);
+      const whole = await this.page.draw(canvas, width, mine.signal);
       if (mine.signal.aborted) return;
-      this.note.hidden = out === 'none';
-      this.note.textContent = out === 'none' ? '' : `A picture ${out === 'own' ? `on page ${this.n}` : 'that pages share'} could not be drawn here. Open the paper in Drive to see it.`;
+      this.note.hidden = whole;
       // What was there stays, stretched, until this is ready.
       for (const c of this.el.querySelectorAll('canvas')) c.width = c.height = 0;
       this.el.replaceChildren(canvas, words);

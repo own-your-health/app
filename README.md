@@ -490,7 +490,7 @@ visit. What it is goes by its first bytes, as a portal's own type may be wrong.
 
 | Paper | How it is shown |
 |---|---|
-| PDF | Drawn on canvases by pdf.js, in a worker, with its words over them to select. Forms are drawn as they are filled in. Its scripts, forms, links and XFA are off: the app uses none of pdf.js's layers for them. A page is drawn when it comes near, so a long one holds few. A picture in it that does not read is left out, and said. |
+| PDF | Drawn on canvases by pdf.js, in a worker, with its words over them to select. Forms are drawn as they are filled in. Its scripts, forms, links and XFA are off: the app uses none of pdf.js's layers for them. A page is drawn when it comes near, so a long one holds few. A part of a page that does not read is left out, and said. |
 | PNG, JPEG, GIF, WebP | As a picture, from a blob URL that ends when it is closed. |
 | HTML, C-CDA XML | As headings, text, lists and tables built from text by the app. The file is never given to the browser to parse: the app reads it (`src/paper/markup.ts`), keeps a fixed set of parts and no attribute but a cell's span, and leaves out scripts, styles, frames, objects and forms' controls. A link is its words and its address, not a link. A picture outside the file is named and never loaded. |
 | RTF | Its text only, which the page says. |

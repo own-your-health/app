@@ -310,6 +310,7 @@ test('a JPEG 2000 picture in a PDF is read without WebAssembly', async ({ page }
 });
 
 const picture = (filter: string, body: string) => `<< /Type /XObject /Subtype /Image /Width 32 /Height 32 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /${filter} /Length ${body.length} >>\nstream\n${body}\nendstream`;
+const LACKS = 'Something in this paper could not be drawn here. Open it in Drive to see it whole.';
 for (const filter of ['JPXDecode', 'DCTDecode'])
   test(`a page that lacks a picture says so, and no other page does: ${filter}`, async ({ page }) => {
     await put(page, PDF, makePdf([line('The first page'), `${line('The second page')} q 200 0 0 200 72 300 cm /I Do Q`, line('The last page')], { resources: '/XObject << /I 100 0 R >>', extra: [picture(filter, 'not a picture')] }));
@@ -319,23 +320,60 @@ for (const filter of ['JPXDecode', 'DCTDecode'])
     // What can be drawn of it is.
     await expect(second.locator('.textLayer')).toContainText('The second page');
     await expect.poll(() => inked(second.locator('canvas'))).toBeGreaterThan(0.0003);
-    await expect(paper.locator('.paper-note:visible')).toHaveText(['A picture on page 2 could not be drawn here. Open the paper in Drive to see it.']);
-    await expect(paper.locator('.paper-note:visible')).toHaveRole('status');
+    await expect(paper.locator('.paper-note:visible')).toHaveText(['A picture on page 2 could not be drawn here.']);
+    await expect(paper.getByRole('status')).toHaveText(`3 pages. ${LACKS}`);
     await paper.getByRole('group', { name: 'Page 3 of 3' }).scrollIntoViewIfNeeded();
     await expect(paper.getByRole('group', { name: 'Page 3 of 3' }).locator('.textLayer')).toContainText('The last page');
     await expect(paper.locator('.paper-note:visible')).toHaveCount(1);
   });
 
-test('a picture that pages share and that cannot be drawn is said on them', async ({ page }) => {
-  await put(page, PDF, makePdf(Array.from({ length: 4 }, (_, i) => `${line(`Page ${i + 1}`)} q 200 0 0 200 72 300 cm /I Do Q`), { resources: '/XObject << /I 100 0 R >>', extra: [picture('JPXDecode', 'not a picture')] }));
+const stream = (dict: string, body: string) => `<< ${dict} /Length ${body.length} >>\nstream\n${body}\nendstream`;
+const IMAGE = '/Type /XObject /Subtype /Image /Width 32 /Height 32';
+const FORM = '/Type /XObject /Subtype /Form /BBox [0 0 1 1]';
+/** What a page draws, as its picture unless it says how. */
+const LEFT_OUT: [what: string, object: string, draws?: string][] = [
+  ['a stencil', stream(`${IMAGE} /ImageMask true /BitsPerComponent 1 /Filter /JPXDecode`, 'not a picture')],
+  ['a scan that is one', stream(`${IMAGE} /ImageMask true /BitsPerComponent 1 /Filter /JBIG2Decode`, 'not a picture')],
+  ['a picture of no size', stream('/Type /XObject /Subtype /Image /ColorSpace /DeviceRGB /BitsPerComponent 8', 'x')],
+  ['a small picture in its line', stream(FORM, 'BI /W 8 /H 8 /BPC 8 ID x EI Q')],
+  ['a shading that is not there', stream(`${FORM} /Resources << /Shading << >> >>`, '/S sh')],
+  ['a shading of no known kind', stream(`${FORM} /Resources << /Shading << /S << /ShadingType 99 /ColorSpace /DeviceRGB >> >> >>`, '/S sh')],
+  ['a font with no parts', '<< /Type /Font /Subtype /Type0 /BaseFont /Sample /Encoding /Identity-H >>', 'BT /J 1 Tf <0041> Tj ET'],
+  ['an object of no known kind', stream('/Type /XObject /Subtype /NoSuchKind', 'x')],
+];
+for (const [what, object, draws = '/I Do'] of LEFT_OUT)
+  test(`a part of a page that is left out is said: ${what}`, async ({ page }) => {
+    await put(page, PDF, makePdf([`${line('The first page')} q 200 0 0 200 72 300 cm ${draws} Q`], { resources: '/XObject << /I 100 0 R >> /Font << /F 3 0 R /J 100 0 R >>', extra: [object] }));
+    const paper = await open(page, ROBIN, PDF);
+    await expect(paper.locator('.textLayer')).toContainText('The first page');
+    await expect(paper.getByRole('status')).toHaveText(`1 page. ${LACKS}`);
+    await expect(paper.locator('.paper-note:visible')).toHaveCount(0);
+  });
+
+test('a page let go of as it is read lacks nothing', async ({ page }) => {
+  await put(page, PDF, makePdf(Array.from({ length: 60 }, (_, i) => Array.from({ length: 400 }, (_x, n) => `BT /F 8 Tf ${n % 500} ${(n * 7) % 780} Td (Page ${i + 1}, ${n}) Tj ET`).join('\n'))));
   const paper = await open(page, ROBIN, PDF);
-  for (const n of [1, 2, 3, 4]) {
-    const one = paper.getByRole('group', { name: `Page ${n} of 4` });
-    await one.scrollIntoViewIfNeeded();
-    await expect(one.locator('.textLayer')).toContainText(`Page ${n}`);
+  await expect(paper.getByRole('status')).toHaveText('60 pages');
+  for (const n of [60, 1, 40, 5, 30, 60]) await paper.locator('.paper-box').evaluate((el, to) => (el.scrollTop = (el.scrollHeight * to) / 60), n);
+  await paper.getByRole('group', { name: 'Page 60 of 60' }).scrollIntoViewIfNeeded();
+  await expect(paper.getByRole('group', { name: 'Page 60 of 60' }).locator('.textLayer')).toContainText('Page 60, 399');
+  await expect(paper.getByRole('status')).toHaveText('60 pages');
+});
+
+test('a worker that does not start is said, also while pdf.js itself is loading', async ({ page }) => {
+  await page.route(/\/assets\/pdf\.worker/, (route) => route.fulfill({ contentType: 'text/javascript', body: 'this is no script' }));
+  for (const wait of [0, 1500]) {
+    await page.route(/\/assets\/pdf-/, async (route) => {
+      await new Promise((r) => setTimeout(r, wait));
+      await route.continue();
+    });
+    await page.goto('about:blank');
+    await page.goto(`./?demo#/p/${ROBIN}/r/${PDF.id}`);
+    await page.getByRole('button', { name: /^View\b/ }).click();
+    await expect(page.locator('.paper').getByRole('alert')).toHaveText('This browser could not start the app’s PDF reader. Open it in Drive to see it.');
+    expect(page.workers()).toHaveLength(0);
   }
-  await expect(paper.locator('.paper-note:visible')).toHaveCount(4);
-  await expect(paper.locator('.paper-note:visible').last()).toHaveText('A picture that pages share could not be drawn here. Open the paper in Drive to see it.');
+  problems = problems.filter((p) => !/SyntaxError|Unexpected/.test(p));
 });
 
 test('a file of the app that does not load is said, with a way to reload', async ({ page }) => {
