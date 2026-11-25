@@ -873,11 +873,13 @@ dropped from the address.
   whatever the list says. Their person's own results and papers say how many
   there are, and nothing else of them. No shared screen, sheet or list of
   everyone's says it. The list is applied even when the folder's files have
-  changed since `views.json` was written. Those lists then say that which of
-  the newest are about another person is not known yet, and, where `views.json`
-  or its list does not read, that some may be; the sheet for a doctor says that
-  too. What an earlier read of this folder named stays out meanwhile. An
-  earlier medrec's folder names none, and nothing is said.
+  changed since `views.json` was written. Results, a test's page and Papers
+  then say that some may be about another person and why, as they do where
+  `views.json` or its list does not read; so does the sheet for a doctor. What
+  an earlier read of this folder named stays out until a list of its files
+  reads, also when an earlier medrec on another computer writes the views
+  again. The first read of a folder whose views an earlier medrec wrote last
+  names none, and nothing is said.
 - **Papers** (`#/papers`, a tab, also from each
   person's Health): every paper in the Drive folder but those about another
   person (above), newest first by year, each with the visit it belongs to as a

@@ -2,6 +2,7 @@
 // docs/data-contract.md). Only the fields the app reads are typed; every
 // object keeps the rest, which the Inspect view shows as it is.
 
+import type { Unsure } from './aboutAnother';
 import type { MedrecBills } from './bills';
 import type { CodeNames } from './codeNames';
 import type { Standings } from './standing';
@@ -216,8 +217,8 @@ export interface PersonIndex {
   imports: ImportRun[];
   /** How many of the chart's items are about somebody else, and not here (src/model/aboutAnother.ts). */
   about?: number;
-  /** Why there may be others here: medrec's list of them could not be read, or is not known to be of these files. */
-  aboutUnsure?: 'unreadable' | 'behind';
+  /** Why there may be others here. */
+  aboutUnsure?: Unsure;
   /** medrec's events for this index (views/<person id>/events.json), when the store found them written from it. */
   events?: MedrecEvents;
   /** Which of these items are private (src/model/private.ts), as the store read it: while it is missing, all are held back from shared screens. */

@@ -93,6 +93,12 @@ test('their own lists and sheet say where medrec’s list does not read, and oth
     await go(page, path);
     await expect(line(page), path).toHaveText(unread);
   }
+  // One test's page too, and a list says it before what it holds.
+  await go(page, `#/p/${ROBIN}/results`);
+  await expect(page.locator('main p').filter({ hasText: unread })).toBeInViewport();
+  await page.getByRole('link', { name: /Creatinine/ }).first().click();
+  await expect(page.getByRole('heading', { level: 1, name: /Creatinine/ })).toBeVisible();
+  await expect(line(page)).toHaveText(unread);
   for (const [path, own] of [['#/papers', /papers/], ['#/health', /Robin/], [`#/p/${ROBIN}/conditions`, /Active/]] as [string, RegExp][]) {
     await go(page, path);
     await expect(page.locator('main').getByText(own).first(), path).toBeVisible();
@@ -104,5 +110,5 @@ test('their own lists and sheet say where medrec’s list does not read, and oth
   await lay(page, { 'views/views.json': JSON.stringify(views) });
   await go(page, `#/p/${ROBIN}/results`);
   await page.reload();
-  await expect(line(page)).toHaveText(['1 item about another person, not shown.', 'Which of the newest items are about another person is not known yet.']);
+  await expect(line(page)).toHaveText([/^Which of the newest items are about another person is not known yet, so some of these may be\./, '1 item about another person, not shown.']);
 });

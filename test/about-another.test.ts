@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { Store } from '../src/data/store';
-import { aboutAnother, aboutText, unsureText, withoutAbout, type About } from '../src/model/aboutAnother';
+import { aboutAnother, aboutText, stillAbout, unsureText, withoutAbout, type About, type Unsure } from '../src/model/aboutAnother';
 import { parseIndex } from '../src/model/parse';
 import { findItem } from '../src/model/records';
 import type { MedRecord } from '../src/model/types';
@@ -52,13 +52,28 @@ describe('the items views.json names', () => {
     expect([unchecked({ ...NOW, index: undefined }), unchecked({ ...NOW, household: undefined }), unchecked({ ...NOW, index: null }), unchecked(NOW)]).toEqual(['behind', 'behind', 'behind', undefined]);
   });
 
-  it('are nothing to say of an earlier medrec’s folder', () => {
+  it('are not said by an earlier medrec’s views, or by none', () => {
     expect([said({ index: 'other' }, '0.9.8'), said(undefined, '0.9.8'), said(of(['r_1']), '0.9.8')]).toEqual([
-      [[], undefined],
-      [[], undefined],
-      [['r_1'], undefined],
+      [[], 'unsaid'],
+      [[], 'unsaid'],
+      [['r_1'], 'unsaid'],
     ]);
-    expect([aboutAnother(null, 'p_a', NOW), aboutAnother({ people: {} }, 'p_a', NOW)]).toEqual([only(), only()]);
+    expect([aboutAnother(null, 'p_a', NOW), aboutAnother({ people: {} }, 'p_a', NOW)]).toEqual(Array(2).fill({ ids: new Set(), unsure: 'unsaid' }));
+  });
+
+  it('are what an earlier read said until a list of these files reads', () => {
+    const earlier = new Set(['r_1']);
+    const now = (said: About) => {
+      const { ids, unsure } = stillAbout(said, earlier);
+      return [[...ids], unsure];
+    };
+    expect([now(only('r_2')), now(only())]).toEqual([
+      [['r_2'], undefined],
+      [[], undefined],
+    ]);
+    for (const unsure of ['unreadable', 'newer_format', 'behind', 'unsaid'] as const) expect(now({ ids: new Set(['r_2']), unsure })).toEqual([['r_1', 'r_2'], unsure]);
+    // A folder that never said has nothing to say.
+    expect([stillAbout({ ids: new Set(), unsure: 'unsaid' }, new Set()), stillAbout({ ids: new Set(), unsure: 'behind' }, new Set())]).toEqual([only(), { ids: new Set(), unsure: 'behind' }]);
   });
 });
 
@@ -169,6 +184,7 @@ describe('a folder', () => {
     const s = await load({ 'views/views.json': '{' });
     expect([out(s), s.index(ALEX)!.aboutUnsure]).toEqual([[undefined, 'unreadable', false], 'unreadable']);
     expect(out(await load(by('0.9.9', (p) => void (p.about_another = { r_1: {} }))))).toEqual([undefined, 'unreadable', false]);
+    expect(out(await load({ 'views/views.json': JSON.stringify({ schema: 'medrec-views/v3' }) }))).toEqual([undefined, 'newer_format', false]);
     // A folder without views is an earlier medrec's, and someone with no index has nothing.
     expect(out(await load({ 'views/views.json': null }))).toEqual([undefined, undefined, false]);
     expect((await load({ 'views/views.json': '{', 'Robin Example/index.json': null })).index(ROBIN)!.aboutUnsure).toBeUndefined();
@@ -191,6 +207,9 @@ describe('a folder', () => {
     };
     expect(await again({ 'views/views.json': '{' })).toEqual([1, 'unreadable', true, true]);
     expect(await again(by('0.9.9', (p) => Object.assign(p, { index: createHash('md5').update('other').digest('hex') })))).toEqual([1, 'behind', true, true]);
+    expect(await again({ 'views/views.json': JSON.stringify({ schema: 'medrec-views/v3' }) })).toEqual([1, 'newer_format', true, true]);
+    // Another computer's earlier medrec, which has no list.
+    expect(await again(by('0.9.8'))).toEqual([1, 'unsaid', true, true]);
     // A list that reads, of these files, decides.
     expect(await again(by('0.9.9'))).toEqual([undefined, undefined, false, true]);
   });
@@ -201,7 +220,23 @@ describe('a folder', () => {
     await s.load();
     folder.fresh = () => demoFolderWith(by('0.9.9', (p) => void (p.about_another = [result])));
     await s.reload();
-    s.folder.fresh = () => demoFolderWith({ 'views/views.json': '{' });
+    const next = (overlay: Overlay) => {
+      s.folder.fresh = () => demoFolderWith(overlay);
+      return s.reload();
+    };
+    await next({ 'views/views.json': '{' });
+    expect(out(s)).toEqual([1, 'unreadable', true]);
+    // Nor do views that were here and are gone let it in.
+    await expect(next({ 'views/views.json': null })).rejects.toThrow('medrec’s views are not in the folder.');
+    expect(out(s)).toEqual([1, 'unreadable', true]);
+  });
+
+  it('keeps out what a list named of someone whose index did not read', async () => {
+    const folder = demoFolderWith({ ...by('0.9.9', (p) => void (p.about_another = [result])), 'Robin Example/index.json': '{' });
+    const s = new Store(folder);
+    await s.load();
+    expect(s.index(ROBIN)).toBeUndefined();
+    folder.fresh = () => demoFolderWith({ 'views/views.json': '{' });
     await s.reload();
     expect(out(s)).toEqual([1, 'unreadable', true]);
   });
@@ -222,9 +257,11 @@ describe('a folder', () => {
 
 it('a list says how many, and no more', () => {
   expect([aboutText(1), aboutText(2)]).toEqual(['1 item about another person, not shown', '2 items about another person, not shown']);
-  expect([unsureText(index), unsureText({ ...index, aboutUnsure: 'unreadable' }), unsureText({ ...index, aboutUnsure: 'behind' })]).toEqual([
+  expect([undefined, 'unreadable', 'newer_format', 'behind', 'unsaid'].map((x) => unsureText({ ...index, ...(x ? { aboutUnsure: x as Unsure } : {}) }))).toEqual([
     undefined,
     'medrec’s list of what is about another person could not be read, so some of these may be.',
-    'Which of the newest items are about another person is not known yet.',
+    'medrec’s list of what is about another person is written by a newer medrec. Update the app. Until then some of these may be.',
+    'Which of the newest items are about another person is not known yet, so some of these may be. medrec writes its list again after its next import or refresh.',
+    'An older medrec wrote the folder’s views last, without its list of what is about another person, so some of these may be. Update medrec on every computer that writes the folder.',
   ]);
 });

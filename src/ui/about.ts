@@ -11,5 +11,5 @@ export function unsureNote(idx: PersonIndex): HTMLElement | null {
   return text ? h('p', { class: 'small muted' }, text) : null;
 }
 
-/** How many a list leaves out, and that it may hold others. */
-export const aboutNotes = (idx: PersonIndex): (HTMLElement | null)[] => [idx.about ? h('p', { class: 'small muted' }, `${aboutText(idx.about)}.`) : null, unsureNote(idx)];
+/** How many a list leaves out. */
+export const aboutNote = (idx: PersonIndex): HTMLElement | null => (idx.about ? h('p', { class: 'small muted' }, `${aboutText(idx.about)}.`) : null);
