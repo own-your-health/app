@@ -15,7 +15,7 @@ import { count, dateText, localDay, monthDayText } from '../ui/format';
 import { href, type Route } from '../ui/router';
 import { aheadOf, type AheadLine } from './ahead';
 import { aheadRow, signInRow } from './aheadView';
-import { householdEvents, type PersonEvent } from './calendar';
+import { asShared, householdEvents, type PersonEvent } from './calendar';
 import { recentCard } from './calendarView';
 import { eventRoute, eventWhen } from './eventView';
 import { markButton, markNote } from './markPaid';
@@ -231,7 +231,7 @@ export function nextHome(ctx: Ctx, signIn: { text: string; route: Route } | unde
       continue;
     }
     const held = whyHeld(idx);
-    const mine = all.filter((x) => x.person.id === p.id);
+    const mine = all.filter((x) => x.person.id === p.id).map(asShared);
     const bills = held ? [] : forShared(idx, openBills(idx, mine, today, store.marks));
     const ahead = aheadOf(p, idx, today, false);
     if (bills.length) owing.push({ person: p, idx, bills });

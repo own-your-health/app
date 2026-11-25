@@ -62,12 +62,39 @@ export function billPrivate(idx: PersonIndex, doc: MedDocument, event?: PersonEv
   return paperPrivate(idx, doc.id) ?? (event && (inVisit(idx, doc.id) || takenOut(idx, doc.id)) ? undefined : event?.private);
 }
 
-/** What a shared screen shows of some bills: those not private, without the visit of one whose visit is, or a receipt that is. */
-export function forShared<T extends { private?: string; event?: PersonEvent; bill?: Bill }>(idx: PersonIndex, bills: T[]): T[] {
+/** A bill, or a payment at a visit, by what of it a shared screen may leave out. */
+interface Shareable {
+  private?: string;
+  event?: PersonEvent;
+  bill?: Bill;
+  claimSays?: number;
+  claimSaysVisit?: boolean;
+  verdict?: BillVerdict;
+}
+
+/** Whether what the claims say of a bill comes from a private one: the claim medrec matched, else any the visit's are put beside it. */
+function saidByPrivate(idx: PersonIndex, { bill, event }: Shareable): boolean {
+  const claim = bill?.medrec?.claim;
+  return claim ? !!recordPrivate(idx, claim) : !!event && (!!event.private || !!(event.event.shared ?? event.event).fewerClaims);
+}
+
+/**
+ * What a shared screen shows of some bills: those not private, without the
+ * visit of one whose visit is, a receipt that is, or what a private claim
+ * says. `bills` go by the events as shared screens show them (asShared).
+ */
+export function forShared<T extends Shareable>(idx: PersonIndex, bills: T[]): T[] {
   const isPrivate = (receipt: MedDocument) => !!paperPrivate(idx, receipt.id);
   return bills.flatMap((b) => {
     if (b.private) return [];
     const shown = { ...b };
+    // Nor does it say that no claim backs it: a private one does.
+    if ((b.claimSays !== undefined || b.verdict === 'no_claim') && saidByPrivate(idx, b)) {
+      // A payment at a visit is listed for what the claims say of it alone.
+      if (!b.bill) return [];
+      delete shown.claimSays;
+      Object.assign(shown, { claimSaysVisit: false, verdict: 'unmatched' });
+    }
     if (b.event?.private) delete shown.event;
     if (b.bill) shown.bill = { ...b.bill, unread: b.bill.unread.filter((r) => !isPrivate(r)), payments: b.bill.payments.map((p) => (p.receipt && isPrivate(p.receipt) ? { from: p.from } : p)) };
     return [shown];

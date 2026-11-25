@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { privateCase } from '../test/helpers';
-import { removed, renamed, rewritten } from './alter';
+import { partsPrivate, removed, renamed, rewritten } from './alter';
 import { lay } from './lay';
 import { ROBIN, SAM } from '../test/sample';
 
@@ -199,16 +199,23 @@ async function holds(page: Page, path: string, without?: string): Promise<string
 /** The pages everyone's lists are on, whose words say nothing of how many private items there are. */
 const LISTS: [string, string?][] = [['#/', '.money-line'], ['#/calendar?view=ahead'], ['#/money/bills'], ['#/money/calls'], ['#/money/events'], ['#/money/events?sort=discount'], ['#/papers'], ['#/costs'], ['#/search?q=example']];
 
-for (const [name, base] of [
-  ['the sample’s', {}],
-  ['the household’s marks', privateCase('marked')],
+const PARTS: typeof LISTS = [...LISTS, ['#/calendar?view=list', '.cal-private']];
+// A bill is still beside the private claim medrec matched, where the folder without it has none.
+const BILLS = ['#/', '#/money/bills', '#/money/calls'];
+
+for (const [name, base, lists] of [
+  ['the sample’s', {}, LISTS],
+  ['the household’s marks', privateCase('marked'), LISTS],
+  ['parts of visits that are not', partsPrivate(), PARTS],
+  ['the portal visits of visits that are not', partsPrivate('encounter'), PARTS],
+  ['the claims and portal visits of visits that are not', partsPrivate('claim', 'encounter'), PARTS.filter(([path]) => !BILLS.includes(path))],
 ] as const) {
   test(`every shared screen reads the same whatever its private items are called and on which day: ${name}`, async ({ page, browser }) => {
     const other = await browser.newPage();
     await other.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
     await lay(page, base);
     await lay(other, renamed(base));
-    for (const path of [...SHARED.map(([p]) => p), ...LISTS.map(([p]) => p), '#/calendar?month=2026-09', '#/money?period=plan-1']) {
+    for (const path of [...SHARED.map(([p]) => p), ...LISTS.map(([p]) => p), '#/calendar?month=2026-09', '#/calendar?month=2026-07', '#/money?period=plan-1']) {
       const [was, is] = await Promise.all([holds(page, path), holds(other, path)]);
       expect(was.join('').length, path).toBeGreaterThan(400);
       expect(is, path).toEqual(was);
@@ -224,7 +231,7 @@ for (const [name, base] of [
     await other.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
     await lay(page, base);
     await lay(other, removed(base));
-    for (const [path, totals] of LISTS) {
+    for (const [path, totals] of lists) {
       const [was, is] = await Promise.all([holds(page, path, totals), holds(other, path, totals)]);
       expect(is, path).toEqual(was);
     }
@@ -234,6 +241,27 @@ for (const [name, base] of [
     await other.close();
   });
 }
+
+test('a bill says nothing of a private claim, or of a visit by one, on the screens the household shares', async ({ page }) => {
+  const bill = (of: string | RegExp) => card(page, of).locator('.row', { hasText: '$120.00' });
+  await go(page, '#/');
+  await expect(bill(/^Bills$/).locator('.need-title')).toHaveText('Lab tests, Jul 9');
+  await expect(bill(/^Bills$/).locator('.row-meta')).toContainText('the visit’s claims say you owe $50.70');
+  await lay(page, partsPrivate('claim', 'encounter'));
+  await page.reload();
+  await expect(bill(/^Bills$/).locator('.need-title')).toHaveText('Tests, Jul 9');
+  await expect(bill(/^Bills$/).locator('.row-meta')).toHaveText('Sam · was due Aug 31 · unless it was paid elsewhere');
+  await go(page, '#/money/bills');
+  await expect(bill('Due now').locator('.row-meta').first()).toContainText('Sam · Tests, Jul 9, 2026');
+  await expect(card(page, 'Check before paying')).toHaveCount(0);
+  for (const path of ['#/money/bills', '#/money/calls', '#/']) {
+    await go(page, path);
+    await expect(page.locator('main')).not.toContainText(/\$50\.70|\$69\.30|no claim in these records|Matches the claim/i);
+  }
+  // Their own pages have it.
+  await go(page, `#/money/calls?who=${SAM}`);
+  await expect(page.locator('main')).toContainText('$50.70');
+});
 
 /** The folder with Sam's one private claim from a plan no other claim names, on this day, and with every claim of Alex's private. */
 const ownPlan = (day: string) =>

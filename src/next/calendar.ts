@@ -32,19 +32,22 @@ export function householdEvents(household: Household, index: (id: string) => Per
   return out.sort((a, b) => b.event.start.localeCompare(a.event.start) || b.event.end.localeCompare(a.event.end) || a.lane - b.lane || a.event.id.localeCompare(b.event.id));
 }
 
+/** An event that is not private as a screen the household shares shows it: without what in it is. */
+export const asShared = (x: PersonEvent): PersonEvent => (x.event.shared ? { ...x, event: x.event.shared, money: eventMoney(x.event.shared) } : x);
+
 /**
  * What a view shows: one person's events, private ones too (their own page),
- * or everyone's, where a private event shows only when the household turned
- * that on. `hidden` counts the private events left out. Events held back,
- * because no current list says which are private, never show on everyone's,
- * and are not counted as private.
+ * or everyone's, where a private event, and what is private in any other,
+ * shows only when the household turned that on. `hidden` counts the private
+ * events left out. Events held back, because no current list says which are
+ * private, never show on everyone's, and are not counted as private.
  */
 export function shown(events: PersonEvent[], who: string | undefined, showPrivate: boolean): { events: PersonEvent[]; hidden: number } {
   if (who) return { events: events.filter((x) => x.person.id === who), hidden: 0 };
   const cleared = events.filter((x) => x.private !== HELD);
   if (showPrivate) return { events: cleared, hidden: 0 };
   const kept = cleared.filter((x) => !x.private);
-  return { events: kept, hidden: cleared.length - kept.length };
+  return { events: kept.map(asShared), hidden: cleared.length - kept.length };
 }
 
 export type MarkShape = 'dot' | 'ring' | 'bar';

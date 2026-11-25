@@ -10,6 +10,7 @@ interface Views {
 interface Member {
   record?: string;
   document?: string;
+  person?: string;
 }
 interface Item extends Json {
   id: string;
@@ -66,7 +67,7 @@ function disguised<T extends object>(item: T): T {
   const month = Object.entries(item).find(([k]) => k === 'date' || k === 'start')?.[1] as string | undefined;
   const change = (x: unknown, key = ''): unknown => {
     if (Array.isArray(x)) return x.map((v) => change(v, key));
-    if (typeof x === 'object' && x) return Object.fromEntries(Object.entries(x).map(([k, v]) => [k, change(v, k)]));
+    if (typeof x === 'object' && x) return Object.fromEntries(Object.entries(x).map(([k, v]) => [k, k === 'benefit_period' ? v : change(v, k)]));
     if (typeof x !== 'string') return x;
     if (/^\d{4}-\d{2}-\d{2}$/.test(x)) return month && x.startsWith(month.slice(0, 7)) ? nextTo(x) : x;
     return NAMES.has(key) ? 'Something else entirely' : x;
@@ -83,6 +84,31 @@ export const renamed = (base: Overlay): Overlay =>
     events.events = change(events.events, list.events).map((e) => ({ ...e, members: e.members?.map((m) => ((m.record ?? '') in list.records || (m.document ?? '') in list.documents ? disguised(m) : m)) }));
     for (const id of Object.keys(bills.bills)) if (id in list.documents) bills.bills[id] = disguised(bills.bills[id]!);
     bills.not_billed = bills.not_billed.map((x) => (x.event in list.events ? disguised(x) : x));
+  });
+
+/**
+ * The sample with parts of visits that are not private marked private: the
+ * records of these kinds, as they stay where the household marked a visit not
+ * private, with medrec giving it no place and no words of its own; or, with
+ * none, all but its claims and portal visits. A fill or a vaccine is as
+ * private as its record.
+ */
+export const partsPrivate = (...kinds: string[]): Overlay =>
+  rewritten({}, ({ index, events, list }) => {
+    const kindOf = new Map(index.records.map((r) => [r.id, r.kind ?? '']));
+    const mark = { area: 'mental_health', from: 'records' };
+    for (const e of events.events) {
+      if (e.id in list.events || e.kind === 'fill' || e.kind === 'vaccine') continue;
+      for (const m of e.members ?? []) {
+        const kind = kindOf.get(m.record ?? '') ?? 'paper';
+        if (kinds.length ? !kinds.includes(kind) : kind === 'claim' || kind === 'encounter') continue;
+        if (m.record) list.records[m.record] = mark;
+        else if (m.document && !m.person) list.documents[m.document] = mark;
+      }
+      if (!kinds.length) continue;
+      delete e.what;
+      delete e.place;
+    }
   });
 
 /** The folder with none of them in it. A visit the household marked not private stays as it is when only private records make it one. */
