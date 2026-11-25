@@ -1,25 +1,38 @@
 // What every screen the household shares has in common: which claims it may
 // not name, and the line that says whose items are held back, and why.
 
-import { isHeld, leavesOff, recordPrivate, whyHeld } from '../model/private';
+import { HELD, isHeld, leavesOff, recordPrivate, whyHeld } from '../model/private';
 import { called } from '../model/people';
-import type { Person } from '../model/types';
+import type { Household, Person, PersonIndex } from '../model/types';
 import type { Store } from '../data/store';
 import type { Ctx } from '../ui/components';
 import { h } from '../ui/dom';
-import { householdEvents } from './calendar';
+import { householdEvents, type PersonEvent } from './calendar';
+import { eventPrivate } from './event';
+import { eventInError } from './medrecEvents';
 
-/** Claims a shared screen neither names nor dates: private ones, and those of a private visit, each with its area. */
+/** The area of the visit a claim entered in error would be in, as medrec has it; held where that is not here to judge. */
+function visitPrivate(idx: PersonIndex, household: Household, events: PersonEvent[], claim: string): string | undefined {
+  if (!idx.events) return HELD;
+  const at = idx.events.errorAt.get(claim);
+  if (!at) return undefined;
+  const stands = events.find((x) => x.event.id === at);
+  if (stands) return stands.private;
+  const wrong = eventInError(idx, household, at);
+  return wrong ? eventPrivate(wrong, idx) : HELD;
+}
+
+/** Claims a shared screen neither names, dates nor counts: private ones, and those of a private visit, each with its area. */
 export function quietClaims(store: Store, today: string): Map<string, string> {
   const quiet = new Map<string, string>();
+  const put = (id: string, area: string | undefined) => void (area && !quiet.has(id) && quiet.set(id, area));
+  const events = householdEvents(store.household, (id) => store.index(id), today);
   for (const p of store.household.people) {
     const idx = store.index(p.id);
-    for (const r of idx?.records ?? []) {
-      const area = r.kind === 'claim' ? recordPrivate(idx!, r.id) : undefined;
-      if (area) quiet.set(r.id, area);
-    }
+    for (const r of idx?.records ?? []) if (r.kind === 'claim') put(r.id, recordPrivate(idx!, r.id));
+    for (const r of idx?.inError?.records ?? []) if (r.kind === 'claim') put(r.id, recordPrivate(idx!, r.id) ?? visitPrivate(idx!, store.household, events, r.id));
   }
-  for (const x of householdEvents(store.household, (id) => store.index(id), today)) if (x.private) for (const c of x.event.claims) if (!quiet.has(c.record.id)) quiet.set(c.record.id, x.private);
+  for (const x of events) for (const c of x.event.claims) put(c.record.id, x.private);
   return quiet;
 }
 

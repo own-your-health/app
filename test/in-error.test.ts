@@ -14,6 +14,7 @@ import { differs, billErrorsText, keptText } from '../src/ui/inError';
 import { parseBills } from '../src/model/bills';
 import { parseMedrecEvents, type MedrecEvents } from '../src/model/events';
 import { errorsLeft } from '../src/next/calendar';
+import { quietClaims } from '../src/next/shared';
 import { personEvents } from '../src/next/load';
 import { eventInError } from '../src/next/medrecEvents';
 import { demo } from './demo-data';
@@ -120,13 +121,14 @@ describe('an index without it', () => {
   });
 
   it('keeps what reads of an index that does not all read', () => {
-    const odd = { ...raw, records: [{ ...record('r_leveldiffers'), words: 'none' }, { ...record('r_filldiffers'), words: [null, 'x', { raw_path: 7, status: 8, verification: null, read: 'x' }, ...record('r_filldiffers').words!] }, { ...record('r_levelerror'), status: 7 }], documents: [{ ...paper('d_eyebill'), also_from: {}, words: {}, near_duplicates: 'none' }, { ...paper('d_skinbill'), also_from: [null, {}, { source: 'x', method: 'y' }, ...paper('d_eyebill').also_from!] }] };
+    const odd = { ...raw, records: [{ ...record('r_leveldiffers'), words: 'none' }, { ...record('r_filldiffers'), words: [null, 'x', { raw_path: 7, status: 8, verification: null, read: 'x' }, ...record('r_filldiffers').words!] }, { ...record('r_levelerror'), status: 7 }], documents: [{ ...paper('d_eyebill'), also_from: {}, words: {}, near_duplicates: 'none' }, { ...paper('d_skinbill'), id: 'd_near', near_duplicates: [null, 'x', {}, { document: 7 }, { document: 'd_2', similarity: 0.9 }] }, { ...paper('d_skinbill'), also_from: [null, {}, { source: 'x', method: 'y' }, ...paper('d_eyebill').also_from!] }] };
     const read = parseIndex(odd, raw.person);
     expect([read.records.map((r) => r.words), read.documents.map((d) => d.also_from), read.documents.map((d) => d.words)]).toEqual([
       [undefined, [{ read: 'x' }, ...record('r_filldiffers').words!], undefined],
-      [undefined, paper('d_eyebill').also_from],
-      [undefined, paper('d_skinbill').words],
+      [undefined, paper('d_skinbill').also_from, paper('d_eyebill').also_from],
+      [undefined, paper('d_skinbill').words, paper('d_skinbill').words],
     ]);
+    expect(read.documents.map((d) => d.near_duplicates)).toEqual([undefined, [{ document: 'd_2', similarity: 0.9 }], paper('d_skinbill').near_duplicates]);
     expect(withoutErrors(read, undefined).inError!.records).toEqual([]);
   });
 
@@ -237,8 +239,9 @@ describe('medrec’s views of what is entered in error', () => {
   it('are each visit’s own, the visits that are none without it, and the decisions kept of it', () => {
     const read = events({ events_in_error: [{ ...event, id: 'e_2' }, { id: 'no day' }], in_error: { r_2: { event: 'e_1', not_applied: [{ id: 'o_1' }, { id: 'o_2' }] }, r_3: { event: 'e_2' }, r_4: { not_applied: 'none' }, r_5: 'x' } });
     expect([read.events.map((e) => e.inError), read.errors.map((e) => e.id), [...read.notApplied]]).toEqual([[['r_2']], ['e_2'], [['r_2', 2]]]);
+    expect([...events({ in_error: { r_2: { event: 'e_1' }, r_3: { event: 7 }, r_4: {}, r_5: 'x', r_6: null } }).errorAt]).toEqual([['r_2', 'e_1']]);
     const none = parseMedrecEvents({ schema: 'medrec-events/v1', person: 'p_a', events: [{ ...event, in_error: undefined }] }, 'p_a');
-    expect([none.events[0]!.inError, none.errors, none.notApplied.size]).toEqual([[], [], 0]);
+    expect([none.events[0]!.inError, none.errors, none.notApplied.size, none.errorAt.size]).toEqual([[], [], 0, 0]);
     expect(events({ events_in_error: 'none', in_error: [] }).errors).toEqual([]);
   });
 
@@ -377,6 +380,32 @@ describe('medrec’s own views of the fixture', () => {
     const planned = { ...idx, records: year(idx.records, '07-01'), inError: { ...idx.inError!, records: year(idx.inError!.records, '10-01') } };
     expect(new Set(errorLines(raw.person, planned).map((l) => l.planYear.start))).toEqual(new Set(['2023-07-01']));
     expect(errorLines(raw.person, idx, { planStart: '05-01' }).map((l) => [l.claim, l.planYear.start]).sort()).toEqual([[id('r_eyevisit'), '2023-05-01'], [id('r_footvisit'), '2024-05-01']]);
+  });
+
+  it('say which visit each would be in, so everyone’s costs count no claim of a private one', async () => {
+    const { store, idx } = await opened();
+    const [eye, foot, skin] = ['r_eyevisit', 'r_footvisit', 'r_skinvisit'].map(id) as [string, string, string];
+    const at = (claim: string) => idx.events!.errorAt.get(claim)!;
+    const stands = idx.events!.events.find((e) => e.members.some((m) => m.record === skin))!.id;
+    const known = idx.privacy as Extract<NonNullable<PersonIndex['privacy']>, { kind: 'known' }>;
+    // Of everyone's costs, what is left out. Robin alone has any.
+    const quiet = (more: Partial<typeof known>, events: Partial<MedrecEvents> | null = {}) => {
+      const its = { ...idx, privacy: { ...known, ...more }, events: events ? { ...idx.events!, ...events } : undefined };
+      return Object.fromEntries(quietClaims({ household: store.household, index: () => its } as unknown as Store, '2026-11-22'));
+    };
+    expect(quiet({})).toEqual({ [foot]: 'household' });
+    // Its visit alone says it.
+    expect(quiet({ records: new Map(), documents: new Map() })).toEqual({ [foot]: known.events.get(at(foot)) });
+    expect(quiet({ records: new Map(), events: new Map([[at(eye), 'mental_health']]) })).toEqual({ [eye]: 'mental_health' });
+    expect(quiet({ records: new Map(), events: new Map() })).toEqual({});
+    // A claim's own area is first, whatever its visit's is.
+    expect(quiet({ records: new Map([[eye, 'sexual_health']]), events: new Map() })).toEqual({ [eye]: 'sexual_health' });
+    expect(quiet({ records: new Map([[skin, 'sexual_health']]), events: new Map([[stands, 'mental_health']]) })).toEqual({ [skin]: 'sexual_health' });
+    // A visit that stands, and has the rest of it.
+    expect(quiet({ records: new Map(), events: new Map([[stands, 'mental_health']]) }, { errorAt: new Map([[eye, stands]]) })).toEqual({ [skin]: 'mental_health', [eye]: 'mental_health' });
+    // In none, and not here to judge.
+    expect(quiet({ records: new Map(), events: new Map() }, { errorAt: new Map([[eye, 'e_elsewhere']]) })).toEqual({ [eye]: HELD });
+    expect(quiet({ records: new Map(), events: new Map() }, null)).toEqual({ [eye]: HELD, [foot]: HELD });
   });
 
   it('are not there yet: the index itself says it, and the app makes the visits and bills of what is left', async () => {

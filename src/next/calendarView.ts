@@ -4,7 +4,7 @@
 // them off unless the household turns that on for this visit to the page.
 
 import type { Person } from '../model/types';
-import { button, card, chip, empty, link, type Ctx } from '../ui/components';
+import { button, card, chip, empty, link, rowAside, type Ctx } from '../ui/components';
 import { h, icon } from '../ui/dom';
 import { formatMoney, fromCents } from '../model/records';
 import { count, dateText, localDay } from '../ui/format';
@@ -83,7 +83,7 @@ function eventRow(x: PersonEvent, opts: { person: boolean; month?: string; brief
           h('div', { class: 'row-title' }, [title, opts.brief ? null : e.place].filter(Boolean).join(' · ')),
           h('div', { class: 'row-meta' }, [opts.person ? called(x.person) : null, ...(opts.brief ? [e.place ?? kind ?? e.what] : [kind, e.what]), e.end > e.start ? `to ${dateText(e.end)}` : null].filter(Boolean).join(' · ')),
         ),
-        h('div', { class: 'row-aside' }, knownArea(x.private) ? chip('Private', 'muted') : null, n ? h('span', { class: 'num' }, n) : null),
+        rowAside(knownArea(x.private) ? chip('Private', 'muted') : null, n ? h('span', { class: 'num' }, n) : null),
         h('span', { class: 'row-chevron' }, icon('next', 18)),
       ),
     ),

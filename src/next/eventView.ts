@@ -94,14 +94,14 @@ function headCard(ctx: Ctx, idx: PersonIndex, e: CareEvent, m: EventMoney): HTML
 }
 
 /** A private event says so on its page: where it stays off, and that this is discretion, not security. */
-function privateNote(e: CareEvent, idx: PersonIndex): HTMLElement | null {
+function privateNote(e: CareEvent, idx: PersonIndex, off = 'Kept off Home and everyone’s Calendar, Money, Papers and search results.'): HTMLElement | null {
   const area = knownArea(eventPrivate(e, idx));
   if (!area) return null;
   return h(
     'p',
     { class: 'event-private small' },
     chip('Private', 'muted'),
-    ` ${areaText(area)}. Kept off Home and everyone’s Calendar, Money, Papers and search results. This is discretion, not security: everyone the Drive folder is shared with can still read its files.`,
+    ` ${areaText(area)}. ${off} This is discretion, not security: everyone the Drive folder is shared with can still read its files.`,
   );
 }
 
@@ -405,6 +405,7 @@ function errorEvent(ctx: Ctx, idx: PersonIndex, id: string): HTMLElement | null 
     h('div', { class: 'card-head' }, h('h1', null, title), chip('Entered in error', 'attention')),
     h('p', { class: 'muted' }, dotted([eventWhen(e), e.place])),
     h('p', null, 'What makes it a visit is entered in error, so it is in no list or total.'),
+    privateNote(e, idx, 'Everyone’s Calendar does not count it.'),
     ...[...e.visits.map((v) => v.record), ...e.claims.map((c) => c.record), ...e.recorded].map((r) => part({ id: r.id, title: recordTitle(r), kind: KIND_LABELS[r.kind] ?? r.kind })),
     ...e.papers.filter((p) => !p.person).map((p) => part({ id: p.doc.id, title: documentTitle(p.doc), kind: docTypeLabel(p.doc.doc_type) })),
   );

@@ -62,6 +62,8 @@ export interface MedrecEvents {
   errors: MedrecEvent[];
   /** How many of the household's decisions name each item entered in error: kept, and not applied. */
   notApplied: ReadonlyMap<string, number>;
+  /** The visit each item entered in error would be in: one that stands, or one of `errors`. */
+  errorAt: ReadonlyMap<string, string>;
   /** The indexes of the other people whose events (X1) and papers (X2) these name, from the load this file is of; the store fills it in. */
   others: ReadonlyMap<string, PersonIndex>;
 }
@@ -132,6 +134,8 @@ export function parseMedrecEvents(raw: unknown, person: string): MedrecEvents {
     text(x.document) ? [{ document: text(x.document)!, could_join: strings(x.could_join), rule: (text(x.rule) ?? '') as MedrecRule }] : [],
   );
   const aliases = (Array.isArray(raw.aliases) ? raw.aliases : []).filter(isObj).flatMap((x) => (text(x.organization) && text(x.document) ? [{ organization: text(x.organization)!, document: text(x.document)! }] : []));
-  const notApplied = new Map(Object.entries(isObj(raw.in_error) ? raw.in_error : {}).flatMap(([id, x]): [string, number][] => (isObj(x) && Array.isArray(x.not_applied) ? [[id, x.not_applied.length]] : [])));
-  return { person, events: read(raw.events), pending, aliases, errors: read(raw.events_in_error), notApplied, others: new Map() };
+  const inError = Object.entries(isObj(raw.in_error) ? raw.in_error : {}).flatMap(([id, x]) => (isObj(x) ? [{ id, at: x.event, not: x.not_applied }] : []));
+  const notApplied = new Map(inError.flatMap((x): [string, number][] => (Array.isArray(x.not) ? [[x.id, x.not.length]] : [])));
+  const errorAt = new Map(inError.flatMap((x): [string, string][] => (typeof x.at === 'string' ? [[x.id, x.at]] : [])));
+  return { person, events: read(raw.events), pending, aliases, errors: read(raw.events_in_error), notApplied, errorAt, others: new Map() };
 }

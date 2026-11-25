@@ -865,10 +865,10 @@ dropped from the address.
   fill can be its newest. The file is made from the records alone, so what the
   household marked or said never makes it stale; it is used, and read for
   again, as code names are. Without one the lists go by each record's own
-  status, and nothing is said of sources that differ. Where medrec's views list
-  one that is stale, still to come or refused, the lists, Health (everyone's
-  too) and the sheet say why; a folder of an earlier medrec has none, and they
-  say nothing.
+  status, and nothing is said of sources that differ but on what is entered in
+  error (below). Where medrec's views list one that is stale, still to come or
+  refused, the lists, Health (everyone's too) and the sheet say why; a folder
+  of an earlier medrec has none, and they say nothing.
 - **About another person.** A chart can hold what is about somebody else: a
   screening a parent answers about themselves, or a result its source says is
   another's. medrec 0.9.9 and later name those items by id (`about_another` in
@@ -892,17 +892,18 @@ dropped from the address.
   out of the index when that is read: it is in no list, search, visit, bill,
   total or doctor's sheet. A statement whose first paper is in error is its
   next copy's, and a study has no report of one. Results, a test's page,
-  conditions, allergies, medicines, immunizations, Papers, the claims under
-  Costs, the calendar's list, a visit and search say how many they leave out
-  ("1 entered in error, not shown"), on everyone's view of those that are not
-  private: medrec's private list names those too. Bills says so of bills, with
+  conditions, allergies and medicines (on Health and the sheet for a doctor
+  too), immunizations, Papers, the claims under Costs, the calendar's list, a
+  visit and search say how many they leave out ("1 entered in error, not
+  shown"), on everyone's view of those that are not private, nor of a private
+  visit: medrec's private list names those too. Bills says so of bills, with
   how many have a payment the household marked, and which, since money may be
-  owed back. One opened by its id says that it is entered in
-  error, what each source says and when that was read, and what the household
-  decided of it, which medrec keeps and does not apply (`not_applied` in
-  `events.json` and `bills.json`). So does a visit that is none without it. One
-  that some source still stands by stays, with **Sources differ** and what each
-  says. A source whose word is not kept is not heard, and does not say so.
+  owed back. One opened by its id says that it is entered in error, what each
+  source says and when that was read, and what the household decided of it,
+  which medrec keeps and does not apply (`not_applied` in `events.json` and
+  `bills.json`). So does a visit that is none without it. One that some source
+  still stands by stays, with **Sources differ** and what each says. A source
+  whose word is not kept is not heard, and does not say so.
   Where `views.json` does not read, or was made from another index, what the
   index itself keeps of each source says it, by the same rule. The views of an
   earlier medrec are made of the whole index, so beside those nothing is taken
@@ -942,8 +943,9 @@ page count. Papers took the place of each person's list of documents. A
   marks. From 0.9.5 the list has two more rules: a paper that a private
   record links is private, whatever else links it, and an imaging study is
   as private as its report (`studies`), or judged by nothing without one
-  (`unreported_studies`). medrec 0.9.6 also judges the papers tied to a
-  private one. The app judges the first two, and the copies of one statement,
+  (`unreported_studies`). One whose report is entered in error has none in the
+  app; medrec looks for another report of it, so a study in neither is not
+  private. medrec 0.9.6 also judges the papers tied to a private one. The app judges the first two, and the copies of one statement,
   the same way where an earlier medrec wrote the list (`medrec` in
   `views.json`). The household's own mark on a paper wins; an earlier list
   shows one only on a paper in a private visit, so a paper it took out that a

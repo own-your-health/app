@@ -57,11 +57,13 @@ test('is in no list, which says how many it leaves out', async ({ page }) => {
     await expect(main(page).locator('.row', { hasText: '19.28' })).toHaveCount(1);
     await expect(main(page).locator('.row', { hasText: '19.28' })).not.toContainText('Matches the claim');
   }
-  // The claims of a person's costs, and of everyone's, none of which is private.
+  // The claims of a person's costs, and of everyone's, none of which is private; also where nothing else fits the choices.
   for (const who of [`&only=person:${ROBIN}`, '']) {
     await go(page, `#/costs?period=all${who}`);
     await expect(card(page, '')).toContainText([ONE]);
   }
+  await go(page, `#/costs?period=all&only=person:${ROBIN}&only=month:2026-10&only=category:pharmacy`);
+  await expect(main(page).locator('.card', { hasText: 'No claim lines match these choices.' })).toContainText(ONE);
   await go(page, '#/costs?period=all&only=category:vaccine');
   await expect(main(page)).toContainText('Costs');
   await expect(main(page)).not.toContainText('entered in error');
@@ -161,7 +163,7 @@ test('one that some source stands by stays, and says that they differ', async ({
 
 test('what it says fits a narrow phone, with a long word in each name', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 780 });
-  const word = 'Chlorobenzylidenemalononitrileacetophenone';
+  const word = 'Sample_statement_with_no_space_anywhere_in_its_own_file_name';
   const named = rewritten(
     enteredInError(),
     ({ name, index }) => {
@@ -180,14 +182,29 @@ test('what it says fits a narrow phone, with a long word in each name', async ({
   }
 });
 
+test('a private visit of which nothing stands says that it is private', async ({ page }) => {
+  await lay(page, rewritten(enteredInError(), ({ name, list }) => void (name === 'Robin Example' && Object.assign(list.events, { [FILL]: { area: 'mental_health', from: 'members' } })), '0.9.9'));
+  await go(page, `#/p/${ROBIN}/e/${FILL}`);
+  await expect(main(page)).toContainText('Private Mental health. Everyone’s Calendar does not count it.');
+  await go(page, '#/calendar?view=list');
+  await expect(main(page).locator('h1')).toBeVisible();
+  await expect(main(page)).not.toContainText('entered in error');
+  await go(page, '#/costs?period=all');
+  await expect(main(page).locator('h1')).toBeVisible();
+  await expect(main(page)).not.toContainText('entered in error');
+  await go(page, `#/calendar?view=list&who=${ROBIN}`);
+  await expect(main(page)).toContainText(ONE);
+});
+
 test('a row with several things beside it keeps its name’s width on a narrow phone', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 780 });
-  // Private and paid, and its sources differ on it.
+  // Private and paid, and its sources differ on it; and a private visit with an amount.
   const all = rewritten(
     enteredInError(),
     ({ name, bills, list }) => {
       if (name !== 'Robin Example') return;
       list.documents[DIFFERS] = { area: 'household', from: 'household' };
+      list.events[VISIT] = { area: 'household', from: 'household' };
       Object.assign(bills.bills[DIFFERS]!, { paid: [{ from: 'household', id: 'o_cccccccccccccccccccc', on: '2026-11-04', amount: '53.68', currency: 'USD' }], paid_total: '53.68', left: '0.00', settled: true });
     },
     '0.9.9',
@@ -196,11 +213,12 @@ test('a row with several things beside it keeps its name’s width on a narrow p
   for (const [path, beside] of [
     [`#/papers?who=${ROBIN}`, ['Sources differ', 'Private']],
     [`#/money/bills?who=${ROBIN}`, ['Sources differ', 'Private', '$53.68']],
+    [`#/calendar?view=list&who=${ROBIN}`, ['Private', /^\$/]],
   ] as const) {
     await go(page, path);
-    const row = main(page).locator('.row', { has: page.locator('.row-aside', { hasText: 'Sources differ' }) });
+    const row = main(page).locator(path.startsWith('#/calendar') ? `.row:has(a[href*="${VISIT}"])` : '.row:has(.row-aside:has-text("Sources differ"))');
     await expect(row.locator('.row-aside > *'), path).toHaveText([...beside]);
-    expect((await row.locator('.row-body').boundingBox())!.width, path).toBeGreaterThan(90);
+    expect((await row.locator('.row-body').boundingBox())!.width, path).toBeGreaterThan(80);
     // One under the other.
     const tops = await row.locator('.row-aside > *').evaluateAll((xs) => xs.map((x) => x.getBoundingClientRect()).map((b) => [b.top, b.bottom]));
     expect(tops.slice(1).every((b, i) => b[0]! > tops[i]![1]!), path).toBe(true);

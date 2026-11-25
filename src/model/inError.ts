@@ -38,7 +38,7 @@ export function withoutErrors(index: PersonIndex, listed: ReturnType<typeof inEr
   // A statement whose first paper is in error is its next copy's.
   const next = new Map<string, string>();
   const again = (doc: MedDocument): MedDocument => {
-    const d = Array.isArray(doc.near_duplicates) ? { ...doc, near_duplicates: doc.near_duplicates.filter((n) => !ids.has(n.document)) } : doc;
+    const d = doc.near_duplicates ? { ...doc, near_duplicates: doc.near_duplicates.filter((n) => !ids.has(n.document)) } : doc;
     const { same_statement_as: of, ...rest } = d;
     if (!of || !ids.has(of)) return d;
     const first = next.get(of);

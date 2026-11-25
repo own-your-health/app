@@ -114,14 +114,15 @@ function isProvenance(p: unknown): boolean {
   return isObject(p) && isObject(p.source) && isStr(p.method);
 }
 
-/** What each source says of an item, and where else a paper came from: what reads of them. */
-function said(x: Record<string, unknown>): { words?: SourceWord[]; also_from?: unknown[] } {
-  const { words, also_from, ...rest } = x;
+/** What each source says of an item, where else a paper came from, and what it is nearly a copy of: what reads of them. */
+function said(x: Record<string, unknown>): { words?: SourceWord[]; also_from?: unknown[]; near_duplicates?: unknown[] } {
+  const { words, also_from, near_duplicates, ...rest } = x;
   const word = (w: Record<string, unknown>): SourceWord => Object.fromEntries((['raw_path', 'status', 'verification', 'read'] as const).flatMap((k) => (isStr(w[k]) ? [[k, w[k]]] : [])));
   return {
     ...rest,
     ...(Array.isArray(words) ? { words: words.filter(isObject).map(word) } : {}),
     ...(Array.isArray(also_from) ? { also_from: also_from.filter(isProvenance) } : {}),
+    ...(Array.isArray(near_duplicates) ? { near_duplicates: near_duplicates.filter((n) => isObject(n) && isStr(n.document)) } : {}),
   };
 }
 
