@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { expect, test, type Page } from '@playwright/test';
 import { demoJson, paidCase, privateCase, type Overlay } from '../test/helpers';
 import { rewritten } from './alter';
@@ -492,6 +493,8 @@ test('a private bill is marked on its person’s own pages, and nothing of that 
     for (const path of ['#/', '#/money', '#/money/bills', '#/money/calls']) {
       await page.evaluate((to) => (location.hash = to), path);
       await expect(page.locator('.private-line')).toBeVisible();
+      // A chart is drawn again once it is measured, with labels for its width.
+      await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
       out.push(await page.locator('.main').innerText());
     }
     return out;
@@ -751,11 +754,89 @@ test.describe('signed in', () => {
     problems = [];
   });
 
+  test('a payment Drive stored without answering is found, and sent once', async ({ page }) => {
+    await page.clock.setFixedTime(new Date());
+    await open(page);
+    await markButton(page, SURGERY).click();
+    google.losing = true;
+    await send(page).click();
+    await expect(form(page)).toHaveCount(0);
+    await expect(card(page, /^Marked paid$/).locator('.mark-line')).toContainText('$175.00 marked paid');
+    expect(google.changes).toHaveLength(1);
+    expect(problems.filter((x) => !x.includes('503'))).toEqual([]);
+    problems = [];
+  });
+
+  test('a payment another device marked while the form was open stops this one', async ({ page }) => {
+    await page.clock.setFixedTime(new Date());
+    await open(page);
+    await markButton(page, SURGERY).click();
+    // A part of it: what is left is not what the form was opened on.
+    google.writeAsMac('_requests/20261122T200312Z_x_abcdefghijklmnopqrst.json', request('x_abcdefghijklmnopqrst', doc('Sam Example', '175.00'), '75.00', now()));
+    for (let i = 0; i < 2; i++) {
+      await send(page).click();
+      await expect(page.locator('#paid-problem')).toHaveText('What is left to pay has changed since this was opened, so nothing was sent. Close this and look at the bill again.');
+      await expect(send(page)).not.toHaveAttribute('aria-disabled', 'true');
+    }
+    expect(google.changes).toEqual([]);
+    // Behind the form the bill has that payment, and the rest to mark.
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await expect(billRow(page, SURGERY).locator('.mark-line')).toContainText('$75.00 marked paid');
+    await markButton(page, SURGERY).click();
+    await expect(page.getByLabel('Amount')).toHaveValue('100.00');
+    await send(page).click();
+    await expect(card(page, /^Marked paid$/).locator('.mark-line')).toHaveCount(2);
+    expect(google.changes).toHaveLength(1);
+  });
+
+  test('a bill that a later statement replaced while the form was open is not marked', async ({ page }) => {
+    await page.clock.setFixedTime(new Date());
+    await open(page);
+    await markButton(page, SURGERY).click();
+    // medrec's next list, and an answer to another device's request, for which the records are read again.
+    const views = JSON.parse(google.read('views/views.json')!) as { people: Record<string, { files: Record<string, string> }> };
+    const files = views.people[SAM]!.files;
+    const list = JSON.parse(google.read(`views/${SAM}/bills.${files['bills.json']!.slice(0, 12)}.json`)!) as { bills: Record<string, { superseded_by?: string }> };
+    list.bills[doc('Sam Example', '175.00')]!.superseded_by = doc('Sam Example', '120.00');
+    const text = JSON.stringify(list);
+    files['bills.json'] = createHash('md5').update(text).digest('hex');
+    google.writeAsMac(`views/${SAM}/bills.${files['bills.json'].slice(0, 12)}.json`, text);
+    google.writeAsMac('views/views.json', JSON.stringify(views));
+    google.writeAsMac('_requests/20261122T200412Z_x_bcdefghijklmnopqrstu.json', request('x_bcdefghijklmnopqrstu', doc('Sam Example', '120.00'), '1.00', now()));
+    await look(page);
+    await expect(page.locator('.main')).toContainText('$1.00 marked paid');
+    google.writeAsMac('_requests/done/20261122T200412Z_x_bcdefghijklmnopqrstu.json', request('x_bcdefghijklmnopqrstu', doc('Sam Example', '120.00'), '1.00', now(), 'The folder could not be written.'));
+    await look(page);
+    await expect(billRow(page, SURGERY).locator('.mark-paid')).toHaveCount(0);
+    await send(page).click();
+    await expect(page.locator('#paid-problem')).toContainText('nothing was sent');
+    expect(google.changes).toEqual([]);
+  });
+
+  test('a payment another device marked and the Mac recorded, while this one was not looked at, counts here', async ({ page }) => {
+    await page.clock.setFixedTime(new Date());
+    await open(page);
+    await markButton(page, SURGERY).click();
+    const done = (id: string) => ({ ...(JSON.parse(asked(id)) as object), handled: { picked_up_at: now(), finished_at: now(), outcome: 'ok', sources: [], message: '', by: 'medrec 0.9.6' } });
+    google.failing = 'household.json';
+    google.writeAsMac('_requests/done/20261122T200312Z_x_abcdefghijklmnopqrst.json', JSON.stringify(done('x_abcdefghijklmnopqrst')));
+    await send(page).click();
+    await expect(page.locator('#paid-problem')).toContainText('nothing was sent');
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await look(page);
+    await expect(card(page, /^Marked paid$/).locator('.mark-line')).toContainText('$175.00 marked paid, Nov 1, 2026. The Mac has recorded it.');
+    await expect(markButton(page, SURGERY)).toHaveCount(0);
+    expect(google.changes).toEqual([]);
+    expect(problems.filter((x) => !x.includes('503'))).toEqual([]);
+    problems = [];
+  });
+
   test('a payment taken back that the Mac had read says so, and medrec’s list before it stands until it has written the next', async ({ page }) => {
     await page.clock.setFixedTime(new Date());
     await open(page);
     await markButton(page, SURGERY).click();
     await send(page).click();
+    await expect(form(page)).toHaveCount(0);
     const path = google.changes[0]!.path;
     const written = JSON.parse(google.read(path)!) as object;
     await page.getByRole('button', { name: /^Undo/ }).click();

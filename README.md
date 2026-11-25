@@ -664,7 +664,12 @@ dropped from the address.
   so one taken back is looked for until no pass that read it can still be at
   work, and a payment filed after all says so. medrec answers a request before
   it writes the list that shows it, so a recorded payment is kept until that
-  list does, for a quarter of an hour at most. A filed payment is undone from
+  list does, for a quarter of an hour at most; so is one another device asked
+  for that was answered after the records here were read. The folder is looked
+  at once more before a request is written: when what is left to pay is no
+  longer what the form was opened on, nothing is sent. Where Drive does not
+  answer, the request is looked for, and the same asked again is that one, so
+  it counts once. A filed payment is undone from
   the bill's page with medrec 0.9.7 and later, and before with the command that
   page gives. What the Mac could not record says so beside the bill. Which
   medrec answers requests is the status's `refresher.medrec_version`. An account

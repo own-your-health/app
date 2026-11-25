@@ -4,7 +4,7 @@
 // alone says what is paid. An account that may only view the folder has none
 // of it.
 
-import { receiptDay, type Bill } from '../model/billing';
+import { billList, receiptDay, type Bill } from '../model/billing';
 import { called } from '../model/people';
 import { atLeast } from '../model/private';
 import { formatMoney, fromCents, toCents, type Money } from '../model/records';
@@ -58,6 +58,9 @@ function notRecorded(ctx: Ctx, idx: PersonIndex, bill: Bill): MarkRequest | unde
   return lastFailed(ctx, (r) => billMarks(idx, bill, [{ file: '', request: r, cancellable: false }]).length > 0);
 }
 
+/** What Mark paid asks for on a bill: what is left that no payment is marked for, where medrec's list says what that is. */
+const toMark = (ctx: Ctx, idx: PersonIndex, bill: Bill): number => (bill.medrec && !bill.replacedBy ? unmarkedCents(bill, billMarks(idx, bill, ctx.store.marks)) : 0);
+
 const provider = (bill: Bill): string => bill.provider ?? 'the bill';
 
 /** Whose bill it is and what it asks, for the form and for a screen reader's list of buttons. */
@@ -72,9 +75,9 @@ const billName = (bill: Bill): string => `${provider(bill)}${bill.date ? `, ${da
 export function paidControl(ctx: Ctx, idx: PersonIndex, bill: Bill, named = false): HTMLElement | null {
   if (bill.settled || bill.replacedBy) return null;
   const marks = billMarks(idx, bill, ctx.store.marks);
-  const cents = unmarkedCents(bill, marks);
+  const cents = toMark(ctx, idx, bill);
   const failed = notRecorded(ctx, idx, bill);
-  const mark = cents > 0 && bill.medrec && canMark(ctx, idx) ? button(named ? `Mark paid: ${provider(bill)}` : 'Mark paid', (ev) => openForm(ctx, idx, bill, cents, ev.currentTarget as HTMLElement), { small: true }) : null;
+  const mark = cents > 0 && canMark(ctx, idx) ? button(named ? `Mark paid: ${provider(bill)}` : 'Mark paid', (ev) => openForm(ctx, idx, bill, cents, ev.currentTarget as HTMLElement), { small: true }) : null;
   mark?.setAttribute('aria-label', `Mark paid: ${billName(bill)}, ${formatMoney(fromCents(cents, bill.left!.currency))}`);
   if (!marks.length && !failed && !mark) return null;
   return h(
@@ -136,6 +139,12 @@ function openForm(ctx: Ctx, idx: PersonIndex, bill: Bill, left: number, from: HT
     for (const f of [on, amount]) f.setAttribute('aria-invalid', f === field ? 'true' : 'false');
     field.focus();
   };
+  /** Whether that is still what is left, whoever marked or recorded a payment since. */
+  const stands = () => {
+    const now = ctx.store.index(idx.person);
+    const b = now && billList(now).find((x) => x.doc.id === bill.doc.id);
+    return !!now && !!b && toMark(ctx, now, b) === left;
+  };
   const submit = async () => {
     const paid: Money | null = typedAmount(amount.value) === null ? null : { amount: typedAmount(amount.value)!, currency };
     if (!/^\d{4}-\d{2}-\d{2}$/.test(on.value)) return refuse(on, 'Choose the day it was paid.');
@@ -146,7 +155,7 @@ function openForm(ctx: Ctx, idx: PersonIndex, bill: Bill, left: number, from: HT
     send.setAttribute('aria-disabled', 'true');
     problem.textContent = '';
     for (const f of [on, amount]) f.setAttribute('aria-invalid', 'false');
-    const sent = await ctx.mark({ paid: { person: idx.person, document: bill.doc.id, on: on.value, amount: paidAmount(paid) } }, (text) => (problem.textContent = text));
+    const sent = await ctx.mark({ paid: { person: idx.person, document: bill.doc.id, on: on.value, amount: paidAmount(paid) } }, (text) => (problem.textContent = text), stands);
     send.removeAttribute('aria-disabled');
     if (!sent) return;
     close();

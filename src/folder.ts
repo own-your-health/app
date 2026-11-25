@@ -57,6 +57,9 @@ export function splitPath(path: string): string[] {
 
 export const REQUESTS_DIR = '_requests';
 
+/** Drive's answer to writing a request was lost, and the file was not found: it may be stored all the same. */
+export class Unanswered extends Error {}
+
 export class DriveFolder implements RecordsFolder {
   readonly kind = 'drive' as const;
   private listings = new Map<string, Promise<Map<string, DriveFile>>>();
@@ -163,8 +166,17 @@ export class DriveFolder implements RecordsFolder {
   async createRequest(name: string, body: unknown): Promise<void> {
     const dir = await this.resolve(REQUESTS_DIR);
     if (!dir || dir.mimeType !== FOLDER_MIME) throw new Error('The records folder has no _requests folder.');
-    await this.drive.createJson(dir.id, name, body);
-    this.forget(REQUESTS_DIR);
+    try {
+      await this.drive.createJson(dir.id, name, body);
+    } catch (e) {
+      // A refusal stored nothing. With no answer, or a fault of Drive's, it may have.
+      if (e instanceof DriveError && e.status < 500) throw e;
+      this.forget(REQUESTS_DIR);
+      const found = await Promise.all([REQUESTS_DIR, `${REQUESTS_DIR}/done`].map((d) => this.resolve(`${d}/${name}`))).catch(() => []);
+      if (!found.some((f) => f)) throw new Unanswered('Google Drive did not answer, so this may or may not have been sent. The app is looking for it. Sending the same again counts once.');
+    } finally {
+      this.forget(REQUESTS_DIR);
+    }
   }
 
   async deleteRequest(name: string): Promise<boolean> {

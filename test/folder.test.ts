@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { Drive, type DriveFile } from '../src/drive';
-import { DriveFolder, KEPT_TIMES, LOAD_TIMES, readJson, splitPath } from '../src/folder';
+import { Drive, DriveError, type DriveFile } from '../src/drive';
+import { DriveFolder, KEPT_TIMES, LOAD_TIMES, readJson, splitPath, Unanswered } from '../src/folder';
 import { DEMO, demoFolder, fixture, json } from './helpers';
 
 function driveWith(tree: Record<string, DriveFile[]>, contents: Record<string, string> = {}, meta: Record<string, DriveFile> = {}) {
@@ -122,6 +122,40 @@ describe('DriveFolder', () => {
   it('refuses to write when there is no _requests/', async () => {
     const { drive } = driveWith({ root: ROOT.root!.filter((f) => f.name !== '_requests') });
     await expect(new DriveFolder(drive, 'root', 'x').createRequest('a.json', {})).rejects.toThrow('no _requests folder');
+  });
+
+  it('looks for a request whose answer from Drive was lost, and says when it cannot tell', async () => {
+    const name = '20261122T201500Z_x_aaaaaaaaaaaaaaaaaaaa.json';
+    const done: DriveFile = { id: 'folder-done', name: 'done', mimeType: 'application/vnd.google-apps.folder' };
+    // `stored` is where the file is once Drive was asked; `then`, whether Drive still answers.
+    const asked = async (fault: number | 'none', stored: 'waiting' | 'answered' | null, then = true) => {
+      const tree: Record<string, DriveFile[]> = { ...ROOT, 'folder-requests': [...ROOT['folder-requests']!.filter((f) => f.name !== 'done'), done], 'folder-done': [] };
+      let posts = 0;
+      const drive = new Drive(() => 'tok', (async (input: RequestInfo | URL, init: RequestInit = {}) => {
+        if (init.method === 'POST') {
+          posts += 1;
+          const at = stored === 'waiting' ? 'folder-requests' : 'folder-done';
+          if (stored) tree[at] = [...tree[at]!, { id: 'file-new', name, mimeType: 'application/json' }];
+          if (fault === 'none') throw new TypeError('Failed to fetch');
+          return json({ error: { code: fault, message: 'no', errors: [{ reason: 'no' }] } }, fault);
+        }
+        if (posts && !then) throw new TypeError('Failed to fetch');
+        return json({ files: tree[new URL(String(input)).searchParams.get('q')!.match(/^'([^']+)' in parents/)![1]!] ?? [] });
+      }) as typeof fetch);
+      const folder = new DriveFolder(drive, 'root', 'x');
+      // Listed before, as an open app has.
+      await folder.list('_requests/done');
+      await folder.createRequest(name, {});
+      expect((await folder.list(stored === 'answered' ? '_requests/done' : '_requests'))!.map((e) => e.name)).toContain(name);
+    };
+    for (const fault of [500, 503, 'none'] as const) {
+      await asked(fault, 'waiting');
+      await asked(fault, 'answered');
+      await expect(asked(fault, null)).rejects.toThrow(Unanswered);
+      await expect(asked(fault, 'waiting', false)).rejects.toThrow('Google Drive did not answer, so this may or may not have been sent.');
+    }
+    // A refusal is one, whatever is there.
+    for (const status of [400, 403, 404, 429, 499]) await expect(asked(status, 'waiting')).rejects.toThrow(DriveError);
   });
 
   it('deletes a pending request by name', async () => {

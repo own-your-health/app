@@ -2,7 +2,7 @@
 // read from the folder is written to browser storage or sent anywhere but
 // back to Drive.
 
-import { readJson, REQUESTS_DIR, type RecordsFolder } from '../folder';
+import { readJson, REQUESTS_DIR, Unanswered, type Entry, type RecordsFolder } from '../folder';
 import { FolderError, parseAttempts, parseHousehold, parseIndex, parseMark, parseRefused, parseRequest, parseStatus, parseText } from '../model/parse';
 import { buildMark, buildRequest, markRecorded, requestFileName, sameScope } from '../model/requests';
 import { macState, sourceViews, type MacState, type SourceView } from '../model/sources';
@@ -70,6 +70,8 @@ const NO_BILLS = {
 /** Holds that end once medrec has written, or the folder answers. */
 const MAY_END = new Set<HeldWhy>(['behind', 'arriving', 'unchecked', 'unreadable']);
 
+const DONE_DIR = `${REQUESTS_DIR}/done`;
+
 /** A read that has not ended by then is taken over by the next. */
 const STALLED_MS = 120_000;
 
@@ -91,6 +93,9 @@ export interface PendingRequest {
   cancellable: boolean;
 }
 
+/** The paths of the requests and the answers listed. */
+const requestPaths = (entries: Entry[] | null, done: Entry[] | null): string[] => [...(entries ?? []).map((e) => `${REQUESTS_DIR}/${e.name}`), ...(done ?? []).map((e) => `${DONE_DIR}/${e.name}`)];
+
 const isRefresh = (p: PendingRequest | PendingMark): p is PendingRequest => 'scope' in p.request;
 const isMark = (p: PendingRequest | PendingMark): p is PendingMark => !isRefresh(p);
 
@@ -107,7 +112,7 @@ export class Store {
   done: RefreshRequest[] = [];
   /** The payments marked, or undone, that wait for the Mac. */
   private waitingMarks: PendingMark[] = [];
-  /** Those the Mac has recorded while the app was open, and when that was seen: each until medrec's list shows it. */
+  /** Those the Mac has recorded since the records were read, and when that was seen: each until medrec's list shows it. */
   private taken: { mark: PendingMark; seen: number }[] = [];
   /** Those taken back, when, and whether here: the Mac may have read one before. */
   private back = new Map<string, { mark: PendingMark; at: number; here: boolean }>();
@@ -115,6 +120,12 @@ export class Store {
   answeredMarks: MarkRequest[] = [];
   /** Those it refused while the app was open: the answer names only the request. */
   private refusedMarks: MarkRequest[] = [];
+  /** Those Drive did not answer and no look has found, by what each asks. */
+  private unanswered = new Map<string, MarkRequest>();
+  /** The answers the records were read after, or a look has taken in. */
+  private answers = new Set<string>();
+  /** The requests and answers of the last look. */
+  private looked = new Set<string>();
   /** False when this account may only view the folder. */
   mayRequest = true;
   /** The medrec that wrote the views, when views.json reads. */
@@ -154,8 +165,14 @@ export class Store {
 
   /** Reads household.json, every person's index, the status and the requests. */
   async load(): Promise<void> {
-    await this.loadHousehold();
+    await this.loadStart();
     await Promise.all([this.loadRecords(), this.loadRefreshState()]);
+  }
+
+  /** Reads the household, and lists the answers the records are read after: what those did, the records show. */
+  private async loadStart(): Promise<void> {
+    const [done] = await Promise.all([this.folder.list(DONE_DIR), this.loadHousehold()]);
+    this.answers = new Set((done ?? []).map((e) => e.name));
   }
 
   /** Whether a request this app saw waiting has finished since the records were last read, or they do not show what it did. */
@@ -190,7 +207,7 @@ export class Store {
     const upTo = this.finished;
     // Its own view of the folder: a call that hangs, or a read taken over, touches nothing others use.
     const next = new Store(this.folder.fresh());
-    await next.loadHousehold();
+    await next.loadStart();
     await next.loadRecords();
     // Another read took over from this one, which had stalled.
     if (run !== this.runs) return;
@@ -220,6 +237,7 @@ export class Store {
     this.loadedAt = next.loadedAt;
     this.snapshot = next.snapshot;
     this.readUpTo = upTo;
+    for (const name of next.answers) this.answers.add(name);
     this.taken = this.recorded.filter((t) => !markRecorded(t.mark.request, this.indexes));
   }
 
@@ -431,10 +449,9 @@ export class Store {
     const before = new Map<string, PendingRequest | PendingMark>([...this.pending, ...this.waitingMarks].map((p) => [p.file, p]));
     this.folder.forget('_status');
     this.folder.forget(REQUESTS_DIR);
-    const [statusRaw, entries, doneEntries, may] = await Promise.all([
+    const [statusRaw, [entries, doneEntries], may] = await Promise.all([
       readJson(this.folder, '_status/status.json').catch(() => undefined),
-      this.folder.list(REQUESTS_DIR),
-      this.folder.list(`${REQUESTS_DIR}/done`),
+      this.listRequests(),
       this.folder.mayRequest(),
     ]);
     this.mayRequest = may !== false;
@@ -472,28 +489,43 @@ export class Store {
     const asked = <T extends { file: string }>(of: T[]) => of.filter((p) => !before.has(p.file) && !names.has(p.file));
     this.pending = [...waiting.filter(isRefresh), ...asked(this.pending)];
     this.waitingMarks = [...waiting.filter(isMark), ...asked(this.waitingMarks)];
-    const finished = this.watch(new Set(listed.map((e) => e.name)), doneNames, before);
+    const finished = new Set(this.watch(new Set(listed.map((e) => e.name)), doneNames, before));
     // Only the latest outcomes matter on screen; the names sort by time.
     const doneFiles = (doneEntries ?? [])
       .filter((e) => !e.folder && e.name.endsWith('.json'))
       .map((e) => e.name)
       .sort()
       .slice(-50);
-    const done = await Promise.all(doneFiles.map((n) => readJson(this.folder, `${REQUESTS_DIR}/done/${n}`).catch(() => null)));
+    const done = await Promise.all(doneFiles.map((n) => readJson(this.folder, `${DONE_DIR}/${n}`).catch(() => null)));
+    const marks = done.map(parseMark);
     this.done = done.map(parseRequest).filter((x): x is RefreshRequest => x !== null);
-    this.answeredMarks = done.map(parseMark).filter((x): x is MarkRequest => x !== null);
-    const recorded = new Set(this.answeredMarks.filter((r) => r.handled?.outcome === 'ok').map((r) => r.id));
+    this.answeredMarks = marks.filter((x): x is MarkRequest => x !== null);
     this.refused = done.map(parseRefused).filter((x): x is RefusedRequest => x !== null);
-    for (const file of finished) {
+    doneFiles.forEach((file, i) => {
+      // One asked for on another device counts as well, when it was answered after the records were read.
+      if (done[i] === null || (this.answers.has(file) && !finished.has(file))) return;
+      this.answers.add(file);
       const back = this.back.get(file);
-      const mark = back?.mark ?? before.get(file);
       this.back.delete(file);
-      if (!mark || !isMark(mark)) continue;
-      if (recorded.has(mark.request.id) && !markRecorded(mark.request, this.indexes)) this.taken.push({ mark: { ...mark, cancellable: false, taken: true, ...(back?.here ? { late: true } : {}) }, seen: Date.now() });
-      const refused = this.refused.find((r) => r.id === mark.request.id);
-      if (refused) this.refusedMarks.push({ ...mark.request, handled: refused.handled });
-    }
+      const [request, asked] = [marks[i], before.get(file)];
+      if (request?.handled?.outcome === 'ok' && !markRecorded(request, this.indexes)) this.taken.push({ mark: { file, request, cancellable: false, taken: true, ...(back?.here ? { late: true } : {}) }, seen: Date.now() });
+      const refused = asked && isMark(asked) && this.refused.find((r) => r.id === asked.request.id);
+      if (refused) this.refusedMarks.push({ ...asked.request, handled: refused.handled });
+    });
     this.answeredMarks.push(...this.refusedMarks);
+    this.looked = new Set(requestPaths(entries, doneEntries));
+    for (const [asks, r] of this.unanswered) if ([REQUESTS_DIR, DONE_DIR].some((d) => this.looked.has(`${d}/${requestFileName(r)}`))) this.unanswered.delete(asks);
+  }
+
+  /** The requests that wait, and the answers. */
+  private listRequests(): Promise<[Entry[] | null, Entry[] | null]> {
+    return Promise.all([this.folder.list(REQUESTS_DIR), this.folder.list(DONE_DIR)]);
+  }
+
+  /** Looks at `_requests/` when it has something the last look did not. */
+  private async lookAgain(): Promise<void> {
+    this.folder.forget(REQUESTS_DIR);
+    if (requestPaths(...(await this.listRequests())).some((p) => !this.looked.has(p))) await this.loadRefreshState();
   }
 
   /** Whether any of the household's items are off shared screens because no list says which are private. */
@@ -615,26 +647,49 @@ export class Store {
     if (held) return held;
     const request = buildRequest({ scope, now: new Date(), by, appVersion });
     const file = requestFileName(request);
-    await this.folder.createRequest(file, request);
+    await this.write(file, request);
     const p = { file, request, cancellable: true };
     // A look meanwhile may have listed it already.
     this.pending = [...this.pending.filter((x) => x.file !== file), p];
-    this.watched.set(file, false);
     return p;
   }
 
-  /** Asks the Mac to mark a bill paid, or to undo a payment marked before. The same asked again is the one that waits. */
-  async requestMark(mark: { paid: PaidMark } | { unpaid: UnpaidMark }, by: { email?: string; name?: string }, appVersion: string): Promise<PendingMark> {
-    const asks = (m: { paid?: PaidMark; unpaid?: UnpaidMark }) => JSON.stringify([m.paid ?? null, m.unpaid ?? null]);
-    const held = this.waitingMarks.find((m) => asks(m.request) === asks(mark));
+  /**
+   * Asks the Mac to mark a bill paid, or to undo a payment marked before. The
+   * same asked again is the one that waits. `stands` says whether what it was
+   * asked on still holds, once what another device asked meanwhile is seen.
+   */
+  async requestMark(mark: { paid: PaidMark } | { unpaid: UnpaidMark }, by: { email?: string; name?: string }, appVersion: string, stands = () => true): Promise<PendingMark> {
+    const asksOf = (m: { paid?: PaidMark; unpaid?: UnpaidMark }) => JSON.stringify([m.paid ?? null, m.unpaid ?? null]);
+    const asks = asksOf(mark);
+    const waits = () => this.waitingMarks.find((m) => asksOf(m.request) === asks);
+    const held = waits() ?? (await this.lookAgain().then(waits));
     if (held) return held;
-    const request = buildMark({ mark, now: new Date(), by, appVersion });
+    if (!stands()) throw new Error('What is left to pay has changed since this was opened, so nothing was sent. Close this and look at the bill again.');
+    const request = this.unanswered.get(asks) ?? buildMark({ mark, now: new Date(), by, appVersion });
     const file = requestFileName(request);
-    await this.folder.createRequest(file, request);
+    try {
+      await this.write(file, request);
+    } catch (e) {
+      // The next look settles it; until then the same asked again is this one.
+      if (e instanceof Unanswered) this.unanswered.set(asks, request);
+      throw e;
+    }
+    this.unanswered.delete(asks);
     const p = { file, request, cancellable: true };
     this.waitingMarks = [...this.waitingMarks.filter((x) => x.file !== file), p];
-    this.watched.set(file, false);
     return p;
+  }
+
+  /** Writes a request, and watches for its answer; also where Drive did not say whether it is there. */
+  private async write(file: string, request: RefreshRequest | MarkRequest): Promise<void> {
+    try {
+      await this.folder.createRequest(file, request);
+    } catch (e) {
+      if (e instanceof Unanswered) this.watched.set(file, false);
+      throw e;
+    }
+    this.watched.set(file, false);
   }
 
   /**
@@ -663,7 +718,7 @@ export class Store {
   }
 
   private async answered(file: string): Promise<boolean> {
-    this.folder.forget(`${REQUESTS_DIR}/done`);
-    return ((await this.folder.list(`${REQUESTS_DIR}/done`)) ?? []).some((e) => e.name === file);
+    this.folder.forget(DONE_DIR);
+    return ((await this.folder.list(DONE_DIR)) ?? []).some((e) => e.name === file);
   }
 }

@@ -63,6 +63,8 @@ export class FakeGoogle {
   readonly reads: string[] = [];
   /** A file whose content Drive fails to give, as it does now and then; `*` while it answers nothing at all. */
   failing: string | null = null;
+  /** Drive stores the next files the app writes, and its answer is lost. */
+  losing = false;
   /** The folder is shared with the account to view only. */
   viewer = false;
   /** What the sign-in grants, and so what the token may do; a person can untick a scope on Google's screen. */
@@ -280,7 +282,7 @@ export class FakeGoogle {
     }
     const node = this.add({ name: meta.name, mimeType: meta.mimeType ?? 'application/octet-stream', parent: parent.id, byApp: true, content: parts[1] ?? '' });
     this.changes.push({ method: 'CREATE', path: this.pathOf(node) });
-    return json(route, 200, this.resource(node));
+    return this.losing ? driveError(route, 503, 'backendError', 'Backend Error') : json(route, 200, this.resource(node));
   }
 
   private resource(n: Node) {

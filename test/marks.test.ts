@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { startDemoMac } from '../src/data/demo-mac';
 import { applyMark } from '../src/data/demo-marks';
 import { Store } from '../src/data/store';
-import type { DemoFolder } from '../src/folder';
+import { Unanswered, type DemoFolder } from '../src/folder';
 import { billList } from '../src/model/billing';
 import { householdEvents } from '../src/next/calendar';
 import { markRecorded } from '../src/model/requests';
@@ -92,9 +92,13 @@ describe('a payment marked', () => {
     const doc = owing(store.index(ROBIN)!, '53.68').id;
     const list = folder.list.bind(folder);
     let asked: PendingMark | undefined;
+    let first = true;
     folder.list = async (path) => {
       const entries = await list(path);
-      if (path === '_requests') asked = await store.requestMark(paid(ROBIN, doc, '53.68'), {}, '0.1.0');
+      if (path === '_requests' && first) {
+        first = false;
+        asked = await store.requestMark(paid(ROBIN, doc, '53.68'), {}, '0.1.0');
+      }
       return entries;
     };
     await store.loadRefreshState();
@@ -190,6 +194,265 @@ describe('a payment marked', () => {
     for (const index of [undefined, { ...idx, bills: undefined }]) expect([shows(index, asked), shows(index, undo('o_2'))]).toEqual([false, false]);
   });
 
+  it('marked on another device and answered between two looks counts, and the records are read for it', async () => {
+    const { folder, store: there } = await loaded();
+    const doc = owing(there.index(ROBIN)!, '53.68').id;
+    const here = new Store(folder);
+    await here.load();
+    const m = await there.requestMark(paid(ROBIN, doc, '53.68'), {}, '0.1.0');
+    const writeViews = await file(folder, m);
+    for (let i = 0; i < 2; i++) {
+      await here.loadRefreshState();
+      expect([here.marks.map((x) => [x.file, x.taken, x.cancellable, x.late]), here.owed, here.waiting]).toEqual([[[m.file, true, false, undefined]], true, false]);
+      await expect(here.reload()).rejects.toThrow('older than their records');
+    }
+    writeViews();
+    await here.reload();
+    expect([here.marks, here.owed, billList(here.index(ROBIN)!).find((b) => b.doc.id === doc)!.settled]).toEqual([[], false, true]);
+    // An undo asked there as well.
+    const payment = billList(here.index(ROBIN)!).find((b) => b.doc.id === doc)!.payments[0]!.id!;
+    await there.reload();
+    const undo = await there.requestMark({ unpaid: { person: ROBIN, payment } }, {}, '0.1.0');
+    const undone = await file(folder, undo);
+    await here.loadRefreshState();
+    expect([here.marks.map((x) => [x.file, x.taken]), here.owed]).toEqual([[[undo.file, true]], true]);
+    undone();
+    await here.reload();
+    expect([here.marks, here.owed]).toEqual([[], false]);
+  });
+
+  it('answered before the records were read is as they have it, also when they have it no more', async () => {
+    const { folder, store: there } = await loaded();
+    const doc = owing(there.index(ROBIN)!, '53.68').id;
+    const here = new Store(folder);
+    await here.load();
+    // Recorded and, by the time the records are read, undone on the Mac.
+    const one = await there.requestMark(paid(ROBIN, doc, '53.68'), {}, '0.1.0');
+    answer(folder, one, 'ok');
+    const later = new Store(folder);
+    await later.load();
+    await later.loadRefreshState();
+    expect([later.marks, later.owed]).toEqual([[], false]);
+    await here.reload();
+    await here.loadRefreshState();
+    expect([here.marks, here.owed]).toEqual([[], false]);
+    // The next is after them.
+    const two = await there.requestMark(paid(ROBIN, doc, '1.00'), {}, '0.1.0');
+    answer(folder, two, 'ok');
+    await here.loadRefreshState();
+    expect([here.marks.map((x) => x.file), here.owed]).toEqual([[two.file], true]);
+    // Answered some other way, it counts for nothing.
+    const three = await there.requestMark(paid(ROBIN, doc, '2.00'), {}, '0.1.0');
+    answer(folder, three, 'failed');
+    const four = await there.requestMark(paid(ROBIN, doc, '3.00'), {}, '0.1.0');
+    answer(folder, four, 'skipped');
+    await here.loadRefreshState();
+    expect(here.marks.map((x) => x.file)).toEqual([two.file]);
+  });
+
+  it('whose answer did not read is taken in at the next look', async () => {
+    for (const waits of [true, false]) {
+      const { folder, store: there } = await loaded();
+      const here = new Store(folder);
+      await here.load();
+      const m = await there.requestMark(paid(ROBIN, owing(there.index(ROBIN)!, '53.68').id, '53.68'), {}, '0.1.0');
+      if (waits) await here.loadRefreshState();
+      answer(folder, m, 'ok');
+      const read = folder.readText.bind(folder);
+      let fails = true;
+      folder.readText = async (path) => {
+        if (fails && path === `_requests/done/${m.file}`) throw new Error('Drive did not answer.');
+        return read(path);
+      };
+      await here.loadRefreshState();
+      expect(here.marks).toEqual([]);
+      fails = false;
+      await here.loadRefreshState();
+      expect(here.marks.map((x) => [x.file, x.taken])).toEqual([[m.file, true]]);
+    }
+  });
+
+  it('is asked only while what it was asked on stands, once the folder is looked at again', async () => {
+    const { folder, store: there } = await loaded();
+    const doc = owing(there.index(ROBIN)!, '53.68').id;
+    const here = new Store(folder);
+    await here.load();
+    const stands = () => here.marks.length === 0;
+    const m = await there.requestMark(paid(ROBIN, doc, '50.00'), {}, '0.1.0');
+    const requests = async () => (await folder.list('_requests'))!.filter((e) => !e.folder).length;
+    for (let i = 0; i < 2; i++) {
+      await expect(here.requestMark(paid(ROBIN, doc, '53.68'), {}, '0.1.0', stands)).rejects.toThrow('What is left to pay has changed since this was opened, so nothing was sent.');
+      expect([here.marks.map((x) => x.file), await requests()]).toEqual([[m.file], 1]);
+    }
+    // What the other device asked is the same request.
+    expect((await here.requestMark(paid(ROBIN, doc, '50.00'), {}, '0.1.0', stands)).file).toBe(m.file);
+    expect((await here.requestMark(paid(ROBIN, doc, '3.68'), {}, '0.1.0', () => here.marks.length === 1)).file).not.toBe(m.file);
+    expect(await requests()).toBe(2);
+  });
+
+  it('the same as one asked on another device meanwhile is that one', async () => {
+    const { folder, store: there } = await loaded();
+    const doc = owing(there.index(ROBIN)!, '53.68').id;
+    const here = new Store(folder);
+    await here.load();
+    const m = await there.requestMark(paid(ROBIN, doc, '53.68'), {}, '0.1.0');
+    expect((await here.requestMark(paid(ROBIN, doc, '53.68'), {}, '0.1.0', () => false)).file).toBe(m.file);
+    expect((await folder.list('_requests'))!.filter((e) => !e.folder)).toHaveLength(1);
+  });
+
+  it('reads what is in the folder again only when something is new there', async () => {
+    const { folder, store } = await loaded();
+    const doc = owing(store.index(ROBIN)!, '53.68').id;
+    let reads = 0;
+    const read = folder.readText.bind(folder);
+    folder.readText = async (path) => {
+      reads += path === '_status/status.json' ? 1 : 0;
+      return read(path);
+    };
+    const m = await store.requestMark(paid(ROBIN, doc, '1.00'), {}, '0.1.0');
+    expect(reads).toBe(0);
+    answer(folder, m, 'failed');
+    await store.requestMark(paid(ROBIN, doc, '2.00'), {}, '0.1.0');
+    expect([reads, store.answeredMarks.map((r) => r.id)]).toEqual([1, [m.request.id]]);
+  });
+
+  it('lists the folder anew before it is asked', async () => {
+    const { folder, store } = await loaded();
+    const doc = owing(store.index(ROBIN)!, '53.68').id;
+    const forgot: (string | undefined)[] = [];
+    folder.forget = (...[prefix]: [string?]) => void forgot.push(prefix);
+    await store.requestMark(paid(ROBIN, doc, '1.00'), {}, '0.1.0');
+    expect(forgot).toEqual(['_requests']);
+  });
+
+  it('Drive did not answer is looked for, and the same asked again is that one', async () => {
+    for (const stored of [true, false]) {
+      const { folder, store } = await loaded();
+      const doc = owing(store.index(ROBIN)!, '53.68').id;
+      const create = folder.createRequest.bind(folder);
+      const written: string[] = [];
+      let lost = true;
+      folder.createRequest = async (name, body) => {
+        written.push(name);
+        if (stored || !lost) await create(name, body);
+        if (lost) throw new Unanswered('Google Drive did not answer.');
+      };
+      await expect(store.requestMark(paid(ROBIN, doc, '53.68'), {}, '0.1.0')).rejects.toThrow('Google Drive did not answer.');
+      expect([store.marks, store.waiting]).toEqual([[], true]);
+      if (stored) {
+        await store.loadRefreshState();
+        expect(store.marks.map((x) => [x.file, x.cancellable])).toEqual([[written[0], true]]);
+      }
+      minutes(1);
+      const again = () => store.requestMark(paid(ROBIN, doc, '53.68'), {}, '0.1.0');
+      if (!stored) await expect(again()).rejects.toThrow('Google Drive did not answer.');
+      lost = false;
+      expect((await again()).file).toBe(written[0]);
+      expect(new Set(written).size).toBe(1);
+      expect(store.marks.map((x) => x.file)).toEqual([written[0]]);
+    }
+  });
+
+  it('Drive did not answer is not another payment, nor the same one taken back since', async () => {
+    const { folder, store } = await loaded();
+    const doc = owing(store.index(ROBIN)!, '53.68').id;
+    const create = folder.createRequest.bind(folder);
+    const ask = (amount: string) => store.requestMark(paid(ROBIN, doc, amount), {}, '0.1.0');
+    const lose = async (amount: string, stored: boolean): Promise<string> => {
+      let name = '';
+      folder.createRequest = async (n, body) => {
+        name = n;
+        if (stored) await create(n, body);
+        throw new Unanswered('Google Drive did not answer.');
+      };
+      await expect(ask(amount)).rejects.toThrow('Google Drive did not answer.');
+      folder.createRequest = create;
+      minutes(1);
+      return name;
+    };
+    const lost = await lose('1.00', false);
+    expect((await ask('2.00')).file).not.toBe(lost);
+    // Sent at last, and taken back before any look.
+    const one = await ask('1.00');
+    expect(one.file).toBe(lost);
+    await store.cancel(one);
+    minutes(1);
+    expect((await ask('1.00')).file).not.toBe(lost);
+    // Found by a look, and taken back.
+    const found = await lose('3.00', true);
+    await store.loadRefreshState();
+    await store.cancel(store.marks.find((m) => m.file === found)!);
+    expect((await ask('3.00')).file).not.toBe(found);
+    // What Drive refused was never there: asked again, it is of its own time.
+    folder.createRequest = async () => Promise.reject(new Error('It may not.'));
+    await expect(ask('4.00')).rejects.toThrow('It may not.');
+    folder.createRequest = create;
+    minutes(1);
+    expect((await ask('4.00')).request.requested_at).toBe(new Date().toISOString().replace('.000Z', 'Z'));
+  });
+
+  it('answered while the records are read for something else is shown until they show it', async () => {
+    const { folder, store } = await loaded();
+    const m = await store.requestMark(paid(ROBIN, owing(store.index(ROBIN)!, '53.68').id, '53.68'), {}, '0.1.0');
+    // A folder that gives the answer, and the list of before.
+    answer(folder, m, 'ok');
+    await store.reload();
+    await store.loadRefreshState();
+    expect([store.marks.map((x) => [x.file, x.taken]), store.owed]).toEqual([[[m.file, true]], true]);
+  });
+
+  it('Drive did not answer, and which is not there at two looks, waits no more', async () => {
+    const { folder, store } = await loaded();
+    const doc = owing(store.index(ROBIN)!, '53.68').id;
+    folder.createRequest = async () => Promise.reject(new Unanswered('Google Drive did not answer.'));
+    await expect(store.requestMark(paid(ROBIN, doc, '53.68'), {}, '0.1.0')).rejects.toThrow();
+    await store.loadRefreshState();
+    expect(store.waiting).toBe(true);
+    await store.loadRefreshState();
+    expect([store.waiting, store.marks]).toEqual([false, []]);
+    // What Drive refused is not there to look for.
+    folder.createRequest = async () => Promise.reject(new Error('It may not.'));
+    await expect(store.requestMark(paid(ROBIN, doc, '1.00'), {}, '0.1.0')).rejects.toThrow('It may not.');
+    await expect(store.requestRefresh({ all: true }, {}, '0.1.0')).rejects.toThrow('It may not.');
+    expect(store.waiting).toBe(false);
+  });
+
+  it('Drive did not answer and the Mac has is another when asked again', async () => {
+    for (const where of ['waiting', 'answered'] as const) {
+      const { folder, store } = await loaded();
+      const doc = owing(store.index(ROBIN)!, '53.68').id;
+      const create = folder.createRequest.bind(folder);
+      folder.createRequest = async (name, body) => {
+        await create(name, body);
+        throw new Unanswered('Google Drive did not answer.');
+      };
+      await expect(store.requestMark(paid(ROBIN, doc, '53.68'), {}, '0.1.0')).rejects.toThrow();
+      folder.createRequest = create;
+      if (where === 'waiting') await store.loadRefreshState();
+      const name = (await folder.list('_requests'))!.find((e) => !e.folder)!.name;
+      const request = JSON.parse((await folder.readText(`_requests/${name}`))!) as MarkRequest;
+      answer(folder, { file: name, request, cancellable: true }, 'failed');
+      await store.loadRefreshState();
+      expect(store.answeredMarks.map((r) => r.id)).toEqual([request.id]);
+      minutes(1);
+      // A payment asked for once more is a new request: the first has its answer.
+      expect((await store.requestMark(paid(ROBIN, doc, '53.68'), {}, '0.1.0')).request.id).not.toBe(request.id);
+    }
+  });
+
+  it('a refresh Drive did not answer is looked for as well', async () => {
+    const { folder, store } = await loaded();
+    const create = folder.createRequest.bind(folder);
+    folder.createRequest = async (name, body) => {
+      await create(name, body);
+      throw new Unanswered('Google Drive did not answer.');
+    };
+    await expect(store.requestRefresh({ all: true }, {}, '0.1.0')).rejects.toThrow('Google Drive did not answer.');
+    expect([store.pending, store.waiting]).toEqual([[], true]);
+    await store.loadRefreshState();
+    expect([store.pending.map((p) => p.request.scope), store.waiting]).toEqual([[{ all: true }], true]);
+  });
+
   it('that did not read this time still waits', async () => {
     const { folder, store } = await loaded();
     const m = await store.requestMark(paid(ROBIN, owing(store.index(ROBIN)!, '53.68').id, '53.68'), {}, '0.1.0');
@@ -207,7 +470,7 @@ describe('a payment marked', () => {
     const m = await store.requestMark(paid(ROBIN, owing(store.index(ROBIN)!, '53.68').id, '53.68'), {}, '0.1.0');
     (await file(folder, m))();
     await store.loadRefreshState();
-    expect(store.marks).toEqual([{ ...m, cancellable: false, taken: true }]);
+    expect(store.marks).toEqual([{ file: m.file, request: { ...m.request, handled: expect.objectContaining({ outcome: 'ok' }) }, cancellable: false, taken: true }]);
     expect([store.owed, store.answeredMarks.map((r) => r.id)]).toEqual([true, [m.request.id]]);
     // Looking again changes nothing: the records are still to be read.
     await store.loadRefreshState();
@@ -364,12 +627,13 @@ describe('a payment marked', () => {
     const { folder, store } = await loaded();
     const doc = owing(store.index(ROBIN)!, '53.68').id;
     const list = folder.list.bind(folder);
-    let fails = 1;
+    let fails = 0;
     folder.list = async (path) => {
       if (path === '_requests/done' && (fails -= 1) === 0) throw new Error('Drive did not answer.');
       return list(path);
     };
     const m = await store.requestMark(paid(ROBIN, doc, '53.68'), {}, '0.1.0');
+    fails = 1;
     await expect(store.cancel(m)).rejects.toThrow('Drive did not answer.');
     expect([store.marks, await folder.readText(`_requests/${m.file}`) !== null]).toEqual([[m], true]);
     fails = 2;

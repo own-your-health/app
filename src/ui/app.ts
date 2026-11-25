@@ -405,7 +405,7 @@ export class App {
         }
         this.renderKeepingScroll();
       },
-      mark: (mark, failed) => this.mark(mark, failed),
+      mark: (mark, failed, stands) => this.mark(mark, failed, stands),
       signOut: () => this.signOut(),
     };
   }
@@ -414,9 +414,9 @@ export class App {
     await this.ask('refresh', (store) => store.requestRefresh(scope, this.user, VERSION), `Asked the Mac to refresh ${what}`);
   }
 
-  private mark(mark: Mark, failed?: (text: string) => void): Promise<boolean> {
+  private mark(mark: Mark, failed?: (text: string) => void, stands?: () => boolean): Promise<boolean> {
     const paid = 'paid' in mark;
-    return this.ask(paid ? 'paid' : 'undo', (store) => store.requestMark(mark, this.user, VERSION), paid ? 'Marked paid. The Mac files it on its next pass.' : 'Asked the Mac to undo the payment', failed);
+    return this.ask(paid ? 'paid' : 'undo', (store) => store.requestMark(mark, this.user, VERSION, stands), paid ? 'Marked paid. The Mac files it on its next pass.' : 'Asked the Mac to undo the payment', failed);
   }
 
   /** Writes a request, and says whether it was sent. */

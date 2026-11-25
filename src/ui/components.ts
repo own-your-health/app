@@ -26,8 +26,12 @@ export interface Ctx {
   refresh(scope: RequestScope, what: string): Promise<void>;
   /** Removes one of the app's own requests while it waits. */
   cancel(p: PendingRequest | PendingMark): Promise<void>;
-  /** Asks the Mac to mark a bill paid, or to undo that; whether it was sent. `failed` takes the reason it was not, else a toast does. */
-  mark(mark: Mark, failed?: (text: string) => void): Promise<boolean>;
+  /**
+   * Asks the Mac to mark a bill paid, or to undo that; whether it was sent.
+   * `failed` takes the reason it was not, else a toast does. Nothing is sent
+   * when `stands`, asked after a last look at the folder, says no.
+   */
+  mark(mark: Mark, failed?: (text: string) => void, stands?: () => boolean): Promise<boolean>;
   signOut(): void;
 }
 
