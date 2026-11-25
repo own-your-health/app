@@ -11,6 +11,7 @@ import { resultGroups } from '../../model/panels';
 import { COMING_UP_DAYS, FLU, fluSeason, SCHEDULE_SOURCE, scheduleDigest, scheduleFor, type DoseState, type FluSeason, type ScheduleRow } from '../../model/schedule';
 import type { Person, PersonIndex, Provenance } from '../../model/types';
 import { resultChart, resultSparkline } from '../chart';
+import { aboutNote, unsureNote } from '../about';
 import { button, card, chip, command, empty, flagChip, link, row, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, localDay, yearOf } from '../format';
@@ -147,6 +148,7 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
       'div',
       { class: 'stack' },
       h('p', null, link({ name: 'person', person: person.id, section: 'results' }, icon('back', 16), ' All results')),
+      unsureNote(idx),
       card(
         {},
         h('div', { class: 'card-head' }, h('h1', null, s.name), flagChip(t.flag)),
@@ -177,16 +179,18 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
       others.length ? card({ title: `Also in ${group.name}` }, others.map((x) => resultRow(person.id, x))) : null,
     );
   }
-  if (!groups.length) return card({ title: 'Results' }, empty('No results yet.'));
+  if (!groups.length) return card({ title: 'Results' }, empty('No results yet.'), unsureNote(idx), aboutNote(idx));
   return h(
     'div',
     { class: 'stack' },
+    unsureNote(idx),
     groups.map((g) =>
       card(
         { title: g.name, actions: g.outOfRange ? chip(`${g.outOfRange} out of range`, 'attention') : null },
         g.tests.map((t) => resultRow(person.id, t)),
       ),
     ),
+    aboutNote(idx),
   );
 }
 

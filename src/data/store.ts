@@ -10,6 +10,7 @@ import { parseBills } from '../model/bills';
 import { parseMedrecEvents } from '../model/events';
 import { atLeast, held, isHeld, noList, parsePrivate, type HeldWhy, type Privacy } from '../model/private';
 import { parseCodeNames } from '../model/codeNames';
+import { aboutAnother, stillAbout, withoutAbout, type About } from '../model/aboutAnother';
 import { parseStanding } from '../model/standing';
 import { parseViews, viewOf, type PersonView, type ViewFile } from '../model/views';
 import type { AttemptLine, Household, MarkRequest, PaidMark, PendingMark, Person, PersonIndex, PersonText, RefreshRequest, RefreshStatus, RefusedRequest, RequestScope, UnpaidMark } from '../model/types';
@@ -151,7 +152,7 @@ export class Store {
   private reading: Promise<void> | null = null;
   private readingSince = 0;
   private runs = 0;
-  /** Whether views.json was there to read. */
+  /** Whether views.json was there to read, in this read or one before. */
   private hasViews = false;
   /** Views, by person and file, that views.json lists and the folder does not give yet. */
   private late = new Set<string>();
@@ -161,6 +162,8 @@ export class Store {
   standingNotes = new Map<string, string>();
   /** Who has no index.json: nothing is imported for them yet. */
   private absent = new Set<string>();
+  /** The items named as about somebody else, by person: they stay out until a list of the folder's files reads. */
+  private named = new Map<string, ReadonlySet<string>>();
   private texts = new Map<string, Promise<PersonText | null>>();
   /** Handled requests of the app's own it has tried to remove once. */
   private tidied = new Set<string>();
@@ -211,6 +214,7 @@ export class Store {
     const upTo = this.finished;
     // Its own view of the folder: a call that hangs, or a read taken over, touches nothing others use.
     const next = new Store(this.folder.fresh());
+    next.named = this.named;
     await next.loadStart();
     await next.loadRecords();
     // Another read took over from this one, which had stalled.
@@ -234,7 +238,8 @@ export class Store {
     this.billsNotes = next.billsNotes;
     this.standingNotes = next.standingNotes;
     this.indexErrors = next.indexErrors;
-    this.hasViews = next.hasViews;
+    this.hasViews ||= next.hasViews;
+    this.named = next.named;
     this.medrec = next.medrec;
     this.viewsError = next.viewsError;
     this.eventsNotes = next.eventsNotes;
@@ -259,6 +264,7 @@ export class Store {
     const household = this.folder.md5('household.json');
     // Whoever compares with it says why it could not be read; with no view to compare, nobody does.
     household.catch(() => undefined);
+    await this.leaveOutAbout(views, household);
     await Promise.all([this.loadEvents(views, household), this.loadPrivate(views, household), this.loadNames(views, household), this.loadBills(views, household)]);
     this.loadedAt = Date.now();
     this.snapshot = JSON.stringify([
@@ -267,7 +273,7 @@ export class Store {
       this.viewsError,
       ...this.household.people.map((p) => {
         const index = this.indexes.get(p.id);
-        return [index?.rev, this.indexErrors.get(p.id), this.eventsNotes.get(p.id), index?.privacy?.kind === 'held' ? index.privacy.text : null, !!index?.codeNames, !!index?.standing, this.standingNotes.get(p.id), this.billsNotes.get(p.id)];
+        return [index?.rev, index?.aboutUnsure, this.indexErrors.get(p.id), this.eventsNotes.get(p.id), index?.privacy?.kind === 'held' ? index.privacy.text : null, !!index?.codeNames, !!index?.standing, this.standingNotes.get(p.id), this.billsNotes.get(p.id)];
       }),
     ]);
   }
@@ -285,6 +291,22 @@ export class Store {
         : { kind: 'unreadable', text: `medrec’s views could not be read: ${e instanceof Error ? e.message : 'unknown error'} The app groups each person’s visits itself.` };
       return null;
     }
+  }
+
+  /** Leaves out what is about somebody else, before anything is made of an index. */
+  private async leaveOutAbout(views: Record<string, unknown> | null, household: Promise<string | null | undefined>): Promise<void> {
+    const named = new Map<string, ReadonlySet<string>>();
+    await Promise.all(
+      this.household.people.map(async (p) => {
+        const [h, i] = await Promise.all([household, this.folder.md5(`${p.folder}/index.json`)].map((m) => m.catch(() => undefined)));
+        const said: About = this.viewsError ? { ids: new Set(), unsure: this.viewsError.kind } : aboutAnother(views, p.id, { household: h, index: i });
+        const about = stillAbout(said, this.named.get(p.id) ?? new Set());
+        named.set(p.id, about.ids);
+        const index = this.indexes.get(p.id);
+        if (index && !this.absent.has(p.id)) this.indexes.set(p.id, withoutAbout(index, about));
+      }),
+    );
+    this.named = named;
   }
 
   private async loadIndexes(): Promise<void> {

@@ -19,8 +19,8 @@ Google Drive. It reads the records folder that
   recent), their full lists of results against their reference range,
   medicines, conditions, allergies, immunizations and imaging, and a sheet to
   hand a doctor;
-- **Papers**: every file in the folder, each with the visit it belongs to,
-  for everyone or one person, by kind of paper;
+- **Papers**: the folder's papers, but those about another person, each with
+  the visit it belongs to, for everyone or one person, by kind of paper;
 - one search over everyone's records, documents and imaging, and the text
   medrec extracted from documents, from the search button in the bar;
 - for any record, the raw FHIR the source served, where it came from, and the
@@ -864,9 +864,25 @@ dropped from the address.
   one that is stale, still to come or refused, the lists, Health (everyone's
   too) and the sheet say why; a folder of an earlier medrec has none, and they
   say nothing.
+- **About another person.** A chart can hold what is about somebody else: a
+  screening a parent answers about themselves, or a result its source says is
+  another's. medrec 0.9.9 and later name those items by id (`about_another` in
+  `views.json`, `src/model/aboutAnother.ts`). They are left out when the index
+  is read, with every link to them, so no list, total, search, sheet or page
+  has one; an item whose own `key` begins with `about|` is left out too,
+  whatever the list says. Their person's own results and papers say how many
+  there are, and nothing else of them. No shared screen, sheet or list of
+  everyone's says it. The list is applied even when the folder's files have
+  changed since `views.json` was written. Results, a test's page and Papers
+  then say that some may be about another person and why, as they do where
+  `views.json` or its list does not read; so does the sheet for a doctor. What
+  an earlier read of this folder named stays out until a list of its files
+  reads, also when an earlier medrec on another computer writes the views
+  again. The first read of a folder whose views an earlier medrec wrote last
+  names none, and nothing is said.
 - **Papers** (`#/papers`, a tab, also from each
-  person's Health): every paper in the Drive
-  folder, newest first by year, each with the visit it belongs to as a
+  person's Health): every paper in the Drive folder but those about another
+  person (above), newest first by year, each with the visit it belongs to as a
   link. A paper is with a visit when the visit holds it, when a record of
   the visit links it (an explanation of benefits names its claim), or when
   it is the receipt for a bill the visit holds (or the only one it can be

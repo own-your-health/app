@@ -12,6 +12,7 @@ import { underHeadings, type ConditionItem, type ItemStanding, type ListNotes, t
 import type { LatestResult } from '../model/overview';
 import { originNames } from '../model/records';
 import type { Household, Person, PersonIndex, Provenance } from '../model/types';
+import { unsureNote } from '../ui/about';
 import { button, card, chip, empty, link, row, type Ctx } from '../ui/components';
 import { h, icon, type Child } from '../ui/dom';
 import { count, dateText, localDay } from '../ui/format';
@@ -326,6 +327,7 @@ function doctorPage(ctx: Ctx, p: Person, idx: PersonIndex): HTMLElement {
     ...head(ctx, `${p.name}’s health summary`, 'Hand this to a doctor: the current picture in a clinician’s terms.', p.id, 'doctor'),
     h('p', { class: 'small' }, meta(p.birth_date ? `Born ${dateText(p.birth_date)} (${ageWords(p.birth_date, today)})` : null, `From ${coverageOf(idx).words.toLowerCase()}, as of ${dateText(today)}`)),
     standingNote(ctx, idx),
+    unsureNote(idx),
     hidden ? h('div', { class: 'sheet-private' }, h('p', { class: 'small muted' }, h('span', { role: 'status' }, status), ' This is discretion, not security: the files stay readable in the shared Drive folder.'), toggle) : null,
     h('p', { class: 'sheet-print' }, button('Print', () => window.print(), { small: true })),
     shown,
