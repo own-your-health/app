@@ -71,24 +71,26 @@ const leads = (words: string, code: string | undefined) => !!plainWords(words) &
 /** A title's "unspecified" only says that nothing more is known. */
 const folded = (s: string) => s.toLowerCase().replace(/\bunspecified\b/g, ' ').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 
+/** Which leads, the source's words or the title; `say` is how either is shown. */
+function choose(title: string, words: string | undefined, code: string | undefined, say: (text: string) => string): Named {
+  if (!words) return { name: say(title) };
+  if (!leads(words, code)) return { name: say(title), source: say(words) };
+  return { name: say(words), ...(folded(title) === folded(words) ? {} : { title: say(title) }) };
+}
+
 /** A condition by the source's words, or by its code's title where they are none a person can read. */
 export function conditionName(index: PersonIndex, r: MedRecord): Named {
   const title = r.kind === 'condition' ? titleOn(index, r, r.code?.system, r.code?.code) : undefined;
-  if (!title) return { name: recordTitle(r) };
-  const words = r.display || r.code?.display;
-  if (!words) return { name: title };
-  if (!leads(words, r.code?.code)) return { name: title, source: words };
-  return { name: words, ...(folded(title) === folded(words) ? {} : { title }) };
+  return title ? choose(title, r.display || r.code?.display, r.code?.code, (text) => text) : { name: recordTitle(r) };
 }
+
+/** In Details: the source's words, else the title, and the title beside words it differs from. */
+export const inDetails = (n: Named): { words: string; title?: string } => ({ words: n.source ?? n.name, title: n.title ?? (n.source ? n.name : undefined) });
 
 /** A claim's diagnosis with its code, "Ear infection (H66.90)", by the same rule. */
 export function diagnosisName(index: PersonIndex, claim: MedRecord, d: Diagnosis): Named {
   const title = titleOn(index, claim, d.system, d.code);
-  if (!title) return { name: diagnosisText(d) };
-  const titled = diagnosisText({ ...d, display: title });
-  if (!d.display) return { name: titled };
-  if (!leads(d.display, d.code)) return { name: titled, source: diagnosisText(d) };
-  return { name: diagnosisText(d), ...(folded(title) === folded(d.display) ? {} : { title: titled }) };
+  return title ? choose(title, d.display, d.code, (text) => diagnosisText({ ...d, display: text })) : { name: diagnosisText(d) };
 }
 
 /** A claim's diagnoses in the payer's order. */

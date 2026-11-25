@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { Store } from '../src/data/store';
 import { claimDiagnoses } from '../src/model/claims';
-import { codeKey, conditionName, diagnosisName, diagnosisNames, nameList, parseCodeNames } from '../src/model/codeNames';
+import { codeKey, conditionName, diagnosisName, diagnosisNames, inDetails, nameList, parseCodeNames } from '../src/model/codeNames';
 import { find } from '../src/model/search';
 import type { JsonObject, MedRecord, PersonIndex } from '../src/model/types';
 import { personNamed } from './demo-data';
@@ -131,6 +131,17 @@ describe('a condition', () => {
     const idx = index(SAMPLE, robin);
     const r = condition(idx, 'High blood pressure');
     expect(conditionName(idx, { ...r, display: '', code: { system: ICD10CM, code: 'I10' } })).toEqual({ name: HTN });
+  });
+
+  it('is in Details in the source’s words, with the title where it differs, and by the title where there are no words', () => {
+    const idx = index(SAMPLE, robin);
+    const r = condition(idx, 'High blood pressure');
+    const shown = (over: Partial<MedRecord>) => inDetails(conditionName(idx, { ...r, ...over }));
+    expect(shown({})).toEqual({ words: 'High blood pressure', title: HTN });
+    expect(shown({ display: 'HYPERTENSION NOS' })).toEqual({ words: 'HYPERTENSION NOS', title: HTN });
+    expect(shown({ display: '', code: { system: ICD10CM, code: 'I10' } })).toEqual({ words: HTN, title: undefined });
+    expect(shown({ display: HTN })).toEqual({ words: HTN, title: undefined });
+    expect(shown({ kind: 'procedure', display: 'Knee scope' })).toEqual({ words: 'Knee scope', title: undefined });
   });
 
   it('is said once when the source’s words are the title’s', () => {

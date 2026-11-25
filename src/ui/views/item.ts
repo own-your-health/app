@@ -180,11 +180,7 @@ function technical(...cards: Child[]): HTMLElement {
 }
 
 /** The record as medrec keeps it: its code, status and every field. */
-function fieldsCard(idx: PersonIndex, r: MedRecord, skip: string[] = []): HTMLElement {
-  const named = r.kind === 'condition' ? [conditionName(idx, r)] : r.kind === 'claim' ? diagnosisNames(idx, r) : [];
-  const titles = named.flatMap((n) => n.title ?? []);
-  // A condition's own words are its name at the source.
-  const words = r.kind === 'claim' ? named.flatMap((n) => n.source ?? []) : [];
+function fieldsCard(r: MedRecord, skip: string[], extra: [string, Child][]): HTMLElement {
   const fields = Object.entries(r.fields).filter(([k]) => k !== 'when' && !skip.includes(k));
   return card(
     { title: 'The record' },
@@ -193,9 +189,7 @@ function fieldsCard(idx: PersonIndex, r: MedRecord, skip: string[] = []): HTMLEl
       ['Name at the source', r.display],
       ['Code', r.code ? [r.code.display, r.code.code].filter(Boolean).join(' · ') : undefined],
       ['Code system', r.code?.system],
-      ['The code’s published title', r.kind === 'condition' ? titles[0] : undefined],
-      [titles.length > 1 ? 'Diagnoses, by published title' : 'Diagnosis, by published title', r.kind === 'claim' && titles.length ? nameList(titles) : undefined],
-      [words.length > 1 ? 'Diagnoses, in the claim’s words' : 'Diagnosis, in the claim’s words', words.length ? nameList(words) : undefined],
+      ...extra,
       ['Status', r.status],
       ['Date', r.date],
       ...fields.map(([k, v]): [string, Child] => [fieldLabel(k), fieldValue(v)]),
@@ -203,9 +197,10 @@ function fieldsCard(idx: PersonIndex, r: MedRecord, skip: string[] = []): HTMLEl
   );
 }
 
-function recordTechnical(ctx: Ctx, idx: PersonIndex, r: MedRecord, skip: string[] = []): HTMLElement {
+/** A record whole, folded: without the fields to skip, and with what its page adds after its code. */
+function recordTechnical(ctx: Ctx, idx: PersonIndex, r: MedRecord, skip: string[] = [], extra: [string, Child][] = []): HTMLElement {
   return technical(
-    fieldsCard(idx, r, skip),
+    fieldsCard(r, skip, extra),
     ...r.provenance.map((p, i) => provenanceCard(ctx, idx, p, i, r.provenance.length)),
     card({ title: 'Identifiers' }, kv([['Record', h('code', null, r.id)], ['Merge key', h('code', null, r.key)]])),
   );
@@ -388,10 +383,11 @@ function conditionView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   const { active, ended, other } = conditionList(idx);
   const i = [...active, ...ended, ...other].find((x) => x.records.includes(r));
   const name = recordTitle(r);
+  const named = conditionName(idx, r);
   const status = statusText(r.status);
   return [
     head(
-      conditionName(idx, r).name,
+      named.name,
       i?.refuted ? chip('Ruled out', 'muted') : i?.unconfirmed ? chip('Unconfirmed', 'muted') : null,
       ['Condition', status, fromText(ctx, idx, r)],
       kv([
@@ -402,7 +398,7 @@ function conditionView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
       ]),
       learnLink(r, name),
     ),
-    recordTechnical(ctx, idx, r),
+    recordTechnical(ctx, idx, r, [], [['The code’s published title', named.title]]),
   ];
 }
 
@@ -478,6 +474,8 @@ function claimView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   const a = claimAmounts(r);
   const c = claimContext(idx, ctx.store.household, idx.person, localDay(ctx.now()), r);
   const diagnoses = diagnosisNames(idx, r);
+  const titles = diagnoses.flatMap((d) => d.title ?? []);
+  const words = diagnoses.flatMap((d) => d.source ?? []);
   const docs = r.documents.map((id) => idx.documents.find((d) => d.id === id)).filter((d): d is MedDocument => !!d);
   const start = isObject(r.fields.billable_period) ? str(r.fields.billable_period.start) : undefined;
   return [
@@ -510,7 +508,10 @@ function claimView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
       : null,
     lines.length ? linesCard(idx.person, lines, c.lineRecords) : null,
     docs.length ? card({ title: 'Documents' }, docs.map((d) => row({ route: itemRoute(idx.person, d.id), title: documentTitle(d), meta: [docTypeLabel(d.doc_type), dateText(d.date)].filter(Boolean).join(' · ') }))) : null,
-    recordTechnical(ctx, idx, r, lines.length ? ['items'] : []),
+    recordTechnical(ctx, idx, r, lines.length ? ['items'] : [], [
+      [titles.length > 1 ? 'Diagnoses, by published title' : 'Diagnosis, by published title', titles.length ? nameList(titles) : undefined],
+      [words.length > 1 ? 'Diagnoses, in the claim’s words' : 'Diagnosis, in the claim’s words', words.length ? nameList(words) : undefined],
+    ]),
   ];
 }
 
