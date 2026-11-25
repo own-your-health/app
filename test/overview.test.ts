@@ -71,6 +71,7 @@ describe('the latest results', () => {
       'Total cholesterol',
       'Triglycerides',
       'Hemoglobin',
+      'Calcium',
     ]);
     expect(latest[0]!.flag).toMatchObject({ level: 'high', from: 'source' });
     expect(latest.filter((r) => isOutOfRange(r.flag))).toHaveLength(1);

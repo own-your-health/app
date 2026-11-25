@@ -1,1363 +1,177 @@
-// Writes public/demo/: a synthetic records folder in medrec's layout, for
-// the demo mode and the tests. Every person, organization, id and value is
-// invented. Run `node scripts/demo-folder.mjs` after changing it, and commit
-// the result; the tests check the manifest against the files.
+// Writes the sample records folder (public/demo/) from scripts/sample/: what
+// invented providers serve and papers a household keeps. This script only
+// puts those where medrec reads them. medrec 0.9.7, its own release, writes
+// every record, paper, index, view and status: no field of them is set here.
 //
-// The folder's times are anchored at ANCHOR. The demo moves the times of
-// loads, filings, requests and checks forward by (now - ANCHOR) when it reads
-// them (LOAD_TIMES in src/folder.ts), so the sample's loads always look
-// recent; times of care stay as written.
+//   MEDREC=<medrec 0.9.7> node scripts/demo-folder.mjs <a new folder>
+//
+// It writes to a folder that does not exist yet and deletes nothing. To take a
+// new sample, move public/demo away and the new folder into its place.
+//
+// The same sources give the same bytes (medrec.mjs): medrec runs over
+// stand-ins for the provider CLIs and pdftotext, and finds nothing else.
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { basename, dirname, join, resolve } from 'node:path';
+import { createHash } from 'node:crypto';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
+import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { APP_VIEW, md5Of, withMedrec } from './medrec.mjs';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'demo');
-const ANCHOR = '2026-11-22T20:00:00Z';
+import { ANCHOR, APP_VIEW, iso, md5Of, scratchMachine } from './medrec.mjs';
+import { machineWith, put } from './providers.mjs';
+import { PEOPLE, SOURCES } from './sample/household.mjs';
+import * as alex from './sample/alex.mjs';
+import * as drew from './sample/drew.mjs';
+import * as robin from './sample/robin.mjs';
+import * as sam from './sample/sam.mjs';
 
-// A seeded generator, so the folder is the same on every run.
-let seed = 0x5eed1234;
-// mulberry32: 32-bit integer steps, so no bits are lost to floating point.
-function rand() {
-  seed = (seed + 0x6d2b79f5) | 0;
-  let t = seed;
-  t = Math.imul(t ^ (t >>> 15), t | 1);
-  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-  return (t ^ (t >>> 14)) >>> 0;
-}
-const B32 = 'abcdefghijklmnopqrstuvwxyz234567';
-function id(kind) {
-  let s = '';
-  for (let i = 0; i < 20; i++) s += B32[rand() & 31];
-  return `${kind}_${s}`;
-}
-function hex(n) {
-  let s = '';
-  for (let i = 0; i < n; i++) s += '0123456789abcdef'[rand() & 15];
-  return s;
-}
-function at(offsetMinutes) {
-  return new Date(Date.parse(ANCHOR) + offsetMinutes * 60_000).toISOString().replace('.000Z', 'Z');
+const HERE = dirname(fileURLToPath(import.meta.url));
+const KEPT = resolve(HERE, '..', 'public', 'demo');
+const OUT = process.argv[2] && resolve(process.argv[2]);
+if (!OUT || existsSync(OUT)) {
+  console.error('usage: node scripts/demo-folder.mjs <a new folder>');
+  process.exit(2);
 }
 
-const files = new Map();
-// When each source's newest import ran: the records and documents it added
-// are filed at that moment, as medrec files them, and the app shows them as
-// new in the latest load.
-const ROBIN_CHART_LOAD = at(-60 * 3);
-const ALEX_PEDS_LOAD = at(-60 * 26);
-// When each source's first import ran (minutes from the anchor); its
-// records were filed then.
-const FIRST_IMPORT = new Map();
+const MINUTE = 60;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
 
-function write(path, value) {
-  files.set(path, typeof value === 'string' ? value : `${JSON.stringify(value, null, 2)}\n`);
-}
+const { home, root: ROOT, at, signedIn, serves, fails, imports, files, idOf } = machineWith(PEOPLE, SOURCES);
+const refreshes = (s, before, ...more) => at(before, '--profile', 'demo', 'refresh', 'add', '--source', idOf(s), '--provider-profile', s.login, ...more);
+const pass = (before) => at(before, 'refresh', '--scheduled');
 
-// ---- People, organizations, sources ----
+const { robinChart, robinPlan, robinBlood, robinRx, samChart, samLab, samBilling, samPlan, alexPeds, alexPlan, drewPeds } = SOURCES;
 
-const folderId = id('f');
-const robin = { id: id('p'), name: 'Robin Example', folder: 'Robin Example', birth_date: '1980-01-01', adult: true, aliases: ['Robin Q Example'], links: { huishouden_health_person: 'hh-demo-robin' }, created_at: at(-60 * 24 * 40) };
-const sam = { id: id('p'), name: 'Sam Example', folder: 'Sam Example', birth_date: '1980-07-01', adult: true, links: { huishouden_health_person: 'hh-demo-sam' }, created_at: at(-60 * 24 * 40) };
-const alex = { id: id('p'), name: 'Alex Example', folder: 'Alex Example', birth_date: '2018-01-01', guardians: [robin.id, sam.id], links: { huishouden_health_person: 'hh-demo-alex' }, created_at: at(-60 * 24 * 40) };
-// A baby. Its id is drawn after the other sources', so theirs stay put.
-const jamie = { id: null, name: 'Jamie Example', folder: 'Jamie Example', birth_date: '2026-07-28', guardians: [robin.id, sam.id], links: { huishouden_health_person: 'hh-demo-jamie' }, created_at: at(-60 * 24 * 30) };
-const people = [robin, sam, alex, jamie];
+// ---- The folder, and what was on paper ----
 
-const orgs = {
-  health: { id: id('g'), name: 'Example Health', fhir_base: 'https://fhir.example.org/r4' },
-  peds: { id: id('g'), name: 'Example Pediatrics', fhir_base: 'https://api.example.net/fhir/r4' },
-  plan: { id: id('g'), name: 'Example Health Plan' },
-  blood: { id: id('g'), name: 'Example Blood Center' },
-  lab: { id: id('g'), name: 'Example Lab' },
-  billing: { id: id('g'), name: 'Example Billing' },
-};
+at(40 * DAY, 'profiles', 'add', 'demo');
+at(40 * DAY, 'init', ROOT);
+for (const p of Object.values(PEOPLE)) at(40 * DAY, 'people', 'add', p.name, '--birth-date', p.born, ...p.args);
+files('robin', 39 * DAY, robin.PAPERS);
+files('sam', 39 * DAY, [...sam.PAPERS, sam.LATER_PAPERS.endoscopy, sam.LATER_PAPERS.center]);
+for (const image of sam.ANKLE) put(join(home, 'papers', 'ankle', image.file), image.bytes);
+at(39 * DAY, 'images', 'intake', '--person', PEOPLE.sam.name, join(home, 'papers', 'ankle'));
 
-function source(person, cli, slug, org, kind = 'fhir') {
-  return {
-    id: id('s'),
-    kind,
-    person: person.id,
-    cli,
-    organization: slug,
-    organization_name: org.name,
-    ...(org.fhir_base ? { fhir_base: org.fhir_base } : {}),
-    patient_id: `pat-${hex(6)}`,
-    last_pull: at(-90),
-  };
-}
+// ---- The first loads ----
 
-const src = {
-  robinChart: source(robin, 'mychart', 'example-health', orgs.health),
-  robinPlan: source(robin, 'uhc', 'example-health-plan', orgs.plan, 'portal'),
-  robinBlood: source(robin, 'oneblood', 'example-blood-center', orgs.blood, 'portal'),
-  samChart: source(sam, 'mychart', 'example-health', orgs.health),
-  samLab: source(sam, 'labcorp', 'example-lab', orgs.lab, 'portal'),
-  samBilling: source(sam, 'peryourhealth', 'example-billing', orgs.billing, 'portal'),
-  alexPeds: source(alex, 'athena', 'example-pediatrics', orgs.peds),
-};
-FIRST_IMPORT.set(src.robinChart.id, -60 * 24 * 8);
-FIRST_IMPORT.set(src.robinPlan.id, -60 * 24 * 3);
-FIRST_IMPORT.set(src.robinBlood.id, -60 * 24 * 12);
-FIRST_IMPORT.set(src.samChart.id, -60 * 5);
-FIRST_IMPORT.set(src.samLab.id, -60 * 24 * 9);
-FIRST_IMPORT.set(src.alexPeds.id, -60 * 26);
-jamie.id = id('p');
-src.jamiePeds = source(jamie, 'athena', 'example-pediatrics', orgs.peds);
-const JAMIE_PEDS_LOAD = at(-60 * 20);
-FIRST_IMPORT.set(src.jamiePeds.id, -60 * 20);
+// The portal keeps the plan's own claims from its app.
+const noClaims = [{ resource_type: 'ExplanationOfBenefit', reason: 'the server does not give this app claims', code: 'forbidden' }];
+imports(robinChart, 38 * DAY, robin.CHART[0], noClaims);
+imports(robinRx, 38 * DAY, robin.RX[0]);
+imports(samPlan, 36 * DAY, sam.PLAN[0]);
+imports(alexPlan, 36 * DAY, alex.PLAN[0]);
+imports(alexPeds, 35 * DAY, alex.PEDS[0]);
+imports(drewPeds, 35 * DAY, drew.PEDS[0]);
+imports(samLab, 35 * DAY, sam.LAB[0]);
+imports(robinPlan, 33 * DAY, robin.PLAN[0]);
+files('robin', 32 * DAY, [robin.LATER_PAPERS.october]);
+files('robin', 24 * DAY, [robin.LATER_PAPERS.lab]);
+imports(robinPlan, 20 * DAY, robin.PLAN[1]);
+imports(samBilling, 20 * DAY, sam.BILLING[0]);
+imports(samChart, 12 * DAY, sam.CHART[0]);
+imports(robinBlood, 12 * DAY, robin.BLOOD[0]);
 
-const writeHousehold = () => write('household.json', {
-  schema: 'medrec-household/v1',
-  format: 1,
-  folder_id: folderId,
-  rev: 12,
-  created_at: at(-60 * 24 * 40),
-  people,
-  organizations: Object.values(orgs).map((o) => ({ ...o, aliases: [] })),
-  sources: Object.values(src),
-});
-writeHousehold();
+// ---- Loads on a schedule ----
 
-// ---- Records ----
+// A lab that loads every nine days or so, and last did.
+refreshes(samLab, 9 * DAY, '--every', '208h');
+serves(samLab, 9 * DAY, sam.LAB[0]);
+pass(9 * DAY);
+imports(robinChart, 8 * DAY, robin.CHART[1], noClaims);
+imports(robinPlan, 3 * DAY, robin.PLAN[2]);
+imports(robinBlood, 2 * DAY, robin.BLOOD[1]);
+// A billing site paused by hand.
+refreshes(samBilling, 2 * DAY);
+at(2 * DAY, 'refresh', 'pause', idOf(samBilling), '--reason', 'user', '--note', 'Paused by hand on the Mac.');
+for (const s of [robinRx, samPlan, alexPlan]) refreshes(s, 30 * HOUR, '--every', '48h');
+serves(robinRx, 30 * HOUR, robin.RX[1]);
+serves(samPlan, 30 * HOUR, sam.PLAN[1]);
+serves(alexPlan, 30 * HOUR, alex.PLAN[1]);
+pass(30 * HOUR);
+refreshes(alexPeds, 26 * HOUR);
+serves(alexPeds, 26 * HOUR, alex.PEDS[1]);
+pass(26 * HOUR);
+files('alex', DAY, [alex.LATER_PAPERS.school]);
+refreshes(drewPeds, 20 * HOUR);
+serves(drewPeds, 20 * HOUR, drew.PEDS[0]);
+pass(20 * HOUR);
+// Member sites whose sign-ins nothing renews: each loads after someone signs
+// in, and otherwise waits. The lab's site does not answer from here on.
+refreshes(robinPlan, 8 * HOUR);
+signedIn(robinPlan, { authenticated: false, renews: false, lasts_secs: 1800 });
+fails(samLab, 5, 'the site did not answer; try again later (503 Service Unavailable)\n');
+pass(8 * HOUR);
+refreshes(robinBlood, 6 * HOUR);
+fails(robinBlood, 3, '');
+pass(6 * HOUR);
+refreshes(samChart, 5 * HOUR);
+serves(samChart, 5 * HOUR, sam.CHART[1]);
+signedIn(samChart, { session_valid: true, renews: true, expires_at: iso(-40 * HOUR) });
+pass(5 * HOUR);
+// A person asks for Robin's chart, as the app writes it.
+refreshes(robinChart, 3 * HOUR);
+serves(robinChart, 3 * HOUR, robin.CHART[2], noClaims);
+signedIn(robinChart, { session_valid: true, renews: true, expires_at: iso(-200 * DAY) });
+const asked = iso(3 * HOUR + 4 * MINUTE);
+const id = `x_${[...createHash('sha256').update('robin chart request').digest().subarray(0, 20)].map((b) => 'abcdefghijklmnopqrstuvwxyz234567'[b % 32]).join('')}`;
+put(
+  join(ROOT, '_requests', `${asked.replace(/[-:]/g, '')}_${id}.json`),
+  JSON.stringify({ schema: 'medrec-request/v1', id, requested_at: asked, requested_by: { email: 'robin@example.com', name: PEOPLE.robin.name }, scope: { source: idOf(robinChart) }, app: { name: 'own-your-health-app', version: '0.1.0' } }, null, 2),
+);
+pass(3 * HOUR);
+// The practice's sign-in renews itself, so its end is news.
+fails(alexPeds, 3, 'The sign-in has expired and could not be renewed.\n');
+signedIn(alexPeds, { session_valid: true, renews: true });
+pass(2 * HOUR);
+// Nothing is due: the pass that says the Mac still looks.
+pass(2 * MINUTE);
 
-const LOINC = 'http://loinc.org';
-const SNOMED = 'http://snomed.info/sct';
-const ICD10 = 'http://hl7.org/fhir/sid/icd-10-cm';
-const RXNORM = 'http://www.nlm.nih.gov/research/umls/rxnorm';
-const CVX = 'http://hl7.org/fhir/sid/cvx';
+// ---- The codes' names ----
 
-function sourceDir(person, s) {
-  return `${person.folder}/Records/${s.cli}-${s.organization}`;
-}
-
-function provenance(person, s, type, rid, filedAt, cliVersion = '0.7.1') {
-  return {
-    source: { kind: s.kind === 'fhir' ? 'fhir' : 'portal', cli: s.cli, cli_version: cliVersion, organization_id: s.organization, ...(s.fhir_base ? { fhir_base: s.fhir_base } : {}) },
-    method: s.kind === 'fhir' ? 'fhir-api' : 'portal',
-    source_resource: { type, id: rid, last_updated: `${filedAt.slice(0, 10)}T08:00:00Z` },
-    fetched_at: filedAt,
-    filed_at: filedAt,
-    raw_path: `${sourceDir(person, s)}/${type}/${rid}.json`,
-    filed_by: 'medrec 0.2.11',
-  };
-}
-
-class PersonData {
-  constructor(person) {
-    this.person = person;
-    this.records = [];
-    this.documents = [];
-    this.studies = [];
-    this.imports = [];
-    this.texts = {};
-  }
-
-  record(s, type, kind, { date, code, display, status, fields = {}, resource, filed = at((FIRST_IMPORT.get(s.id) ?? -60 * 24 * 30) - 1), extraVersions = 0 }) {
-    const rid = `${type.toLowerCase()}-${hex(8)}`;
-    const prov = provenance(this.person, s, type, rid, filed);
-    const rec = {
-      id: id('r'),
-      kind,
-      key: `${kind}|${code ? `${code.system}|${code.code}` : display.toLowerCase()}|${date ?? ''}`,
-      ...(date ? { date } : {}),
-      ...(code ? { code } : {}),
-      display,
-      ...(status ? { status } : {}),
-      fields: { ...(date ? { when: date } : {}), ...fields },
-      documents: [],
-      provenance: [prov],
-    };
-    this.records.push(rec);
-    write(prov.raw_path, { resourceType: type, id: rid, meta: { lastUpdated: prov.source_resource.last_updated }, ...resource });
-    for (let i = 0; i < extraVersions; i++) {
-      write(prov.raw_path.replace(/\.json$/, `~${hex(8)}.json`), { resourceType: type, id: rid, meta: { lastUpdated: `${date}T08:00:00Z` }, ...resource, status: 'preliminary' });
-    }
-    return rec;
-  }
-
-  document(s, { date, doc_type, title, organization, pages = 1, text, statement, filed = at((s && FIRST_IMPORT.get(s.id)) ?? -60 * 24 * 20) , original }) {
-    const did = id('d');
-    const year = (date ?? '2026').slice(0, 4);
-    const name = `${date}_${doc_type}_${organization.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_${original}`;
-    const binId = `binary-${hex(8)}`;
-    const doc = {
-      id: did,
-      path: `${this.person.folder}/${doc_type === 'bill' || doc_type === 'eob' ? 'Claims' : 'Documents'}/${year}/${name}`,
-      sha256: hex(64),
-      md5: hex(32),
-      size: 40_000 + (rand() % 200_000),
-      media_type: 'application/pdf',
-      pages,
-      original_name: original,
-      title,
-      doc_type,
-      date,
-      organization,
-      filed_at: filed,
-      origin: { kind: s ? 'fhir' : 'inbox', name: original, action: s ? 'copied' : 'moved' },
-      text: { chars: text.length, engines: ['pdftotext 26.10.0'] },
-      ...(statement ? { statement } : {}),
-      provenance: s
-        ? provenance(this.person, s, 'Binary', binId, filed)
-        : { source: { kind: 'scan' }, method: 'scan', filed_at: filed, classified_by: 'medrec intake', filed_by: 'medrec 0.2.11' },
-    };
-    if (s) write(doc.provenance.raw_path, { resourceType: 'Binary', id: binId, contentType: 'application/pdf', data: '(the bytes of the filed PDF)' });
-    this.documents.push(doc);
-    this.texts[did] = text;
-    return doc;
-  }
-
-  importRun(s, { importedAt, added, updated, unchanged, docs = 0, cliVersion = '0.7.1' }) {
-    const run = {
-      id: id('i'),
-      source_dir: sourceDir(this.person, s),
-      stream_sha256: hex(64),
-      stream_bytes: 100_000 + (rand() % 900_000),
-      cli: s.cli,
-      cli_version: cliVersion,
-      organization: s.organization,
-      patient_id: s.patient_id,
-      pulled_at: importedAt,
-      imported_at: importedAt,
-      counts: { Patient: 1, Observation: added + unchanged },
-      records_added: added,
-      records_updated: updated,
-      records_unchanged: unchanged,
-      records_older: 0,
-      resources_written: added + updated,
-      resources_unchanged: unchanged,
-      documents_added: docs,
-    };
-    this.imports.push(run);
-    return run;
-  }
-
-  write() {
-    const f = this.person.folder;
-    write(`${f}/index.json`, { schema: 'medrec-index/v1', person: this.person.id, rev: 9, documents: this.documents, records: this.records, studies: this.studies, imports: this.imports });
-    write(`${f}/text.json`, { schema: 'medrec-text/v1', person: this.person.id, texts: this.texts });
-    this.noteId ??= id('n');
-    write(`${f}/notes.md`, `# Notes: ${this.person.name}\n\n## 2026-10-02 (${this.noteId})\nTags: question\n\nAsk about the cholesterol recheck at the next visit.\n`);
-  }
-}
-
-function obs(code, display, value, unit, ucum, range, interp) {
-  return {
-    status: 'final',
-    category: [{ coding: [{ system: 'http://terminology.hl7.org/CodeSystem/observation-category', code: 'laboratory', display: 'Laboratory' }] }],
-    code: { coding: [{ system: LOINC, code, display }], text: display },
-    valueQuantity: { value, unit, system: 'http://unitsofmeasure.org', code: ucum },
-    ...(range ? { referenceRange: [{ text: range }] } : {}),
-    ...(interp ? { interpretation: [{ text: interp }] } : {}),
-  };
-}
-
-// Robin: a primary-care system, an insurer, a blood donor centre.
-const R = new PersonData(robin);
-const ldl = [['2025-03-10', 162, 'High'], ['2025-09-15', 141, 'High'], ['2026-03-20', 118, 'Normal'], ['2026-10-01', 104, 'Normal']];
-for (const [date, v, interp] of ldl) {
-  R.record(src.robinChart, 'Observation', 'result', {
-    date,
-    code: { system: LOINC, code: '13457-7', display: 'Cholesterol in LDL, calculated' },
-    display: 'LDL cholesterol',
-    status: 'final',
-    fields: { value: { value: v, unit: 'mg/dL', system: 'http://unitsofmeasure.org' }, reference_range: '<130 mg/dL', interpretation: interp, category: 'Laboratory', issued: `${date}T15:00:00Z` },
-    resource: { ...obs('13457-7', 'Cholesterol in LDL, calculated', v, 'mg/dL', 'mg/dL', '<130 mg/dL', interp), effectiveDateTime: date },
-    extraVersions: date === '2026-10-01' ? 1 : 0,
-  });
-}
-for (const [date, v] of [['2025-03-10', 94], ['2025-09-15', 101], ['2026-10-01', 92]]) {
-  R.record(src.robinChart, 'Observation', 'result', {
-    date,
-    code: { system: LOINC, code: '2345-7', display: 'Glucose [Mass/volume] in Serum or Plasma' },
-    display: 'Glucose',
-    status: 'final',
-    fields: { value: { value: v, unit: 'mg/dL' }, reference_range: '70-99 mg/dL', interpretation: v > 99 ? 'High' : 'Normal', category: 'Laboratory' },
-    resource: { ...obs('2345-7', 'Glucose', v, 'mg/dL', 'mg/dL', '70-99 mg/dL', v > 99 ? 'High' : 'Normal'), effectiveDateTime: date },
-  });
-}
-R.record(src.robinChart, 'Observation', 'result', {
-  date: '2026-10-01',
-  code: { system: LOINC, code: '4548-4', display: 'Hemoglobin A1c/Hemoglobin.total in Blood' },
-  display: 'Hemoglobin A1c',
-  status: 'final',
-  fields: { value: { value: 5.4, unit: '%' }, reference_range: '4.0-5.6 %', interpretation: 'Normal', category: 'Laboratory' },
-  resource: { ...obs('4548-4', 'Hemoglobin A1c', 5.4, '%', '%', '4.0-5.6 %', 'Normal'), effectiveDateTime: '2026-10-01' },
-});
-// The rest of each lipid panel and metabolic panel those visits drew.
-// `asText`: the number came the way some labs send one, as text (a FHIR
-// valueString), with a structured range and no flag.
-function lab(P, source, date, [code, name, display, v, unit, range, interp], asText = false) {
-  const quantity = { ...obs(code, display, v, unit, unit, range, interp), effectiveDateTime: date };
-  const bound = (n) => ({ value: Number(n), unit, system: 'http://unitsofmeasure.org', code: unit });
-  const [low, high] = range.replace(` ${unit}`, '').split('-');
-  const plain = { ...quantity, valueString: String(v), referenceRange: [{ low: bound(low), high: bound(high), text: `${low} - ${high} ${unit}` }] };
-  delete plain.valueQuantity;
-  delete plain.interpretation;
-  P.record(source, 'Observation', 'result', {
-    date,
-    code: { system: LOINC, code, display: name },
-    display,
-    status: 'final',
-    fields: asText
-      ? { value: String(v), reference_range: `${low} ${unit} – ${high} ${unit}`, category: 'Laboratory' }
-      : { value: { value: v, unit }, reference_range: range, interpretation: interp, category: 'Laboratory' },
-    resource: asText ? plain : quantity,
-  });
-}
-for (const [date, total, trig, hdl] of [['2025-03-10', 238, 168, 44], ['2025-09-15', 214, 152, 46], ['2026-03-20', 189, 128, 48], ['2026-10-01', 176, 117, 51]]) {
-  lab(R, src.robinChart, date, ['2093-3', 'Cholesterol [Mass/volume] in Serum or Plasma', 'Cholesterol, total', total, 'mg/dL', '<200 mg/dL', total >= 200 ? 'High' : 'Normal']);
-  lab(R, src.robinChart, date, ['2571-8', 'Triglyceride [Mass/volume] in Serum or Plasma', 'Triglycerides', trig, 'mg/dL', '<150 mg/dL', trig >= 150 ? 'High' : 'Normal']);
-  lab(R, src.robinChart, date, ['2085-9', 'Cholesterol in HDL [Mass/volume] in Serum or Plasma', 'HDL cholesterol', hdl, 'mg/dL', '>39 mg/dL', 'Normal']);
-}
-for (const [date, k, cr, na] of [['2025-03-10', 4.4, 0.8, 140], ['2025-09-15', 4.6, 0.9, 139], ['2026-10-01', 4.9, 0.9, 141]]) {
-  lab(R, src.robinChart, date, ['2823-3', 'Potassium [Moles/volume] in Serum or Plasma', 'Potassium', k, 'mmol/L', '3.5-5.1 mmol/L', 'Normal']);
-  lab(R, src.robinChart, date, ['2160-0', 'Creatinine [Mass/volume] in Serum or Plasma', 'Creatinine', cr, 'mg/dL', '0.6-1.2 mg/dL', 'Normal']);
-  lab(R, src.robinChart, date, ['2951-2', 'Sodium [Moles/volume] in Serum or Plasma', 'Sodium', na, 'mmol/L', '136-145 mmol/L', 'Normal'], date === '2025-09-15');
-}
-// The portal names the 2025 physical by a billing descriptor, in capitals:
-// the app shows its reason instead and keeps the descriptor for Details.
-for (const [date, reason, code, named] of [['2025-03-10', 'Annual physical', '99396', 'YEARLY EXAM RETURNING ADULT'], ['2025-09-15', 'Follow-up', '99213', 'Office visit'], ['2026-10-01', 'Annual physical', '99396', 'Office visit']]) {
-  R.record(src.robinChart, 'Encounter', 'encounter', {
-    date,
-    code: { system: 'http://www.ama-assn.org/go/cpt', code, display: named },
-    display: named,
-    status: 'finished',
-    fields: { class: 'ambulatory', practitioner: 'Dr. Jordan Sample', location: 'Example Health Main Clinic', reason, period: { start: `${date}T14:00:00Z`, end: `${date}T14:40:00Z` } },
-    resource: { status: 'finished', class: { code: 'AMB', display: 'ambulatory' }, type: [{ text: named }], period: { start: `${date}T14:00:00Z`, end: `${date}T14:40:00Z` }, reasonCode: [{ text: reason }] },
-  });
-}
-R.record(src.robinChart, 'Condition', 'condition', {
-  date: '2025-03-10',
-  code: { system: ICD10, code: 'I10', display: 'Essential (primary) hypertension' },
-  display: 'High blood pressure',
-  status: 'active',
-  fields: { verification_status: 'confirmed', category: 'Problem list item' },
-  resource: { clinicalStatus: { coding: [{ code: 'active' }] }, code: { coding: [{ system: ICD10, code: 'I10', display: 'Essential (primary) hypertension' }] }, onsetDateTime: '2025-03-10' },
-});
-R.record(src.robinChart, 'Condition', 'condition', {
-  date: '2019-05-01',
-  code: { system: ICD10, code: 'J30.2', display: 'Other seasonal allergic rhinitis' },
-  display: 'Seasonal allergies',
-  status: 'resolved',
-  fields: { verification_status: 'confirmed', abatement: '2024-06-01' },
-  resource: { clinicalStatus: { coding: [{ code: 'resolved' }] }, code: { coding: [{ system: ICD10, code: 'J30.2' }] }, onsetDateTime: '2019-05-01', abatementDateTime: '2024-06-01' },
-});
-R.record(src.robinChart, 'MedicationRequest', 'medication', {
-  date: '2025-03-12',
-  code: { system: RXNORM, code: '314076', display: 'lisinopril 10 MG Oral Tablet' },
-  display: 'Lisinopril 10 mg tablet',
-  status: 'active',
-  fields: { dosage: 'Take 1 tablet by mouth once a day', prescriber: 'Dr. Jordan Sample', intent: 'order', source: 'request' },
-  resource: { status: 'active', intent: 'order', medicationCodeableConcept: { coding: [{ system: RXNORM, code: '314076' }], text: 'Lisinopril 10 mg tablet' }, authoredOn: '2025-03-12', dosageInstruction: [{ text: 'Take 1 tablet by mouth once a day' }] },
-});
-R.record(src.robinChart, 'MedicationRequest', 'medication', {
-  date: '2023-04-02',
-  code: { system: RXNORM, code: '1014678', display: 'cetirizine hydrochloride 10 MG Oral Tablet' },
-  display: 'Cetirizine 10 mg tablet',
-  status: 'stopped',
-  fields: { dosage: 'Take 1 tablet daily as needed', source: 'request' },
-  resource: { status: 'stopped', intent: 'order', medicationCodeableConcept: { text: 'Cetirizine 10 mg tablet' }, authoredOn: '2023-04-02' },
-});
-// The pharmacy's fills of the lisinopril prescription.
-for (const date of ['2026-08-14', '2026-11-12']) {
-  R.record(src.robinChart, 'MedicationDispense', 'medication', {
-    date,
-    code: { system: RXNORM, code: '314076', display: 'lisinopril 10 MG Oral Tablet' },
-    display: 'Lisinopril 10 mg tablet',
-    status: 'completed',
-    fields: { dosage: 'Take 1 tablet by mouth once a day', quantity: '90 tablet', days_supply: 90, pharmacy: 'Example Pharmacy', prescriber: 'Dr. Jordan Sample', source: 'dispense' },
-    resource: { status: 'completed', medicationCodeableConcept: { coding: [{ system: RXNORM, code: '314076' }], text: 'Lisinopril 10 mg tablet' }, whenHandedOver: date, quantity: { value: 90, unit: 'tablet' }, daysSupply: { value: 90, unit: 'days' } },
-  });
-}
-R.record(src.robinChart, 'AllergyIntolerance', 'allergy', {
-  date: '2016-08-01',
-  code: { system: SNOMED, code: '300916003', display: 'Latex allergy' },
-  display: 'Latex',
-  status: 'inactive',
-  fields: { criticality: 'low', reaction: ['Itching'] },
-  resource: { clinicalStatus: { coding: [{ code: 'inactive' }] }, code: { text: 'Latex' }, criticality: 'low', reaction: [{ manifestation: [{ text: 'Itching' }] }] },
-});
-R.record(src.robinChart, 'Immunization', 'immunization', {
-  date: '2025-10-04',
-  code: { system: CVX, code: '309', display: 'COVID-19, mRNA, 2024-2025 formula' },
-  display: 'COVID-19 vaccine',
-  status: 'not-done',
-  fields: {},
-  resource: { status: 'not-done', statusReason: { text: 'Patient declined' }, vaccineCode: { coding: [{ system: CVX, code: '309' }], text: 'COVID-19 vaccine' }, occurrenceDateTime: '2025-10-04' },
-});
-R.record(src.robinChart, 'AllergyIntolerance', 'allergy', {
-  date: '2012-01-01',
-  code: { system: SNOMED, code: '91939003', display: 'Allergy to sulfonamide' },
-  display: 'Sulfa drugs',
-  status: 'active',
-  fields: { criticality: 'low', reaction: ['Rash'] },
-  resource: { clinicalStatus: { coding: [{ code: 'active' }] }, code: { text: 'Sulfa drugs' }, criticality: 'low', reaction: [{ manifestation: [{ text: 'Rash' }] }] },
-});
-for (const [date, code, name] of [['2025-10-04', '141', 'Influenza, seasonal, injectable'], ['2026-10-01', '141', 'Influenza, seasonal, injectable'], ['2024-02-11', '115', 'Tdap']]) {
-  R.record(src.robinChart, 'Immunization', 'immunization', {
-    date,
-    code: { system: CVX, code, display: name },
-    display: name,
-    status: 'completed',
-    fields: { performer: 'Example Health Main Clinic', lot_number: `LOT${hex(4).toUpperCase()}`, site: 'Left arm' },
-    resource: { status: 'completed', vaccineCode: { coding: [{ system: CVX, code }], text: name }, occurrenceDateTime: date },
-  });
-}
-const usd = (amount) => ({ amount, currency: 'USD' });
-// The plan balances the newest statement printed: the year's deductible and out-of-pocket limit.
-const planBalance = [
-  {
-    category: '1',
-    network: 'in',
-    unit: 'individual',
-    term: 'annual',
-    financial: [
-      { type: 'Deductible', allowed: usd('1500.00'), used: usd('1120.40') },
-      { type: 'Out-of-pocket limit', allowed: usd('4000.00'), used: usd('1356.10') },
-    ],
-  },
-];
-// A claim's lines: [code, what was done, billed, allowed, plan paid, coinsurance].
-// Each claim's totals are its lines' sums. They are drawn here as medrec
-// before 0.5.0 filed them, named for their type ("Professional"), and shaped
-// again further down, after the pharmacy claims, as `medrec reindex` would.
-const CPT = 'http://www.ama-assn.org/go/cpt';
-const claims = [
-  ['2026-11-18', 'Example Health', [['99213', 'Office visit', '180.00', '112.50', '87.50', '25.00']]],
-  ['2026-10-03', 'Example Lab', [['80061', 'Cholesterol tests', '180.00', '78.40', '62.72', '15.68'], ['36415', 'Blood draw', '40.00', '18.00', '14.40', '3.60']]],
-  ['2026-10-01', 'Example Health', [['99396', 'Preventive visit', '320.00', '210.00', '168.00', '42.00'], ['90686', 'Flu vaccine', '62.00', '38.40', '30.72', '7.68'], ['90471', 'Vaccine given', '30.00', '20.00', '16.00', '4.00']], planBalance],
-  ['2025-09-15', 'Example Health', [['99213', 'Office visit', '189.00', '121.10', '121.10', '0.00']]],
-  ['2025-03-10', 'Example Health', [['99214', 'Office visit', '290.00', '190.00', '152.00', '38.00'], ['85025', 'Blood cell test', '108.00', '65.90', '52.72', '13.18']]],
-];
-const sum = (xs) => (xs.reduce((a, x) => a + Math.round(Number(x) * 100), 0) / 100).toFixed(2);
-const adjudication = (billed, allowed, paid, coinsurance) => [
-  { category: 'Submitted Amount', amount: usd(billed), reason: null },
-  { category: 'Eligible Amount', amount: usd(allowed), reason: null },
-  { category: 'Benefit Amount', amount: usd(paid), reason: null },
-  { category: 'Deductible', amount: usd('0.00'), reason: null },
-  { category: 'Coinsurance', amount: usd(coinsurance), reason: null },
-  { category: 'Member liability', amount: usd(coinsurance), reason: null },
-];
-for (const [date, provider, lines, balances] of claims) {
-  const [billed, allowed, paid, share] = [2, 3, 4, 5].map((i) => sum(lines.map((l) => l[i])));
-  const items = lines.map(([code, display, b, a, p, c], i) => ({
-    sequence: i + 1,
-    service: { system: CPT, code, display },
-    serviced: date,
-    quantity: { value: 1, unit: null },
-    net: usd(b),
-    adjudication: adjudication(b, a, p, c),
-  }));
-  R.record(src.robinPlan, 'ExplanationOfBenefit', 'claim', {
-    date,
-    code: { system: 'http://terminology.hl7.org/CodeSystem/claim-type', code: 'professional', display: 'Professional' },
-    display: 'Professional',
-    status: 'active',
-    fields: {
-      provider,
-      insurer: 'Example Health Plan',
-      outcome: 'complete',
-      billable_period: { start: date, end: date },
-      total: adjudication(billed, allowed, paid, share).map(({ category, amount }) => ({ category, amount })),
-      payment: usd(paid),
-      type: 'Professional',
-      use: 'claim',
-      items,
-      ...(balances ? { benefit_balance: balances } : {}),
-    },
-    resource: {
-      status: 'active',
-      type: { coding: [{ code: 'professional' }] },
-      use: 'claim',
-      billablePeriod: { start: date, end: date },
-      outcome: 'complete',
-      item: lines.map(([code, display, b], i) => ({ sequence: i + 1, productOrService: { coding: [{ system: CPT, code, display }] }, servicedDate: date, net: { value: Number(b), currency: 'USD' } })),
-    },
-  });
-}
-// The insurer's statement for the October visit, linked to its claim.
-const eob = R.document(src.robinPlan, { date: '2026-10-20', doc_type: 'eob', title: 'Explanation of Benefits', organization: 'Example Health Plan', pages: 2, text: 'Explanation of Benefits. Example Health, office visit 10/01/2026. Amount billed $412.00. Plan paid $214.72. You may owe the provider $53.68.', original: 'eob_2026-10.pdf', filed: at(-60 * 24 * 20) });
-R.records.find((r) => r.kind === 'claim' && r.date === '2026-10-01').documents.push(eob.id);
-// Robin's coverage as the insurer gives it: the one that began in March,
-// open-ended. The portal keeps the one before.
-const HIP = { system: 'http://terminology.hl7.org/CodeSystem/v3-ActCode', code: 'HIP', display: 'health insurance plan policy' };
-R.record(src.robinPlan, 'Coverage', 'coverage', {
-  date: '2026-03-01',
-  code: HIP,
-  display: 'Example Health Plan PPO',
-  status: 'active',
-  fields: { payer: 'Example Health Plan', period: { start: '2026-03-01', end: '9999-12-31' }, relationship: 'self', plan: 'PPO Choice', group: 'GRP-000000' },
-  resource: { status: 'active', period: { start: '2026-03-01', end: '9999-12-31' } },
-});
-const visitText = 'Visit summary. Annual physical with Dr. Jordan Sample. Discussed home blood pressure readings and continuing lisinopril. LDL cholesterol is lower than last year. Influenza vaccine given today. Return in twelve months.';
-const visit = R.document(src.robinChart, { date: '2026-10-01', doc_type: 'visit_summary', title: 'After visit summary', organization: 'Example Health', pages: 3, text: visitText, original: 'after_visit_summary.pdf' });
-R.records.find((r) => r.kind === 'encounter' && r.date === '2026-10-01').documents.push(visit.id);
-R.document(src.robinChart, { date: '2026-10-01', doc_type: 'lab_report', title: 'Lipid panel', organization: 'Example Health', pages: 2, text: 'Lipid panel, fasting 12 hours. LDL cholesterol 104 mg/dL. Total cholesterol 176 mg/dL. HDL 51 mg/dL. Triglycerides 117 mg/dL.', original: 'lipid_panel.pdf' });
-R.document(null, {
-  date: '2026-10-01',
-  doc_type: 'bill',
-  title: 'Statement from Example Health',
-  organization: 'Example Health',
-  text: 'Statement date 10/20/2026. Account number ****0000. Amount due $53.68. Please pay by 11/19/2026.',
-  statement: { statement_date: '2026-10-20', amount_due: { amount: '53.68', currency: 'USD' }, due_date: '2026-11-19', account: '****0000' },
-  original: 'statement_oct.pdf',
-});
-// Last year's bill and the receipt for paying it.
-R.document(null, {
-  date: '2025-04-02',
-  doc_type: 'bill',
-  title: 'Statement from Example Health',
-  organization: 'Example Health',
-  text: 'Statement date 04/02/2025. Account number ****0000. Amount due $51.18. Please pay by 05/02/2025.',
-  statement: { statement_date: '2025-04-02', amount_due: { amount: '51.18', currency: 'USD' }, due_date: '2025-05-02', account: '****0000' },
-  original: 'statement_apr_2025.pdf',
-});
-R.document(null, { date: '2025-04-20', doc_type: 'receipt', title: 'Payment receipt from Example Health', organization: 'Example Health', text: 'Payment received 04/20/2025. Account ****0000. Amount paid $51.18. Thank you.', original: 'receipt_apr_2025.pdf' });
-R.document(null, {
-  date: '2026-10-28',
-  doc_type: 'bill',
-  title: 'Statement from Example Lab',
-  organization: 'Example Lab',
-  text: 'Statement date 10/28/2026. Account # ****1111. Balance due $19.28. Due date 11/27/2026.',
-  statement: { statement_date: '2026-10-28', amount_due: { amount: '19.28', currency: 'USD' }, due_date: '2026-11-27', account: '****1111' },
-  original: 'lab_statement.pdf',
-});
-R.document(null, { date: '2024-02-11', doc_type: 'immunization_record', title: 'Vaccination card', organization: 'Example Health', text: 'Vaccination record. Tdap 02/11/2024.', original: 'scan_0007.pdf' });
-for (const [date, v] of [['2025-06-01', 13.9], ['2025-12-02', 14.2], ['2026-06-05', 14.0]]) {
-  R.record(src.robinBlood, 'Observation', 'result', {
-    date,
-    code: { system: LOINC, code: '718-7', display: 'Hemoglobin [Mass/volume] in Blood' },
-    display: 'Hemoglobin',
-    status: 'final',
-    fields: { value: { value: v, unit: 'g/dL' }, category: 'Donation screening' },
-    resource: { ...obs('718-7', 'Hemoglobin', v, 'g/dL', 'g/dL'), effectiveDateTime: date },
-  });
-}
-for (const [code, name, display, v, unit, range, interp] of [
-  ['2823-3', 'Potassium [Moles/volume] in Serum or Plasma', 'Potassium', 5.4, 'mmol/L', '3.5-5.1 mmol/L', 'High'],
-  ['2160-0', 'Creatinine [Mass/volume] in Serum or Plasma', 'Creatinine', 0.9, 'mg/dL', '0.6-1.2 mg/dL', 'Normal'],
-]) {
-  R.record(src.robinChart, 'Observation', 'result', {
-    date: '2026-11-18',
-    code: { system: LOINC, code, display: name },
-    display,
-    status: 'final',
-    fields: { value: { value: v, unit }, reference_range: range, interpretation: interp, category: 'Laboratory', issued: '2026-11-19T16:00:00Z' },
-    resource: { ...obs(code, display, v, unit, unit, range, interp), effectiveDateTime: '2026-11-18' },
-    filed: ROBIN_CHART_LOAD,
-  });
-}
-// The follow-up visit the November claim is for; its results came in a later load.
-R.record(src.robinChart, 'Encounter', 'encounter', {
-  date: '2026-11-18',
-  code: { system: 'http://www.ama-assn.org/go/cpt', code: '99213', display: 'Office visit' },
-  display: 'Office visit',
-  status: 'finished',
-  fields: { class: 'ambulatory', practitioner: 'Dr. Jordan Sample', location: 'Example Health Main Clinic', reason: 'Blood pressure follow-up', period: { start: '2026-11-18T15:00:00Z', end: '2026-11-18T15:20:00Z' } },
-  resource: { status: 'finished', class: { code: 'AMB', display: 'ambulatory' }, type: [{ text: 'Office visit' }], period: { start: '2026-11-18T15:00:00Z', end: '2026-11-18T15:20:00Z' }, reasonCode: [{ text: 'Blood pressure follow-up' }] },
-});
-R.document(src.robinChart, { date: '2026-11-18', doc_type: 'lab_report', title: 'Basic metabolic panel', organization: 'Example Health', text: 'Basic metabolic panel. Potassium 5.4 mmol/L (high). Creatinine 0.9 mg/dL.', original: 'basic_metabolic_panel.pdf', filed: ROBIN_CHART_LOAD });
-const rChart = R.importRun(src.robinChart, { importedAt: ROBIN_CHART_LOAD, added: 2, updated: 0, unchanged: 41, docs: 1 });
-R.importRun(src.robinChart, { importedAt: at(-60 * 24 * 8), added: 5, updated: 1, unchanged: 36 });
-R.importRun(src.robinPlan, { importedAt: at(-60 * 24 * 3), added: 1, updated: 0, unchanged: 3, cliVersion: '0.3.2' });
-R.importRun(src.robinBlood, { importedAt: at(-60 * 24 * 2), added: 0, updated: 0, unchanged: 3, cliVersion: '0.1.1' });
-R.write();
-
-// Sam: the same primary-care system, a lab, a billing site, an X-ray.
-const S = new PersonData(sam);
-for (const [date, v] of [['2026-04-02', 18], ['2026-07-09', 24], ['2026-10-12', 33]]) {
-  const flag = v < 30 ? 'Low' : 'Normal';
-  S.record(src.samChart, 'Observation', 'result', {
-    date,
-    code: { system: LOINC, code: '62292-8', display: '25-Hydroxyvitamin D2+D3 [Mass/volume] in Serum or Plasma' },
-    display: 'Vitamin D, 25-hydroxy',
-    status: 'final',
-    fields: { value: { value: v, unit: 'ng/mL' }, reference_range: '30-100 ng/mL', interpretation: flag, category: 'Laboratory' },
-    resource: { ...obs('62292-8', 'Vitamin D, 25-hydroxy', v, 'ng/mL', 'ng/mL', '30-100 ng/mL', flag), effectiveDateTime: date },
-  });
-}
-S.record(src.samLab, 'Observation', 'result', {
-  date: '2026-07-09',
-  code: { system: LOINC, code: '3016-3', display: 'Thyrotropin [Units/volume] in Serum or Plasma' },
-  display: 'TSH',
-  status: 'final',
-  fields: { value: { value: 2.1, unit: 'mIU/L' }, reference_range: '0.4-4.0 mIU/L', interpretation: 'Normal', category: 'Laboratory' },
-  resource: { ...obs('3016-3', 'TSH', 2.1, 'mIU/L', 'mIU/L', '0.4-4.0 mIU/L', 'Normal'), effectiveDateTime: '2026-07-09' },
-});
-// A blood count with a low hemoglobin, drawn twice.
-for (const [date, hgb, wbc, plt] of [['2026-07-09', 11.2, 6.1, 245], ['2026-10-12', 11.8, 5.8, 260]]) {
-  lab(S, src.samLab, date, ['718-7', 'Hemoglobin [Mass/volume] in Blood', 'Hemoglobin', hgb, 'g/dL', '12.0-15.5 g/dL', hgb < 12 ? 'Low' : 'Normal']);
-  lab(S, src.samLab, date, ['6690-2', 'Leukocytes [#/volume] in Blood by Automated count', 'White blood cells', wbc, '10*3/uL', '4.5-11.0 10*3/uL', 'Normal']);
-  lab(S, src.samLab, date, ['777-3', 'Platelets [#/volume] in Blood by Automated count', 'Platelets', plt, '10*3/uL', '150-400 10*3/uL', 'Normal']);
-}
-S.record(src.samChart, 'Condition', 'condition', {
-  date: '2026-04-02',
-  code: { system: ICD10, code: 'E55.9', display: 'Vitamin D deficiency, unspecified' },
-  display: 'Vitamin D deficiency',
-  status: 'active',
-  fields: { verification_status: 'confirmed', category: 'Problem list item' },
-  resource: { clinicalStatus: { coding: [{ code: 'active' }] }, code: { coding: [{ system: ICD10, code: 'E55.9' }], text: 'Vitamin D deficiency' }, onsetDateTime: '2026-04-02' },
-});
-S.record(src.samChart, 'Condition', 'condition', {
-  date: '2026-05-20',
-  code: { system: ICD10, code: 'S93.401A', display: 'Sprain of unspecified ligament of right ankle, initial encounter' },
-  display: 'Right ankle sprain',
-  status: 'resolved',
-  fields: { verification_status: 'confirmed', category: 'Encounter diagnosis', abatement: '2026-07-01' },
-  resource: { clinicalStatus: { coding: [{ code: 'resolved' }] }, code: { coding: [{ system: ICD10, code: 'S93.401A' }], text: 'Right ankle sprain' }, onsetDateTime: '2026-05-20', abatementDateTime: '2026-07-01' },
-});
-S.record(src.samChart, 'AllergyIntolerance', 'allergy', {
-  date: '2001-03-01',
-  code: { system: SNOMED, code: '91935009', display: 'Allergy to peanut' },
-  display: 'Peanuts',
-  status: 'active',
-  fields: { criticality: 'high', reaction: ['Hives', 'Swelling of the lips'] },
-  resource: { clinicalStatus: { coding: [{ code: 'active' }] }, code: { text: 'Peanuts' }, criticality: 'high', reaction: [{ manifestation: [{ text: 'Hives' }, { text: 'Swelling of the lips' }] }] },
-});
-S.record(src.samChart, 'MedicationStatement', 'medication', {
-  date: '2026-05-20',
-  display: 'Ibuprofen 200 mg tablet',
-  status: 'completed',
-  fields: { dosage: '2 tablets by mouth every 6 hours as needed for pain', source: 'statement' },
-  resource: { status: 'completed', medicationCodeableConcept: { text: 'Ibuprofen 200 mg tablet' }, effectiveDateTime: '2026-05-20', dosage: [{ text: '2 tablets by mouth every 6 hours as needed for pain' }] },
-});
-S.record(src.samChart, 'MedicationRequest', 'medication', {
-  date: '2026-04-03',
-  display: 'Vitamin D3 2,000 unit capsule',
-  status: 'active',
-  fields: { dosage: 'Take 1 capsule by mouth once a day', prescriber: 'Dr. Casey Placeholder', source: 'request' },
-  resource: { status: 'active', intent: 'order', medicationCodeableConcept: { text: 'Vitamin D3 2,000 unit capsule' }, authoredOn: '2026-04-03' },
-});
-S.record(src.samChart, 'Encounter', 'encounter', {
-  date: '2026-05-20',
-  display: 'Sports medicine visit',
-  status: 'finished',
-  fields: { class: 'ambulatory', practitioner: 'Dr. Casey Placeholder', location: 'Example Health Orthopedics', reason: 'Ankle sprain' },
-  resource: { status: 'finished', class: { code: 'AMB' }, type: [{ text: 'Sports medicine visit' }], period: { start: '2026-05-20T15:00:00Z' }, reasonCode: [{ text: 'Ankle sprain' }] },
-});
-const samNote = S.document(src.samChart, {
-  date: '2026-05-20',
-  doc_type: 'visit_summary',
-  title: 'Sports medicine visit note',
-  organization: 'Example Health',
-  pages: 2,
-  text: 'Sports medicine visit with Dr. Casey Placeholder. Right ankle sprain while running. X-ray of the ankle shows no fracture. Brace, ice and rest for two weeks, then physical therapy exercises.',
-  original: 'visit_note.pdf',
-  filed: at(-60 * 24 * 150),
-});
-S.records.find((r) => r.kind === 'encounter' && r.date === '2026-05-20').documents.push(samNote.id);
-S.studies.push({
-  id: id('m'),
-  study_uid: `2.25.${String(rand())}${String(rand())}`,
-  path: 'Sam Example/Imaging/2026-05-20_xr_ankle_example_imaging/',
-  date: '2026-05-20',
-  modalities: ['DX'],
-  body_part: 'ANKLE',
-  description: 'XR ankle, 3 views',
-  facility: 'Example Imaging',
-  accession: `ACC${hex(6).toUpperCase()}`,
-  series: [
-    { uid: `2.25.${String(rand())}`, number: 1, modality: 'DX', description: 'AP', instances: { [`2.25.${String(rand())}`]: 'S001/00001.dcm' } },
-    { uid: `2.25.${String(rand())}`, number: 2, modality: 'DX', description: 'Lateral', instances: { [`2.25.${String(rand())}`]: 'S002/00001.dcm' } },
-    { uid: `2.25.${String(rand())}`, number: 3, modality: 'DX', description: 'Oblique', instances: { [`2.25.${String(rand())}`]: 'S003/00001.dcm' } },
-  ],
-  instances: 3,
-  size: 21_402_118,
-  filed_at: at(-60 * 24 * 60),
-  provenance: [{ source: { kind: 'media' }, method: 'media', filed_at: at(-60 * 24 * 60), filed_by: 'medrec 0.2.11' }],
-});
-S.document(null, {
-  date: '2026-07-09',
-  doc_type: 'bill',
-  title: 'Statement from Example Billing',
-  organization: 'Example Billing',
-  text: 'Statement date 08/01/2026. Guarantor account # EX-000000. Balance due $120.00. Due date 08/31/2026.',
-  statement: { statement_date: '2026-08-01', amount_due: { amount: '120.00', currency: 'USD' }, due_date: '2026-08-31', account: 'EX-000000' },
-  original: 'statement.pdf',
-});
-S.importRun(src.samChart, { importedAt: at(-60 * 5), added: 0, updated: 1, unchanged: 5 });
-S.importRun(src.samLab, { importedAt: at(-60 * 24 * 9), added: 1, updated: 0, unchanged: 0, cliVersion: '0.2.1' });
-S.write();
-
-// Alex: a child at a pediatric practice.
-const A = new PersonData(alex);
-for (const [date, kg] of [['2024-01-08', 20.4], ['2025-01-13', 22.6], ['2026-01-12', 25.1]]) {
-  A.record(src.alexPeds, 'Observation', 'result', {
-    date,
-    code: { system: LOINC, code: '29463-7', display: 'Body weight' },
-    display: 'Weight',
-    status: 'final',
-    fields: { value: { value: kg, unit: 'kg' }, category: 'Vital signs' },
-    resource: { status: 'final', code: { coding: [{ system: LOINC, code: '29463-7', display: 'Body weight' }] }, valueQuantity: { value: kg, unit: 'kg' }, effectiveDateTime: date },
-  });
-}
-for (const [date, code, name] of [
-  ['2018-01-01', '08', 'Hep B, adolescent or pediatric'],
-  ['2018-02-05', '08', 'Hep B, adolescent or pediatric'],
-  ['2018-03-05', '120', 'DTaP-Hib-IPV'],
-  ['2018-03-05', '133', 'Pneumococcal conjugate PCV 13'],
-  ['2018-03-05', '119', 'Rotavirus, monovalent'],
-  ['2018-05-07', '120', 'DTaP-Hib-IPV'],
-  ['2018-05-07', '133', 'Pneumococcal conjugate PCV 13'],
-  ['2018-05-07', '119', 'Rotavirus, monovalent'],
-  ['2018-07-09', '110', 'DTaP-hepatitis B and poliovirus vaccine'],
-  ['2018-07-09', '48', 'Hib (PRP-T)'],
-  ['2018-07-09', '133', 'Pneumococcal conjugate PCV 13'],
-  ['2019-01-07', '03', 'MMR'],
-  ['2019-01-07', '21', 'Varicella'],
-  ['2019-01-07', '83', 'Hep A, ped/adol, 2 dose'],
-  ['2019-01-07', '133', 'Pneumococcal conjugate PCV 13'],
-  ['2019-04-08', '20', 'DTaP'],
-  ['2019-04-08', '48', 'Hib (PRP-T)'],
-  ['2019-07-08', '83', 'Hep A, ped/adol, 2 dose'],
-  ['2022-01-10', '20', 'DTaP'],
-  ['2022-01-10', '10', 'IPV'],
-  ['2022-01-10', '03', 'MMR'],
-  ['2022-01-10', '21', 'Varicella'],
-  ['2024-10-14', '141', 'Influenza, seasonal, injectable'],
-  ['2025-10-20', '141', 'Influenza, seasonal, injectable'],
-]) {
-  A.record(src.alexPeds, 'Immunization', 'immunization', {
-    date,
-    code: { system: CVX, code, display: name },
-    display: name,
-    status: 'completed',
-    fields: { performer: 'Example Pediatrics', route: 'Intramuscular' },
-    resource: { status: 'completed', vaccineCode: { coding: [{ system: CVX, code }], text: name }, occurrenceDateTime: date },
-  });
-}
-for (const [date, what] of [['2024-01-08', 'Well child visit, 6 years'], ['2025-01-13', 'Well child visit, 7 years'], ['2026-01-12', 'Well child visit, 8 years']]) {
-  A.record(src.alexPeds, 'Encounter', 'encounter', {
-    date,
-    display: what,
-    status: 'finished',
-    fields: { class: 'ambulatory', practitioner: 'Dr. Morgan Placeholder', location: 'Example Pediatrics' },
-    resource: { status: 'finished', type: [{ text: what }], period: { start: `${date}T13:00:00Z` } },
-  });
-}
-A.record(src.alexPeds, 'Encounter', 'encounter', {
-  date: '2026-11-20',
-  display: 'Sick visit',
-  status: 'finished',
-  fields: { class: 'ambulatory', practitioner: 'Dr. Morgan Placeholder', location: 'Example Pediatrics', reason: 'Ear pain' },
-  resource: { status: 'finished', type: [{ text: 'Sick visit' }], period: { start: '2026-11-20T16:00:00Z' }, reasonCode: [{ text: 'Ear pain' }] },
-  filed: ALEX_PEDS_LOAD,
-});
-// A note from the sick visit, scanned and filed by hand: it carries only the practice's name.
-A.document(null, { date: '2026-11-20', doc_type: 'letter', title: 'School note', organization: 'Example Pediatrics', text: 'Alex Example was seen in clinic on 11/20/2026 and may return to school on 11/22/2026.', original: 'scan_0012.pdf' });
-A.record(src.alexPeds, 'Condition', 'condition', {
-  date: '2026-11-20',
-  code: { system: ICD10, code: 'H66.90', display: 'Otitis media, unspecified, unspecified ear' },
-  display: 'Ear infection',
-  status: 'active',
-  fields: { verification_status: 'confirmed', category: 'Encounter diagnosis' },
-  resource: { clinicalStatus: { coding: [{ code: 'active' }] }, code: { coding: [{ system: ICD10, code: 'H66.90' }], text: 'Ear infection' }, onsetDateTime: '2026-11-20' },
-  filed: ALEX_PEDS_LOAD,
-});
-A.record(src.alexPeds, 'MedicationRequest', 'medication', {
-  date: '2026-11-20',
-  code: { system: RXNORM, code: '308189', display: 'amoxicillin 400 MG in 5 mL Oral Suspension' },
-  display: 'Amoxicillin 400 mg/5 mL suspension',
-  status: 'active',
-  fields: { dosage: 'Take 7 mL by mouth twice a day for 10 days', prescriber: 'Dr. Morgan Placeholder', intent: 'order', source: 'request' },
-  resource: { status: 'active', intent: 'order', medicationCodeableConcept: { text: 'Amoxicillin 400 mg/5 mL suspension' }, authoredOn: '2026-11-20', dosageInstruction: [{ text: 'Take 7 mL by mouth twice a day for 10 days' }] },
-  filed: ALEX_PEDS_LOAD,
-});
-A.document(src.alexPeds, { date: '2025-10-20', doc_type: 'immunization_record', title: 'Immunization history', organization: 'Example Pediatrics', text: 'Immunization history. DTaP, IPV, MMR 01/10/2022. Influenza 10/20/2025.', original: 'immunizations.pdf' });
-const aPeds = A.importRun(src.alexPeds, { importedAt: ALEX_PEDS_LOAD, added: 3, updated: 0, unchanged: 11, docs: 1, cliVersion: '0.6.1' });
-A.write();
-
-// Jamie: a baby, almost four months old at the anchor, loaded yesterday.
-const J = new PersonData(jamie);
-J.record(src.jamiePeds, 'Encounter', 'encounter', {
-  date: '2026-07-28',
-  display: 'Birth hospital stay',
-  status: 'finished',
-  fields: { class: 'inpatient', practitioner: 'Dr. Riley Placeholder', location: 'Example Health Birth Center', reason: 'Birth', period: { start: '2026-07-28T18:20:00Z', end: '2026-07-30T14:00:00Z' } },
-  resource: { status: 'finished', class: { code: 'IMP', display: 'inpatient encounter' }, type: [{ text: 'Birth hospital stay' }], period: { start: '2026-07-28T18:20:00Z', end: '2026-07-30T14:00:00Z' } },
-  filed: JAMIE_PEDS_LOAD,
-});
-J.record(src.jamiePeds, 'Immunization', 'immunization', {
-  date: '2026-07-28',
-  code: { system: CVX, code: '08', display: 'Hep B, adolescent or pediatric' },
-  display: 'Hep B, adolescent or pediatric',
-  status: 'completed',
-  fields: { performer: 'Example Health Birth Center', lot_number: `LOT${hex(4).toUpperCase()}`, site: 'Right thigh', route: 'Intramuscular' },
-  resource: { status: 'completed', vaccineCode: { coding: [{ system: CVX, code: '08' }], text: 'Hep B, adolescent or pediatric' }, occurrenceDateTime: '2026-07-28' },
-  filed: JAMIE_PEDS_LOAD,
-});
-for (const [date, kg] of [['2026-07-28', 3.18], ['2026-08-31', 4.26], ['2026-09-29', 5.37]]) {
-  J.record(src.jamiePeds, 'Observation', 'result', {
-    date,
-    code: { system: LOINC, code: '29463-7', display: 'Body weight' },
-    display: 'Weight',
-    status: 'final',
-    fields: { value: { value: kg, unit: 'kg' }, category: 'Vital signs' },
-    resource: { status: 'final', code: { coding: [{ system: LOINC, code: '29463-7', display: 'Body weight' }] }, valueQuantity: { value: kg, unit: 'kg' }, effectiveDateTime: date },
-    filed: JAMIE_PEDS_LOAD,
-  });
-}
-// The heart screen every baby in this sample's birth center gets.
-J.record(src.jamiePeds, 'Observation', 'result', {
-  date: '2026-07-29',
-  code: { system: LOINC, code: '59407-7', display: 'Oxygen saturation in Blood Preductal by Pulse oximetry' },
-  display: 'Oxygen saturation, right hand',
-  status: 'final',
-  fields: { value: { value: 98, unit: '%' }, reference_range: '95-100 %', category: 'Vital signs' },
-  resource: { ...obs('59407-7', 'Oxygen saturation, right hand', 98, '%', '%', '95-100 %'), effectiveDateTime: '2026-07-29' },
-  filed: JAMIE_PEDS_LOAD,
-});
-for (const [date, what] of [['2026-08-31', 'Well child visit, 1 month'], ['2026-09-29', 'Well child visit, 2 months']]) {
-  J.record(src.jamiePeds, 'Encounter', 'encounter', {
-    date,
-    display: what,
-    status: 'finished',
-    fields: { class: 'ambulatory', practitioner: 'Dr. Morgan Placeholder', location: 'Example Pediatrics' },
-    resource: { status: 'finished', type: [{ text: what }], period: { start: `${date}T15:00:00Z` } },
-    filed: JAMIE_PEDS_LOAD,
-  });
-}
-const discharge = J.document(src.jamiePeds, { date: '2026-07-30', doc_type: 'discharge_summary', title: 'Newborn discharge summary', organization: 'Example Health', pages: 2, text: 'Newborn discharge summary. Born 07/28/2026 at 40 weeks. Birth weight 3.18 kg. Hepatitis B vaccine given 07/28/2026. Heart screen normal. First visit with the pediatrician at one month.', original: 'newborn_discharge.pdf', filed: JAMIE_PEDS_LOAD });
-J.records.find((r) => r.kind === 'encounter' && r.date === '2026-07-28').documents.push(discharge.id);
-J.importRun(src.jamiePeds, { importedAt: JAMIE_PEDS_LOAD, added: 12, updated: 0, unchanged: 0, docs: 1, cliVersion: '0.6.1' });
-J.write();
-
-// ---- What the Mac's `medrec refresh` wrote ----
-
-// An attempt's counts are its import's, so the status, the attempts log and
-// the index always agree.
-function counts(run) {
-  return {
-    records_added: run.records_added,
-    records_updated: run.records_updated,
-    records_unchanged: run.records_unchanged,
-    records_older: run.records_older,
-    resources_written: run.resources_written,
-    resources_unchanged: run.resources_unchanged,
-    documents_added: run.documents_added,
-    documents_duplicate: 0,
-    documents_unchanged: 0,
-    documents_same_statement: 0,
-  };
-}
-const machine = id('h');
-const attempts = [];
-function attempt(s, person, { started, minutes = 1, trigger = 'schedule', requests = [], outcome = 'ok', exit = 0, error = null, importId = null, c }) {
-  const a = { attempt: id('t'), started_at: started, finished_at: at(Date.parse(started) / 60_000 - Date.parse(ANCHOR) / 60_000 + minutes), trigger, requests, outcome, exit_code: exit, error, import: importId };
-  attempts.push({ schema: 'medrec-attempt/v1', attempt: a.attempt, source: s.id, person: person.id, cli: s.cli, organization: s.organization, started_at: a.started_at, finished_at: a.finished_at, trigger, requests, outcome, exit_code: exit, error, import: importId, ...(c ? { counts: c } : {}) });
-  return a;
-}
-
-const doneReq = { schema: 'medrec-request/v1', id: id('x'), requested_at: at(-60 * 3 - 4), requested_by: { email: 'robin@example.com', name: 'Robin Example' }, scope: { source: src.robinChart.id }, app: { name: 'own-your-health-app', version: '0.1.0' } };
-const robinChartOk = attempt(src.robinChart, robin, { started: at(-60 * 3 - 1), trigger: 'request', requests: [doneReq.id], importId: rChart.id, c: counts(rChart) });
-const alexOk = attempt(src.alexPeds, alex, { started: at(-60 * 26 - 1), importId: aPeds.id, c: counts(aPeds) });
-const samChartOk = attempt(src.samChart, sam, { started: at(-60 * 5 - 1), importId: S.imports[0].id, c: counts(S.imports[0]) });
-attempt(src.samLab, sam, { started: at(-60 * 24 * 9 - 1), importId: S.imports[1].id, c: counts(S.imports[1]) });
-const samLabFail = attempt(src.samLab, sam, {
-  started: at(-60 * 2),
-  outcome: 'failed',
-  exit: 5,
-  error: { code: 'upstream', message: 'The lab site answered 503 three times.', remedy: 'Nothing to do; the Mac tries again later.' },
-});
-const robinPlanNeeds = attempt(src.robinPlan, robin, { started: at(-60 * 8), outcome: 'needs_person', exit: 3, error: { code: 'needs_person', message: 'uhc needs a sign-in: its export answered that the sign-in has ended', remedy: `run \`medrec refresh sign-in ${src.robinPlan.id}\` on this machine`, provider_message: 'The member site session has expired. Sign in with `uhc auth login --browser --profile <provider profile> --overwrite`.' } });
-
-
-// ---- More claims, for the costs screen ----
-// Sam's employer plan, whose plan year starts in July, with Alex on it as a
-// child; and Robin's pharmacy benefit. Every id here is drawn after all the
-// others, so the rest of the folder keeps its ids.
-orgs.carePlan = { id: id('g'), name: 'Example Care Plan', fhir_base: 'https://fhir.example.com/r4' };
-orgs.rx = { id: id('g'), name: 'Example Pharmacy Benefits' };
-src.samPlan = source(sam, 'kp', 'example-care-plan', orgs.carePlan);
-src.alexPlan = source(alex, 'kp', 'example-care-plan', orgs.carePlan);
-src.robinRx = source(robin, 'caremark', 'example-pharmacy-benefits', orgs.rx, 'portal');
-const PLANS_LOAD = at(-60 * 30);
-for (const s of [src.samPlan, src.alexPlan, src.robinRx]) FIRST_IMPORT.set(s.id, -60 * 30);
-writeHousehold();
-
-const NDC = 'http://hl7.org/fhir/sid/ndc';
-const NUBC = 'https://www.nubc.org/CodeSystem/RevenueCodes';
-const cents = (x) => Math.round(Number(x) * 100);
-const dollars = (c) => usd((c / 100).toFixed(2));
-// A line: [code, what was done, billed, allowed, deductible, copay, coinsurance, plan paid].
-// Allowed is what the plan paid plus your share (deductible, copay, coinsurance).
-// The plan year a July plan's claim prints as its benefit period (FHIR ExplanationOfBenefit.benefitPeriod).
-function julyYear(date) {
-  const y = Number(date.slice(0, 4)) - (date.slice(5) < '07-01' ? 1 : 0);
-  return { start: `${y}-07-01`, end: `${y + 1}-06-30` };
-}
-
-// What medrec 0.5.0 and later adds to a claim, by the rules of its data
-// contract (docs/data-contract.md, "index.json", claims): a name from its
-// lines and provider, each line's category and the claim's, amounts under
-// fixed names (you_owe only when the payer gives it), the diagnoses, and
-// links guessed by date and name. Every claim in the sample carries them:
-// Robin's professional claims are drawn in the earlier shape and reshaped
-// further down, as `medrec reindex` would.
-const LINE_CATEGORY = { 99213: 'visit', 99214: 'visit', 99215: 'visit', 29880: 'procedure', 29881: 'procedure', 73560: 'imaging', J0690: 'drug', E0114: 'supply', L1820: 'supply', 73610: 'imaging', 84443: 'lab', 36415: 'lab', 85025: 'lab', 82306: 'lab', 87651: 'lab', 87880: 'lab', 90686: 'vaccine', 90471: 'vaccine', 90834: 'visit', 80061: 'lab', 99396: 'visit' };
-const words = (...texts) => new Set(texts.filter(Boolean).join(' ').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 4));
-function claimFields(P, { date, provider, type, lines, diagnoses, liability }) {
-  const pharmacy = type === 'Pharmacy';
-  const categoryOf = (code) => {
-    if (pharmacy) return 'pharmacy';
-    const c = LINE_CATEGORY[code];
-    if (!c) throw new Error(`no category for ${code}`);
-    return c;
-  };
-  const on = (r, day) => r.date?.slice(0, 10) === day;
-  // The one encounter on a date of service, not planned, cancelled or entered
-  // in error; of several, the one sharing a word of four or more letters with
-  // the claim's provider; else none.
-  const encounters = P.records.filter((r) => r.kind === 'encounter' && on(r, date) && !['planned', 'cancelled', 'entered-in-error'].includes(r.status));
-  const named = encounters.filter((r) => [...words(r.fields.service_provider, r.fields.location, r.fields.practitioner)].some((w) => words(provider).has(w)));
-  const visit = encounters.length === 1 ? encounters[0] : named.length === 1 ? named[0] : undefined;
-  // The results and reports dated on a lab line's date of service.
-  const labResults = P.records.filter((r) => (r.kind === 'result' || r.kind === 'report') && on(r, date) && !['cancelled', 'entered-in-error'].includes(r.status)).map((r) => r.id);
-  const lineRecords = (c) => (c === 'visit' ? (visit ? [visit.id] : []) : c === 'lab' ? labResults : []);
-  const amountsOf = (l) => ({
-    billed: usd(l[2]),
-    ...(pharmacy ? { discount: dollars(cents(l[2]) - cents(l[3])) } : {}),
-    allowed: usd(l[3]),
-    plan_paid: usd(l[7]),
-    deductible: usd(l[4]),
-    copay: usd(l[5]),
-    coinsurance: usd(l[6]),
-    ...(liability ? { you_owe: dollars(cents(l[4]) + cents(l[5]) + cents(l[6])) } : {}),
-  });
-  const kinds = [...new Set(lines.map((l) => categoryOf(l[0])))];
-  const total = (i) => (lines.reduce((t, l) => t + cents(l[i]), 0) / 100).toFixed(2);
-  const services = [...new Set(lines.map((l) => l[1]))];
-  const served = services.length <= 2 ? services.join(' and ') : `${services[0]}, ${services[1]} and ${services.length - 2} more`;
-  return {
-    display: `${pharmacy ? lines[0][1] : served} · ${provider}`,
-    category: pharmacy ? 'pharmacy' : kinds.length === 1 ? kinds[0] : 'mixed',
-    amounts: amountsOf(['', '', total(2), total(3), total(4), total(5), total(6), total(7)]),
-    diagnoses: diagnoses.map(([code, display], i) => ({ sequence: i + 1, code: { system: ICD10, code, display } })),
-    ...(visit ? { visit: visit.id } : {}),
-    results: kinds.includes('lab') ? labResults : [],
-    items: lines.map((l) => ({ category: categoryOf(l[0]), amounts: amountsOf(l), records: lineRecords(categoryOf(l[0])) })),
-  };
-}
-
-// `liability: false`: the payer gives no figure for what the member owes, only its parts.
-// `replaced`: [code, what was done, billed], the provider's line the plan
-// recoded under its policy, kept as not covered just before the line that
-// replaced it. The claim's totals leave it out, as a plan's do, and medrec
-// 0.8.2 marks it so (`counted: false`), with the plan's note on it (`payer_notes`).
-// `end`: the last day of a stay, when it is not `date`. A line's ninth item
-// is a hospital's revenue code, [code, what it is], as medrec 0.8.2 gives it.
-function claimOf(P, s, { date, end = date, provider, insurer, type = 'Professional', system = CPT, lines, balances, benefitPeriod, diagnoses = [], liability = true, replaced }) {
-  for (const l of lines) if (cents(l[3]) !== cents(l[4]) + cents(l[5]) + cents(l[6]) + cents(l[7])) throw new Error(`allowed is not paid plus share: ${l}`);
-  const share = (l) => cents(l[4]) + cents(l[5]) + cents(l[6]);
-  const amounts = (l) => [
-    ['Submitted Amount', usd(l[2])],
-    ['Eligible Amount', usd(l[3])],
-    ['Benefit Amount', usd(l[7])],
-    ['Deductible', usd(l[4])],
-    ['Copay', usd(l[5])],
-    ['Coinsurance', usd(l[6])],
-    ...(liability ? [['Member liability', dollars(share(l))]] : []),
-    ...(type === 'Pharmacy' ? [['Discount', dollars(cents(l[2]) - cents(l[3]))]] : []),
-  ];
-  const sumAt = (i) => (lines.reduce((t, l) => t + cents(l[i]), 0) / 100).toFixed(2);
-  const totals = amounts(['', '', sumAt(2), sumAt(3), sumAt(4), sumAt(5), sumAt(6), sumAt(7)]);
-  const medrec = claimFields(P, { date, provider, type, lines, diagnoses, liability });
-  const items = lines.map((l, i) => ({
-    sequence: i + 1,
-    service: { system, code: l[0], display: l[1] },
-    serviced: date,
-    quantity: { value: 1, unit: null },
-    net: usd(l[2]),
-    adjudication: amounts(l).map(([category, amount]) => ({ category, amount, reason: null })),
-    ...medrec.items[i],
-    ...(l[8] ? { revenue: { system: NUBC, code: l[8][0], display: l[8][1] } } : {}),
-  }));
-  if (replaced) {
-    const [code, display, billed] = replaced;
-    const at = lines.findIndex((l) => LINE_CATEGORY[l[0]] === LINE_CATEGORY[code]);
-    items.splice(at, 0, {
-      service: { system, code, display },
-      serviced: date,
-      quantity: { value: 1, unit: null },
-      net: usd(billed),
-      adjudication: [
-        { category: 'Submitted Amount', amount: usd(billed), reason: null },
-        { category: 'Not covered', amount: usd(billed), reason: { text: 'Replaced under the plan’s coding policy' } },
-      ],
-      category: LINE_CATEGORY[code],
-      amounts: { billed: usd(billed), not_covered: usd(billed) },
-      records: medrec.items[at].records,
-      counted: false,
-      payer_notes: ['C7 -- This service was paid under a different code than the one billed.'],
-    });
-    items.forEach((it, i) => (it.sequence = i + 1));
-  }
-  return P.record(s, 'ExplanationOfBenefit', 'claim', {
-    date,
-    code: { system: 'http://terminology.hl7.org/CodeSystem/claim-type', code: type.toLowerCase(), display: type },
-    display: medrec.display,
-    status: 'active',
-    fields: {
-      provider,
-      insurer,
-      outcome: 'complete',
-      billable_period: { start: date, end },
-      total: totals.map(([category, amount]) => ({ category, amount })),
-      payment: usd(sumAt(7)),
-      type,
-      use: 'claim',
-      items,
-      ...(balances ? { benefit_balance: balances } : {}),
-      ...(benefitPeriod ? { benefit_period: benefitPeriod } : {}),
-      category: medrec.category,
-      amounts: medrec.amounts,
-      diagnoses: medrec.diagnoses,
-      ...(medrec.visit ? { visit: medrec.visit } : {}),
-      results: medrec.results,
-    },
-    resource: {
-      status: 'active',
-      type: { coding: [{ code: type.toLowerCase() }] },
-      use: 'claim',
-      billablePeriod: { start: date, end },
-      ...(benefitPeriod ? { benefitPeriod } : {}),
-      outcome: 'complete',
-      item: items.map((it) => ({ sequence: it.sequence, productOrService: { coding: [{ system, code: it.service.code, display: it.service.display }] }, servicedDate: date, net: { value: Number(it.net.amount), currency: 'USD' } })),
-    },
-  });
-}
-const careBalance = (deductibleUsed, outOfPocketUsed) => [
-  {
-    category: '1',
-    network: 'in',
-    unit: 'individual',
-    term: 'annual',
-    financial: [
-      { type: 'Deductible', allowed: usd('750.00'), used: usd(deductibleUsed) },
-      { type: 'Out-of-pocket limit', allowed: usd('3000.00'), used: usd(outOfPocketUsed) },
-    ],
-  },
-];
-const coverage = (P, s, display, relationship) =>
-  P.record(s, 'Coverage', 'coverage', {
-    date: '2025-07-01',
-    code: { system: 'http://terminology.hl7.org/CodeSystem/v3-ActCode', code: 'HIP', display: 'health insurance plan policy' },
-    display,
-    status: 'active',
-    fields: { payer: 'Example Care Plan', period: { start: '2025-07-01' }, relationship, plan: 'HMO Family', group: 'GRP-111111' },
-    resource: { status: 'active', period: { start: '2025-07-01' } },
-  });
-
-// Sam: a sports-medicine visit with an X-ray late in one plan year; then, in
-// the next, lab work that went to the deductible.
-coverage(S, src.samPlan, 'Example Care Plan HMO', 'self');
-claimOf(S, src.samPlan, { date: '2026-05-20', provider: 'Example Health', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-05-20'), diagnoses: [['S93.401A', 'Sprain of unspecified ligament of right ankle, initial encounter']], lines: [['99214', 'Office visit', '260.00', '168.00', '0.00', '40.00', '0.00', '128.00'], ['73610', 'X-ray of the ankle', '145.00', '82.00', '0.00', '0.00', '16.40', '65.60']] });
-claimOf(S, src.samPlan, { date: '2026-07-09', provider: 'Example Lab', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-07-09'), liability: false, diagnoses: [['Z13.29', 'Encounter for screening for other suspected endocrine disorder']], lines: [['84443', 'Thyroid test (TSH)', '95.00', '41.20', '41.20', '0.00', '0.00', '0.00'], ['36415', 'Blood draw', '25.00', '9.50', '9.50', '0.00', '0.00', '0.00']] });
-claimOf(S, src.samPlan, { date: '2026-10-12', provider: 'Example Lab', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-10-12'), diagnoses: [['E55.9', 'Vitamin D deficiency, unspecified']], lines: [['85025', 'Blood cell test', '98.00', '31.40', '31.40', '0.00', '0.00', '0.00'], ['82306', 'Vitamin D test', '150.00', '38.90', '38.90', '0.00', '0.00', '0.00']], balances: careBalance('233.50', '408.50') });
-S.importRun(src.samPlan, { importedAt: PLANS_LOAD, added: 9, updated: 0, unchanged: 0, cliVersion: '0.4.0' });
-S.write();
-
-// Alex, on Sam's plan: a flu shot, and a sick visit at the pediatric practice.
-coverage(A, src.alexPlan, 'Example Care Plan HMO (dependent)', 'child');
-claimOf(A, src.alexPlan, { date: '2025-10-20', provider: 'Example Pediatrics', insurer: 'Example Care Plan', benefitPeriod: julyYear('2025-10-20'), diagnoses: [['Z23', 'Encounter for immunization']], lines: [['90686', 'Flu vaccine', '55.00', '32.00', '0.00', '0.00', '0.00', '32.00'], ['90471', 'Vaccine given', '28.00', '18.00', '0.00', '0.00', '0.00', '18.00']] });
-// The practice billed a costlier strep test; the plan paid it as the quick one.
-claimOf(A, src.alexPlan, { date: '2026-11-20', provider: 'Example Pediatrics', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-11-20'), diagnoses: [['H66.90', 'Otitis media, unspecified, unspecified ear']], replaced: ['87651', 'Strep test, DNA method', '132.00'], lines: [['99213', 'Office visit', '165.00', '98.00', '0.00', '25.00', '0.00', '73.00'], ['87880', 'Strep test', '48.00', '21.30', '0.00', '0.00', '0.00', '21.30']], balances: careBalance('0.00', '25.00') });
-A.importRun(src.alexPlan, { importedAt: PLANS_LOAD, added: 3, updated: 0, unchanged: 0, cliVersion: '0.4.0' });
-A.write();
-
-// Robin's lisinopril fills, as the pharmacy benefit's claims.
-for (const [date, words] of [['2026-08-14', 'HTN'], ['2026-11-12', 'HYPERTENSION NOS']]) {
-  claimOf(R, src.robinRx, { date, provider: 'Example Pharmacy', insurer: 'Example Pharmacy Benefits', type: 'Pharmacy', system: NDC, diagnoses: [['I10', words]], lines: [['00000-1111-90', 'Lisinopril 10 mg tablet, 90 days', '32.50', '12.40', '0.00', '10.00', '0.00', '2.40']] });
-}
-R.importRun(src.robinRx, { importedAt: PLANS_LOAD, added: 2, updated: 0, unchanged: 0, cliVersion: '1.2.0' });
-// Robin's professional claims as medrec 0.5.0 and later files them (`medrec
-// reindex` shapes a claim again from its raw file): named for their lines,
-// with their categories, amounts and links. They stay where they were drawn,
-// so no id moves.
-for (const [date, provider, lines] of claims) {
-  const r = R.records.find((x) => x.kind === 'claim' && x.date === date && x.fields.provider === provider && x.display === 'Professional');
-  const medrec = claimFields(R, { date, provider, type: 'Professional', lines: lines.map(([code, what, b, a, paid, c]) => [code, what, b, a, '0.00', '0.00', c, paid]), diagnoses: [], liability: true });
-  // These claims print no copay, so medrec's amounts name none.
-  for (const x of [medrec, ...medrec.items]) delete x.amounts.copay;
-  r.display = medrec.display;
-  Object.assign(r.fields, { category: medrec.category, amounts: medrec.amounts, diagnoses: medrec.diagnoses, ...(medrec.visit ? { visit: medrec.visit } : {}), results: medrec.results });
-  r.fields.items.forEach((it, i) => Object.assign(it, medrec.items[i]));
-}
-R.write();
-const planOk = (s, person, run) => attempt(s, person, { started: at(-60 * 30 - 1), importId: run.id, c: counts(run) });
-const samPlanOk = planOk(src.samPlan, sam, S.imports.at(-1));
-const alexPlanOk = planOk(src.alexPlan, alex, A.imports.at(-1));
-const robinRxOk = planOk(src.robinRx, robin, R.imports.at(-1));
-const planStatus = (s, person, ok, run) => ({
-  source: s.id, person: person.id, cli: s.cli, organization: s.organization, auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: at(60 * 24 - 30),
-  sign_in: { state: 'ok', expires_at: at(60 * 24 * 60), checked_at: at(-60 * 30 - 1), renews: s.cli !== 'caremark', needs_person: null },
-  last_attempt: ok,
-  last_success: { attempt: ok.attempt, finished_at: ok.finished_at, import: run.id, counts: counts(run), withheld_types: [] },
-});
-
-write('_requests/.keep', '');
-const compact = (iso) => iso.replace(/[-:]/g, '');
-write(`_requests/done/${compact(doneReq.requested_at)}_${doneReq.id}.json`, {
-  ...doneReq,
-  handled: {
-    picked_up_at: at(-60 * 3 - 1),
-    finished_at: robinChartOk.finished_at,
-    outcome: 'ok',
-    sources: [{ source: src.robinChart.id, outcome: 'ok', attempt: robinChartOk.attempt, next_allowed_at: at(60 * 21) }],
-    message: '1 source imported',
-    by: 'medrec 0.3.0',
-  },
-});
-
-// ---- Coverage over time ----
-
-// Robin's portal lists the coverage before March and the one since, with the
-// insurer's name as it is registered. Written last, so no other id moves.
-const portalCoverage = (plan, start, end) =>
-  R.record(src.robinChart, 'Coverage', 'coverage', {
-    date: start,
-    code: HIP,
-    display: 'EXAMPLE HEALTH PLAN, INC.',
-    status: 'active',
-    fields: { payer: 'EXAMPLE HEALTH PLAN, INC.', period: { start, ...(end ? { end } : {}) }, relationship: 'self', plan },
-    resource: { status: 'active', payor: [{ display: 'EXAMPLE HEALTH PLAN, INC.' }], period: { start, ...(end ? { end } : {}) }, class: [{ type: { coding: [{ code: 'plan' }] }, name: plan }] },
-  });
-portalCoverage('HMO Basic', '2023-06-01', '2026-02-28');
-portalCoverage('PPO Choice', '2026-03-01');
-R.write();
-
-// ---- The Mac's status ----
-
-// Robin's plan and blood centre are member sites whose sign-ins nothing
-// renews: each loads after someone signs in, and otherwise waits quietly.
-const robinBloodWaits = attempt(src.robinBlood, robin, { started: at(-60 * 6), outcome: 'needs_person', exit: 3, error: { code: 'needs_person', message: 'oneblood needs a sign-in: its export answered that the sign-in has ended', remedy: `run \`medrec refresh sign-in ${src.robinBlood.id}\` on this machine`, provider_message: '' } }); // the provider said nothing
-// Alex's practice loaded yesterday, and its next load found the sign-in
-// ended. medrec renews this sign-in on its own, so an end is news: a person
-// must sign in. These attempts are drawn last, so no other id moves.
-const alexPedsEnded = attempt(src.alexPeds, alex, { started: at(-60 * 2), outcome: 'needs_person', exit: 3, error: { code: 'needs_person', message: 'athena needs a sign-in: its export answered that the sign-in has ended', remedy: `run \`medrec refresh sign-in ${src.alexPeds.id}\` on this machine`, provider_message: 'The sign-in has expired and could not be renewed. Run `athena auth login --profile <provider profile>`.' } });
-
-write('_status/status.json', {
-  schema: 'medrec-status/v1',
-  format: 1,
-  updated_at: at(-2),
-  refresher: { medrec_version: '0.3.0', machine, last_pass_at: at(-2), next_pass_at: at(3), pass_every_secs: 300, heartbeat_every_secs: 3600 },
-  sources: [
-    {
-      source: src.robinChart.id, person: robin.id, cli: 'mychart', organization: 'example-health', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: at(60 * 21),
-      sign_in: { state: 'ok', expires_at: at(60 * 24 * 200), checked_at: at(-60 * 3 - 1), renews: true, needs_person: null },
-      last_attempt: robinChartOk,
-      last_success: { attempt: robinChartOk.attempt, finished_at: robinChartOk.finished_at, import: rChart.id, counts: counts(rChart), withheld_types: ['ExplanationOfBenefit'] },
-    },
-    {
-      source: src.robinPlan.id, person: robin.id, cli: 'uhc', organization: 'example-health-plan', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: null,
-      sign_in: { state: 'signed_out', expires_at: null, checked_at: at(-60 * 8), renews: false, lasts_secs: 1800, needs_person: { reason: 'sign_in', since: at(-60 * 8), command: `medrec refresh sign-in ${src.robinPlan.id}` } },
-      last_attempt: robinPlanNeeds,
-      last_success: null,
-    },
-    {
-      source: src.robinBlood.id, person: robin.id, cli: 'oneblood', organization: 'example-blood-center', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: null,
-      sign_in: { state: 'expired', expires_at: null, checked_at: at(-60 * 6), renews: false, needs_person: { reason: 'sign_in', since: at(-60 * 6), command: `medrec refresh sign-in ${src.robinBlood.id}` } },
-      last_attempt: robinBloodWaits,
-      last_success: null,
-    },
-    {
-      source: src.samChart.id, person: sam.id, cli: 'mychart', organization: 'example-health', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: at(60 * 19),
-      sign_in: { state: 'expiring', expires_at: at(60 * 40), checked_at: at(-60 * 5 - 1), renews: true, needs_person: null },
-      last_attempt: samChartOk,
-      last_success: { attempt: samChartOk.attempt, finished_at: samChartOk.finished_at, import: S.imports[0].id, counts: counts(S.imports[0]), withheld_types: [] },
-    },
-    {
-      source: src.samLab.id, person: sam.id, cli: 'labcorp', organization: 'example-lab', auto: true, paused: null, failures: 2, min_interval_secs: 86400, next_run_at: at(60),
-      sign_in: { state: 'ok', expires_at: null, checked_at: at(-60 * 2), needs_person: null },
-      last_attempt: samLabFail,
-      last_success: null,
-    },
-    {
-      source: src.samBilling.id, person: sam.id, cli: 'peryourhealth', organization: 'example-billing', auto: false, paused: { reason: 'user', note: 'Paused by hand on the Mac.', since: at(-60 * 24 * 2) }, failures: 0, min_interval_secs: 86400, next_run_at: null,
-      sign_in: { state: 'unknown', expires_at: null, checked_at: at(-60 * 24 * 2), renews: false, needs_person: null },
-      last_attempt: null,
-      last_success: null,
-    },
-    {
-      source: src.alexPeds.id, person: alex.id, cli: 'athena', organization: 'example-pediatrics', auto: true, paused: null, failures: 0, min_interval_secs: 86400, next_run_at: null,
-      sign_in: { state: 'expired', expires_at: null, checked_at: at(-60 * 2), renews: true, needs_person: { reason: 'sign_in', since: at(-60 * 2), command: `medrec refresh sign-in ${src.alexPeds.id}` } },
-      last_attempt: alexPedsEnded,
-      last_success: { attempt: alexOk.attempt, finished_at: alexOk.finished_at, import: aPeds.id, counts: counts(aPeds), withheld_types: [] },
-    },
-    planStatus(src.samPlan, sam, samPlanOk, S.imports.at(-1)),
-    planStatus(src.alexPlan, alex, alexPlanOk, A.imports.at(-1)),
-    planStatus(src.robinRx, robin, robinRxOk, R.imports.at(-1)),
-  ],
-});
-attempts.sort((a, b) => a.started_at.localeCompare(b.started_at));
-const byMonth = new Map();
-for (const a of attempts) {
-  const m = a.started_at.slice(0, 7);
-  byMonth.set(m, [...(byMonth.get(m) ?? []), a]);
-}
-for (const [m, lines] of byMonth) write(`_status/attempts/${m}.ndjson`, lines.map((l) => JSON.stringify(l)).join('\n') + '\n');
-
-write('README.md', '# Sample records\n\nA synthetic medrec records folder for the app’s demo mode and tests. Every person, organization and value in it is invented.\n');
-
-// ---- Sam's knee procedure ----
-
-// One visit, five claims from four billers: the surgery center, the surgeon,
-// the imaging group and the equipment supplier, twice. The surgery center
-// billed for both sides of the joint; the plan paid for one and kept the
-// center's line, not counted. Its bill is in the folder; the surgeon's is not
-// yet. Drawn last, so no other id moves.
-const kneeDay = '2026-08-26';
-const kneePlan = { insurer: 'Example Care Plan', benefitPeriod: julyYear(kneeDay), diagnoses: [['S83.241A', 'Other tear of medial meniscus, current injury, right knee, initial encounter']] };
-claimOf(S, src.samPlan, { ...kneePlan, date: kneeDay, provider: 'Example Surgery Center', type: 'Institutional', replaced: ['29880', 'Knee scope, both sides', '5120.00'], lines: [
-  ['29881', 'Knee scope, one side', '3960.00', '1240.00', '0.00', '175.00', '0.00', '1065.00', ['0360', 'Operating room']],
-  ['J0690', 'Antibiotic during surgery', '88.00', '22.00', '0.00', '0.00', '0.00', '22.00', ['0636', 'Medicine given']],
-] });
-claimOf(S, src.samPlan, { ...kneePlan, date: kneeDay, provider: 'Example Orthopedic Surgeons', lines: [['29881', 'Knee scope, one side', '1450.00', '610.00', '112.50', '0.00', '0.00', '497.50']] });
-claimOf(S, src.samPlan, { ...kneePlan, date: kneeDay, provider: 'Example Imaging Partners', lines: [['73560', 'X-ray of the knee', '118.00', '44.00', '0.00', '0.00', '0.00', '44.00']] });
-claimOf(S, src.samPlan, { ...kneePlan, date: kneeDay, provider: 'Example Medical Supply', lines: [['E0114', 'Crutches', '62.00', '28.40', '0.00', '0.00', '0.00', '28.40']] });
-claimOf(S, src.samPlan, { ...kneePlan, date: kneeDay, provider: 'Example Medical Supply', lines: [['L1820', 'Knee brace', '140.00', '71.30', '0.00', '0.00', '0.00', '71.30']] });
-S.document(null, {
-  date: kneeDay,
-  doc_type: 'bill',
-  title: 'Statement from Example Surgery Center',
-  organization: 'Example Surgery Center',
-  text: 'Knee procedure 08/26/2026. Statement date 09/21/2026. Account ****2222. Amount due $175.00. Please pay by 10/21/2026.',
-  statement: { statement_date: '2026-09-21', amount_due: { amount: '175.00', currency: 'USD' }, due_date: '2026-10-21', account: '****2222' },
-  original: 'surgery_center_statement_sep.pdf',
-});
-S.document(null, { date: kneeDay, doc_type: 'discharge_summary', title: 'Going home after knee surgery', organization: 'Example Surgery Center', pages: 2, text: 'Knee scope 08/26/2026. Went home the same day on crutches. Keep the dressing dry for three days. Start physical therapy in one week.', original: 'knee_going_home.pdf' });
-S.write();
-
-// ---- A private visit ----
-// Sam's video counseling session. Its practice says its area, so medrec lists
-// it in Sam's private.json, and the app keeps it on Sam's own pages and off
-// the household's shared screens unless someone turns that on.
-S.record(src.samChart, 'Encounter', 'encounter', {
-  date: '2026-10-27',
-  display: 'Counseling session',
-  status: 'finished',
-  fields: { class: 'virtual', practitioner: 'Dr. Morgan Placeholder', location: 'Example Counseling', reason: 'Anxiety' },
-  resource: { status: 'finished', class: { code: 'VR' }, type: [{ text: 'Counseling session' }], period: { start: '2026-10-27T21:00:00Z' }, reasonCode: [{ text: 'Anxiety' }] },
-});
-S.write();
-
-// ---- Refills ----
-// Sam's loratadine, filled for 30 days, so a refill comes due. And nicotine
-// patches, which medrec lists as private by the medicine: their refill shows
-// on Sam's own pages and stays off the household's shared screens.
-S.record(src.samChart, 'MedicationDispense', 'medication', {
-  date: '2026-10-25',
-  display: 'Loratadine 10 mg tablet',
-  status: 'completed',
-  fields: { dosage: 'Take 1 tablet by mouth once a day', quantity: '30 tablet', days_supply: 30, pharmacy: 'Example Pharmacy', prescriber: 'Dr. Casey Placeholder', source: 'dispense' },
-  resource: { status: 'completed', medicationCodeableConcept: { text: 'Loratadine 10 mg tablet' }, whenHandedOver: '2026-10-25', quantity: { value: 30, unit: 'tablet' }, daysSupply: { value: 30, unit: 'days' } },
-});
-S.record(src.samChart, 'MedicationRequest', 'medication', {
-  date: '2026-10-30',
-  display: 'Nicotine 14 mg/24 hour patch',
-  status: 'active',
-  fields: { dosage: 'Put on 1 patch once a day', prescriber: 'Dr. Casey Placeholder', source: 'request' },
-  resource: { status: 'active', intent: 'order', medicationCodeableConcept: { text: 'Nicotine 14 mg/24 hour patch' }, authoredOn: '2026-10-30', dosageInstruction: [{ text: 'Put on 1 patch once a day' }] },
-});
-S.record(src.samChart, 'MedicationDispense', 'medication', {
-  date: '2026-10-31',
-  display: 'Nicotine 14 mg/24 hour patch',
-  status: 'completed',
-  fields: { dosage: 'Put on 1 patch once a day', quantity: '28 patch', days_supply: 28, pharmacy: 'Example Pharmacy', prescriber: 'Dr. Casey Placeholder', source: 'dispense' },
-  resource: { status: 'completed', medicationCodeableConcept: { text: 'Nicotine 14 mg/24 hour patch' }, whenHandedOver: '2026-10-31', quantity: { value: 28, unit: 'patch' }, daysSupply: { value: 28, unit: 'days' } },
-});
-S.write();
-
-// ---- What the counseling cost ----
-// The plan's claim for Sam's counseling session, private like the visit, so
-// Money's totals count it while its shared lists leave it off, counted. Sam
-// owes a copay and no bill has come yet. It is the newest claim to print
-// Sam's plan balances, so a shared view must not date or link it. Drawn
-// last, so no other id moves.
-claimOf(S, src.samPlan, { date: '2026-10-27', provider: 'Example Counseling', insurer: 'Example Care Plan', benefitPeriod: julyYear('2026-10-27'), diagnoses: [['F41.1', 'Generalized anxiety disorder']], lines: [['90834', 'Talk therapy session', '180.00', '110.00', '0.00', '30.00', '0.00', '80.00']], balances: careBalance('233.50', '438.50') });
-S.write();
-
-// ---- Jamie's two-month doses ----
-// The shots of the September visit: the four-month ones come due after the
-// anchor. Drawn last, so no other id moves.
-for (const [code, name] of [['110', 'DTaP-hepatitis B and poliovirus vaccine'], ['48', 'Hib (PRP-T)'], ['133', 'Pneumococcal conjugate PCV 13'], ['119', 'Rotavirus, monovalent']]) {
-  J.record(src.jamiePeds, 'Immunization', 'immunization', {
-    date: '2026-09-29',
-    code: { system: CVX, code, display: name },
-    display: name,
-    status: 'completed',
-    fields: { performer: 'Example Pediatrics', route: code === '119' ? 'Oral' : 'Intramuscular' },
-    resource: { status: 'completed', vaccineCode: { coding: [{ system: CVX, code }], text: name }, occurrenceDateTime: '2026-09-29' },
-    filed: JAMIE_PEDS_LOAD,
-  });
-}
-J.write();
-
-// ---- Sam's loratadine prescription ----
-// The order its October fill is for. Drawn last, so no other id moves.
-S.record(src.samChart, 'MedicationRequest', 'medication', {
-  date: '2026-04-21',
-  display: 'Loratadine 10 mg tablet',
-  status: 'active',
-  fields: { dosage: 'Take 1 tablet by mouth once a day', prescriber: 'Dr. Casey Placeholder', source: 'request' },
-  resource: { status: 'active', intent: 'order', medicationCodeableConcept: { text: 'Loratadine 10 mg tablet' }, authoredOn: '2026-04-21', dosageInstruction: [{ text: 'Take 1 tablet by mouth once a day' }] },
-});
-S.write();
-
-// ---- Write ----
-
-// The names medrec gave the sample's codes, by the files that hold them.
-const named = existsSync(join(ROOT, 'views', 'views.json'))
-  ? readdirSync(join(ROOT, 'views'), { recursive: true })
-      .filter((f) => f === 'views.json' || basename(f).startsWith('code-names.'))
-      .map((f) => [join('views', f), readFileSync(join(ROOT, 'views', f))])
-  : [];
-rmSync(ROOT, { recursive: true, force: true });
-const list = [...files.keys()].sort();
-for (const path of list) {
-  const full = join(ROOT, path);
-  mkdirSync(dirname(full), { recursive: true });
-  writeFileSync(full, files.get(path));
-}
-
-// ---- medrec's views ----
-// The app reads each person's events, private items and code names from
-// medrec's views: views/views.json and, under views/<person id>/,
-// events.<md5>.json (medrec 0.9.0 and later), private.<md5>.json (0.9.1) and
-// code-names.<md5>.json (0.9.4). medrec writes them here itself
-// (scripts/medrec.mjs): nothing in them is set by hand. The app reads no
-// other view, so the rest are not kept.
-//
-// The names come from CMS's table of ICD-10-CM titles, which medrec reads
-// from a machine that has it and otherwise keeps from the last views. So the
-// table is needed only when the sample gains a code: ICD10CM_ZIP is then the
-// zip `medrec tables list` gives the address of, which medrec checks against
-// its recorded hash. The last pass never has it, so every machine writes the
-// same views.
+// They come from CMS's table of ICD-10-CM titles, which medrec reads from a
+// machine that has it and otherwise keeps from that person's last views. So the
+// table is needed only when someone gains a code or their id changes, and a run
+// that then goes without it stops: ICD10CM_ZIP is the zip `medrec tables list`
+// gives the address of, which medrec checks against its recorded hash. The last
+// pass is on a machine without it, so every machine writes the same views.
 if (process.env.ICD10CM_ZIP) {
-  withMedrec(ROOT, (medrec) => {
-    medrec('tables', 'fetch', 'icd10cm', '--file', resolve(process.env.ICD10CM_ZIP));
-    medrec('views', 'write', '--all');
-  });
+  at(2 * MINUTE, 'tables', 'fetch', 'icd10cm', '--file', resolve(process.env.ICD10CM_ZIP));
+  at(2 * MINUTE, 'views', 'write', '--all');
 } else {
-  for (const [f, bytes] of named) {
-    mkdirSync(dirname(join(ROOT, f)), { recursive: true });
-    writeFileSync(join(ROOT, f), bytes);
+  for (const f of readdirSync(join(KEPT, 'views'), { recursive: true })) {
+    if (f === 'views.json' || f.split(sep).at(-1).startsWith('code-names.')) put(join(ROOT, 'views', f), readFileSync(join(KEPT, 'views', f)));
   }
 }
-withMedrec(ROOT, (medrec) => medrec('views', 'write', '--all'));
-list.push('views/views.json');
-for (const person of readdirSync(join(ROOT, 'views'), { withFileTypes: true }).filter((e) => e.isDirectory())) {
-  for (const name of readdirSync(join(ROOT, 'views', person.name))) {
-    if (APP_VIEW.test(name)) list.push(`views/${person.name}/${name}`);
-    else rmSync(join(ROOT, 'views', person.name, name));
-  }
+const last = scratchMachine(ROOT).medrec;
+for (const args of [['profiles', 'add', 'demo'], ['init', ROOT], ['views', 'write', '--all'], ['verify']]) last(2 * MINUTE, ...args);
+
+const readJson = (...path) => JSON.parse(readFileSync(join(ROOT, ...path), 'utf8'));
+/** The ICD-10-CM codes anywhere in a record. */
+const icd = (o) => (o && typeof o === 'object' ? [...(o.system === 'http://hl7.org/fhir/sid/icd-10-cm' ? [o.code] : []), ...Object.values(o).flatMap(icd)] : []);
+for (const p of Object.values(PEOPLE)) {
+  const index = readJson(p.name, 'index.json');
+  const names = readdirSync(join(ROOT, 'views', index.person)).filter((f) => f.startsWith('code-names.')).map((f) => readJson('views', index.person, f));
+  const named = new Set(names.flatMap((n) => [...Object.keys(n.codes ?? {}), ...Object.keys(n.private_codes ?? {})]).map((key) => key.split('|')[1]));
+  const unnamed = [...new Set(icd(index.records))].filter((code) => !named.has(code));
+  if (unnamed.length) throw new Error(`${p.name}'s ${unnamed.join(', ')} have no name: run again with ICD10CM_ZIP (above)`);
 }
-list.sort();
+
+// ---- The folder as the app ships it ----
+
+const ships = (f) => !f.startsWith(`views${sep}`) || f === join('views', 'views.json') || APP_VIEW.test(f.split(sep).at(-1));
+const list = readdirSync(ROOT, { recursive: true, withFileTypes: true })
+  .filter((e) => e.isFile())
+  .map((e) => join(e.parentPath, e.name).slice(ROOT.length + 1))
+  .filter(ships)
+  .sort();
+for (const f of list) {
+  mkdirSync(dirname(join(OUT, f)), { recursive: true });
+  copyFileSync(join(ROOT, f), join(OUT, f));
+}
+// The app lists this folder from the manifest, which has no empty ones.
+put(join(OUT, '_requests', '.keep'), '');
+const shipped = [...list.map((f) => f.split(sep).join('/')), '_requests/.keep'].sort();
 // Each file's MD5, as Drive reports it: the app checks medrec's views against them.
-const md5 = Object.fromEntries(list.map((f) => [f, md5Of(readFileSync(join(ROOT, f)))]));
-writeFileSync(join(ROOT, 'manifest.json'), `${JSON.stringify({ anchor: ANCHOR, files: list, md5 }, null, 2)}\n`);
-console.log(`wrote ${list.length} files under public/demo/`);
+const md5 = Object.fromEntries(shipped.map((f) => [f, md5Of(readFileSync(join(OUT, f)))]));
+put(join(OUT, 'manifest.json'), `${JSON.stringify({ anchor: ANCHOR, files: shipped, md5 }, null, 2)}\n`);
+console.log(`wrote ${shipped.length} files under ${OUT}`);

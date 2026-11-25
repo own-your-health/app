@@ -1,0 +1,1512 @@
+{
+  "schema": "medrec-index/v1",
+  "person": "p_zkcd2d4s5sbgiehhueoj",
+  "rev": 10,
+  "documents": [
+    {
+      "id": "d_cxq32wjwu7if44eetisk",
+      "path": "Val Example/Claims/2026/2026-04-02_bill_example_lab_Statement from Example Lab, april.pdf",
+      "sha256": "61f8c0316cc657faf9f7d1fb7ef4a05a497e69dd315e46007a7cf41a84f80803",
+      "md5": "0662dfc1f99bf945098c44abe7a8c261",
+      "size": 805,
+      "media_type": "application/pdf",
+      "pages": 1,
+      "original_name": "Statement from Example Lab, april.pdf",
+      "doc_type": "bill",
+      "date": "2026-04-02",
+      "organization": "Example Lab",
+      "filed_at": "2026-11-13T20:00:00Z",
+      "origin": {
+        "kind": "file",
+        "name": "Statement from Example Lab, april.pdf",
+        "action": "copied"
+      },
+      "text": {
+        "chars": 78,
+        "engines": [
+          "pdftotext sample"
+        ]
+      },
+      "minhash": [
+        309345006,
+        613591915,
+        1059369495,
+        168410765,
+        15593024,
+        434631904,
+        512370918,
+        207399034,
+        480108534,
+        746631991,
+        965081397,
+        391362775,
+        320323357,
+        968588985,
+        533097131,
+        296172445,
+        397015392,
+        133239434,
+        192656135,
+        387143283,
+        627373729,
+        625198379,
+        496713093,
+        498598281,
+        420495793,
+        868007714,
+        624332333,
+        132915831,
+        345870552,
+        923328124,
+        174400753,
+        359026236,
+        780996356,
+        136769303,
+        347227893,
+        1130452838,
+        121632644,
+        849577274,
+        249357180,
+        412441651,
+        27813286,
+        75319382,
+        137777429,
+        1798359,
+        422283790,
+        514084902,
+        1435275,
+        1056395009,
+        251375348,
+        794151801,
+        47665574,
+        101658949,
+        47234483,
+        1572368112,
+        394948675,
+        281644775,
+        280230079,
+        408054632,
+        92079393,
+        1309213813,
+        21691209,
+        119151640,
+        118387833,
+        424220742
+      ],
+      "classification": {
+        "person": {
+          "proposal": {
+            "value": "p_zkcd2d4s5sbgiehhueoj",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "date": {
+          "proposal": {
+            "value": "2026-04-02",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "doc_type": {
+          "proposal": {
+            "value": "bill",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "organization": {
+          "proposal": {
+            "value": "Example Lab",
+            "score": 99,
+            "confidence": "given"
+          }
+        }
+      },
+      "statement": {
+        "statement_date": "2026-04-02",
+        "account": "L-2040"
+      },
+      "provenance": {
+        "source": {
+          "kind": "scan"
+        },
+        "method": "file",
+        "filed_at": "2026-11-13T20:00:00Z",
+        "raw_path": "Val Example/Claims/2026/2026-04-02_bill_example_lab_Statement from Example Lab, april.pdf",
+        "classified_by": "hand",
+        "filed_by": "medrec 0.9.7"
+      }
+    },
+    {
+      "id": "d_dz4pbwvnyfqzh32qhw7w",
+      "path": "Val Example/Claims/2026/2026-08-20_bill_example_lab_Statement from Example Lab, september.pdf",
+      "sha256": "3fdeeab1c5cc06e28335884d946994e6be187decabc1bcf7be9af7719bebc860",
+      "md5": "a8bd64779f7eabdb14b18fba95cb0050",
+      "size": 866,
+      "media_type": "application/pdf",
+      "pages": 1,
+      "original_name": "Statement from Example Lab, september.pdf",
+      "doc_type": "bill",
+      "date": "2026-08-20",
+      "organization": "Example Lab",
+      "filed_at": "2026-11-13T20:00:00Z",
+      "origin": {
+        "kind": "file",
+        "name": "Statement from Example Lab, september.pdf",
+        "action": "copied"
+      },
+      "text": {
+        "chars": 123,
+        "engines": [
+          "pdftotext sample"
+        ]
+      },
+      "minhash": [
+        189571717,
+        22187309,
+        675457579,
+        168410765,
+        320974123,
+        469290472,
+        283375567,
+        107116119,
+        113438232,
+        967922819,
+        193781991,
+        221914111,
+        167443379,
+        168736556,
+        9012232,
+        75783561,
+        193678463,
+        133239434,
+        103330119,
+        387143283,
+        437186876,
+        464233950,
+        2960625,
+        861084888,
+        142542922,
+        79706962,
+        540601625,
+        79312326,
+        345870552,
+        228967834,
+        111465298,
+        402784569,
+        374524539,
+        136769303,
+        70268469,
+        106913445,
+        97399729,
+        69929410,
+        19441437,
+        412441651,
+        27813286,
+        75319382,
+        343449930,
+        1798359,
+        216146029,
+        40811116,
+        1435275,
+        34798267,
+        62297602,
+        56904119,
+        42972171,
+        75141207,
+        364948012,
+        286490554,
+        291028203,
+        264841376,
+        200810187,
+        281527609,
+        470773000,
+        174365713,
+        21691209,
+        7818851,
+        118387833,
+        445158178
+      ],
+      "classification": {
+        "person": {
+          "proposal": {
+            "value": "p_zkcd2d4s5sbgiehhueoj",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "date": {
+          "proposal": {
+            "value": "2026-08-20",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "doc_type": {
+          "proposal": {
+            "value": "bill",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "organization": {
+          "proposal": {
+            "value": "Example Lab",
+            "score": 99,
+            "confidence": "given"
+          }
+        }
+      },
+      "statement": {
+        "statement_date": "2026-09-02",
+        "amount_due": {
+          "amount": "90.00",
+          "currency": "USD"
+        },
+        "due_date": "2026-10-02",
+        "account": "L-2040"
+      },
+      "provenance": {
+        "source": {
+          "kind": "scan"
+        },
+        "method": "file",
+        "filed_at": "2026-11-13T20:00:00Z",
+        "raw_path": "Val Example/Claims/2026/2026-08-20_bill_example_lab_Statement from Example Lab, september.pdf",
+        "classified_by": "hand",
+        "filed_by": "medrec 0.9.7"
+      }
+    },
+    {
+      "id": "d_vcavtjiom624xqb64caq",
+      "path": "Val Example/Claims/2026/2026-08-20_bill_example_lab_Statement from Example Lab, september, again.pdf",
+      "sha256": "73a0b294d68bbe8e0a3117965215cd420f55d4107e94ab89bc7cd276b1d08236",
+      "md5": "b481929f7ab810823a2546d12242138a",
+      "size": 879,
+      "media_type": "application/pdf",
+      "pages": 1,
+      "original_name": "Statement from Example Lab, september, again.pdf",
+      "doc_type": "bill",
+      "date": "2026-08-20",
+      "organization": "Example Lab",
+      "filed_at": "2026-11-13T20:00:00Z",
+      "origin": {
+        "kind": "file",
+        "name": "Statement from Example Lab, september, again.pdf",
+        "action": "copied"
+      },
+      "text": {
+        "chars": 128,
+        "engines": [
+          "pdftotext sample"
+        ]
+      },
+      "near_duplicates": [
+        {
+          "document": "d_dz4pbwvnyfqzh32qhw7w",
+          "similarity": 0.97
+        }
+      ],
+      "minhash": [
+        189571717,
+        22187309,
+        675457579,
+        168410765,
+        320974123,
+        469290472,
+        283375567,
+        107116119,
+        113438232,
+        702265237,
+        193781991,
+        221914111,
+        167443379,
+        168736556,
+        9012232,
+        75783561,
+        193678463,
+        133239434,
+        103330119,
+        387143283,
+        437186876,
+        464233950,
+        2960625,
+        861084888,
+        142542922,
+        79706962,
+        540601625,
+        79312326,
+        345870552,
+        228967834,
+        111465298,
+        402784569,
+        374524539,
+        136769303,
+        70268469,
+        106913445,
+        97399729,
+        69929410,
+        19441437,
+        412441651,
+        27813286,
+        75319382,
+        343449930,
+        1798359,
+        216146029,
+        40811116,
+        1435275,
+        34798267,
+        62297602,
+        56904119,
+        42972171,
+        75141207,
+        364948012,
+        286490554,
+        291028203,
+        264841376,
+        200810187,
+        281527609,
+        70657697,
+        174365713,
+        21691209,
+        7818851,
+        118387833,
+        445158178
+      ],
+      "classification": {
+        "person": {
+          "proposal": {
+            "value": "p_zkcd2d4s5sbgiehhueoj",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "date": {
+          "proposal": {
+            "value": "2026-08-20",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "doc_type": {
+          "proposal": {
+            "value": "bill",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "organization": {
+          "proposal": {
+            "value": "Example Lab",
+            "score": 99,
+            "confidence": "given"
+          }
+        }
+      },
+      "statement": {
+        "statement_date": "2026-09-02",
+        "amount_due": {
+          "amount": "90.00",
+          "currency": "USD"
+        },
+        "due_date": "2026-10-02",
+        "account": "L-2040"
+      },
+      "same_statement_as": "d_dz4pbwvnyfqzh32qhw7w",
+      "provenance": {
+        "source": {
+          "kind": "scan"
+        },
+        "method": "file",
+        "filed_at": "2026-11-13T20:00:00Z",
+        "raw_path": "Val Example/Claims/2026/2026-08-20_bill_example_lab_Statement from Example Lab, september, again.pdf",
+        "classified_by": "hand",
+        "filed_by": "medrec 0.9.7"
+      }
+    },
+    {
+      "id": "d_76gr5px2k6w2c7lrzlsq",
+      "path": "Val Example/Claims/2026/2026-08-11_bill_example_dental_Statement from Example Dental, august.pdf",
+      "sha256": "fbe2ad2b6c7d4563fe3730b587681139a1f0a90bc9f1b42b6e7cb61244dc3175",
+      "md5": "5149b6952729080d943db7bc915ddd04",
+      "size": 805,
+      "media_type": "application/pdf",
+      "pages": 1,
+      "original_name": "Statement from Example Dental, august.pdf",
+      "doc_type": "bill",
+      "date": "2026-08-11",
+      "organization": "Example Dental",
+      "filed_at": "2026-11-13T20:00:00Z",
+      "origin": {
+        "kind": "file",
+        "name": "Statement from Example Dental, august.pdf",
+        "action": "copied"
+      },
+      "text": {
+        "chars": 78,
+        "engines": [
+          "pdftotext sample"
+        ]
+      },
+      "minhash": [
+        338429385,
+        924023017,
+        286052436,
+        152854595,
+        216534752,
+        721022188,
+        192584371,
+        897318179,
+        109003672,
+        647437195,
+        337982130,
+        174161637,
+        574962763,
+        723346182,
+        1029189371,
+        499493927,
+        786510745,
+        108845316,
+        1179419817,
+        253718555,
+        309227231,
+        1021278340,
+        229190876,
+        122242848,
+        459685873,
+        310880455,
+        155573826,
+        146046940,
+        617354683,
+        363418871,
+        637524186,
+        1497038485,
+        260656078,
+        591168096,
+        562098677,
+        49070538,
+        307330789,
+        1272896193,
+        139367902,
+        350094028,
+        27813286,
+        167671087,
+        985887036,
+        1798359,
+        568784959,
+        712038665,
+        542992703,
+        491744698,
+        578090175,
+        115220962,
+        47665574,
+        740661732,
+        392498133,
+        634678364,
+        110485459,
+        355228458,
+        291314534,
+        408054632,
+        362159998,
+        833244342,
+        21691209,
+        312454113,
+        520615706,
+        683809804
+      ],
+      "classification": {
+        "person": {
+          "proposal": {
+            "value": "p_zkcd2d4s5sbgiehhueoj",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "date": {
+          "proposal": {
+            "value": "2026-08-11",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "doc_type": {
+          "proposal": {
+            "value": "bill",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "organization": {
+          "proposal": {
+            "value": "Example Dental",
+            "score": 99,
+            "confidence": "given"
+          }
+        }
+      },
+      "statement": {
+        "statement_date": "2026-08-11",
+        "amount_due": {
+          "amount": "120.00",
+          "currency": "USD"
+        }
+      },
+      "provenance": {
+        "source": {
+          "kind": "scan"
+        },
+        "method": "file",
+        "filed_at": "2026-11-13T20:00:00Z",
+        "raw_path": "Val Example/Claims/2026/2026-08-11_bill_example_dental_Statement from Example Dental, august.pdf",
+        "classified_by": "hand",
+        "filed_by": "medrec 0.9.7"
+      }
+    },
+    {
+      "id": "d_yltc5fubk7ttsrnqzecu",
+      "path": "Val Example/Claims/2026/2026-07-20_bill_example_therapy_Statement from Example Therapy, july.pdf",
+      "sha256": "4f22f506c328103163a77863231265f026430d7d37c5f9f5eabdd2e07f15f7dd",
+      "md5": "fbf9b8adaf0cf0613d44fa3104661218",
+      "size": 805,
+      "media_type": "application/pdf",
+      "pages": 1,
+      "original_name": "Statement from Example Therapy, july.pdf",
+      "doc_type": "bill",
+      "date": "2026-07-20",
+      "organization": "Example Therapy",
+      "filed_at": "2026-11-13T20:00:00Z",
+      "origin": {
+        "kind": "file",
+        "name": "Statement from Example Therapy, july.pdf",
+        "action": "copied"
+      },
+      "text": {
+        "chars": 78,
+        "engines": [
+          "pdftotext sample"
+        ]
+      },
+      "minhash": [
+        445086215,
+        248208271,
+        132056279,
+        262715776,
+        577411773,
+        190558689,
+        192584371,
+        112401826,
+        248269508,
+        1171901620,
+        770566745,
+        297607488,
+        664241531,
+        17577335,
+        299416328,
+        34925948,
+        128802840,
+        15973227,
+        358264829,
+        579702224,
+        12619530,
+        54420029,
+        136724217,
+        122242848,
+        393662596,
+        310880455,
+        220095381,
+        146046940,
+        174185209,
+        688933360,
+        936800153,
+        248159615,
+        236805591,
+        1716031,
+        425969986,
+        244120693,
+        448568674,
+        511980677,
+        177445567,
+        563785439,
+        27813286,
+        218033820,
+        1176708856,
+        1798359,
+        144000221,
+        43655714,
+        911371116,
+        260278977,
+        346511014,
+        1012929452,
+        47665574,
+        622645119,
+        452958455,
+        1137487801,
+        394948675,
+        412554277,
+        70944257,
+        26524239,
+        8653860,
+        118242966,
+        21691209,
+        960950087,
+        354527992,
+        68568420
+      ],
+      "classification": {
+        "person": {
+          "proposal": {
+            "value": "p_zkcd2d4s5sbgiehhueoj",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "date": {
+          "proposal": {
+            "value": "2026-07-20",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "doc_type": {
+          "proposal": {
+            "value": "bill",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "organization": {
+          "proposal": {
+            "value": "Example Therapy",
+            "score": 99,
+            "confidence": "given"
+          }
+        }
+      },
+      "statement": {
+        "statement_date": "2026-07-20",
+        "amount_due": {
+          "amount": "30.00",
+          "currency": "USD"
+        }
+      },
+      "provenance": {
+        "source": {
+          "kind": "scan"
+        },
+        "method": "file",
+        "filed_at": "2026-11-13T20:00:00Z",
+        "raw_path": "Val Example/Claims/2026/2026-07-20_bill_example_therapy_Statement from Example Therapy, july.pdf",
+        "classified_by": "hand",
+        "filed_by": "medrec 0.9.7"
+      }
+    },
+    {
+      "id": "d_v6cjq2vnslergcbmlw73",
+      "path": "Val Example/Claims/2026/2026-09-20_receipt_example_lab_Receipt from Example Lab, lab.pdf",
+      "sha256": "ebe074c2afc54a9a8c3451a1b8298eccf6f936cf3537d33c28ec76b22749cf6d",
+      "md5": "354c3b56a406ced4d64193c4211e2c2e",
+      "size": 806,
+      "media_type": "application/pdf",
+      "pages": 1,
+      "original_name": "Receipt from Example Lab, lab.pdf",
+      "doc_type": "receipt",
+      "date": "2026-09-20",
+      "organization": "Example Lab",
+      "filed_at": "2026-11-13T20:00:00Z",
+      "origin": {
+        "kind": "file",
+        "name": "Receipt from Example Lab, lab.pdf",
+        "action": "copied"
+      },
+      "text": {
+        "chars": 79,
+        "engines": [
+          "pdftotext sample"
+        ]
+      },
+      "minhash": [
+        987769136,
+        1595329894,
+        60968549,
+        66992289,
+        83578314,
+        234236984,
+        184423010,
+        117623611,
+        387743270,
+        98277636,
+        965081397,
+        1503276557,
+        87593831,
+        1147293577,
+        1013413859,
+        997169514,
+        645780094,
+        184901618,
+        86143930,
+        347943790,
+        445860984,
+        394404511,
+        240639080,
+        56587317,
+        74970241,
+        819483616,
+        668617485,
+        42740222,
+        60993963,
+        539072159,
+        378473206,
+        248159615,
+        236805591,
+        63196685,
+        347227893,
+        8724643,
+        601213293,
+        145394187,
+        205664700,
+        919222552,
+        297378380,
+        287899495,
+        817419028,
+        379846284,
+        397792141,
+        209523837,
+        1435275,
+        746515676,
+        411642416,
+        104087175,
+        86279744,
+        235446512,
+        425680908,
+        288255770,
+        195921449,
+        186567903,
+        125600409,
+        289370668,
+        1466372956,
+        261044330,
+        718064511,
+        961790600,
+        301340005,
+        15429356
+      ],
+      "classification": {
+        "person": {
+          "proposal": {
+            "value": "p_zkcd2d4s5sbgiehhueoj",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "date": {
+          "proposal": {
+            "value": "2026-09-20",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "doc_type": {
+          "proposal": {
+            "value": "receipt",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "organization": {
+          "proposal": {
+            "value": "Example Lab",
+            "score": 99,
+            "confidence": "given"
+          }
+        }
+      },
+      "statement": {
+        "amount_paid": {
+          "amount": "40.00",
+          "currency": "USD"
+        },
+        "paid_on": "2026-09-20"
+      },
+      "provenance": {
+        "source": {
+          "kind": "scan"
+        },
+        "method": "file",
+        "filed_at": "2026-11-13T20:00:00Z",
+        "raw_path": "Val Example/Claims/2026/2026-09-20_receipt_example_lab_Receipt from Example Lab, lab.pdf",
+        "classified_by": "hand",
+        "filed_by": "medrec 0.9.7"
+      }
+    },
+    {
+      "id": "d_hqliajy4tjmcls2n6db4",
+      "path": "Val Example/Claims/2026/2026-07-01_receipt_example_clinic_Receipt from Example Clinic, desk.pdf",
+      "sha256": "d3e53f00d09dc377c63d773513289eb584ef75072043c5c8550cb0ae5de79596",
+      "md5": "2cd5ad2e19cbc87779eba2d559c7470a",
+      "size": 809,
+      "media_type": "application/pdf",
+      "pages": 1,
+      "original_name": "Receipt from Example Clinic, desk.pdf",
+      "doc_type": "receipt",
+      "date": "2026-07-01",
+      "organization": "Example Clinic",
+      "filed_at": "2026-11-13T20:00:00Z",
+      "origin": {
+        "kind": "file",
+        "name": "Receipt from Example Clinic, desk.pdf",
+        "action": "copied"
+      },
+      "text": {
+        "chars": 82,
+        "engines": [
+          "pdftotext sample"
+        ]
+      },
+      "minhash": [
+        987769136,
+        112132063,
+        60968549,
+        48987981,
+        83578314,
+        833947011,
+        184423010,
+        118152558,
+        190579492,
+        98277636,
+        157090475,
+        613253919,
+        162308693,
+        481086446,
+        99007936,
+        997169514,
+        49597128,
+        578251475,
+        988734109,
+        429252660,
+        821952254,
+        115517031,
+        148291001,
+        214439992,
+        213210458,
+        539793140,
+        545061310,
+        330065176,
+        60993963,
+        675658426,
+        350508676,
+        34165002,
+        62765614,
+        549743254,
+        222698157,
+        66936748,
+        495876094,
+        145394187,
+        93637364,
+        123487325,
+        451517989,
+        581578788,
+        337943904,
+        379846284,
+        253558982,
+        114172773,
+        1045907302,
+        516023569,
+        316263368,
+        87733286,
+        445222579,
+        310864242,
+        382379249,
+        96272879,
+        865038257,
+        186567903,
+        770321176,
+        87531960,
+        23920348,
+        589606440,
+        666261694,
+        87777762,
+        790035691,
+        297663238
+      ],
+      "classification": {
+        "person": {
+          "proposal": {
+            "value": "p_zkcd2d4s5sbgiehhueoj",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "date": {
+          "proposal": {
+            "value": "2026-07-01",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "doc_type": {
+          "proposal": {
+            "value": "receipt",
+            "score": 99,
+            "confidence": "given"
+          }
+        },
+        "organization": {
+          "proposal": {
+            "value": "Example Clinic",
+            "score": 99,
+            "confidence": "given"
+          }
+        }
+      },
+      "statement": {
+        "amount_paid": {
+          "amount": "45.00",
+          "currency": "USD"
+        },
+        "paid_on": "2026-07-01"
+      },
+      "provenance": {
+        "source": {
+          "kind": "scan"
+        },
+        "method": "file",
+        "filed_at": "2026-11-13T20:00:00Z",
+        "raw_path": "Val Example/Claims/2026/2026-07-01_receipt_example_clinic_Receipt from Example Clinic, desk.pdf",
+        "classified_by": "hand",
+        "filed_by": "medrec 0.9.7"
+      }
+    }
+  ],
+  "records": [
+    {
+      "id": "r_xs7ebhwsxxnhj6o7exzz",
+      "kind": "claim",
+      "key": "claim|id|https://example-health-plan.example|uhc|example-health-plan|explanationofbenefit-36375c27|2026-08-20",
+      "date": "2026-08-20",
+      "code": {
+        "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+        "code": "professional",
+        "display": "Professional"
+      },
+      "display": "Comprehensive metabolic panel · Example Lab",
+      "status": "active",
+      "fields": {
+        "when": "2026-08-20",
+        "provider": "Example Lab",
+        "insurer": "Example Health Plan",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-08-20",
+          "end": "2026-08-20"
+        },
+        "total": [
+          {
+            "category": "Submitted Amount",
+            "amount": {
+              "amount": "130",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Eligible Amount",
+            "amount": {
+              "amount": "64",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Benefit Amount",
+            "amount": {
+              "amount": "0",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Deductible",
+            "amount": {
+              "amount": "64",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Copay",
+            "amount": {
+              "amount": "0",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Coinsurance",
+            "amount": {
+              "amount": "0",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Member liability",
+            "amount": {
+              "amount": "64",
+              "currency": "USD"
+            }
+          }
+        ],
+        "payment": {
+          "amount": "0",
+          "currency": "USD"
+        },
+        "type": "Professional",
+        "use": "claim",
+        "category": "lab",
+        "amounts": {
+          "billed": {
+            "amount": "130",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "64",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "0",
+            "currency": "USD"
+          },
+          "deductible": {
+            "amount": "64",
+            "currency": "USD"
+          },
+          "copay": {
+            "amount": "0",
+            "currency": "USD"
+          },
+          "coinsurance": {
+            "amount": "0",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "64",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "sequence": 1,
+            "category": "lab",
+            "amounts": {
+              "billed": {
+                "amount": "130",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "64",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "0",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "64",
+                "currency": "USD"
+              },
+              "copay": {
+                "amount": "0",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "0",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "64",
+                "currency": "USD"
+              }
+            },
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "80053",
+              "display": "Comprehensive metabolic panel"
+            },
+            "serviced": "2026-08-20",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "130",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "130",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "64",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "0",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "64",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Copay",
+                "amount": {
+                  "amount": "0",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "0",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "64",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ]
+          }
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "uhc",
+            "cli_version": "0.3.6",
+            "organization_id": "example-health-plan",
+            "fhir_base": "https://example-health-plan.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "ExplanationOfBenefit",
+            "id": "explanationofbenefit-36375c27",
+            "last_updated": "2026-08-20T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:23:00Z",
+          "filed_at": "2026-11-14T20:23:00Z",
+          "raw_path": "Val Example/Records/uhc-example-health-plan/ExplanationOfBenefit/explanationofbenefit-36375c27.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    },
+    {
+      "id": "r_ixg6r5xykydvru6o3fkh",
+      "kind": "claim",
+      "key": "claim|id|https://example-health-plan.example|uhc|example-health-plan|explanationofbenefit-fb6db691|2026-07-01",
+      "date": "2026-07-01",
+      "code": {
+        "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+        "code": "professional",
+        "display": "Professional"
+      },
+      "display": "Office visit · Example Clinic",
+      "status": "active",
+      "fields": {
+        "when": "2026-07-01",
+        "provider": "Example Clinic",
+        "insurer": "Example Health Plan",
+        "outcome": "complete",
+        "billable_period": {
+          "start": "2026-07-01",
+          "end": "2026-07-01"
+        },
+        "total": [
+          {
+            "category": "Submitted Amount",
+            "amount": {
+              "amount": "150",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Eligible Amount",
+            "amount": {
+              "amount": "100",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Benefit Amount",
+            "amount": {
+              "amount": "75",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Deductible",
+            "amount": {
+              "amount": "0",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Copay",
+            "amount": {
+              "amount": "25",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Coinsurance",
+            "amount": {
+              "amount": "0",
+              "currency": "USD"
+            }
+          },
+          {
+            "category": "Member liability",
+            "amount": {
+              "amount": "25",
+              "currency": "USD"
+            }
+          }
+        ],
+        "payment": {
+          "amount": "75",
+          "currency": "USD"
+        },
+        "type": "Professional",
+        "use": "claim",
+        "category": "visit",
+        "amounts": {
+          "billed": {
+            "amount": "150",
+            "currency": "USD"
+          },
+          "allowed": {
+            "amount": "100",
+            "currency": "USD"
+          },
+          "plan_paid": {
+            "amount": "75",
+            "currency": "USD"
+          },
+          "deductible": {
+            "amount": "0",
+            "currency": "USD"
+          },
+          "copay": {
+            "amount": "25",
+            "currency": "USD"
+          },
+          "coinsurance": {
+            "amount": "0",
+            "currency": "USD"
+          },
+          "you_owe": {
+            "amount": "25",
+            "currency": "USD"
+          }
+        },
+        "items": [
+          {
+            "sequence": 1,
+            "category": "visit",
+            "amounts": {
+              "billed": {
+                "amount": "150",
+                "currency": "USD"
+              },
+              "allowed": {
+                "amount": "100",
+                "currency": "USD"
+              },
+              "plan_paid": {
+                "amount": "75",
+                "currency": "USD"
+              },
+              "deductible": {
+                "amount": "0",
+                "currency": "USD"
+              },
+              "copay": {
+                "amount": "25",
+                "currency": "USD"
+              },
+              "coinsurance": {
+                "amount": "0",
+                "currency": "USD"
+              },
+              "you_owe": {
+                "amount": "25",
+                "currency": "USD"
+              }
+            },
+            "service": {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99213",
+              "display": "Office visit"
+            },
+            "serviced": "2026-07-01",
+            "quantity": {
+              "value": 1,
+              "unit": null
+            },
+            "net": {
+              "amount": "150",
+              "currency": "USD"
+            },
+            "adjudication": [
+              {
+                "category": "Submitted Amount",
+                "amount": {
+                  "amount": "150",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Eligible Amount",
+                "amount": {
+                  "amount": "100",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Benefit Amount",
+                "amount": {
+                  "amount": "75",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Deductible",
+                "amount": {
+                  "amount": "0",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Copay",
+                "amount": {
+                  "amount": "25",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Coinsurance",
+                "amount": {
+                  "amount": "0",
+                  "currency": "USD"
+                },
+                "reason": null
+              },
+              {
+                "category": "Member liability",
+                "amount": {
+                  "amount": "25",
+                  "currency": "USD"
+                },
+                "reason": null
+              }
+            ]
+          }
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "uhc",
+            "cli_version": "0.3.6",
+            "organization_id": "example-health-plan",
+            "fhir_base": "https://example-health-plan.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "ExplanationOfBenefit",
+            "id": "explanationofbenefit-fb6db691",
+            "last_updated": "2026-07-01T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:23:00Z",
+          "filed_at": "2026-11-14T20:23:00Z",
+          "raw_path": "Val Example/Records/uhc-example-health-plan/ExplanationOfBenefit/explanationofbenefit-fb6db691.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    }
+  ],
+  "studies": [],
+  "imports": [
+    {
+      "id": "i_pkuwxzurgpvsspe7o6s4",
+      "source_dir": "Val Example/Records/uhc-example-health-plan",
+      "stream_sha256": "c73e2a90e9443a15dc0a6db19a68e337589c63841c54757338db6cd92284d458",
+      "stream_bytes": 7212,
+      "cli": "uhc",
+      "cli_version": "0.3.6",
+      "organization": "example-health-plan",
+      "patient_id": "pat-57223d94",
+      "pulled_at": "2026-11-14T20:23:00Z",
+      "imported_at": "2026-11-14T20:23:00Z",
+      "counts": {
+        "ExplanationOfBenefit": 2,
+        "Patient": 1
+      },
+      "records_added": 2,
+      "records_updated": 0,
+      "records_unchanged": 0,
+      "records_older": 0,
+      "resources_written": 3,
+      "resources_unchanged": 0,
+      "documents_added": 0
+    },
+    {
+      "id": "i_rffjrag3x466unazfqyb",
+      "source_dir": "Val Example/Records/uhc-example-health-plan",
+      "stream_sha256": "c73e2a90e9443a15dc0a6db19a68e337589c63841c54757338db6cd92284d458",
+      "stream_bytes": 7212,
+      "cli": "uhc",
+      "cli_version": "0.3.6",
+      "organization": "example-health-plan",
+      "patient_id": "pat-57223d94",
+      "pulled_at": "2026-11-14T20:23:00Z",
+      "imported_at": "2026-11-16T20:00:00Z",
+      "counts": {
+        "ExplanationOfBenefit": 2,
+        "Patient": 1
+      },
+      "records_added": 0,
+      "records_updated": 0,
+      "records_unchanged": 2,
+      "records_older": 0,
+      "resources_written": 0,
+      "resources_unchanged": 3,
+      "documents_added": 0
+    }
+  ]
+}

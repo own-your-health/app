@@ -1,9 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
+import { ROBIN, SAM } from '../test/sample';
 
 // Every record page leads with the plain answer; codes, sources, identifiers
 // and the raw FHIR sit folded under Technical details.
 
-const PEOPLE: Record<string, string> = { 'Robin': 'p_xo4em46i7yj3hphlpajo', 'Sam': 'p_wwezzed7kml67hnp6s7n' };
+const PEOPLE: Record<string, string> = { 'Robin': ROBIN, 'Sam': SAM };
 
 /** One of a person's full lists (results, medicines…), at the address Health's links open. */
 async function openList(page: Page, name: string, list: string) {
@@ -36,7 +37,7 @@ async function expectLearnLink(page: Page, site: RegExp, href: RegExp) {
   await expect(a).toHaveAttribute('rel', 'noopener noreferrer');
   await expect(a).toHaveText(site);
   const url = (await a.getAttribute('href'))!;
-  expect(url).not.toMatch(/[pr]_[a-z2-7]{20}|Example|Robin|Sam|Alex|Jamie/);
+  expect(url).not.toMatch(/[pr]_[a-z2-7]{20}|Example|Robin|Sam|Alex|Drew/);
 }
 
 test('a result leads with its value, the lab’s range and what the test measures', async ({ page }) => {
@@ -92,18 +93,18 @@ test('a result out of the lab’s range says so in words and marks it on the bar
 
 test('a number the lab sent as text reads as one: its unit, the range bar and the chart', async ({ page }) => {
   await openList(page, 'Robin', 'results');
-  await page.getByRole('link', { name: /Glucose/ }).first().click();
-  await page.locator('table a', { hasText: 'Mar 10, 2025' }).click();
+  await page.getByRole('link', { name: /Sodium/ }).first().click();
+  await page.locator('table a', { hasText: 'Sep 15, 2025' }).click();
   const head = page.locator('section.card').first();
-  await expect(head.locator('h1')).toHaveText('Glucose');
-  await expect(head.locator('.result-value')).toHaveText('94 mg/dL');
-  await expect(head.locator('.verdict.verdict-in')).toHaveText('Within the lab’s range of 70–99 mg/dL.');
+  await expect(head.locator('h1')).toHaveText('Sodium');
+  await expect(head.locator('.result-value')).toHaveText('139 mmol/L');
+  await expect(head.locator('.verdict.verdict-in')).toHaveText('Within the lab’s range of 136–145 mmol/L.');
   expect(await head.locator('.verdict').evaluate((el) => getComputedStyle(el, '::before').content)).toContain('✓');
-  await expect(head.locator('svg.range-bar')).toHaveAttribute('aria-label', '94 mg/dL. Within the lab’s range of 70–99 mg/dL.');
+  await expect(head.locator('svg.range-bar')).toHaveAttribute('aria-label', '139 mmol/L. Within the lab’s range of 136–145 mmol/L.');
   await expect(head.locator('.range-marker-in')).toHaveCount(1);
   const history = page.locator('.card', { has: page.locator('h2', { hasText: /^Over time$/ }) });
   await expect(history.locator('svg.chart circle')).toHaveCount(3);
-  await expect(history.locator('tbody tr[aria-current="true"]')).toContainText('94 mg/dL');
+  await expect(history.locator('tbody tr[aria-current="true"]')).toContainText('139 mmol/L');
 });
 
 test('a medicine leads with how to take it and its last fill', async ({ page }) => {
@@ -148,7 +149,7 @@ test('a document and a visit keep their files and sources under Technical detail
   await expect(page.locator('section.card').first()).toContainText('Annual physical');
   const visit = page.locator('.card', { has: page.locator('h2', { hasText: /^At this visit$/ }) });
   // Results by their plain names.
-  await expect(visit).toContainText('A1c');
+  await expect(visit).toContainText('Total cholesterol');
   await expect(visit).not.toContainText('Cholesterol, total');
   await expectFolded(page);
 

@@ -7,7 +7,7 @@ import { join } from 'node:path';
 describe('household.json', () => {
   it('reads the sample household', () => {
     const h = parseHousehold(demoJson('household.json'));
-    expect(h.people.map((p) => p.name)).toEqual(['Robin Example', 'Sam Example', 'Alex Example', 'Jamie Example']);
+    expect(h.people.map((p) => p.name)).toEqual(['Robin Example', 'Sam Example', 'Alex Example', 'Drew Example']);
     expect(h.sources).toHaveLength(11);
     expect(h.people[0]!.links?.huishouden_health_person).toBe('hh-demo-robin');
   });
@@ -112,8 +112,8 @@ describe('requests', () => {
   });
 
   it('reads a payment marked, and its undo, pending or answered', () => {
-    for (const f of ['paid', 'paid-done', 'paid-invalid', 'unpaid']) {
-      const raw = fixture<{ id: string }>(`requests/${f}.json`);
+    for (const f of ['requests/paid', 'requests/unpaid', 'rules/paid-ok', 'rules/paid-invalid']) {
+      const raw = fixture<{ id: string }>(`${f}.json`);
       expect(parseMark(raw)?.id).toBe(raw.id);
       expect(parseRequest(raw)).toBeNull();
     }
@@ -135,9 +135,11 @@ describe('requests', () => {
   });
 
   it('reads a request medrec refused, which keeps no scope', () => {
-    const r = parseRefused(fixture('folder/done-invalid.json'));
-    expect(r).toMatchObject({ id: null, handled: { outcome: 'invalid', message: 'The request is larger than 4 KiB.' } });
-    expect(parseRequest(fixture('folder/done-invalid.json'))).toBeNull();
+    const large = parseRefused(fixture('rules/refused-large.json'));
+    expect(large).toMatchObject({ id: expect.stringMatching(/^x_[a-z2-7]{20}$/), received: { bytes: 5291, sha256: null }, handled: { outcome: 'invalid', message: 'it is 5291 bytes; a request is at most 4096' } });
+    const misnamed = parseRefused(fixture('rules/refused-name.json'));
+    expect(misnamed).toMatchObject({ id: null, handled: { outcome: 'invalid' } });
+    for (const f of ['rules/refused-large.json', 'rules/refused-name.json']) expect(parseRequest(fixture(f))).toBeNull();
   });
 });
 

@@ -251,7 +251,7 @@ export const LOAD_TIMES = new Set([
 ]);
 
 /** The sample's keys for times that stay as written: times of care (an event's `times` among them), and a source's own. */
-export const KEPT_TIMES = new Set(['start', 'end', 'issued', 'lastUpdated', 'last_updated', 'times[]']);
+export const KEPT_TIMES = new Set(['start', 'end', 'date', 'when', 'issued', 'lastUpdated', 'last_updated', 'times[]']);
 
 /**
  * The synthetic records folder shipped with the app (public/demo/), read

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { CLIENT, FakeGoogle, FOLDER_NAME, OTHER_CLIENT, OTHER_USER, READ, TOKEN, USER, WRITE } from './fake-google';
+import { ROBIN, SAM } from '../test/sample';
 
 // The signed-in app against a stand-in for Google and Drive (fake-google.ts):
 // sign-in, the folder, Refresh and its answer, and what the app may change.
@@ -213,7 +214,7 @@ test('Refresh writes one request and shows the Mac’s answer', async ({ page })
 });
 
 test('a finished Refresh shows what it brought, without a reload', async ({ page }) => {
-  const robin = 'p_xo4em46i7yj3hphlpajo';
+  const robin = ROBIN;
   await signIn(page);
   await page.getByRole('button', { name: 'Refresh everything' }).click();
   await expect(page.getByText(/waiting for the Mac/).first()).toBeVisible();
@@ -303,7 +304,7 @@ test('while Drive is out after a finished Refresh, the looks end', async ({ page
 });
 
 test('someone held back is shown again when the app comes to the front after medrec has written their list', async ({ page }) => {
-  const sam = 'p_wwezzed7kml67hnp6s7n';
+  const sam = SAM;
   const list = google.list(`views/${sam}`).find((f) => f.startsWith('private.'))!;
   const content = google.read(`views/${sam}/${list}`)!;
   google.removeAsMac(`views/${sam}/${list}`);

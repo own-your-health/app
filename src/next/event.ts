@@ -55,7 +55,7 @@ export interface CareEvent {
   doubt?: string;
   /** What it was, in plain words: medrec's `what`, the portal's name for the visit or its reason, else the claims' services (`nameEvent`). */
   what?: string;
-  /** The billing descriptors the records name it by ("FIRST APPOINTMENT TIER THREE"), shown only in Details. */
+  /** The billing descriptors the records name it by ("NEW VISIT LEVEL FOUR"), shown only in Details. */
   descriptors?: string[];
   /** What medrec still expects for it: the doctors' claims, the hospital's claim, a claim or a bill. */
   expected?: { what: string; why: string; since?: string }[];
@@ -289,7 +289,7 @@ export function nameEvent(e: CareEvent, household: Household, person: string, gi
   const claimSaid = first ? claimTitle(first) : undefined;
   const portal = [v?.display, str(v?.fields.reason)];
   // medrec's pick is the portal's reason, or a plain name for its code. A private visit goes by the
-  // portal's own name for it first ("Counseling session"), so that no row says more than it has to.
+  // portal's own name for it first ("Clinic visit"), so that no row says more than it has to.
   const said = (given.private ? [...portal, given.what, claimSaid] : [given.what, ...portal, claimSaid]).filter((x): x is string => !!x);
   const title = given.title ?? kindTitle(e, claimSaid, given.what);
   e.title = title;

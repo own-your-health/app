@@ -11,11 +11,10 @@ import { markRecorded } from '../src/model/requests';
 import { billMarks, callsSummary, mayBePaid, openBills, toPay, unmarkedCents, worthACall } from '../src/next/money';
 import type { MarkRequest, MedDocument, PaidMark, PendingMark, PersonIndex, RefreshStatus, UnpaidMark } from '../src/model/types';
 import { demoFolder, demoFolderWith, demoJson } from './helpers';
+import { ROBIN, SAM } from './sample';
 
 const NOW = new Date('2026-11-22T20:00:00Z');
 const TODAY = '2026-11-22';
-const ROBIN = 'p_xo4em46i7yj3hphlpajo';
-const SAM = 'p_wwezzed7kml67hnp6s7n';
 
 beforeEach(() => {
   vi.useFakeTimers({ now: NOW, toFake: ['setTimeout', 'clearTimeout', 'Date'] });
@@ -657,7 +656,7 @@ describe('a payment marked', () => {
 
   it('is asked of a medrec that records it, by an account that may', async () => {
     const { store } = await loaded();
-    expect([store.medrec, store.mayRequest]).toEqual(['0.9.5', true]);
+    expect([store.medrec, store.mayRequest]).toEqual(['0.9.7', true]);
     const folder = demoFolder(NOW);
     const viewer = async (may: boolean | undefined) => {
       folder.mayRequest = async () => may;
@@ -668,8 +667,8 @@ describe('a payment marked', () => {
     expect([await viewer(false), await viewer(undefined), await viewer(true)]).toEqual([false, true, true]);
     const none = await loaded(demoFolderWith({ 'views/views.json': null }));
     expect(none.store.medrec).toBeUndefined();
-    const later = await loaded(demoFolderWith({ 'views/views.json': JSON.stringify({ ...demoJson<object>('views/views.json'), medrec: '0.9.7' }) }));
-    expect(later.store.medrec).toBe('0.9.7');
+    const later = await loaded(demoFolderWith({ 'views/views.json': JSON.stringify({ ...demoJson<object>('views/views.json'), medrec: '0.9.6' }) }));
+    expect(later.store.medrec).toBe('0.9.6');
     later.folder.writeAsMac('views/views.json', JSON.stringify({ ...demoJson<object>('views/views.json'), medrec: '0.9.8' }));
     await later.store.reload();
     expect(later.store.medrec).toBe('0.9.8');
@@ -692,38 +691,38 @@ describe('the sample’s Mac', () => {
   };
 
   it('settles a bill paid in full, and lists its payment by an id', async () => {
-    const doc = owing((await loaded()).store.index(SAM)!, '175.00').id;
-    const { store, waited, done, bill } = await marked(paid(SAM, doc, '175.00'));
+    const doc = owing((await loaded()).store.index(SAM)!, '90.50').id;
+    const { store, waited, done, bill } = await marked(paid(SAM, doc, '90.50'));
     expect([waited, done.handled?.outcome, done.paid?.document]).toEqual([[false], 'ok', doc]);
-    expect(bill(SAM, doc)).toMatchObject({ settled: true, payments: [{ from: 'household', on: '2026-11-20', amount: { amount: '175.00', currency: 'USD' } }] });
+    expect(bill(SAM, doc)).toMatchObject({ settled: true, payments: [{ from: 'household', on: '2026-11-20', amount: { amount: '90.50', currency: 'USD' } }] });
     expect(bill(SAM, doc).payments[0]!.id).toMatch(/^o_[a-z2-7]{20}$/);
     expect([store.billsNotes.size, store.mayBring()]).toEqual([0, false]);
   });
 
   it('leaves the rest of one paid in part, and counts a second payment', async () => {
     const start = await loaded();
-    const doc = owing(start.store.index(SAM)!, '175.00').id;
-    const one = await marked(paid(SAM, doc, '75'), start);
-    expect(one.bill(SAM, doc)).toMatchObject({ settled: false, left: { amount: '100.00', currency: 'USD' } });
-    const two = await marked(paid(SAM, doc, '120.00', '2026-11-01'), one);
-    expect(two.bill(SAM, doc)).toMatchObject({ settled: true, payments: [{ on: '2026-11-01' }, { on: '2026-11-20', amount: { amount: '75.00' } }] });
-    const again = await marked(paid(SAM, doc, '75.00'), two);
+    const doc = owing(start.store.index(SAM)!, '90.50').id;
+    const one = await marked(paid(SAM, doc, '60'), start);
+    expect(one.bill(SAM, doc)).toMatchObject({ settled: false, left: { amount: '30.50', currency: 'USD' } });
+    const two = await marked(paid(SAM, doc, '50.00', '2026-11-01'), one);
+    expect(two.bill(SAM, doc)).toMatchObject({ settled: true, payments: [{ on: '2026-11-01' }, { on: '2026-11-20', amount: { amount: '60.00' } }] });
+    const again = await marked(paid(SAM, doc, '60.00'), two);
     expect([again.bill(SAM, doc).payments.length, again.done.handled?.message]).toEqual([2, 'It was marked already.']);
   });
 
   it('does not take off a payment in another currency', async () => {
-    const doc = owing((await loaded()).store.index(SAM)!, '175.00').id;
-    const { bill } = await marked({ paid: { person: SAM, document: doc, on: '2026-11-20', amount: { amount: '175.00', currency: 'EUR' } } });
-    expect(bill(SAM, doc)).toMatchObject({ settled: false, left: { amount: '175.00' }, payments: [{ apart: true }] });
+    const doc = owing((await loaded()).store.index(SAM)!, '90.50').id;
+    const { bill } = await marked({ paid: { person: SAM, document: doc, on: '2026-11-20', amount: { amount: '90.50', currency: 'EUR' } } });
+    expect(bill(SAM, doc)).toMatchObject({ settled: false, left: { amount: '90.50' }, payments: [{ apart: true }] });
   });
 
   it('drops a payment, and has nothing to undo twice', async () => {
     const start = await loaded();
-    const doc = owing(start.store.index(SAM)!, '175.00').id;
-    const one = await marked(paid(SAM, doc, '175.00'), start);
+    const doc = owing(start.store.index(SAM)!, '90.50').id;
+    const one = await marked(paid(SAM, doc, '90.50'), start);
     const unpaid = { unpaid: { person: SAM, payment: one.bill(SAM, doc).payments[0]!.id! } };
     const two = await marked(unpaid, one);
-    expect(two.bill(SAM, doc)).toMatchObject({ settled: false, left: { amount: '175.00' }, payments: [] });
+    expect(two.bill(SAM, doc)).toMatchObject({ settled: false, left: { amount: '90.50' }, payments: [] });
     expect(two.done).toMatchObject({ unpaid: unpaid.unpaid, handled: { outcome: 'ok' } });
     vi.setSystemTime(new Date('2026-11-22T21:00:00Z'));
     expect((await marked(unpaid, two)).done.handled?.message).toBe('There was nothing to undo.');
@@ -732,9 +731,9 @@ describe('the sample’s Mac', () => {
   it('refuses what is not one of the person’s bills, and does nothing once it is undone', async () => {
     const start = await loaded();
     const receipt = start.store.index(ROBIN)!.documents.find((d) => d.doc_type === 'receipt')!;
-    for (const [person, doc] of [[ROBIN, receipt.id], [ROBIN, owing(start.store.index(SAM)!, '175.00').id], ['p_nobody', receipt.id]] as const) expect((await marked(paid(person, doc, '5.00'), start)).done.handled?.outcome).toBe('invalid');
+    for (const [person, doc] of [[ROBIN, receipt.id], [ROBIN, owing(start.store.index(SAM)!, '90.50').id], ['p_nobody', receipt.id]] as const) expect((await marked(paid(person, doc, '5.00'), start)).done.handled?.outcome).toBe('invalid');
     const mac = startDemoMac(start.folder, () => undefined);
-    const m = await start.store.requestMark(paid(SAM, owing(start.store.index(SAM)!, '175.00').id, '175.00'), {}, '0.1.0');
+    const m = await start.store.requestMark(paid(SAM, owing(start.store.index(SAM)!, '90.50').id, '90.50'), {}, '0.1.0');
     mac(m.file);
     await vi.advanceTimersByTimeAsync(100);
     await start.store.cancel(m);
@@ -751,15 +750,15 @@ describe('a bill whose payment waits for the Mac', () => {
     const { store } = await loaded();
     const idx = store.index(SAM)!;
     const events = householdEvents(store.household, (id) => store.index(id), TODAY).filter((x) => x.person.id === SAM);
-    const [billing, surgery] = [owing(idx, '120.00'), owing(idx, '175.00')];
+    const [billing, center] = [owing(idx, '120.00'), owing(idx, '90.50')];
     const receipt: MedDocument = { ...billing, id: 'd_unread', doc_type: 'receipt', date: '2026-08-20', statement: undefined };
     const open = (amount: string | null, from: PersonIndex = idx, doc = billing) => openBills(from, events, TODAY, amount === null ? [] : [mark(SAM, doc.id, amount)]).find((b) => b.bill.doc.id === doc.id)!;
     const kinds = (b: ReturnType<typeof open>) => [b.marked, worthACall(b), mayBePaid(b), toPay(b)];
     expect(kinds(open(null))).toEqual([false, true, false, false]);
     expect(kinds(open('119.99'))).toEqual([false, true, false, false]);
     expect([kinds(open('120.00')), kinds(open('130.00'))]).toEqual([[true, false, false, false], [true, false, false, false]]);
-    expect(kinds(open('175.00', idx, surgery))).toEqual([true, false, false, false]);
-    expect(kinds(open('174.00', idx, surgery))).toEqual([false, false, false, true]);
+    expect(kinds(open('90.50', idx, center))).toEqual([true, false, false, false]);
+    expect(kinds(open('90.49', idx, center))).toEqual([false, false, false, true]);
     const unread = { ...idx, documents: [...idx.documents, receipt] };
     expect([kinds(open(null, unread)), kinds(open('120.00', unread))]).toEqual([[false, false, true, false], [true, false, false, false]]);
     expect(open('120.00').marks).toHaveLength(1);
@@ -769,17 +768,17 @@ describe('a bill whose payment waits for the Mac', () => {
   it('keeps what it asks and what is left, as medrec has them, and says what no payment is marked for', async () => {
     const { store } = await loaded();
     const idx = store.index(SAM)!;
-    const bill = billList(idx).find((b) => b.doc.id === owing(idx, '175.00').id)!;
-    const marks = [mark(SAM, bill.doc.id, '100.00')];
-    expect([unmarkedCents(bill, []), unmarkedCents(bill, marks), unmarkedCents(bill, [...marks, ...marks])]).toEqual([17500, 7500, 0]);
+    const bill = billList(idx).find((b) => b.doc.id === owing(idx, '90.50').id)!;
+    const marks = [mark(SAM, bill.doc.id, '50.00')];
+    expect([unmarkedCents(bill, []), unmarkedCents(bill, marks), unmarkedCents(bill, [...marks, ...marks])]).toEqual([9050, 4050, 0]);
     const [open] = openBills(idx, [], TODAY, marks).filter((b) => b.bill.doc.id === bill.doc.id);
-    expect([open!.cents, open!.asked]).toEqual([17500, 17500]);
+    expect([open!.cents, open!.asked]).toEqual([9050, 9050]);
   });
 
   it('takes a payment marked on a copy of its statement, and none of another person’s', async () => {
     const { store } = await loaded();
     const idx = store.index(SAM)!;
-    const bill = billList(idx).find((b) => b.doc.id === owing(idx, '175.00').id)!;
+    const bill = billList(idx).find((b) => b.doc.id === owing(idx, '90.50').id)!;
     const copied = { ...idx, documents: [...idx.documents, { ...bill.doc, id: 'd_copy', same_statement_as: bill.doc.id }] };
     expect(billMarks(copied, bill, [mark(SAM, 'd_copy', '1.00')])).toHaveLength(1);
     expect(billMarks(idx, bill, [mark(SAM, 'd_copy', '1.00'), mark(ROBIN, bill.doc.id, '1.00')])).toEqual([]);

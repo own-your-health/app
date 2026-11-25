@@ -75,7 +75,7 @@ describe('allergies', () => {
 describe('medicines', () => {
   it('joins a prescription to its fills: who prescribed, since when, the last fill and where', () => {
     const { active, past } = medicineList(index('Robin Example'));
-    expect(names(active)).toEqual(['Lisinopril 10 mg tablet']);
+    expect(names(active)).toEqual(['Lisinopril 10 mg tablet', 'Atorvastatin 20 mg tablet']);
     expect(active[0]).toMatchObject({ first: '2025-03-12', known: ['filled', 'prescribed'], prescriber: 'Dr. Jordan Sample', lastFill: { date: '2026-11-12', pharmacy: 'Example Pharmacy', daysSupply: 90 } });
     expect(names(past)).toEqual(['Cetirizine 10 mg tablet']);
     expect(past[0]!.latest.status).toBe('stopped');
@@ -92,8 +92,8 @@ describe('medicines', () => {
 
   it('says when a medicine is only reported', () => {
     const { active, past } = medicineList(index('Sam Example'));
-    expect(names(active)).toEqual(['Nicotine 14 mg/24 hour patch', 'Loratadine 10 mg tablet', 'Vitamin D3 2,000 unit capsule']);
-    expect(active[1]).toMatchObject({ known: ['filled', 'prescribed'], lastFill: { date: '2026-10-25', daysSupply: 30 } });
+    expect(names(active)).toEqual(['Emtricitabine-tenofovir 200-300 mg tablet', 'Famotidine 20 mg tablet', 'Vitamin D3 2,000 unit capsule']);
+    expect(active[1]).toMatchObject({ known: ['filled', 'prescribed'], lastFill: { date: '2026-10-29', daysSupply: 30 } });
     expect(active[2]).toMatchObject({ known: ['prescribed'] });
     expect(past[0]).toMatchObject({ name: 'Ibuprofen 200 mg tablet', known: ['reported'] });
   });

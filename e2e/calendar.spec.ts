@@ -1,9 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
+import { ROBIN, SAM } from '../test/sample';
+import { rewritten } from './alter';
+import { lay } from './lay';
 
 // The calendar: the household's events a month at a time with a lane
 // per person, or as one list, and private events kept off the shared view.
-
-const SAM = 'p_wwezzed7kml67hnp6s7n';
 
 async function open(page: Page, path = '') {
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
@@ -17,7 +18,7 @@ test('home leads to the calendar, which opens on this month with a lane per pers
   const recent = card(page, /^Recently$/);
   // Each row leads with the kind and the place, and says what it was beneath.
   await expect(recent.locator('.row-title')).toHaveText(['Office visit · Example Pediatrics', 'Office visit · Example Health Main Clinic', 'Lisinopril 10 mg tablet · Example Pharmacy']);
-  await expect(recent.locator('.row-meta')).toHaveText(['Alex · Ear pain', 'Robin · Blood pressure follow-up', 'Robin · Pharmacy']);
+  await expect(recent.locator('.row-meta')).toHaveText(['Alex · Ear pain', 'Robin · Cholesterol and potassium recheck', 'Robin · Pharmacy']);
   await recent.getByRole('link', { name: /^Calendar/ }).click();
   await expect(page).toHaveURL(/#\/calendar$/);
   await expect(page.locator('main h1')).toHaveText('Calendar');
@@ -28,8 +29,8 @@ test('home leads to the calendar, which opens on this month with a lane per pers
   await expect(month.locator('.cal-legend .cal-key')).toHaveText(['Visit or tests', 'Pharmacy or vaccine', 'Emergency room or hospital stay', 'Robin', 'Alex']);
 
   const list = card(page, 'What happened in November 2026');
-  await expect(list).toContainText('2 visits, 1 pharmacy trip on 3 days · your share $60.00.');
-  await expect(list.locator('.row-title')).toHaveText(['Office visit · Example Pediatrics', 'Office visit · Example Health Main Clinic', 'Lisinopril 10 mg tablet · Example Pharmacy']);
+  await expect(list).toContainText('2 visits, 2 pharmacy trips on 4 days · your share $60.00.');
+  await expect(list.locator('.row-title')).toHaveText(['Office visit · Example Pediatrics', 'Office visit · Example Health Main Clinic', 'Lisinopril 10 mg tablet · Example Pharmacy', 'Atorvastatin 20 mg tablet · Example Pharmacy']);
 
   // A day opens its own list, and goes back to the month.
   await month.getByRole('link', { name: /^Thursday, November 12:/ }).click();
@@ -46,63 +47,70 @@ test('home leads to the calendar, which opens on this month with a lane per pers
   await expect(page.locator('.event-what')).toHaveText('Ear pain');
 });
 
+/** The sample with Sam's day at the endoscopy center a stay of two nights. */
+const STAY = rewritten({}, ({ name, events }) => {
+  if (name === 'Sam Example') Object.assign(events.events.find((e) => e.start === '2026-09-16')!, { kind: 'inpatient', end: '2026-09-18' });
+});
+
 test('a hospital stay is one bar across its days, in its person’s lane', async ({ page }) => {
-  await open(page, '#/calendar?month=2026-07');
-  await expect(page.locator('.cal-month .cal-lane.lane-3 .mark-bar')).toHaveCount(3);
-  const list = card(page, 'What happened in July 2026');
-  await expect(list.locator('.row-title').first()).toHaveText('Hospital stay · 2 nights · Example Health Birth Center');
-  await list.locator('.row', { hasText: 'Birth' }).locator('a.row-main').click();
+  await lay(page, STAY);
+  await open(page, '#/calendar?month=2026-09');
+  await expect(page.locator('.cal-month .cal-lane.lane-1 .mark-bar')).toHaveCount(3);
+  const list = card(page, 'What happened in September 2026');
+  await expect(list.locator('.row-title').nth(1)).toHaveText('Hospital stay · 2 nights · Example Endoscopy Center');
+  await list.locator('.row', { hasText: 'Hospital stay' }).locator('a.row-main').click();
   await expect(page.locator('.event h1')).toHaveText('Hospital stay · 2 nights');
-  await expect(page.locator('.event-what')).toHaveText('Birth');
 });
 
 test('a private event stays off the Everyone calendar until shown, and on its person’s own', async ({ page }) => {
   await open(page, '#/calendar');
   await page.getByRole('link', { name: 'Previous month: October 2026' }).click();
   await expect(page).toHaveURL(/#\/calendar\?month=2026-10$/);
-  const list = card(page, 'What happened in October 2026');
-  await expect(list.locator('.row-title')).toHaveText(['Loratadine 10 mg tablet · Example Pharmacy', 'Lab tests · Example Lab', 'Lab tests · Example Lab', 'Office visit · Example Health Main Clinic']);
+  await expect(page.locator('.cal-private')).toHaveCount(0);
+  await page.getByRole('link', { name: 'Next month: November 2026' }).click();
+  const list = card(page, 'What happened in November 2026');
+  await expect(list.locator('.row-title')).toHaveText(['Office visit · Example Pediatrics', 'Office visit · Example Health Main Clinic', 'Lisinopril 10 mg tablet · Example Pharmacy', 'Atorvastatin 20 mg tablet · Example Pharmacy']);
   const notice = page.locator('.cal-private');
-  await expect(notice).toContainText('2 private events (substance use, mental health) are kept off this shared view.');
+  await expect(notice).toContainText('2 private events (sexual health) are kept off this shared view.');
   await expect(notice).toContainText('This is discretion, not security');
 
   // The button keeps the keyboard, and a screen reader hears what changed.
   await notice.getByRole('button', { name: 'Show them' }).click();
-  await expect(list.locator('.row', { hasText: 'Counseling session' }).locator('.chip')).toHaveText('Private');
+  await expect(list.locator('.row', { hasText: 'Clinic visit' }).locator('.chip')).toHaveText('Private');
   await expect(page.getByRole('button', { name: 'Hide them again' })).toBeFocused();
   await expect(page.locator('.calendar').getByRole('status')).toHaveText('2 private events now shown.');
   await page.keyboard.press('Enter');
-  await expect(list.locator('.row', { hasText: 'Counseling session' })).toHaveCount(0);
+  await expect(list.locator('.row', { hasText: 'Clinic visit' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Show them' })).toBeFocused();
   await expect(page.locator('.calendar').getByRole('status')).toHaveText('2 private events hidden again.');
 
   // Shown, then the calendar is left: back on it, they are hidden again.
   await page.getByRole('button', { name: 'Show them' }).click();
   await page.goto('./?demo#/');
-  await page.goto('./?demo#/calendar?month=2026-10');
-  await expect(page.locator('.cal-private')).toContainText('2 private events (substance use, mental health) are kept off this shared view.');
+  await page.goto('./?demo#/calendar?month=2026-11');
+  await expect(page.locator('.cal-private')).toContainText('2 private events (sexual health) are kept off this shared view.');
 
   // Sam's own calendar shows it, marked, with no notice.
   await page.getByRole('group', { name: 'Whose calendar' }).getByRole('link', { name: 'Sam' }).click();
-  await expect(page).toHaveURL(new RegExp(`#/calendar\\?month=2026-10&who=${SAM}$`));
+  await expect(page).toHaveURL(new RegExp(`#/calendar\\?month=2026-11&who=${SAM}$`));
   await expect(page.locator('.cal-private')).toHaveCount(0);
-  const own = card(page, 'What happened in October 2026');
-  await expect(own.locator('.row-title')).toHaveText(['Nicotine 14 mg/24 hour patch · Example Pharmacy', 'Office visit · Example Counseling', 'Loratadine 10 mg tablet · Example Pharmacy', 'Lab tests · Example Lab']);
-  await own.locator('.row', { hasText: 'Counseling session' }).locator('a.row-main').click();
-  await expect(page.locator('.event-private')).toContainText('Mental health. Kept off Home and everyone’s Calendar, Money, Papers and search results.');
+  const own = card(page, 'What happened in November 2026');
+  await expect(own.locator('.row-title')).toHaveText(['Emtricitabine-tenofovir 200-300 mg tablet · Example Pharmacy', 'Office visit · Example Sexual Health Clinic']);
+  await own.locator('.row', { hasText: 'Clinic visit' }).locator('a.row-main').click();
+  await expect(page.locator('.event-private')).toContainText('Sexual health. Kept off Home and everyone’s Calendar, Money, Papers and search results.');
 
   // Home's shared list leaves it off.
   await page.goto('./?demo#/');
-  await expect(card(page, /^Recently$/)).not.toContainText('Counseling session');
+  await expect(card(page, /^Recently$/)).not.toContainText('Clinic visit');
 });
 
 test('the list has every event by month, and a person’s Health opens theirs', async ({ page }) => {
   await open(page, `#/health?who=${SAM}`);
-  await card(page, /^What happened$/).getByRole('link', { name: 'All 7 in the calendar' }).click();
+  await card(page, /^What happened$/).getByRole('link', { name: 'All 8 in the calendar' }).click();
   await expect(page).toHaveURL(new RegExp(`#/calendar\\?view=list&who=${SAM}$`));
   await expect(page.getByRole('group', { name: 'View' }).getByRole('link', { name: 'List' })).toHaveAttribute('aria-current', 'page');
-  await expect(page.locator('.calendar .card-head h2')).toHaveText(['October 2026', 'August 2026', 'July 2026', 'May 2026']);
-  await expect(card(page, 'August 2026')).toContainText('1 visit · your share $287.50.');
+  await expect(page.locator('.calendar .card-head h2')).toHaveText(['November 2026', 'October 2026', 'September 2026', 'July 2026', 'May 2026']);
+  await expect(card(page, 'September 2026')).toContainText('1 visit, 1 pharmacy trip · your share $213.90.');
 
   await page.getByRole('group', { name: 'Whose calendar' }).getByRole('link', { name: 'Everyone' }).click();
   await expect(page).toHaveURL(/#\/calendar\?view=list$/);
@@ -117,23 +125,24 @@ test('a day billed for a vaccine is a vaccine visit, named for the dose', async 
 });
 
 test('a day of several vaccines counts its doses, and its page lists each from the clinic’s records', async ({ page }) => {
-  await open(page, '#/calendar?view=list&who=p_xo4em46i7yj3hphlpajo');
+  await open(page, `#/calendar?view=list&who=${ROBIN}`);
   const october = card(page, 'October 2025');
   await expect(october).toContainText('2 vaccines.');
   await october.getByRole('link', { name: /2 vaccines/ }).click();
   await expect(page.locator('main h1')).toHaveText('2 vaccines');
   await expect(page.locator('.event-sources')).toHaveText('Example Health 2 records');
   const happened = card(page, /^What happened$/);
-  await expect(happened.locator('.row-title')).toHaveText(['COVID-19 vaccine', 'Influenza, seasonal, injectable']);
+  await expect(happened.locator('.row-title')).toHaveText(['Influenza, seasonal, injectable', 'COVID-19 vaccine']);
   await expect(happened).toContainText('From the provider’s own records.');
 });
 
 test('the month fits a 360px phone in the dark theme', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 780 });
   await page.emulateMedia({ colorScheme: 'dark' });
-  await open(page, '#/calendar?month=2026-07');
-  await expect(page.locator('.cal-month h2')).toHaveText('July 2026');
+  await lay(page, STAY);
+  await open(page, '#/calendar?month=2026-09');
+  await expect(page.locator('.cal-month h2')).toHaveText('September 2026');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
-  const lane = await page.locator('.cal-lane.lane-3 .mark-bar').first().evaluate((el) => getComputedStyle(el).backgroundColor);
-  expect(lane).toBe('rgb(213, 81, 129)');
+  const lane = await page.locator('.cal-lane.lane-1 .mark-bar').first().evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(lane).toBe('rgb(25, 158, 112)');
 });

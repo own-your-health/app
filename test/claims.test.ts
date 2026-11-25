@@ -32,7 +32,7 @@ describe('a claim title', () => {
 
   it('without lines, uses a name that is more than the type, else the provider', () => {
     expect(claimTitle(claim([]))).toBe('Claim from Example Clinic');
-    expect(claimTitle(claim([], { display: 'Knee x-ray' }))).toBe('Knee x-ray');
+    expect(claimTitle(claim([], { display: 'Ankle x-ray' }))).toBe('Ankle x-ray');
     expect(claimTitle(claim([], { fields: { type: 'Professional' } }))).toBe('Claim');
   });
 
@@ -50,7 +50,7 @@ describe('claim lines', () => {
       ['Cholesterol tests', '80061', 'lab'],
       ['Blood draw', '36415', 'lab'],
     ]);
-    expect(lines[0]!.amounts).toMatchObject({ billed: { amount: '180.00' }, allowed: { amount: '78.40' }, planPaid: { amount: '62.72' }, coinsurance: { amount: '15.68' }, youOwe: { amount: '15.68' } });
+    expect(lines[0]!.amounts).toMatchObject({ billed: { amount: '180' }, allowed: { amount: '78.4' }, planPaid: { amount: '62.72' }, coinsurance: { amount: '15.68' }, youOwe: { amount: '15.68' } });
     expect(lines[0]!.date).toBe('2026-10-03');
   });
 

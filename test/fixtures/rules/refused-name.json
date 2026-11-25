@@ -1,0 +1,16 @@
+{
+  "schema": "medrec-request/v1",
+  "id": null,
+  "received": {
+    "bytes": 22,
+    "sha256": "e97512bda3343e6ea21c9e53d4aeafa341da8c13ad8ca2257ced26905415f3d3"
+  },
+  "handled": {
+    "picked_up_at": "2026-11-16T20:00:00Z",
+    "finished_at": "2026-11-16T20:00:00Z",
+    "outcome": "invalid",
+    "sources": [],
+    "message": "its name is not <YYYYMMDDTHHMMSSZ>_<id>.json",
+    "by": "medrec 0.9.7"
+  }
+}

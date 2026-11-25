@@ -1,0 +1,280 @@
+{
+  "schema": "medrec-index/v1",
+  "person": "p_hlk7b35c6vgnblrhrqyl",
+  "rev": 3,
+  "documents": [],
+  "records": [
+    {
+      "id": "r_l3bgpdbapujbpxiosvfe",
+      "kind": "coverage",
+      "key": "coverage|example health plan|2015-09-01",
+      "date": "2015-09-01",
+      "display": "Example Health Plan",
+      "status": "active",
+      "fields": {
+        "when": "2015-09-01",
+        "payer": "Example Health Plan",
+        "period": {
+          "start": "2015-09-01",
+          "end": "9999-12-31"
+        },
+        "relationship": "self",
+        "plan": "Saver 1500"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "uhc",
+            "cli_version": "0.3.6",
+            "organization_id": "example-health-plan",
+            "fhir_base": "https://example-health-plan.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Coverage",
+            "id": "coverage-94451455",
+            "last_updated": "2015-09-01T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:01:00Z",
+          "filed_at": "2026-11-14T20:01:00Z",
+          "raw_path": "Kit Example/Records/uhc-example-health-plan/Coverage/coverage-94451455.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    },
+    {
+      "id": "r_cymk5oil2h3m74r2x626",
+      "kind": "coverage",
+      "key": "coverage|example health plan inc|2015-09-01",
+      "date": "2015-09-01",
+      "display": "EXAMPLE HEALTH PLAN, INC.",
+      "status": "active",
+      "fields": {
+        "when": "2015-09-01",
+        "payer": "EXAMPLE HEALTH PLAN, INC.",
+        "period": {
+          "start": "2015-09-01"
+        },
+        "relationship": "self"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Coverage",
+            "id": "coverage-94236548",
+            "last_updated": "2015-09-01T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:02:00Z",
+          "filed_at": "2026-11-14T20:02:00Z",
+          "raw_path": "Kit Example/Records/mychart-example-health/Coverage/coverage-94236548.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    },
+    {
+      "id": "r_buxen6q7akviszoyq4fp",
+      "kind": "coverage",
+      "key": "coverage|example health plan inc|2009-07-01",
+      "date": "2009-07-01",
+      "display": "EXAMPLE HEALTH PLAN, INC.",
+      "status": "active",
+      "fields": {
+        "when": "2009-07-01",
+        "payer": "EXAMPLE HEALTH PLAN, INC.",
+        "period": {
+          "start": "2009-07-01",
+          "end": "2015-08-31"
+        },
+        "relationship": "self",
+        "plan": "Saver 1500"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Coverage",
+            "id": "coverage-578e34ea",
+            "last_updated": "2009-07-01T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:02:00Z",
+          "filed_at": "2026-11-14T20:02:00Z",
+          "raw_path": "Kit Example/Records/mychart-example-health/Coverage/coverage-578e34ea.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    },
+    {
+      "id": "r_fmhcvqli4zt2ormbjgdw",
+      "kind": "coverage",
+      "key": "coverage|example vision|2011-02-01",
+      "date": "2011-02-01",
+      "display": "Example Vision",
+      "status": "active",
+      "fields": {
+        "when": "2011-02-01",
+        "payer": "Example Vision",
+        "period": {
+          "start": "2011-02-01",
+          "end": "2013-01-31"
+        },
+        "relationship": "self",
+        "plan": "Vision Plus"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Coverage",
+            "id": "coverage-065dafd2",
+            "last_updated": "2011-02-01T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:02:00Z",
+          "filed_at": "2026-11-14T20:02:00Z",
+          "raw_path": "Kit Example/Records/mychart-example-health/Coverage/coverage-065dafd2.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    },
+    {
+      "id": "r_jc46uui6yb3t2kc5vdms",
+      "kind": "coverage",
+      "key": "coverage|example health plan|2005-01-01",
+      "date": "2005-01-01",
+      "display": "Example Health Plan",
+      "status": "entered-in-error",
+      "fields": {
+        "when": "2005-01-01",
+        "payer": "Example Health Plan",
+        "period": {
+          "start": "2005-01-01"
+        },
+        "relationship": "self"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Coverage",
+            "id": "coverage-96bfc93c",
+            "last_updated": "2005-01-01T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:02:00Z",
+          "filed_at": "2026-11-14T20:02:00Z",
+          "raw_path": "Kit Example/Records/mychart-example-health/Coverage/coverage-96bfc93c.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    },
+    {
+      "id": "r_qsy5i7cbrlsz7eyrivss",
+      "kind": "coverage",
+      "key": "coverage|example dental|",
+      "display": "Example Dental",
+      "status": "active",
+      "fields": {
+        "payer": "Example Dental",
+        "relationship": "self"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "fhir",
+            "cli": "mychart",
+            "cli_version": "0.7.1",
+            "organization_id": "example-health",
+            "fhir_base": "https://fhir.example.org/r4"
+          },
+          "method": "fhir-api",
+          "source_resource": {
+            "type": "Coverage",
+            "id": "coverage-ecc1e2cf",
+            "last_updated": "2026-01-05T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:02:00Z",
+          "filed_at": "2026-11-14T20:02:00Z",
+          "raw_path": "Kit Example/Records/mychart-example-health/Coverage/coverage-ecc1e2cf.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    }
+  ],
+  "studies": [],
+  "imports": [
+    {
+      "id": "i_zrdrv3coucfqydlhwjod",
+      "source_dir": "Kit Example/Records/uhc-example-health-plan",
+      "stream_sha256": "e75f3d7859181e01acbcdfde4b2b2cd66dae794640837e61a1c98ae27f2e200e",
+      "stream_bytes": 1183,
+      "cli": "uhc",
+      "cli_version": "0.3.6",
+      "organization": "example-health-plan",
+      "patient_id": "pat-68e1bb55",
+      "pulled_at": "2026-11-14T20:01:00Z",
+      "imported_at": "2026-11-14T20:01:00Z",
+      "counts": {
+        "Coverage": 1,
+        "Patient": 1
+      },
+      "records_added": 1,
+      "records_updated": 0,
+      "records_unchanged": 0,
+      "records_older": 0,
+      "resources_written": 2,
+      "resources_unchanged": 0,
+      "documents_added": 0
+    },
+    {
+      "id": "i_ha4zjlhi74d6eenofj66",
+      "source_dir": "Kit Example/Records/mychart-example-health",
+      "stream_sha256": "bdbcee0e3a0b7e586427cec8fdf8349c5225c843faad67b62e744127d53d0609",
+      "stream_bytes": 2540,
+      "cli": "mychart",
+      "cli_version": "0.7.1",
+      "organization": "example-health",
+      "patient_id": "pat-a5e26433",
+      "pulled_at": "2026-11-14T20:02:00Z",
+      "imported_at": "2026-11-14T20:02:00Z",
+      "counts": {
+        "Coverage": 5,
+        "Patient": 1
+      },
+      "records_added": 5,
+      "records_updated": 0,
+      "records_unchanged": 0,
+      "records_older": 0,
+      "resources_written": 6,
+      "resources_unchanged": 0,
+      "documents_added": 0
+    }
+  ]
+}

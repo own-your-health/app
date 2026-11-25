@@ -1,0 +1,16 @@
+{
+  "schema": "medrec-request/v1",
+  "id": "x_nljswbyxth22lvn3owr3",
+  "received": {
+    "bytes": 5291,
+    "sha256": null
+  },
+  "handled": {
+    "picked_up_at": "2026-11-16T20:00:00Z",
+    "finished_at": "2026-11-16T20:00:00Z",
+    "outcome": "invalid",
+    "sources": [],
+    "message": "it is 5291 bytes; a request is at most 4096",
+    "by": "medrec 0.9.7"
+  }
+}

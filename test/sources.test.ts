@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { headline, importsFor, isOverdue, macState, needsAttention, needsPerson, QUIET_FOR_MS, requestWait, sourceViews } from '../src/model/sources';
 import { buildRequest } from '../src/model/requests';
-import type { RefreshStatus } from '../src/model/types';
+import type { RefreshRequest, RefreshStatus } from '../src/model/types';
 import { demo, sourceOf } from './demo-data';
 
 const NOW = new Date('2026-11-22T20:00:00Z');
@@ -69,7 +69,9 @@ describe('source views over the sample', () => {
   });
 
   it('fall back to the ImportRun for a source the Mac does not refresh', () => {
-    const v = view('Jamie Example', 'athena');
+    const drew = sourceOf(household, 'Drew Example', 'athena').id;
+    const unset: RefreshStatus = { ...status, sources: status.sources.filter((s) => s.source !== drew) };
+    const v = sourceViews({ household, indexes, status: unset, pending: [], done: [], now: NOW }).find((x) => x.source.id === drew)!;
     expect(v.status).toBeUndefined();
     expect(v.health).toBe('ok');
     expect(v.lastLoad?.importId).toMatch(/^i_/);
@@ -96,10 +98,25 @@ describe('source views over the sample', () => {
 
   it('show an everything request only on sources the Mac refreshes', () => {
     const req = buildRequest({ scope: { all: true }, now: NOW, by: {}, appVersion: '0' });
-    const vs = sourceViews({ household, indexes, status, pending: [req], done: [], now: NOW });
-    // Jamie's practice is not set up for refresh.
-    const notRefreshed = [sourceOf(household, 'Jamie Example', 'athena').id];
-    for (const v of vs) expect(v.pending.length).toBe(notRefreshed.includes(v.source.id) ? 0 : 1);
+    // Drew's practice not set up for refresh.
+    const drew = sourceOf(household, 'Drew Example', 'athena').id;
+    const unset: RefreshStatus = { ...status, sources: status.sources.filter((s) => s.source !== drew) };
+    const vs = sourceViews({ household, indexes, status: unset, pending: [req], done: [], now: NOW });
+    expect(vs.filter((v) => !v.pending.length).map((v) => v.source.id)).toEqual([drew]);
+    expect(vs.every((v) => v.pending.length <= 1)).toBe(true);
+  });
+
+  it('give each source the last request answered for it, and no other’s', () => {
+    const [athena, labcorp] = [sourceOf(household, 'Alex Example', 'athena').id, sourceOf(household, 'Sam Example', 'labcorp').id];
+    const answered = (source: string, finished: string): RefreshRequest => ({
+      ...buildRequest({ scope: { source }, now: new Date(finished), by: {}, appVersion: '0' }),
+      handled: { outcome: 'ok', finished_at: finished, sources: [{ source, outcome: 'ok' }] },
+    });
+    const done = [answered(athena, '2026-11-21T10:00:00Z'), answered(labcorp, '2026-11-22T10:00:00Z'), answered(athena, '2026-11-20T10:00:00Z')];
+    const last = new Map(sourceViews({ household, indexes, status, pending: [], done, now: NOW }).map((v) => [v.source.id, v.lastHandled?.handled?.finished_at]));
+    expect(last.get(athena)).toBe('2026-11-21T10:00:00Z');
+    expect(last.get(labcorp)).toBe('2026-11-22T10:00:00Z');
+    expect([...last.values()].filter(Boolean)).toHaveLength(2);
   });
 });
 
@@ -121,8 +138,11 @@ describe('headline', () => {
   it('reads plainly when nothing is wrong', () => {
     // Without status.json, health comes from the ImportRuns alone.
     const vs = sourceViews({ household, indexes, pending: [], done: [], now: NOW });
-    expect(headline(vs)).toEqual({ text: '10 sources loaded, 1 not yet', attention: false });
-    expect(headline(vs.filter((v) => v.health === 'ok'))).toEqual({ text: 'All 10 sources loaded', attention: false });
+    expect(headline(vs)).toEqual({ text: 'All 11 sources loaded', attention: false });
+    // One nothing has been loaded from.
+    const drew = sourceOf(household, 'Drew Example', 'athena').person;
+    const none = new Map([...indexes].map(([id, idx]) => [id, id === drew ? { ...idx, imports: [] } : idx]));
+    expect(headline(sourceViews({ household, indexes: none, pending: [], done: [], now: NOW }))).toEqual({ text: '10 sources loaded, 1 not yet', attention: false });
     expect(headline([])).toEqual({ text: 'No sources yet', attention: false });
   });
 });

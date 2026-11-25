@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { documentTitle } from '../src/model/records';
 import { visitKind, visitOf, visitTimeline } from '../src/model/visits';
 import type { MedDocument, MedRecord, PersonIndex } from '../src/model/types';
 import { demo, personNamed } from './demo-data';
@@ -8,20 +9,26 @@ const { household, indexes } = demo();
 const person = (name: string) => personNamed(household, name).id;
 const index = (name: string) => indexes.get(person(name))!;
 const timeline = (name: string, idx: PersonIndex = index(name)) => visitTimeline(idx, household, person(name), TODAY);
-const docTitles = (v: { documents: { doc: MedDocument; linked: boolean }[] }) => v.documents.map((d) => `${d.linked ? 'linked ' : ''}${d.doc.title}`);
+/** A person's index with the paper of that title linked to their visit of that name, as a record that names its papers links them. */
+function linking(name: string, visit: string, title: string): PersonIndex {
+  const idx = index(name);
+  const doc = idx.documents.find((d) => d.title === title)!;
+  return { ...idx, records: idx.records.map((r) => (r.kind === 'encounter' && r.display === visit ? { ...r, documents: [doc.id] } : r)) };
+}
+const docTitles = (v: { documents: { doc: MedDocument; linked: boolean }[] }) => v.documents.map((d) => `${d.linked ? 'linked ' : ''}${documentTitle(d.doc)}`);
 
 describe('visits with their documents', () => {
   it('puts medrec’s linked documents first, then the same day’s from the same organization', () => {
-    const { visits, loose } = timeline('Robin Example');
+    const { visits, loose } = timeline('Robin Example', linking('Robin Example', 'Office visit', 'Lipid panel'));
     expect(visits.map((v) => [v.start, v.record.fields.reason])).toEqual([
-      ['2026-11-18', 'Blood pressure follow-up'],
+      ['2026-11-18', 'Cholesterol and potassium recheck'],
       ['2026-10-01', 'Annual physical'],
       ['2025-09-15', 'Follow-up'],
       ['2025-03-10', 'Annual physical'],
     ]);
-    expect(visits.map(docTitles)).toEqual([['Basic metabolic panel'], ['linked After visit summary', 'Lipid panel', 'Statement from Example Health'], [], []]);
+    expect(visits.map(docTitles)).toEqual([['Basic metabolic panel'], ['linked Lipid panel', 'After visit summary', 'Statement from Example Health.pdf'], [], []]);
     // A statement from another provider, an insurer's EOB, a receipt and a scan from days with no visit stay out.
-    expect(loose.map((d) => d.title)).toEqual(['Statement from Example Lab', 'Explanation of Benefits', 'Payment receipt from Example Health', 'Statement from Example Health', 'Vaccination card']);
+    expect(loose.map(documentTitle)).toEqual(['Statement from Example Lab.pdf', 'Explanation of Benefits', 'Payment receipt.pdf', 'Statement from Example Health, April.pdf', 'scan_0007.png']);
   });
 
   it('lists what was recorded at the visit by kind, and its claim', () => {
@@ -37,7 +44,7 @@ describe('visits with their documents', () => {
   it('matches a document filed by hand by its day and the practice’s name', () => {
     const sick = timeline('Alex Example').visits[0]!;
     expect(sick.record.display).toBe('Sick visit');
-    expect(docTitles(sick)).toEqual(['School note']);
+    expect(docTitles(sick)).toEqual(['Care instructions', 'School note.jpg']);
     expect(sick.recorded.map((g) => [g.kind, g.records.map((r) => r.display)])).toEqual([
       ['condition', ['Ear infection']],
       ['medication', ['Amoxicillin 400 mg/5 mL suspension']],
@@ -45,10 +52,15 @@ describe('visits with their documents', () => {
   });
 
   it('spans a stay’s days, and names its kind only when its name does not', () => {
-    const stay = timeline('Jamie Example').visits.find((v) => v.record.display === 'Birth hospital stay')!;
-    expect([stay.start, stay.end]).toEqual(['2026-07-28', '2026-07-30']);
-    expect(docTitles(stay)).toEqual(['linked Newborn discharge summary']);
-    expect(stay.recorded.map((g) => g.kind)).toEqual(['result', 'immunization']);
+    // Sam's May visit made three days long, in a hospital's words, with a medicine given on its last day.
+    const idx = linking('Sam Example', 'Sports medicine visit', 'Sports medicine visit note');
+    const visit = idx.records.find((r) => r.display === 'Sports medicine visit')!;
+    const long: MedRecord = { ...visit, display: 'Inpatient hospital stay', fields: { ...visit.fields, class: 'inpatient', period: { start: '2026-05-20', end: '2026-05-22' } } };
+    const given: MedRecord = { ...idx.records.find((r) => r.kind === 'medication' && r.date === '2026-05-20')!, id: 'r_given', date: '2026-05-22' };
+    const stay = timeline('Sam Example', { ...idx, records: [...idx.records.map((r) => (r === visit ? long : r)), given] }).visits.find((v) => v.record.id === visit.id)!;
+    expect([stay.start, stay.end]).toEqual(['2026-05-20', '2026-05-22']);
+    expect(docTitles(stay)).toEqual(['linked Sports medicine visit note']);
+    expect(stay.recorded.map((g) => [g.kind, g.records.length])).toEqual([['condition', 1], ['medication', 2]]);
     expect(visitKind(stay)).toBeUndefined();
     const robin = timeline('Robin Example').visits;
     expect(visitKind(robin.find((v) => v.record.display === 'Office visit')!)).toBeUndefined();
@@ -59,7 +71,7 @@ describe('visits with their documents', () => {
 
   it('takes imaging from the visit’s days', () => {
     const v = timeline('Sam Example').visits.find((x) => x.record.display === 'Sports medicine visit')!;
-    expect(docTitles(v)).toEqual(['linked Sports medicine visit note']);
+    expect(docTitles(v)).toEqual(['Sports medicine visit note']);
     expect(v.studies.map((s) => s.description)).toEqual(['XR ankle, 3 views']);
   });
 
@@ -72,7 +84,7 @@ describe('visits with their documents', () => {
     const { visits } = timeline('Robin Example', { ...idx, records: [...idx.records, second] });
     const byName = (n: string) => visits.find((v) => v.record.display === n && v.start === '2026-10-01')!;
     expect(docTitles(byName('Lab draw'))).toEqual(['linked Lipid panel']);
-    expect(docTitles(byName('Office visit'))).toEqual(['linked After visit summary', 'Statement from Example Health']);
+    expect(docTitles(byName('Office visit'))).toEqual(['After visit summary', 'Statement from Example Health.pdf']);
   });
 
   it('leaves out withdrawn records, and visits not yet happened or cancelled', () => {
@@ -85,9 +97,9 @@ describe('visits with their documents', () => {
   });
 
   it('finds the visit a record is', () => {
-    const idx = index('Jamie Example');
-    const stay = idx.records.find((r) => r.display === 'Birth hospital stay')!;
-    expect(visitOf(idx, household, person('Jamie Example'), TODAY, stay.id)?.end).toBe('2026-07-30');
-    expect(visitOf(idx, household, person('Jamie Example'), TODAY, idx.records.find((r) => r.kind === 'result')!.id)).toBeUndefined();
+    const idx = index('Drew Example');
+    const visit = idx.records.find((r) => r.display === 'Well child visit, 3 years')!;
+    expect(visitOf(idx, household, person('Drew Example'), TODAY, visit.id)?.end).toBe('2025-12-16');
+    expect(visitOf(idx, household, person('Drew Example'), TODAY, idx.records.find((r) => r.kind === 'result')!.id)).toBeUndefined();
   });
 });

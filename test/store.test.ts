@@ -72,7 +72,7 @@ describe('the store over the sample folder', () => {
     expect(outcome('Alex Example', 'athena')).toBe('needs_person');
     expect(outcome('Sam Example', 'kp')).toBe('ok');
     expect(outcome('Robin Example', 'oneblood')).toBe('needs_person');
-    expect(outcome('Jamie Example', 'athena')).toBeUndefined();
+    expect(outcome('Drew Example', 'athena')).toBe('ok');
     expect(store.sources(new Date(ANCHOR)).find((v) => v.source.id === plan.id)?.lastLoad?.at).toBe('2026-11-22T20:00:06Z');
 
     // Asked again at once, a source loaded moments ago may load again 15 minutes after that load.

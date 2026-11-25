@@ -30,7 +30,7 @@ const idx = (records: MedRecord[]) => ({ ...index('Robin Example'), records }) a
 describe('results by panel', () => {
   it('puts the panel with an out-of-range result first, and that result first in it', () => {
     expect(shape(index('Robin Example'))).toEqual([
-      ['Metabolic panel', 1, ['Potassium', 'Glucose', 'Creatinine', 'Sodium']],
+      ['Metabolic panel', 1, ['Potassium', 'Glucose', 'Creatinine', 'Sodium', 'Calcium']],
       ['Cholesterol (lipid panel)', 0, ['Total cholesterol', 'Triglycerides', 'HDL cholesterol', 'LDL cholesterol']],
       ['Blood sugar (A1c)', 0, ['A1c']],
       ['Blood count (CBC)', 0, ['Hemoglobin']],
@@ -45,8 +45,8 @@ describe('results by panel', () => {
     ]);
   });
 
-  it('groups a baby’s weights and oxygen as vital signs, and bilirubin with the liver panel', () => {
-    expect(shape(index('Jamie Example'))).toEqual([['Vital signs', 0, ['Weight', 'Oxygen saturation, right hand']]]);
+  it('groups a child’s weights and heights as vital signs, a test with no panel apart, and bilirubin with the liver panel', () => {
+    expect(shape(index('Drew Example'))).toEqual([['Vital signs', 0, ['Weight', 'Height']], ['Other tests', 0, ['Lead, blood']]]);
     expect(shape(idx([result('1975-2', 'Bilirubin, total', '2026-03-02', 0.7, 'mg/dL', '0.2-1.2 mg/dL')]))).toEqual([['Liver panel', 0, ['Bilirubin']]]);
   });
 
@@ -63,7 +63,7 @@ describe('results by panel', () => {
     const records = [
       result('94500-6', 'SARS-CoV-2 RNA', '2026-03-01', 0, '', undefined, { category: 'Laboratory' }),
       result(undefined, 'Peak flow', '2026-03-01', 410, 'L/min', undefined, { category: 'Vital signs' }),
-      result(undefined, 'Hearing screen', '2026-03-01', 1, '', undefined, { category: 'Exam' }),
+      result(undefined, 'Grip strength', '2026-03-01', 1, '', undefined, { category: 'Exam' }),
     ];
     expect(shape(idx(records)).map(([name]) => name).sort()).toEqual(['Exam', 'Other tests', 'Vital signs']);
   });

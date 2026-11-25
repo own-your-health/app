@@ -1,0 +1,357 @@
+{
+  "schema": "medrec-index/v1",
+  "person": "p_wknhoo3uvn3vejlf4ek4",
+  "rev": 2,
+  "documents": [],
+  "records": [
+    {
+      "id": "r_xx6wfqcx2k4a6wcfftnj",
+      "kind": "result",
+      "key": "result|http://loinc.org|19123-9|2026-03-24",
+      "date": "2026-03-24",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "19123-9",
+        "display": "Magnesium"
+      },
+      "display": "Magnesium",
+      "status": "final",
+      "fields": {
+        "when": "2026-03-24",
+        "value": "2.1",
+        "reference_range": "1.6 mg/dL – 2.6 mg/dL",
+        "category": "Laboratory"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-8220bc40",
+            "last_updated": "2026-03-24T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Riley Example/Records/labcorp-example-lab/Observation/observation-8220bc40.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    },
+    {
+      "id": "r_krrzpvilv4tdmo3l74bc",
+      "kind": "result",
+      "key": "result|http://loinc.org|19123-9|2025-06-10",
+      "date": "2025-06-10",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "19123-9",
+        "display": "Magnesium"
+      },
+      "display": "Magnesium",
+      "status": "final",
+      "fields": {
+        "when": "2025-06-10",
+        "value": {
+          "value": 1.9,
+          "unit": "mg/dL",
+          "system": "http://unitsofmeasure.org"
+        },
+        "reference_range": "1.6-2.6 mg/dL",
+        "interpretation": "Normal",
+        "category": "Laboratory"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-a55c684e",
+            "last_updated": "2025-06-10T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Riley Example/Records/labcorp-example-lab/Observation/observation-a55c684e.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    },
+    {
+      "id": "r_7qbbxx2xupalf4j25pqo",
+      "kind": "result",
+      "key": "result|http://loinc.org|2777-1|2026-03-24",
+      "date": "2026-03-24",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "2777-1",
+        "display": "Phosphorus"
+      },
+      "display": "Phosphorus",
+      "status": "final",
+      "fields": {
+        "when": "2026-03-24",
+        "value": "5.9",
+        "reference_range": "2.5 - 4.5 mg/dL",
+        "category": "Laboratory"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-4bacff80",
+            "last_updated": "2026-03-24T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Riley Example/Records/labcorp-example-lab/Observation/observation-4bacff80.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    },
+    {
+      "id": "r_knjwaes4ozohmpvftb63",
+      "kind": "result",
+      "key": "result|http://loinc.org|736-9|2026-03-24",
+      "date": "2026-03-24",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "736-9",
+        "display": "Lymphocytes"
+      },
+      "display": "Lymphocytes",
+      "status": "final",
+      "fields": {
+        "when": "2026-03-24",
+        "value": "31",
+        "category": "Laboratory"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-4a9ca535",
+            "last_updated": "2026-03-24T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Riley Example/Records/labcorp-example-lab/Observation/observation-4a9ca535.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    },
+    {
+      "id": "r_q7q4tdkvovilawhtimky",
+      "kind": "result",
+      "key": "result|http://loinc.org|1988-5|2026-03-24",
+      "date": "2026-03-24",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "1988-5",
+        "display": "C-reactive protein"
+      },
+      "display": "C-reactive protein",
+      "status": "final",
+      "fields": {
+        "when": "2026-03-24",
+        "value": "<0.3",
+        "reference_range": "0.0-1.0 mg/dL",
+        "category": "Laboratory"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-02451fa5",
+            "last_updated": "2026-03-24T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Riley Example/Records/labcorp-example-lab/Observation/observation-02451fa5.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    },
+    {
+      "id": "r_zsdl6225257bnpe5a6jy",
+      "kind": "result",
+      "key": "result|http://loinc.org|2132-9|2026-03-24",
+      "date": "2026-03-24",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "2132-9",
+        "display": "Vitamin B12"
+      },
+      "display": "Vitamin B12",
+      "status": "final",
+      "fields": {
+        "when": "2026-03-24",
+        "value": ">2000",
+        "reference_range": ">=200 pg/mL",
+        "category": "Laboratory"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-331664d0",
+            "last_updated": "2026-03-24T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Riley Example/Records/labcorp-example-lab/Observation/observation-331664d0.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    },
+    {
+      "id": "r_tlxyazy4qsgabhbtpdv3",
+      "kind": "result",
+      "key": "result|http://loinc.org|2498-4|2026-03-24",
+      "date": "2026-03-24",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "2498-4",
+        "display": "Iron"
+      },
+      "display": "Iron",
+      "status": "final",
+      "fields": {
+        "when": "2026-03-24",
+        "value": "<10",
+        "reference_range": "50-150 ug/dL",
+        "category": "Laboratory"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-a0c2fff4",
+            "last_updated": "2026-03-24T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Riley Example/Records/labcorp-example-lab/Observation/observation-a0c2fff4.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    },
+    {
+      "id": "r_q3l7vz3cnyoqzihzlwrp",
+      "kind": "result",
+      "key": "result|http://loinc.org|5767-9|2026-03-24",
+      "date": "2026-03-24",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "5767-9",
+        "display": "Urine clarity"
+      },
+      "display": "Urine clarity",
+      "status": "final",
+      "fields": {
+        "when": "2026-03-24",
+        "value": "Clear",
+        "category": "Laboratory"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-c2f5a71b",
+            "last_updated": "2026-03-24T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Riley Example/Records/labcorp-example-lab/Observation/observation-c2f5a71b.json",
+          "filed_by": "medrec 0.9.7"
+        }
+      ]
+    }
+  ],
+  "studies": [],
+  "imports": [
+    {
+      "id": "i_xxyn6rogjqhh7dcwuqlq",
+      "source_dir": "Riley Example/Records/labcorp-example-lab",
+      "stream_sha256": "8a03e5ba68344d9e39224de492b776af681ad540775a54319ac79f7f6cc00dd5",
+      "stream_bytes": 4540,
+      "cli": "labcorp",
+      "cli_version": "0.2.1",
+      "organization": "example-lab",
+      "patient_id": "pat-fb5cf795",
+      "pulled_at": "2026-11-14T20:00:00Z",
+      "imported_at": "2026-11-14T20:00:00Z",
+      "counts": {
+        "Observation": 8,
+        "Patient": 1
+      },
+      "records_added": 8,
+      "records_updated": 0,
+      "records_unchanged": 0,
+      "records_older": 0,
+      "resources_written": 9,
+      "resources_unchanged": 0,
+      "documents_added": 0
+    }
+  ]
+}

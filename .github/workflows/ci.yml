@@ -35,12 +35,11 @@ jobs:
       # Installing the app needs the manifest linked and every icon present.
       - name: Production build carries the manifest and its icons
         run: node scripts/check-install.mjs dist
-      # The sample's views are medrec's own: its generator runs medrec 0.9.5,
-      # this exact build.
-      - name: Install medrec 0.9.5
+      # The sample is what medrec 0.9.7 writes, by this exact build.
+      - name: Install medrec 0.9.7
         env:
-          MEDREC_URL: https://github.com/own-your-health/medrec-cli/releases/download/v0.9.5/medrec-x86_64-unknown-linux-gnu.tar.gz
-          MEDREC_SHA256: 5ca8ada5f4ee22d484ae310044d4b13da8885fb06330d6b2413562c69a6101c1
+          MEDREC_URL: https://github.com/own-your-health/medrec-cli/releases/download/v0.9.7/medrec-x86_64-unknown-linux-gnu.tar.gz
+          MEDREC_SHA256: 7767c8995a94950fca4e6b9a93cd06314563697f48d34c2a9167dab069ac2e9f
         run: |
           curl -fsSL --retry 3 -o "$RUNNER_TEMP/medrec.tar.gz" "$MEDREC_URL"
           echo "$MEDREC_SHA256  $RUNNER_TEMP/medrec.tar.gz" | sha256sum -c -
@@ -51,18 +50,18 @@ jobs:
         env:
           MEDREC: ${{ runner.temp }}/medrec/medrec
         run: |
-          node scripts/demo-folder.mjs
-          git diff --exit-code -- public/demo
-          test -z "$(git status --porcelain -- public/demo)"
-      # So are the private-items and bill cases: medrec writes each list, never a hand.
-      - name: Private-items and bill cases match their generators
+          node scripts/demo-folder.mjs "$RUNNER_TEMP/sample"
+          diff -r "$RUNNER_TEMP/sample" public/demo
+      # So are the cases the tests read: medrec writes each, never a hand.
+      - name: Private-items, bill and rule cases match their generators
         env:
           MEDREC: ${{ runner.temp }}/medrec/medrec
         run: |
           node scripts/private-fixtures.mjs
           node scripts/bill-fixtures.mjs
-          git diff --exit-code -- test/fixtures/private test/fixtures/bills
-          test -z "$(git status --porcelain -- test/fixtures/private test/fixtures/bills)"
+          node scripts/rule-fixtures.mjs
+          git diff --exit-code -- test/fixtures
+          test -z "$(git status --porcelain -- test/fixtures)"
 
   e2e:
     runs-on: ubuntu-latest

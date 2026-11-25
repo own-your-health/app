@@ -3,12 +3,12 @@
 // (scripts/cases.mjs). Run it after scripts/demo-folder.mjs, and commit the
 // result.
 //
-// - marked: the household marked items private and not (MARKS below).
+// - marked: the household marked items private and not.
 // - unreadable: Sam's marks.json does not read.
 
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { DEMO, only, writeCase, writeMarked } from './cases.mjs';
+import { DEMO, only, writeCase } from './cases.mjs';
 
 const household = JSON.parse(readFileSync(join(DEMO, 'household.json'), 'utf8'));
 const person = (name) => household.people.find((p) => p.name === name);
@@ -22,22 +22,17 @@ function eventWith(name, item) {
   return event.id;
 }
 
-const goingHome = only('Sam Example', 'documents', (d) => d.title === 'Going home after knee surgery', 'the going-home instructions');
-const counseling = only('Sam Example', 'records', (r) => r.kind === 'encounter' && r.display === 'Counseling session', 'the counseling session');
-const MARKS = [
+const afterward = only('Sam Example', 'documents', (d) => d.doc_type === 'discharge_summary', 'the after-procedure instructions');
+const clinic = only('Sam Example', 'records', (r) => r.kind === 'encounter' && r.display === 'Clinic visit', 'the clinic visit');
+
+writeCase('private/marked', [
   // A procedure marked private takes its claims and papers with it; one paper of it is marked not private.
-  ['private', 'mark', eventWith('Sam Example', goingHome)],
-  ['private', 'unmark', goingHome],
+  ['private', 'mark', eventWith('Sam Example', afterward)],
+  ['private', 'unmark', afterward],
   // A visit the rules make private, marked not private. Its records stay private.
-  ['private', 'unmark', eventWith('Sam Example', counseling)],
+  ['private', 'unmark', eventWith('Sam Example', clinic)],
   // One record, and one paper, marked by themselves.
   ['private', 'mark', only('Robin Example', 'records', (r) => r.kind === 'allergy' && r.status === 'active', 'the current allergy')],
-  ['private', 'mark', only('Robin Example', 'documents', (d) => d.title === 'Statement from Example Lab', 'the lab’s statement')],
-];
-
-writeMarked('private/marked', MARKS);
-writeCase(
-  'private/unreadable',
-  (root) => writeFileSync(join(root, 'Sam Example', 'marks.json'), '{"schema": "medrec-marks/v1", "person": '),
-  (medrec) => medrec('views', 'write', '--all'),
-);
+  ['private', 'mark', only('Robin Example', 'documents', (d) => d.doc_type === 'bill' && d.organization === 'Example Lab', 'the lab’s statement')],
+]);
+writeCase('private/unreadable', [], (root) => writeFileSync(join(root, 'Sam Example', 'marks.json'), '{"schema": "medrec-marks/v1", "person": '));

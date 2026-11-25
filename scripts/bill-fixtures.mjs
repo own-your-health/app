@@ -2,13 +2,13 @@
 // payments on its bills (scripts/cases.mjs). Run it after
 // scripts/demo-folder.mjs, and commit the result.
 
-import { only, writeMarked } from './cases.mjs';
+import { only, writeCase } from './cases.mjs';
 
 /** A person's one bill for an amount. */
 const bill = (folder, amount) => only(folder, 'documents', (d) => d.doc_type === 'bill' && d.statement?.amount_due?.amount === amount, `bills for $${amount}`);
 const paid = (document, on, amount) => ['bills', 'paid', document, '--on', on, '--amount', amount];
 
-writeMarked('bills/paid', [
+writeCase('bills/paid', [
   // All of a bill that asks more than its claim says.
   paid(bill('Sam Example', '120.00'), '2026-11-20', '120.00'),
   // Part of one, past its due date.

@@ -396,7 +396,8 @@ export interface PendingMark {
 export interface RefusedRequest {
   schema: string;
   id: string | null;
-  received?: { bytes?: number; sha256?: string };
+  /** The file's size, and its SHA-256 (null for one medrec did not read). */
+  received?: { bytes?: number; sha256?: string | null };
   handled: Handled;
 }
 

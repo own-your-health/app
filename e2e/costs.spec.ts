@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
+import { ROBIN, SAM } from '../test/sample';
 
 // The costs screen over the sample household, through the production build
 // and its Content-Security-Policy. Any console error or policy violation fails.
@@ -24,7 +25,7 @@ test('costs this plan year across everyone, broken down, and down to one month a
   // Home's Money card, then Money's way to every claim.
   await page.goto('./?demo');
   const glance = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Money$/ }) });
-  await expect(glance.locator('.glance-answer')).toHaveText('$581.46 your share this plan year');
+  await expect(glance.locator('.glance-answer')).toHaveText('$497.86 your share this plan year');
   await glance.getByRole('link', { name: 'The year, the bills and the biggest costs' }).click();
   await page.getByRole('link', { name: 'Every claim, by provider, kind of care and month' }).click();
   await expect(page).toHaveURL(/#\/costs$/);
@@ -34,9 +35,9 @@ test('costs this plan year across everyone, broken down, and down to one month a
   const summary = page.locator('.card', { has: page.locator('.card-head h2', { hasText: 'This plan year, everyone' }) });
   // Everyone's costs leave Sam's private claim out, totals and all, and say so; Money's totals count it.
   await expect(page.locator('.private-line')).toHaveText('Private claims are left out here, totals too. Money’s totals count every claim. Choose a person to see theirs.');
-  await expect(summary.locator('.glance-answer')).toHaveText('$551.46 your share');
-  await expect(summary.locator('.totals')).toHaveText('Billed $7,276.00; Plan allowed $2,758.10; Plan paid $2,206.64; Your share $551.46');
-  await expect(summary).toContainText('13 claims, 20 lines. Your share is deductible $233.50, copay $220.00, coinsurance $97.96.');
+  await expect(summary.locator('.glance-answer')).toHaveText('$477.86 your share');
+  await expect(summary.locator('.totals')).toHaveText('Billed $4,965.60; Plan allowed $2,024.45; Plan paid $1,546.59; Your share $477.86');
+  await expect(summary).toContainText('12 claims, 18 lines. Your share is deductible $221.00, copay $45.00, coinsurance $211.86.');
   await expect(summary.locator('.plan-note')).toHaveText(
     'Plan years: Example Care Plan, Jul 1, 2026 to Jun 30, 2027; Example Health Plan and Example Pharmacy Benefits, 2026. Example Care Plan: plan year from your plan’s claims. Example Health Plan and Example Pharmacy Benefits: plan year assumed to be the calendar year; your plans’ records don’t say. Set when your plan year starts',
   );
@@ -44,37 +45,37 @@ test('costs this plan year across everyone, broken down, and down to one month a
 
   const balances = page.locator('.card', { hasText: 'Deductible and out-of-pocket' });
   await expect(balances.locator('.row-title')).toHaveText(['Alex, Example Care Plan', 'Sam, Example Care Plan', 'Robin, Example Health Plan']);
-  await expect(balances.getByRole('progressbar', { name: 'Sam, Deductible: $233.50 of $750.00 used' })).toBeVisible();
+  await expect(balances.getByRole('progressbar', { name: 'Sam, Deductible: $221.00 of $750.00 used' })).toBeVisible();
 
   // Every month of the plan years so far, the quiet ones too, each a link to its lines.
   const months = page.getByRole('group', { name: 'Plan paid and your share by month' }).getByRole('link');
   await expect(months).toHaveCount(11);
-  const october = page.getByRole('link', { name: 'Oct 2026: plan paid $291.84, your share $143.26. Show its lines.' });
+  const october = page.getByRole('link', { name: 'Oct 2026: plan paid $298.19, your share $148.26. Show its lines.' });
   await expect(october).toBeVisible();
 
   // The breakdown keeps the keyboard on the choice pressed, and the address keeps the choice.
   const went = page.locator('.card', { hasText: 'Where it went' });
-  await expect(went.locator('.row-title')).toHaveText(['Example Surgery Center', 'Example Lab', 'Example Orthopedic Surgeons', 'Example Health', 'Example Pediatrics', 'Example Pharmacy', 'Example Medical Supply', 'Example Imaging Partners']);
-  await expect(went.locator('.row').first().locator('.row-aside')).toHaveText('$175.00');
+  await expect(went.locator('.row-title')).toHaveText(['Example Lab', 'Example Digestive Health', 'Example Endoscopy Center', 'Example Health', 'Example Pediatrics', 'Example Pharmacy']);
+  await expect(went.locator('.row').first().locator('.row-aside')).toHaveText('$147.48');
   const byKind = went.getByRole('button', { name: 'Kind of care' });
   await byKind.focus();
   await page.keyboard.press('Enter');
   await expect(went.getByRole('button', { name: 'Kind of care' })).toBeFocused();
   await expect(went.getByRole('button', { name: 'Kind of care' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(went.locator('.row-title')).toHaveText(['Procedures', 'Lab tests', 'Visits', 'Pharmacy', 'Vaccines', 'Supplies and equipment', 'Imaging', 'Drugs given']);
+  await expect(went.locator('.row-title')).toHaveText(['Procedures', 'Lab tests', 'Visits', 'Pharmacy', 'Vaccines', 'Other medical services']);
   await expect(page).toHaveURL(/#\/costs\?by=category$/);
   // A screen reader hears what the page now shows.
-  await expect(page.getByRole('status')).toHaveText('This plan year, everyone: $551.46 your share, 13 claims, by kind of care.');
+  await expect(page.getByRole('status')).toHaveText('This plan year, everyone: $477.86 your share, 12 claims, by kind of care.');
 
   await october.click();
   await expect(page).toHaveURL(/#\/costs\?by=category&only=month%3A2026-10$/);
   await expect(page.getByRole('link', { name: 'Month: Oct 2026. Remove this filter.' })).toBeVisible();
-  await expect(summary.locator('.glance-answer')).toHaveText('$143.26 your share');
-  await expect(page.locator('.card-head h2', { hasText: /^3 claims$/ })).toBeVisible();
+  await expect(summary.locator('.glance-answer')).toHaveText('$148.26 your share');
+  await expect(page.locator('.card-head h2', { hasText: /^4 claims$/ })).toBeVisible();
   await expect(page.locator('.card', { hasText: 'Deductible and out-of-pocket' })).toHaveCount(0);
   await page.goBack();
   await expect(page).toHaveURL(/#\/costs\?by=category$/);
-  await expect(summary.locator('.glance-answer')).toHaveText('$551.46 your share');
+  await expect(summary.locator('.glance-answer')).toHaveText('$477.86 your share');
 
   // A calendar year, for taxes.
   await page.getByRole('group', { name: 'Period' }).getByRole('button', { name: '2025' }).click();
@@ -88,59 +89,59 @@ test('costs this plan year across everyone, broken down, and down to one month a
 
 test('each claim leads with what it says you owe, and a line the plan left out is listed, not owed', async ({ page }) => {
   await page.goto('./?demo#/costs');
-  const claims = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^13 claims$/ }) });
-  // Alex's sick visit: the practice billed a costlier strep test, and the plan paid it as the quick one.
-  const visit = claims.locator('.row', { has: page.locator('.row-title', { hasText: /^Office visit and strep test$/ }) });
-  await expect(visit.locator('.row-meta')).toHaveText('Nov 20, 2026 · Alex · Example Pediatrics');
-  await expect(visit.locator('.row-aside')).toHaveText('$25.00');
-  await expect(visit.locator('.totals')).toHaveText('Billed $213.00; Plan allowed $119.30; Plan paid $94.30; You owe $25.00');
-  await expect(visit.locator('.claim-lines li')).toHaveText(['Office visit · CPT 99213your share $25.00', 'Strep test, DNA method · CPT 87651Left out by the plan, not owed', 'Strep test · CPT 87880your share $0.00']);
+  const claims = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^12 claims$/ }) });
+  // Sam's endoscopy: the doctors' claim also lists a look without a biopsy, which the plan does not count.
+  const visit = claims.locator('.row', { hasText: 'Example Digestive Health' });
+  await expect(visit.locator('.row-meta')).toHaveText('Sep 16, 2026 · Sam · Example Digestive Health');
+  await expect(visit.locator('.row-aside')).toHaveText('$116.20');
+  await expect(visit.locator('.totals')).toHaveText('Billed $690.00; Plan allowed $262.00; Plan paid $145.80; You owe $116.20');
+  await expect(visit.locator('.claim-lines li')).toHaveText(['Upper endoscopy with biopsy · CPT 43239your share $116.20', 'Upper endoscopy, look only · CPT 43235Left out by the plan, not owed']);
   const listed = (await claims.locator('.row').allTextContents()).join('\n');
-  expect(listed).not.toContain('$132.00');
+  expect(listed).not.toContain('$410.00');
   expect(listed).not.toContain('Not split by line');
   // A claim of one line names its code beside the claim.
   await expect(claims.locator('.row', { has: page.locator('.row-title', { hasText: /^Office visit$/ }) }).locator('.row-meta')).toHaveText('Nov 18, 2026 · Robin · Example Health · CPT 99213');
 
   // Its page leads with the same, and says the same of the line.
   await visit.locator('a.row-main').click();
-  await expect(page.locator('main h1')).toHaveText('Office visit and strep test');
-  await expect(page.locator('.result-value')).toHaveText('You owe $25.00');
-  const lines = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^3 lines$/ }) });
-  const left = lines.locator('.row', { has: page.locator('.row-title', { hasText: /^Strep test, DNA method$/ }) });
+  await expect(page.locator('main h1')).toHaveText('Upper endoscopy with biopsy');
+  await expect(page.locator('.result-value')).toHaveText('You owe $116.20');
+  const lines = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^2 lines$/ }) });
+  const left = lines.locator('.row', { has: page.locator('.row-title', { hasText: /^Upper endoscopy, look only$/ }) });
   await expect(left.locator('.chip')).toHaveText('Left out');
-  await expect(left.locator('.claim-amounts')).toHaveText('Left out by the plan, not owed: the claim’s totals do not count this line. Billed $132.00.');
-  await expect(left.locator('.claim-notes')).toHaveText('The plan’s note: C7 -- This service was paid under a different code than the one billed.');
-  await expect(lines).not.toContainText('Not covered $132.00');
+  await expect(left.locator('.claim-amounts')).toHaveText('Left out by the plan, not owed: the claim’s totals do not count this line. Billed $410.00.');
+  await expect(left.locator('.claim-notes')).toHaveText('The plan’s note: B2 -- Included in the payment for another procedure of the same day.');
+  await expect(lines).not.toContainText('Not covered $410.00');
 });
 
 test('one code’s prices, across providers and dates', async ({ page }) => {
   await page.goto('./?demo#/costs');
   const same = page.locator('.card', { hasText: 'Same service, different prices' });
-  const office = same.locator('.row', { hasText: 'CPT 99213' });
+  const office = same.locator('.row', { hasText: 'CPT 99214' });
   await expect(office).toContainText('Office visit');
-  await expect(office).toContainText('CPT 99213 · 3 times at 2 providers');
-  await expect(office.locator('.row-aside')).toHaveText('$98.00 to $121.10');
+  await expect(office).toContainText('CPT 99214 · 3 times at 2 providers');
+  await expect(office.locator('.row-aside')).toHaveText('$134.50 to $190.00');
   await office.locator('a').first().click();
-  await expect(page).toHaveURL(/#\/costs\?period=all&only=code%3ACPT%3A99213$/);
+  await expect(page).toHaveURL(/#\/costs\?period=all&only=code%3ACPT%3A99214$/);
   await expect(page.getByRole('group', { name: 'Period' }).getByRole('button', { name: 'All years' })).toHaveAttribute('aria-pressed', 'true');
 
   const each = page.locator('.card', { hasText: 'What it cost each time' });
-  await expect(each.locator('.glance-answer')).toHaveText('$98.00 to $121.10 allowed');
-  await expect(each.locator('.row-title')).toHaveText(['Nov 20, 2026, Example Pediatrics', 'Nov 18, 2026, Example Health', 'Sep 15, 2025, Example Health']);
-  await expect(each.getByRole('img', { name: 'Nov 20, 2026, Example Pediatrics: billed $165.00, allowed $98.00' })).toBeVisible();
-  await expect(page.locator('.card', { has: page.locator('.card-head h2', { hasText: 'All years, everyone' }) }).locator('.glance-answer')).toHaveText('$50.00 your share');
+  await expect(each.locator('.glance-answer')).toHaveText('$134.50 to $190.00 allowed');
+  await expect(each.locator('.row-title')).toHaveText(['Nov 20, 2026, Example Pediatrics', 'May 20, 2026, Example Health', 'Mar 10, 2025, Example Health']);
+  await expect(each.getByRole('img', { name: 'Nov 20, 2026, Example Pediatrics: billed $215.00, allowed $134.50' })).toBeVisible();
+  await expect(page.locator('.card', { has: page.locator('.card-head h2', { hasText: 'All years, everyone' }) }).locator('.glance-answer')).toHaveText('$108.00 your share');
 
   // Each time opens its claim.
   await each.locator('.row').nth(1).locator('a').first().click();
-  await expect(page.locator('main h1')).toHaveText('Office visit');
+  await expect(page.locator('main h1')).toHaveText('Office visit and X-ray of the ankle');
   await page.goBack();
-  await page.getByRole('link', { name: 'Code: Office visit (CPT 99213). Remove this filter.' }).click();
+  await page.getByRole('link', { name: 'Code: Office visit (CPT 99214). Remove this filter.' }).click();
   await expect(page).toHaveURL(/#\/costs\?period=all$/);
   await expect(page.locator('.card', { hasText: 'Same service, different prices' })).toBeVisible();
 });
 
 test('the lines download as CSV, without leaving the page', async ({ page }) => {
-  await page.goto('./?demo#/costs?only=person:p_xo4em46i7yj3hphlpajo');
+  await page.goto(`./?demo#/costs?only=person:${ROBIN}`);
   await expect(page.locator('.card-head h2', { hasText: 'This plan year, Robin' })).toBeVisible();
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download CSV' }).click()]);
   expect(download.suggestedFilename()).toBe('costs-plan.csv');
@@ -148,19 +149,19 @@ test('the lines download as CSV, without leaving the page', async ({ page }) => 
   const text = (await readFile((await download.path())!, 'utf8')).replace(/^\uFEFF/, '');
   const rows = text.trimEnd().split('\r\n');
   expect(rows[0]).toBe('Date,Person,Provider,Insurer,Plan year,Service,Code,Code system,Kind of care,Billed,Allowed,Plan paid,Deductible,Copay,Coinsurance,Not covered,You owe,Claim,Left out by the plan,Revenue code');
-  expect(rows).toHaveLength(9);
+  expect(rows).toHaveLength(10);
   expect(rows[1]).toMatch(/^2026-11-18,Robin,Example Health,Example Health Plan,2026-01-01 to 2026-12-31,Office visit,99213,CPT,Visit,180\.00,112\.50,87\.50,/);
   await expect(page.locator('main h1')).toHaveText('Costs');
 });
 
 test('a person’s costs, from their claims', async ({ page }) => {
   // Sam's old claims address opens Sam's Money, which leads to every claim of Sam's.
-  await page.goto('./?demo#/p/p_wwezzed7kml67hnp6s7n/claims');
-  await expect(page).toHaveURL(/#\/money\?who=p_wwezzed7kml67hnp6s7n$/);
+  await page.goto(`./?demo#/p/${SAM}/claims`);
+  await expect(page).toHaveURL(new RegExp(`#/money\\?who=${SAM}$`));
   await page.getByRole('link', { name: 'Every claim, by provider, kind of care and month' }).click();
-  await expect(page).toHaveURL(/#\/costs\?only=person%3Ap_wwezzed7kml67hnp6s7n$/);
+  await expect(page).toHaveURL(new RegExp(`#/costs\\?only=person%3A${SAM}$`));
   await expect(page.getByRole('group', { name: 'Whose costs' }).getByRole('link', { name: 'Sam' })).toHaveAttribute('aria-current', 'true');
-  await expect(page.locator('.card', { has: page.locator('.card-head h2', { hasText: 'This plan year, Sam' }) }).locator('.glance-answer')).toHaveText('$438.50 your share');
+  await expect(page.locator('.card', { has: page.locator('.card-head h2', { hasText: 'This plan year, Sam' }) }).locator('.glance-answer')).toHaveText('$354.90 your share');
   // A person's breakdown is by provider or kind of care.
   await expect(page.locator('.card', { hasText: 'Where it went' }).getByRole('button')).toHaveText(['Provider', 'Kind of care']);
   await page.getByRole('group', { name: 'Whose costs' }).getByRole('link', { name: 'Everyone' }).click();
