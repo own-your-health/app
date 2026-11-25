@@ -54,21 +54,21 @@ describe('a bound against a range', () => {
   const flag = (op: '<' | '<=' | '>' | '>=', n: number, range: string) => resultFlag({ bound: { op, n }, range })?.level;
 
   it('decides at the range’s edges the way the range draws them', () => {
-    expect(flag('<', 1, '1-5')).toBe('low');
-    expect(flag('<=', 1, '1-5')).toBeUndefined();
-    expect(flag('<', 1, '>1')).toBe('low');
-    expect(flag('<=', 1, '>1')).toBe('low');
-    expect(flag('>', 5, '1-5')).toBe('high');
-    expect(flag('>=', 5, '1-5')).toBeUndefined();
-    expect(flag('>=', 130, '<130')).toBe('high');
-    expect(flag('<', 130, '<130')).toBe('normal');
-    expect(flag('<=', 130, '<130')).toBeUndefined();
-    expect(flag('>', 60, '>=60')).toBe('normal');
-    expect(flag('>', 59, '>=60')).toBeUndefined();
+    expect(flag('<', 3, '3-8')).toBe('low');
+    expect(flag('<=', 3, '3-8')).toBeUndefined();
+    expect(flag('<', 3, '>3')).toBe('low');
+    expect(flag('<=', 3, '>3')).toBe('low');
+    expect(flag('>', 8, '3-8')).toBe('high');
+    expect(flag('>=', 8, '3-8')).toBeUndefined();
+    expect(flag('>=', 47, '<47')).toBe('high');
+    expect(flag('<', 47, '<47')).toBe('normal');
+    expect(flag('<=', 47, '<47')).toBeUndefined();
+    expect(flag('>', 22, '>=22')).toBe('normal');
+    expect(flag('>', 21, '>=22')).toBeUndefined();
   });
 
   it('says nothing when the bound reaches past the range on its open side', () => {
-    expect(flag('<', 0.5, '0-1')).toBeUndefined();
-    expect(flag('>', 60, '60-120')).toBeUndefined();
+    expect(flag('<', 0.7, '0-2')).toBeUndefined();
+    expect(flag('>', 22, '22-85')).toBeUndefined();
   });
 });

@@ -26,7 +26,9 @@ const medicine = (name: string, runsOut: string): MedRecord[] =>
   });
 /** Alex with these medicines. Alex has none of their own. */
 const taking = (...meds: [string, string][]): PersonIndex => ({ ...index('Alex'), records: [...index('Alex').records, ...meds.flatMap(([n, d]) => medicine(n, d))] });
-const refills = (idx: PersonIndex, today = TODAY) => aheadOf({ ...person('Alex'), birth_date: undefined }, idx, today, true);
+/** A Sunday. */
+const SUNDAY = '2026-10-11';
+const refills = (idx: PersonIndex, today = SUNDAY) => aheadOf({ ...person('Alex'), birth_date: undefined }, idx, today, true);
 
 describe('what is ahead of a person', () => {
   it('is what is due, then what is coming up, soonest first', () => {
@@ -62,40 +64,40 @@ describe('what is ahead of a person', () => {
 
 describe('refills', () => {
   it('of one week share a line, from its Sunday, and say each medicine and its day', () => {
-    // Sunday Nov 22 to Saturday Nov 28; Nov 29 starts the next week.
-    const lines = refills(taking(['Cetirizine', '2026-11-24'], ['Ibuprofen', '2026-11-28'], ['Omeprazole', '2026-11-29']));
+    // Sunday Oct 11 to Saturday Oct 17; Oct 18 starts the next week.
+    const lines = refills(taking(['Baclofen', '2026-10-14'], ['Levothyroxine', '2026-10-17'], ['Timolol', '2026-10-18']));
     expect(said(lines)).toEqual([
-      ['2026-11-24', false, '2 refills', 'Nov 24', 'Nov 24'],
-      ['2026-11-29', false, 'Omeprazole', 'Nov 29', 'Nov 29'],
+      ['2026-10-14', false, '2 refills', 'Oct 14', 'Oct 14'],
+      ['2026-10-18', false, 'Timolol', 'Oct 18', 'Oct 18'],
     ]);
-    expect([lines[0]!.brief, lines[0]!.text]).toEqual(['Cetirizine, Ibuprofen', 'Cetirizine runs out about Nov 24 · Ibuprofen runs out about Nov 28']);
+    expect([lines[0]!.brief, lines[0]!.text]).toEqual(['Baclofen, Levothyroxine', 'Baclofen runs out about Oct 14 · Levothyroxine runs out about Oct 17']);
     expect(lines[0]!.route).toEqual({ name: 'health', who: person('Alex').id });
-    expect([lines[1]!.brief, lines[1]!.text]).toEqual(['runs out about then', 'refill: runs out about Nov 29 · 30 days filled Oct 30 at Example Pharmacy']);
+    expect([lines[1]!.brief, lines[1]!.text]).toEqual(['runs out about then', 'refill: runs out about Oct 18 · 30 days filled Sep 18 at Example Pharmacy']);
     expect(lines[1]!.route).toMatchObject({ name: 'item', person: person('Alex').id });
   });
 
   it('that have run out, or do today, are due, apart from the week’s others', () => {
-    const lines = refills(taking(['Cetirizine', '2026-11-20'], ['Ibuprofen', '2026-11-22'], ['Omeprazole', '2026-11-25']));
+    const lines = refills(taking(['Baclofen', '2026-10-08'], ['Levothyroxine', '2026-10-11'], ['Timolol', '2026-10-15']));
     expect(said(lines)).toEqual([
-      ['2026-11-20', true, 'Cetirizine', 'Nov 20', 'Refill due'],
-      ['2026-11-22', true, 'Ibuprofen', 'Today', 'Refill due'],
-      ['2026-11-25', false, 'Omeprazole', 'Nov 25', 'Nov 25'],
+      ['2026-10-08', true, 'Baclofen', 'Oct 8', 'Refill due'],
+      ['2026-10-11', true, 'Levothyroxine', 'Today', 'Refill due'],
+      ['2026-10-15', false, 'Timolol', 'Oct 15', 'Oct 15'],
     ]);
     expect(lines.map((l) => l.late)).toEqual([true, false, false]);
     expect(lines.map((l) => l.brief)).toEqual(['ran out about then', 'runs out about then', 'runs out about then']);
-    const two = refills(taking(['Cetirizine', '2026-11-19'], ['Ibuprofen', '2026-11-20']));
-    expect(said(two)).toEqual([['2026-11-19', true, '2 refills', 'Nov 19', '2 refills']]);
+    const two = refills(taking(['Baclofen', '2026-10-06'], ['Levothyroxine', '2026-10-09']));
+    expect(said(two)).toEqual([['2026-10-06', true, '2 refills', 'Oct 6', '2 refills']]);
   });
 
   it('that are private share no line with those that are not', () => {
-    const idx = taking(['Cetirizine', '2026-11-24'], ['Ibuprofen', '2026-11-25'], ['Omeprazole', '2026-11-26']);
+    const idx = taking(['Baclofen', '2026-10-13'], ['Levothyroxine', '2026-10-14'], ['Timolol', '2026-10-16']);
     const p = idx.privacy as Extract<Privacy, { kind: 'known' }>;
-    const marked: PersonIndex = { ...idx, privacy: { ...p, records: new Map([...p.records, ['r_Ibuprofen1', 'sexual_health'], ['r_Omeprazole1', 'sexual_health']]) } };
+    const marked: PersonIndex = { ...idx, privacy: { ...p, records: new Map([...p.records, ['r_Levothyroxine1', 'household'], ['r_Timolol1', 'household']]) } };
     expect(refills(marked).map((l) => [l.title, l.brief, l.private])).toEqual([
-      ['Cetirizine', 'runs out about then', undefined],
-      ['2 refills', 'Ibuprofen, Omeprazole', 'sexual_health'],
+      ['Baclofen', 'runs out about then', undefined],
+      ['2 refills', 'Levothyroxine, Timolol', 'household'],
     ]);
-    expect(aheadOf({ ...person('Alex'), birth_date: undefined }, marked, TODAY, false).map((l) => l.title)).toEqual(['Cetirizine']);
+    expect(aheadOf({ ...person('Alex'), birth_date: undefined }, marked, SUNDAY, false).map((l) => l.title)).toEqual(['Baclofen']);
   });
 });
 
@@ -127,8 +129,8 @@ describe('doses', () => {
       const doses = records.filter((x) => x.kind === 'immunization' && /hepatitis a|hep a/i.test(x.display ?? ''));
       return { ...index('Drew'), records: [...records.filter((x) => !doses.includes(x)), { ...doses[0]!, date: day, fields: { ...doses[0]!.fields, when: day } }] };
     };
-    // Six months after the first is a Thursday, of the week the 48-month doses start on Monday.
-    expect(of('Drew', false, TODAY, hepA('2026-06-17')).map((l) => [l.title, l.brief, l.tag])).toEqual([['5 vaccine doses', 'DTaP, Polio, MMR, Chickenpox, Hepatitis A', 'Dec 14']]);
+    // Six months after the first is a Wednesday, of the week the 48-month doses start on Monday.
+    expect(of('Drew', false, TODAY, hepA('2026-06-16')).map((l) => [l.title, l.brief, l.tag])).toEqual([['5 vaccine doses', 'DTaP, Polio, MMR, Chickenpox, Hepatitis A', 'Dec 14']]);
     // The next week's is its own.
     expect(of('Drew', false, TODAY, hepA('2026-06-20')).map((l) => [l.title, l.tag])).toEqual([
       ['48-month vaccines', 'Dec 14'],

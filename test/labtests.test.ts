@@ -23,26 +23,26 @@ describe('the curated tests', () => {
   });
 
   it('are found only by a LOINC code', () => {
-    expect(labTest({ system: LOINC, code: '711-2' })?.name).toBe('Eosinophils');
-    expect(labTest({ system: 'urn:oid:2.16.840.1.113883.6.1', code: '711-2' })).toBeUndefined();
-    expect(labTest({ system: 'http://snomed.info/sct', code: '711-2' })).toBeUndefined();
+    expect(labTest({ system: LOINC, code: '2132-9' })?.name).toBe('Vitamin B12');
+    expect(labTest({ system: 'urn:oid:2.16.840.1.113883.6.1', code: '2132-9' })).toBeUndefined();
+    expect(labTest({ system: 'http://snomed.info/sct', code: '2132-9' })).toBeUndefined();
     expect(labTest({ system: LOINC, code: 'constructor' })).toBeUndefined();
   });
 });
 
 describe('a result’s plain name', () => {
   it('is the curated name, then the source’s own, then the code’s', () => {
-    expect(resultName({ display: 'Eosinophils [#/volume] in Blood by Automated count', code: { system: LOINC, code: '711-2' } })).toBe('Eosinophils');
-    expect(resultName({ display: 'Peak flow' })).toBe('Peak flow');
-    expect(resultName({ display: '', code: { system: LOINC, code: '0000-0', display: 'Protein [Mass/volume] in Urine' } })).toBe('Protein in urine');
+    expect(resultName({ display: 'Cobalamin (Vitamin B12) [Mass/volume] in Serum or Plasma', code: { system: LOINC, code: '2132-9' } })).toBe('Vitamin B12');
+    expect(resultName({ display: 'Waist size' })).toBe('Waist size');
+    expect(resultName({ display: '', code: { system: LOINC, code: '0000-0', display: 'Calprotectin [Mass/mass] in Stool' } })).toBe('Calprotectin in stool');
     expect(resultName({})).toBe('Result');
   });
 
   it('reads a LOINC long name plainly', () => {
-    expect(plainLoincName('Eosinophils [#/volume] in Blood by Automated count')).toBe('Eosinophils');
-    expect(plainLoincName('Glucose [Mass/volume] in Serum or Plasma')).toBe('Glucose');
-    expect(plainLoincName('Bilirubin.total [Mass/volume] in Blood')).toBe('Bilirubin total');
-    expect(plainLoincName('Ketones [Presence] in Urine by Test strip')).toBe('Ketones in urine');
-    expect(plainLoincName('LDL cholesterol')).toBeUndefined();
+    expect(plainLoincName('Selenium [Mass/volume] in Blood by Mass spectrometry')).toBe('Selenium');
+    expect(plainLoincName('Caffeine [Mass/volume] in Serum or Plasma')).toBe('Caffeine');
+    expect(plainLoincName('Magnesium.ionized [Moles/volume] in Blood')).toBe('Magnesium ionized');
+    expect(plainLoincName('Yeast [#/area] in Sputum by Light microscopy')).toBe('Yeast in sputum');
+    expect(plainLoincName('Bone density')).toBeUndefined();
   });
 });

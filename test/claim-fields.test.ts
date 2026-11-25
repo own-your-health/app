@@ -29,7 +29,7 @@ const linked: MedRecord = (() => {
 const worded = asFiledBefore(claimOn('2026-03-11'), { words: true });
 const lostLink: MedRecord = { ...claimOn('2026-03-11'), id: 'r_lost', fields: { ...claimOn('2026-03-11').fields, visit: 'r_elsewhere' } };
 // A payer that gives only its totals, with the kind of care medrec gives one it can tell.
-const noLines: MedRecord = { ...claimOn('2026-01-20'), display: 'Imaging · Example Imaging', fields: { ...without(claimOn('2026-01-20'), 'total').fields, category: 'imaging' } };
+const noLines: MedRecord = { ...claimOn('2026-01-20'), display: 'Supplies · Example Imaging', fields: { ...without(claimOn('2026-01-20'), 'total').fields, category: 'supply' } };
 // An emergency room's claim as a medrec before 0.8.2 filed it: the revenue code where the service code goes.
 const facility: MedRecord = (() => {
   const c = without(claimOn('2026-06-14', recordsOf('Noor')), 'category', 'amounts', 'total');
@@ -58,9 +58,9 @@ describe('a claim’s amounts', () => {
   });
 
   it('take medrec’s name over the payer’s words for the same amount', () => {
-    const both: MedRecord = { ...worded, fields: { ...worded.fields, amounts: { you_owe: { amount: '20.00', currency: 'USD' } } } };
+    const both: MedRecord = { ...worded, fields: { ...worded.fields, amounts: { you_owe: { amount: '17.00', currency: 'USD' } } } };
     const a = claimAmounts(both);
-    expect(dollars(a.yourShare)).toBe('20.00');
+    expect(dollars(a.yourShare)).toBe('17.00');
     // An amount medrec leaves out is unknown, so the words still give it.
     expect(dollars(a.billed)).toBe('120');
   });
@@ -87,8 +87,8 @@ describe('a claim’s amounts', () => {
     expect(dollars(a.discount)).toBe('34.85');
     expect(a.parts.map((p) => p.label)).not.toContain('Discount');
     expect(claimLines(pharmacy)[0]!.amounts.discount?.amount).toBe('34.85');
-    const words: MedRecord = { ...worded, fields: { ...worded.fields, total: [{ category: 'Discount', amount: { amount: '5.00', currency: 'USD' } }] } };
-    expect(dollars(claimAmounts(words).discount)).toBe('5.00');
+    const words: MedRecord = { ...worded, fields: { ...worded.fields, total: [{ category: 'Discount', amount: { amount: '8.00', currency: 'USD' } }] } };
+    expect(dollars(claimAmounts(words).discount)).toBe('8.00');
     expect(claimAmounts(words).parts).toEqual([]);
   });
 });
@@ -96,7 +96,7 @@ describe('a claim’s amounts', () => {
 describe('a claim’s name', () => {
   it('is its lines’ services, and without lines medrec’s name less the provider the page shows apart', () => {
     expect(claimTitle(linked)).toBe('Office visit and skin scraping test');
-    expect(claimTitle(noLines)).toBe('Imaging');
+    expect(claimTitle(noLines)).toBe('Supplies');
     expect(claimTitle({ ...noLines, display: 'Professional' })).toBe('Claim from Example Imaging');
   });
 });
@@ -126,7 +126,7 @@ describe('a claim’s lines and kind of care', () => {
 
   it('name the claim’s kind of care: medrec’s, else its lines’ one kind, else mixed', () => {
     expect(claimCategory(linked)).toBe('mixed');
-    expect(claimCategory(noLines)).toBe('imaging');
+    expect(claimCategory(noLines)).toBe('supply');
     expect(claimCategory(worded)).toBe('visit');
     expect(claimCategory(without(linked, 'category'))).toBe('mixed');
     expect(claimCategory({ ...noLines, fields: { ...noLines.fields, category: 'not a category' } })).toBeUndefined();
@@ -134,7 +134,7 @@ describe('a claim’s lines and kind of care', () => {
 
   it('put a claim without lines under the kind medrec gave it in Costs', () => {
     const lines = costLines(PERSON, index).filter((l) => l.claim === noLines.id);
-    expect(lines.map((l) => [l.category, l.cents.billed, l.cents.youOwe])).toEqual([['imaging', 40000, 6000]]);
+    expect(lines.map((l) => [l.category, l.cents.billed, l.cents.youOwe])).toEqual([['supply', 40000, 6000]]);
   });
 });
 
@@ -142,8 +142,8 @@ describe('a claim’s diagnoses', () => {
   it('are in the payer’s order, each with its code', () => {
     expect(claimDiagnoses(linked).map(diagnosisText)).toEqual(['Rash (R21)', 'Ringworm (B35.4)']);
     expect(claimDiagnoses(worded)).toEqual([]);
-    expect(diagnosisText({ code: 'R21' })).toBe('R21');
-    expect(diagnosisText({ display: 'Rash' })).toBe('Rash');
+    expect(diagnosisText({ code: 'J00' })).toBe('J00');
+    expect(diagnosisText({ display: 'Common cold' })).toBe('Common cold');
   });
 
   it('are found by search, in their own words', () => {
@@ -187,7 +187,7 @@ describe('what a claim paid for', () => {
   });
 
   it('is none when medrec’s link is to a visit that has not happened', () => {
-    const planned: MedRecord = { ...FOLLOW_UP, id: 'r_plannedaaaaaaaaaaaaa', date: '2026-04-01', status: 'planned' };
+    const planned: MedRecord = { ...FOLLOW_UP, id: 'r_plannedaaaaaaaaaaaaa', date: '2026-05-27', status: 'planned' };
     const relinked: MedRecord = { ...lostLink, fields: { ...lostLink.fields, visit: planned.id } };
     const idx = { ...index, records: [...index.records.filter((r) => r !== lostLink), planned, relinked] };
     const v = visitTimeline(idx, household, PERSON, TODAY).visits;

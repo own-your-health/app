@@ -192,14 +192,14 @@ test('marks that don’t read are said where the bills are', async ({ page }) =>
 
 test('a payment at a visit above its claims is on Worth a call, and a private one only on its person’s', async ({ page }) => {
   const receipt = demoJson<{ documents: { id: string; doc_type: string }[] }>('Robin Example/index.json').documents.find((d) => d.doc_type === 'receipt')!.id;
-  const desk = (document: string) => ({ reason: 'desk_copay', bill: document, claim: null, event: null, asked: '45.00', owed: '25.00', currency: 'USD' });
+  const desk = (document: string) => ({ reason: 'desk_copay', bill: document, claim: null, event: null, asked: '58.00', owed: '36.00', currency: 'USD' });
   const robins = withBills(ROBIN, privateCase('marked'), (b) => b.worth_a_call.push(desk(receipt)));
   await lay(page, withBills(SAM, robins, (b) => b.worth_a_call.push(desk(docOf('Sam Example', '90.50')))));
   await go(page, '#/money/calls');
   const paid = card(page, 'Paid at a visit');
   await expect(paid.locator('.row-title')).toHaveText(['Example Health']);
-  await expect(paid.locator('.row-meta')).toHaveText('Robin · receipt Apr 20, 2025 · paid $45.00; the claims say you owe $25.00');
-  await expect(paid.locator('.row-aside')).toHaveText('$20.00');
+  await expect(paid.locator('.row-meta')).toHaveText('Robin · receipt Apr 20, 2025 · paid $58.00; the claims say you owe $36.00');
+  await expect(paid.locator('.row-aside')).toHaveText('$22.00');
   await go(page, `#/money/calls?who=${SAM}`);
   await expect(paid.locator('.row-title')).toHaveText(['Example Endoscopy Center']);
   await expect(paid.locator('.chip')).toHaveText('Private');

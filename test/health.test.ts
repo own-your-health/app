@@ -69,7 +69,7 @@ describe('the doctor’s sheet', () => {
   it('lists whoever was seen last first, and by name who was seen the same day or not at all', () => {
     const visit = index('Sam Example').records.find((r) => r.kind === 'encounter')!;
     const seen = (id: string, practitioner: string, date: string) => ({ ...visit, id, key: id, date, fields: { ...visit.fields, practitioner } });
-    const records = [seen('r_a', 'Dr. Reese Sample', '2026-09-01'), seen('r_b', 'Dr. Quinn Sample', '2026-09-01'), seen('r_c', 'Dr. Blair Sample', '2026-08-01'), seen('r_d', 'Dr. Jules Sample', '2026-10-01')];
+    const records = [seen('r_a', 'Dr. Reese Sample', '2026-08-19'), seen('r_b', 'Dr. Quinn Sample', '2026-08-19'), seen('r_c', 'Dr. Blair Sample', '2026-06-24'), seen('r_d', 'Dr. Jules Sample', '2026-10-14')];
     expect(careTeam({ ...index('Sam Example'), records }, TODAY).map((m) => m.name)).toEqual(['Dr. Jules Sample', 'Dr. Quinn Sample', 'Dr. Reese Sample', 'Dr. Blair Sample']);
   });
 

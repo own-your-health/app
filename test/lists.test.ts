@@ -26,32 +26,32 @@ describe('conditions', () => {
   it('goes by a condition’s newest record, and leaves out one entered in error', () => {
     const idx = index('Robin Example');
     const htn = idx.records.find((r) => r.display === 'High blood pressure')!;
-    const later = conditionList(withRecords(idx, [{ kind: 'condition', code: htn.code, display: 'High blood pressure', date: '2026-11-01', status: 'resolved' }]));
+    const later = conditionList(withRecords(idx, [{ kind: 'condition', code: htn.code, display: 'High blood pressure', date: '2026-10-20', status: 'resolved' }]));
     expect(later.active).toEqual([]);
     expect(later.ended.find((i) => i.name === 'High blood pressure')).toMatchObject({ first: '2025-03-10', records: [expect.anything(), expect.anything()] });
-    const mistaken = conditionList(withRecords(idx, [{ kind: 'condition', display: 'Asthma', date: '2026-11-01', status: 'entered-in-error' }]));
-    expect(names([...mistaken.active, ...mistaken.ended, ...mistaken.other])).not.toContain('Asthma');
+    const mistaken = conditionList(withRecords(idx, [{ kind: 'condition', display: 'Plantar fasciitis', date: '2026-10-20', status: 'entered-in-error' }]));
+    expect(names([...mistaken.active, ...mistaken.ended, ...mistaken.other])).not.toContain('Plantar fasciitis');
   });
 
   it('notes an unconfirmed one beside its status, and puts a ruled-out or status-less one under other', () => {
     const c = conditionList(
       withRecords(index('Sam Example'), [
-        { kind: 'condition', display: 'Migraine', date: '2026-09-01', status: 'recurrence', fields: { verification_status: 'provisional' } },
-        { kind: 'condition', display: 'Anemia', date: '2026-09-01', status: 'active', fields: { verification_status: 'refuted' } },
-        { kind: 'condition', display: 'Back pain', date: '2026-08-01' },
+        { kind: 'condition', display: 'Tennis elbow', date: '2026-08-12', status: 'recurrence', fields: { verification_status: 'provisional' } },
+        { kind: 'condition', display: 'Cataract', date: '2026-08-12', status: 'active', fields: { verification_status: 'refuted' } },
+        { kind: 'condition', display: 'Nosebleeds', date: '2026-06-25' },
       ]),
     );
-    expect(c.active.find((i) => i.name === 'Migraine')).toMatchObject({ isActive: true, unconfirmed: true, refuted: false, statusNote: 'Recurred' });
-    expect(names(c.other)).toEqual(['Anemia', 'Back pain']);
+    expect(c.active.find((i) => i.name === 'Tennis elbow')).toMatchObject({ isActive: true, unconfirmed: true, refuted: false, statusNote: 'Recurred' });
+    expect(names(c.other)).toEqual(['Cataract', 'Nosebleeds']);
     expect(c.other.map((i) => [i.refuted, i.isActive])).toEqual([[true, false], [false, false]]);
     // The heading says active or resolved, so those need no note.
     expect([...c.active, ...c.ended].filter((i) => ['Vitamin D deficiency', 'Right ankle sprain'].includes(i.name)).map((i) => i.statusNote)).toEqual([undefined, undefined]);
   });
 
   it('keeps a ruled-out condition out of Resolved, whatever its status', () => {
-    const c = conditionList(withRecords(index('Sam Example'), [{ kind: 'condition', display: 'Gout', date: '2026-09-01', status: 'resolved', fields: { verification_status: 'refuted' } }]));
-    expect(names(c.ended)).not.toContain('Gout');
-    expect(c.other.find((i) => i.name === 'Gout')).toMatchObject({ refuted: true });
+    const c = conditionList(withRecords(index('Sam Example'), [{ kind: 'condition', display: 'Strep throat', date: '2026-08-12', status: 'resolved', fields: { verification_status: 'refuted' } }]));
+    expect(names(c.ended)).not.toContain('Strep throat');
+    expect(c.other.find((i) => i.name === 'Strep throat')).toMatchObject({ refuted: true });
   });
 });
 
@@ -66,9 +66,9 @@ describe('allergies', () => {
   });
 
   it('shows one without a status as current', () => {
-    const a = allergyList(withRecords(index('Sam Example'), [{ kind: 'allergy', display: 'Penicillin', date: '2020-01-01' }, { kind: 'allergy', display: 'Mold', date: '2020-01-01', status: 'resolved' }]));
-    expect(names(a.current)).toEqual(['Penicillin', 'Peanuts']);
-    expect(names(a.ended)).toEqual(['Mold']);
+    const a = allergyList(withRecords(index('Sam Example'), [{ kind: 'allergy', display: 'Bee stings', date: '2017-07-15' }, { kind: 'allergy', display: 'Nickel', date: '2014-02-19', status: 'resolved' }]));
+    expect(names(a.current)).toEqual(['Bee stings', 'Peanuts']);
+    expect(names(a.ended)).toEqual(['Nickel']);
   });
 });
 
@@ -84,7 +84,7 @@ describe('medicines', () => {
   it('leaves out a withdrawn record, even when it is the newest', () => {
     const idx = index('Robin Example');
     const lisinopril = idx.records.find((r) => r.display === 'Lisinopril 10 mg tablet')!;
-    const withdrawn = withRecords(idx, [{ kind: 'medication', code: lisinopril.code, display: 'Lisinopril 20 mg tablet', date: '2026-11-20', status: 'entered-in-error', fields: { dosage: 'Take 2 tablets', source: 'request' } }]);
+    const withdrawn = withRecords(idx, [{ kind: 'medication', code: lisinopril.code, display: 'Lisinopril 2.5 mg tablet', date: '2026-11-17', status: 'entered-in-error', fields: { dosage: 'Take half a tablet', source: 'request' } }]);
     const m = medicineList(withdrawn).active.find((x) => x.key === `${lisinopril.code!.system}|${lisinopril.code!.code}`)!;
     expect(m).toMatchObject({ name: 'Lisinopril 10 mg tablet', latest: { date: '2026-11-12' } });
     expect(m.records.map((r) => r.status)).not.toContain('entered-in-error');

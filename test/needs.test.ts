@@ -95,12 +95,12 @@ describe('vaccine doses', () => {
 
 describe('an age', () => {
   it('reads in days, weeks, months, then years', () => {
-    const on = '2026-03-20';
-    expect([ageWords('2026-03-10', on), ageWords('2026-03-06', on), ageWords('2025-10-30', on), ageWords('2018-01-01', on), ageWords('2026-03-29', on)]).toEqual([
-      '10 days old',
+    const on = '2025-08-19';
+    expect([ageWords('2025-08-14', on), ageWords('2025-08-05', on), ageWords('2025-01-27', on), ageWords('2011-04-06', on), ageWords('2025-08-31', on)]).toEqual([
+      '5 days old',
       '2 weeks old',
-      '4 months old',
-      '8 years old',
+      '6 months old',
+      '14 years old',
       null,
     ]);
   });

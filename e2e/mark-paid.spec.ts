@@ -55,13 +55,13 @@ test('a bill is marked paid from Bills, waits for the Mac, and is paid once file
   await expect(page.getByLabel('Paid on')).toHaveValue('2026-11-22');
   await expect(page.getByLabel('Amount')).toHaveValue('90.50');
   await expect(page.locator('#paid-rest')).toHaveText('That is all that is left to pay.');
-  await page.getByLabel('Paid on').fill('2026-11-20');
+  await page.getByLabel('Paid on').fill('2026-11-18');
   await send(page).click();
 
   await expect(form(page)).toHaveCount(0);
   await expect(page.locator('.toast')).toHaveText('Marked paid. The Mac files it on its next pass.');
   const marked = card(page, /^Marked paid$/);
-  await expect(marked.locator('.mark-line')).toContainText('$90.50 marked paid, Nov 20, 2026. Waiting for the Mac.');
+  await expect(marked.locator('.mark-line')).toContainText('$90.50 marked paid, Nov 18, 2026. Waiting for the Mac.');
   await expect(marked.locator('.mark-line')).toContainText(UNDO);
   await expect(marked.locator('.mark-paid')).toBeFocused();
   await expect(marked).not.toContainText('Was due');
@@ -76,7 +76,7 @@ test('a bill is marked paid from Bills, waits for the Mac, and is paid once file
   // The Mac files it.
   await go(page, '#/money/bills');
   await expect(marked).toHaveCount(0, { timeout: 20_000 });
-  await expect(card(page, /^Paid$/).locator('.row-meta')).toContainText(['Sam · Hospital visit, Sep 16, 2026 · Marked paid, Nov 20, 2026', 'Robin · Office visit, Mar 10, 2025']);
+  await expect(card(page, /^Paid$/).locator('.row-meta')).toContainText(['Sam · Hospital visit, Sep 16, 2026 · Marked paid, Nov 18, 2026', 'Robin · Office visit, Mar 10, 2025']);
   await expect(markButton(page, CENTER)).toHaveCount(0);
 });
 
@@ -117,21 +117,21 @@ test('a part paid leaves the rest to pay and to mark', async ({ page }) => {
   await go(page, '#/money/bills');
   await markButton(page, CENTER).click();
   const rest = page.locator('#paid-rest');
-  await page.getByLabel('Amount').fill('75');
-  await expect(rest).toHaveText('$15.50 of $90.50 would be left to pay.');
-  await page.getByLabel('Amount').fill('200');
-  await expect(rest).toHaveText('That is $109.50 more than is left to pay.');
-  await page.getByLabel('Amount').fill('$40.5');
-  await expect(rest).toHaveText('$50.00 of $90.50 would be left to pay.');
+  await page.getByLabel('Amount').fill('68');
+  await expect(rest).toHaveText('$22.50 of $90.50 would be left to pay.');
+  await page.getByLabel('Amount').fill('140');
+  await expect(rest).toHaveText('That is $49.50 more than is left to pay.');
+  await page.getByLabel('Amount').fill('$36.5');
+  await expect(rest).toHaveText('$54.00 of $90.50 would be left to pay.');
   await send(page).click();
   const row = card(page, 'Due now').locator('.row', { hasText: CENTER });
-  await expect(row.locator('.mark-line')).toContainText('$40.50 marked paid, Nov 22, 2026.');
+  await expect(row.locator('.mark-line')).toContainText('$36.50 marked paid, Nov 22, 2026.');
   await expect(row).toContainText('Was due Nov 4, 2026');
   await row.getByRole('button', { name: /^Mark paid/ }).click();
-  await expect(page.getByLabel('Amount')).toHaveValue('50.00');
-  await expect(form(page)).toContainText('$50.00 left to pay');
+  await expect(page.getByLabel('Amount')).toHaveValue('54.00');
+  await expect(form(page)).toContainText('$54.00 left to pay');
   await page.keyboard.press('Escape');
-  await expect(row).toContainText('$40.50 of $90.50 paid', { timeout: 20_000 });
+  await expect(row).toContainText('$36.50 of $90.50 paid', { timeout: 20_000 });
   await expect(row.locator('.mark-line')).toHaveCount(0);
 });
 
@@ -183,22 +183,22 @@ test('the form holds the keyboard, and closes when the page is left', async ({ p
 
 test('a bill that may be paid starts from its receipt’s day, and is no longer asked about once marked', async ({ page }) => {
   // A receipt from the bill's provider, dated after it, whose amount could not be read.
-  await lay(page, withReceipt('2026-10-05'));
+  await lay(page, withReceipt('2026-10-16'));
   await go(page, '#/money/bills');
   const maybe = card(page, /^May be paid$/);
   await expect(maybe.locator('.row')).toContainText([CENTER]);
   await maybe.getByRole('button', { name: /^Mark paid/ }).click();
-  await expect(page.getByLabel('Paid on')).toHaveValue('2026-10-05');
+  await expect(page.getByLabel('Paid on')).toHaveValue('2026-10-16');
   await expect(form(page)).toContainText('The day on the receipt in the folder. Its amount could not be read, so check it.');
   await send(page).click();
   await expect(maybe).toHaveCount(0);
-  await expect(card(page, /^Marked paid$/).locator('.mark-line')).toContainText('$90.50 marked paid, Oct 5, 2026.');
+  await expect(card(page, /^Marked paid$/).locator('.mark-line')).toContainText('$90.50 marked paid, Oct 16, 2026.');
   await page.evaluate(() => (location.hash = '#/'));
   await expect(card(page, /^Bills$/).locator('.home-quiet')).toHaveText('Besides, 1 is marked paid.');
 });
 
 test('a receipt dated ahead of today leaves today in the form', async ({ page }) => {
-  await lay(page, withReceipt('2026-11-25'));
+  await lay(page, withReceipt('2026-12-03'));
   await go(page, '#/money/bills');
   await card(page, /^May be paid$/).getByRole('button', { name: /^Mark paid/ }).click();
   await expect(page.getByLabel('Paid on')).toHaveValue('2026-11-22');
@@ -251,17 +251,17 @@ test('a bill that asks less than its claims say has Mark paid under Worth a look
     rewritten({}, ({ index, bills }) => {
       const listed = bills.bills[bill];
       if (!listed) return;
-      for (const d of index.documents) if (d.id === bill) d.statement = { ...(d.statement as object), amount_due: { amount: '80.00', currency: 'USD' } };
-      Object.assign(listed, { amount_due: '80.00', left: '80.00' });
-      bills.worth_a_call.push({ reason: 'asks_less', bill, asked: '80.00', owed: '90.50', currency: 'USD' } as { bill: string });
+      for (const d of index.documents) if (d.id === bill) d.statement = { ...(d.statement as object), amount_due: { amount: '72.00', currency: 'USD' } };
+      Object.assign(listed, { amount_due: '72.00', left: '72.00' });
+      bills.worth_a_call.push({ reason: 'asks_less', bill, asked: '72.00', owed: '90.50', currency: 'USD' } as { bill: string });
     }),
   );
   await go(page, '#/money/calls');
   await markButton(page, CENTER).click();
-  await expect(page.getByLabel('Amount')).toHaveValue('80.00');
-  await page.getByLabel('Amount').fill('50');
+  await expect(page.getByLabel('Amount')).toHaveValue('72.00');
+  await page.getByLabel('Amount').fill('46');
   await send(page).click();
-  await expect(card(page, /^Worth a look$/).locator('.mark-line')).toContainText('$50.00 marked paid, Nov 22, 2026.');
+  await expect(card(page, /^Worth a look$/).locator('.mark-line')).toContainText('$46.00 marked paid, Nov 22, 2026.');
 });
 
 test('where medrec’s list does not say what is left there is no Mark paid, and what waits is still said', async ({ page }) => {
@@ -272,7 +272,7 @@ test('where medrec’s list does not say what is left there is no Mark paid, and
     change(changed.people[SAM]!);
     return { 'views/views.json': JSON.stringify(changed) };
   };
-  const waiting = { '_requests/20261122T195900Z_x_abcdefghijklmnopqrst.json': request('x_abcdefghijklmnopqrst', bill, '75.00', '2026-11-22T19:59:00Z') };
+  const waiting = { '_requests/20261122T195900Z_x_abcdefghijklmnopqrst.json': request('x_abcdefghijklmnopqrst', bill, '68.00', '2026-11-22T19:59:00Z') };
   const unreadable = rewritten({}, (files) => files.name === 'Sam Example' && Object.assign(files.bills, { marks_unreadable: true }));
   const leftOut = rewritten({}, (files) => files.name === 'Sam Example' && delete files.bills.bills[bill]);
   for (const [name, overlay] of Object.entries({
@@ -287,7 +287,7 @@ test('where medrec’s list does not say what is left there is no Mark paid, and
     for (const path of [`#/money/bills?who=${SAM}`, `#/p/${SAM}/r/${bill}`, `#/p/${SAM}/e/${eventOf(SAM, bill)}`, '#/']) {
       await go(page, path);
       await expect(page.locator('.main'), `${name} ${path}`).toContainText('Example');
-      if (path !== '#/') await expect(page.locator('.mark-line').first(), `${name} ${path}`).toContainText('$75.00 marked paid, Nov 1, 2026. Waiting for the Mac.');
+      if (path !== '#/') await expect(page.locator('.mark-line').first(), `${name} ${path}`).toContainText('$68.00 marked paid, Oct 30, 2026. Waiting for the Mac.');
       await expect(markButton(page, CENTER), `${name} ${path}`).toHaveCount(0);
     }
     await page.unrouteAll();
@@ -310,12 +310,12 @@ const oneVisit = (due: string) => {
 };
 
 test('on Home, the bills of one visit share a row, marked one by one on its page, and the last says what is marked of it', async ({ page }) => {
-  await lay(page, oneVisit('2026-10-27'));
+  await lay(page, oneVisit('2026-10-24'));
   await go(page, '#/');
   const row = card(page, /^Bills$/).locator('.row', { hasText: 'Robin' });
   // Both are past due: the visit's total, and no button that marks one of them.
   await expect(row.locator('.need-kind')).toHaveText('No payment on file');
-  await expect(row.locator('.row-meta')).toHaveText('Robin · 2 bills · was due Oct 27 · unless it was paid elsewhere');
+  await expect(row.locator('.row-meta')).toHaveText('Robin · 2 bills · was due Oct 24 · unless it was paid elsewhere');
   await expect(row.locator('.row-aside')).toHaveText('$72.96');
   await expect(row.getByRole('button')).toHaveCount(0);
   await row.locator('a.row-main').click();
@@ -323,14 +323,14 @@ test('on Home, the bills of one visit share a row, marked one by one on its page
 
   await page.evaluate(() => (location.hash = '#/money/bills'));
   await markButton(page, 'Example Lab').click();
-  await page.getByLabel('Amount').fill('5');
+  await page.getByLabel('Amount').fill('4');
   await send(page).click();
   await markButton(page, 'Example Health').click();
   await send(page).click();
   await expect(card(page, /^Marked paid$/).locator('.mark-line')).toHaveCount(1);
   await page.evaluate(() => (location.hash = '#/'));
   await expect(row.locator('.need-kind')).toHaveText('No payment on file');
-  await expect(row.locator('.row-meta')).toHaveText('Robin · $5.00 marked paid · was due Oct 27 · matches the claim · unless it was paid elsewhere');
+  await expect(row.locator('.row-meta')).toHaveText('Robin · $4.00 marked paid · was due Oct 24 · matches the claim · unless it was paid elsewhere');
   await expect(row.locator('.row-aside')).toHaveText('$19.28');
   await expect(card(page, /^Bills$/).locator('.home-quiet')).toHaveText('Besides, 1 is marked paid.');
 });
@@ -413,8 +413,8 @@ test('of the payments that could not be recorded the last is said, for two weeks
   const failed = (n: string, at: string) => ({ [`_requests/done/${at.replace(/[-:]/g, '')}_x_${n.repeat(20)}.json`]: request(`x_${n.repeat(20)}`, bill, '120.00', at, `Reason ${n}.`) });
   const said = page.locator('.mark-paid p');
   for (const [overlay, text] of [
-    [{ ...failed('a', '2026-11-20T12:00:00Z'), ...failed('b', '2026-11-21T12:00:00Z') }, ['The payment marked for Nov 1, 2026 was not recorded. Reason b.']],
-    [failed('c', '2026-11-08T20:00:01Z'), ['The payment marked for Nov 1, 2026 was not recorded. Reason c.']],
+    [{ ...failed('a', '2026-11-20T12:00:00Z'), ...failed('b', '2026-11-21T12:00:00Z') }, ['The payment marked for Oct 30, 2026 was not recorded. Reason b.']],
+    [failed('c', '2026-11-08T20:00:01Z'), ['The payment marked for Oct 30, 2026 was not recorded. Reason c.']],
     [failed('d', '2026-11-08T20:00:00Z'), []],
   ] as [Overlay, string[]][]) {
     await lay(page, overlay);
@@ -572,7 +572,7 @@ function request(id: string, document: string, amount: string, at: string, handl
     requested_at: at,
     requested_by: { name: 'Another device' },
     app: { name: 'own-your-health-app', version: '0.1.0' },
-    paid: { person: SAM, document, on: '2026-11-01', amount },
+    paid: { person: SAM, document, on: '2026-10-30', amount },
     ...(handled ? { handled: { picked_up_at: at, finished_at: at, outcome: 'failed', sources: [], message: handled, by: 'medrec 0.9.6' } } : {}),
   });
 }
@@ -615,7 +615,7 @@ test.describe('signed in', () => {
     await page.clock.setFixedTime(new Date());
     await open(page);
     await markButton(page, CENTER).click();
-    await page.getByLabel('Paid on').fill('2026-11-01');
+    await page.getByLabel('Paid on').fill('2026-10-30');
     await send(page).click();
     await expect(card(page, /^Marked paid$/)).toBeVisible();
     expect(google.changes).toEqual([{ method: 'CREATE', path: expect.stringMatching(/^_requests\/\d{8}T\d{6}Z_x_[a-z2-7]{20}\.json$/) }]);
@@ -626,7 +626,7 @@ test.describe('signed in', () => {
       requested_at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/),
       requested_by: expect.objectContaining({ email: expect.any(String) }),
       app: { name: 'own-your-health-app', version: expect.any(String) },
-      paid: { person: SAM, document: doc('Sam Example', '90.50'), on: '2026-11-01', amount: '90.50' },
+      paid: { person: SAM, document: doc('Sam Example', '90.50'), on: '2026-10-30', amount: '90.50' },
     });
     await page.getByRole('button', { name: /^Undo/ }).click();
     await expect(card(page, /^Marked paid$/)).toHaveCount(0);
@@ -675,7 +675,7 @@ test.describe('signed in', () => {
     await expect(due).toHaveCount(1);
     google.writeAsMac('_requests/20261122T200312Z_x_abcdefghijklmnopqrst.json', asked('x_abcdefghijklmnopqrst'));
     await look(page);
-    await expect(card(page, /^Marked paid$/).locator('.mark-line')).toContainText('$90.50 marked paid, Nov 1, 2026. Waiting for the Mac.');
+    await expect(card(page, /^Marked paid$/).locator('.mark-line')).toContainText('$90.50 marked paid, Oct 30, 2026. Waiting for the Mac.');
     await expect(due).toHaveCount(0);
     // Only the device that asked can take it back.
     await expect(page.getByRole('button', { name: /^Undo/ })).toHaveCount(0);
@@ -694,7 +694,7 @@ test.describe('signed in', () => {
     // Asked yesterday and not taken by a Mac that is on.
     google.writeAsMac('_requests/20261122T200512Z_x_cdefghijklmnopqrstuv.json', asked('x_cdefghijklmnopqrstuv', undefined, now(86_400_000)));
     await page.reload();
-    await expect(card(page, /^Marked paid$/).locator('.mark-line')).toContainText('$90.50 marked paid, Nov 1, 2026. The Mac has not taken it yet.');
+    await expect(card(page, /^Marked paid$/).locator('.mark-line')).toContainText('$90.50 marked paid, Oct 30, 2026. The Mac has not taken it yet.');
   });
 
   test('what the Mac has recorded says so until the records can be read again', async ({ page }) => {
@@ -750,7 +750,7 @@ test.describe('signed in', () => {
     await page.clock.setFixedTime(new Date());
     await open(page);
     await markButton(page, CENTER).click();
-    await page.getByLabel('Amount').fill('75');
+    await page.getByLabel('Amount').fill('68');
     google.failing = '*';
     await send(page).click();
     // Said in the form, where the keyboard still is, and nowhere else.
@@ -758,11 +758,11 @@ test.describe('signed in', () => {
     await expect(send(page)).toBeFocused();
     await expect(send(page)).not.toHaveAttribute('aria-disabled', 'true');
     await expect(page.locator('.toast')).toHaveCount(0);
-    await expect(page.getByLabel('Amount')).toHaveValue('75');
+    await expect(page.getByLabel('Amount')).toHaveValue('68');
     google.failing = null;
     await page.keyboard.press('Enter');
     await expect(form(page)).toHaveCount(0);
-    await expect(card(page, 'Due now').locator('.row', { hasText: CENTER }).locator('.mark-line')).toContainText('$75.00 marked paid');
+    await expect(card(page, 'Due now').locator('.row', { hasText: CENTER }).locator('.mark-line')).toContainText('$68.00 marked paid');
     expect(problems.filter((x) => !x.includes('503'))).toEqual([]);
     problems = [];
   });
@@ -790,7 +790,7 @@ test.describe('signed in', () => {
     await open(page);
     await markButton(page, CENTER).click();
     // A part of it: what is left is not what the form was opened on.
-    google.writeAsMac('_requests/20261122T200312Z_x_abcdefghijklmnopqrst.json', request('x_abcdefghijklmnopqrst', doc('Sam Example', '90.50'), '75.00', now()));
+    google.writeAsMac('_requests/20261122T200312Z_x_abcdefghijklmnopqrst.json', request('x_abcdefghijklmnopqrst', doc('Sam Example', '90.50'), '68.00', now()));
     for (let i = 0; i < 2; i++) {
       await send(page).click();
       await expect(page.locator('#paid-problem')).toHaveText('What is left to pay has changed since this was opened, so nothing was sent. Close this and look at the bill again.');
@@ -799,9 +799,9 @@ test.describe('signed in', () => {
     expect(google.changes).toEqual([]);
     // Behind the form the bill has that payment, and the rest to mark.
     await page.getByRole('button', { name: 'Cancel' }).click();
-    await expect(billRow(page, CENTER).locator('.mark-line')).toContainText('$75.00 marked paid');
+    await expect(billRow(page, CENTER).locator('.mark-line')).toContainText('$68.00 marked paid');
     await markButton(page, CENTER).click();
-    await expect(page.getByLabel('Amount')).toHaveValue('15.50');
+    await expect(page.getByLabel('Amount')).toHaveValue('22.50');
     await send(page).click();
     await expect(card(page, /^Marked paid$/).locator('.mark-line')).toHaveCount(2);
     expect(google.changes).toHaveLength(1);
@@ -842,7 +842,7 @@ test.describe('signed in', () => {
     await expect(page.locator('#paid-problem')).toContainText('nothing was sent');
     await page.getByRole('button', { name: 'Cancel' }).click();
     await look(page);
-    await expect(card(page, /^Marked paid$/).locator('.mark-line')).toContainText('$90.50 marked paid, Nov 1, 2026. The Mac has recorded it.');
+    await expect(card(page, /^Marked paid$/).locator('.mark-line')).toContainText('$90.50 marked paid, Oct 30, 2026. The Mac has recorded it.');
     await expect(markButton(page, CENTER)).toHaveCount(0);
     expect(google.changes).toEqual([]);
     expect(problems.filter((x) => !x.includes('503'))).toEqual([]);

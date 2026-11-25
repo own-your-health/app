@@ -196,7 +196,7 @@ describe('isMedrecOwnError', () => {
   it('takes a provider tool’s error from before 0.7.0 as the tool’s', () => {
     expect(isMedrecOwnError({ code: 'needs_person', message: 'The sign-in has expired. Run `athena auth login`.', remedy: 'Run `athena auth login`, then import again.' })).toBe(false);
     expect(isMedrecOwnError({ code: 'needs_person', message: 'Session expired.', remedy: 'Run `athena auth login`.', provider_message: null } as unknown as ErrorInfo)).toBe(false);
-    expect(isMedrecOwnError({ code: 'upstream', message: 'The lab site answered 503 three times.' })).toBe(false);
+    expect(isMedrecOwnError({ code: 'upstream', message: 'The portal answered 502 twice.' })).toBe(false);
     expect(isMedrecOwnError(null)).toBe(false);
   });
 });

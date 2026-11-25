@@ -68,13 +68,13 @@ describe('where each paper belongs', () => {
     const robin = structuredClone(indexes.get(id('Robin Example'))!);
     const [first] = robin.documents;
     robin.documents.push(
-      { ...first!, id: 'd_undated', title: 'Undated letter', doc_type: 'letter', date: undefined },
-      { ...first!, id: 'd_far', title: 'Old letter', doc_type: 'letter', date: '2019-06-01' },
-      { ...first!, id: 'd_card', title: 'Plan card', doc_type: 'insurance_card', date: '2026-01-01' },
+      { ...first!, id: 'd_undated', title: 'Undated note', doc_type: 'letter', date: undefined },
+      { ...first!, id: 'd_far', title: 'Note from long ago', doc_type: 'letter', date: '2016-10-14' },
+      { ...first!, id: 'd_card', title: 'Member card', doc_type: 'insurance_card', date: '2025-08-19' },
     );
     const why = (doc: string) => papersOf(robin, household, TODAY, indexes).find((p) => p.doc.id === doc)!.why;
     expect(why('d_undated')).toBe('It has no date to match a visit by.');
-    expect(why('d_far')).toBe('No visit in these records is on or near Jun 1, 2019.');
+    expect(why('d_far')).toBe('No visit in these records is on or near Oct 14, 2016.');
     expect(why('d_card')).toBe('An insurance card is about no one visit.');
   });
 

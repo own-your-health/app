@@ -407,7 +407,7 @@ describe('what the household marked', () => {
     const labs = (shared: boolean) => unbilledShares(idx, mine, shared).filter((u) => u.provider === 'Example Lab' && u.event.event.start === day);
     expect([paperPrivate(idx, bill.id), labs(false), labs(true).map((u) => [u.cents, u.private])]).toEqual(['household', [], [[1928, undefined]]]);
     // A private receipt accounts for none either.
-    const receipt = { ...bill, id: 'd_receipt', doc_type: 'receipt', organization: 'Example Lab', date: '2026-11-20' };
+    const receipt = { ...bill, id: 'd_receipt', doc_type: 'receipt', organization: 'Example Lab', date: '2026-11-12' };
     const paid = { ...index(SAMPLE, sam), documents: [...index(SAMPLE, sam).documents, receipt] };
     const shares = (idx: PersonIndex, shared: boolean) => unbilledShares(idx, events(SAMPLE).filter((x) => x.person.id === sam), shared).filter((u) => u.provider === 'Example Lab').length;
     if (paid.privacy?.kind !== 'known') throw new Error('not known');

@@ -12,10 +12,10 @@ const index = (name: string) => indexes.get(personNamed(household, name).id)!;
 
 describe('a result against its range', () => {
   it('takes the source’s own interpretation first', () => {
-    expect(resultFlag({ interpretation: 'High', value: 1, range: '3.5-5.1' })).toMatchObject({ level: 'high', critical: false, from: 'source', label: 'High' });
+    expect(resultFlag({ interpretation: 'High', value: 2, range: '20.5-55.5' })).toMatchObject({ level: 'high', critical: false, from: 'source', label: 'High' });
     expect(resultFlag({ interpretation: 'L' })).toMatchObject({ level: 'low', label: 'Low' });
     expect(resultFlag({ interpretation: 'Abnormal' })).toMatchObject({ level: 'abnormal', label: 'Abnormal' });
-    expect(resultFlag({ interpretation: 'Normal', value: 9, range: '3.5-5.1' })).toMatchObject({ level: 'normal', from: 'source' });
+    expect(resultFlag({ interpretation: 'Normal', value: 83, range: '20.5-55.5' })).toMatchObject({ level: 'normal', from: 'source' });
     expect(resultFlag({ interpretation: 'N' })).toMatchObject({ level: 'normal' });
   });
 
@@ -26,31 +26,31 @@ describe('a result against its range', () => {
   });
 
   it('reads the range when the source gave no interpretation it can read', () => {
-    expect(resultFlag({ value: 5.4, range: '3.5-5.1 mmol/L', unit: 'mmol/L' })).toMatchObject({ level: 'high', from: 'range', label: 'Above range' });
-    expect(resultFlag({ value: 10, range: '11 g/dL – 15 g/dL', unit: 'g/dL' })).toMatchObject({ level: 'low', label: 'Below range' });
-    expect(resultFlag({ value: 12, range: '11 g/dL – 15 g/dL', unit: 'g/dL' })).toMatchObject({ level: 'normal', label: 'In range' });
-    expect(resultFlag({ value: 130, range: '<130 mg/dL', unit: 'mg/dL' })).toMatchObject({ level: 'high' });
-    expect(resultFlag({ value: 130, range: '≤ 130 mg/dL', unit: 'mg/dL' })).toMatchObject({ level: 'normal' });
-    expect(resultFlag({ value: 40, range: '> 40 mg/dL', unit: 'mg/dL' })).toMatchObject({ level: 'low' });
-    expect(resultFlag({ value: 40, range: '≥ 40', unit: 'mg/dL' })).toMatchObject({ level: 'normal' });
-    expect(resultFlag({ value: 15, range: '10 to 20' })).toMatchObject({ level: 'normal' });
-    expect(resultFlag({ interpretation: 'Susceptible', value: 6, range: '1-5' })).toMatchObject({ level: 'high', from: 'range' });
+    expect(resultFlag({ value: 24.1, range: '10.5-20.5 mm Hg', unit: 'mm Hg' })).toMatchObject({ level: 'high', from: 'range', label: 'Above range' });
+    expect(resultFlag({ value: 66, range: '75 ug/dL – 140 ug/dL', unit: 'ug/dL' })).toMatchObject({ level: 'low', label: 'Below range' });
+    expect(resultFlag({ value: 98, range: '75 ug/dL – 140 ug/dL', unit: 'ug/dL' })).toMatchObject({ level: 'normal', label: 'In range' });
+    expect(resultFlag({ value: 85, range: '<85 kU/L', unit: 'kU/L' })).toMatchObject({ level: 'high' });
+    expect(resultFlag({ value: 85, range: '≤ 85 kU/L', unit: 'kU/L' })).toMatchObject({ level: 'normal' });
+    expect(resultFlag({ value: 6, range: '> 6 mg/L', unit: 'mg/L' })).toMatchObject({ level: 'low' });
+    expect(resultFlag({ value: 6, range: '≥ 6', unit: 'mg/L' })).toMatchObject({ level: 'normal' });
+    expect(resultFlag({ value: 37, range: '25 to 45' })).toMatchObject({ level: 'normal' });
+    expect(resultFlag({ interpretation: 'Indeterminate', value: 14, range: '3-9' })).toMatchObject({ level: 'high', from: 'range' });
   });
 
   it('reads a range as numbers, with which bounds count as out', () => {
-    expect(parseRange('70-99 mg/dL')).toEqual({ low: 70, high: 99, unit: 'mg/dL' });
-    expect(parseRange('11 g/dL – 15 g/dL')).toEqual({ low: 11, high: 15, unit: 'g/dL' });
-    expect(parseRange('<130 mg/dL')).toEqual({ high: 130, highStrict: true, unit: 'mg/dL' });
-    expect(parseRange('≤ 5')).toEqual({ high: 5, highStrict: false, unit: undefined });
-    expect(parseRange('> 40 mg/dL')).toEqual({ low: 40, lowStrict: true, unit: 'mg/dL' });
-    expect(parseRange('Negative')).toBeUndefined();
+    expect(parseRange('24-61 U/mL')).toEqual({ low: 24, high: 61, unit: 'U/mL' });
+    expect(parseRange('75 ug/dL – 140 ug/dL')).toEqual({ low: 75, high: 140, unit: 'ug/dL' });
+    expect(parseRange('<85 kU/L')).toEqual({ high: 85, highStrict: true, unit: 'kU/L' });
+    expect(parseRange('≤ 9')).toEqual({ high: 9, highStrict: false, unit: undefined });
+    expect(parseRange('> 6 mg/L')).toEqual({ low: 6, lowStrict: true, unit: 'mg/L' });
+    expect(parseRange('Not detected')).toBeUndefined();
   });
 
   it('says nothing when it cannot tell', () => {
-    expect(resultFlag({ value: 5, range: 'Negative' })).toBeUndefined();
-    expect(resultFlag({ value: 5.4, range: '3.5-5.1 mmol/L', unit: 'mg/dL' })).toBeUndefined();
-    expect(resultFlag({ range: '3.5-5.1' })).toBeUndefined();
-    expect(resultFlag({ value: 5 })).toBeUndefined();
+    expect(resultFlag({ value: 14, range: 'Not detected' })).toBeUndefined();
+    expect(resultFlag({ value: 24.1, range: '10.5-20.5 mm Hg', unit: 'kPa' })).toBeUndefined();
+    expect(resultFlag({ range: '20.5-55.5' })).toBeUndefined();
+    expect(resultFlag({ value: 14 })).toBeUndefined();
     expect(isOutOfRange(undefined)).toBe(false);
     expect(isOutOfRange(resultFlag({ interpretation: 'Normal' }))).toBe(false);
   });
@@ -80,11 +80,11 @@ describe('the latest results', () => {
 
   it('put a critical result before a merely high one', () => {
     const idx = index('Robin Example');
-    const critical = { ...idx.records.find((r) => r.display === 'Glucose' && r.date === '2026-10-01')! };
+    const critical = { ...idx.records.find((r) => r.display === 'Sodium' && r.date === '2026-10-01')! };
     critical.fields = { ...critical.fields, interpretation: 'HH' };
     const latest = latestResults({ ...idx, records: idx.records.map((r) => (r.id === critical.id ? critical : r)) });
     expect(latest.slice(0, 2).map((r) => [r.series.name, r.flag?.label])).toEqual([
-      ['Glucose', 'Critical high'],
+      ['Sodium', 'Critical high'],
       ['Potassium', 'High'],
     ]);
   });
@@ -98,8 +98,8 @@ function withRecords(idx: PersonIndex, extra: Partial<MedRecord>[]): PersonIndex
 describe('what is current', () => {
   it('lists visits that happened, not planned or future ones', () => {
     const idx = withRecords(index('Alex Example'), [
-      { kind: 'encounter', display: 'Well child visit, 9 years', date: '2027-01-11', status: 'planned' },
-      { kind: 'encounter', display: 'Follow-up', date: '2026-12-01', status: 'finished' },
+      { kind: 'encounter', display: 'Dental cleaning', date: '2027-03-08', status: 'planned' },
+      { kind: 'encounter', display: 'Glasses fitting', date: '2026-12-15', status: 'finished' },
     ]);
     expect(recentVisits(idx, '2026-11-22').map((r) => r.display).slice(0, 2)).toEqual(['Sick visit', 'Well child visit, 8 years']);
   });
