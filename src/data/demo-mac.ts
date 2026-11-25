@@ -45,9 +45,11 @@ async function start(folder: DemoFolder, file: string, onChange: () => void): Pr
 async function handleMark(folder: DemoFolder, file: string, req: MarkRequest, onChange: () => void): Promise<void> {
   if ((await folder.readText(`${REQUESTS_DIR}/${file}`)) === null) return; // undone
   const at = iso(new Date());
-  const result = await applyMark(folder, req, new Date());
+  const { writeViews, ...result } = await applyMark(folder, req, new Date());
+  // The answer, then the views: the order medrec writes them in.
   folder.writeAsMac(`${REQUESTS_DIR}/done/${file}`, JSON.stringify({ ...req, handled: { picked_up_at: at, finished_at: iso(new Date()), ...result, sources: [], by: 'medrec (demo)' } }, null, 2));
   folder.removeAsMac(`${REQUESTS_DIR}/${file}`);
+  writeViews?.();
   onChange();
 }
 

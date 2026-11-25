@@ -4,7 +4,7 @@
 
 import { readJson, REQUESTS_DIR, type RecordsFolder } from '../folder';
 import { FolderError, parseAttempts, parseHousehold, parseIndex, parseMark, parseRefused, parseRequest, parseStatus, parseText } from '../model/parse';
-import { buildMark, buildRequest, requestFileName, sameScope } from '../model/requests';
+import { buildMark, buildRequest, markRecorded, requestFileName, sameScope } from '../model/requests';
 import { macState, sourceViews, type MacState, type SourceView } from '../model/sources';
 import { parseBills } from '../model/bills';
 import { parseMedrecEvents } from '../model/events';
@@ -73,6 +73,17 @@ const MAY_END = new Set<HeldWhy>(['behind', 'arriving', 'unchecked', 'unreadable
 /** A read that has not ended by then is taken over by the next. */
 const STALLED_MS = 120_000;
 
+/** How long a payment the Mac recorded is kept for while medrec's list does not show it: what is gone by then was undone. */
+const TAKEN_MS = 15 * 60_000;
+
+/**
+ * How long a payment taken back is looked for: a pass reads every request when
+ * it begins, and records the payments once its imports are done. While an
+ * import runs, and shortly after the last, it is looked for longer.
+ */
+const BACK_MS = 15 * 60_000;
+const ENDING_MS = 2 * 60_000;
+
 export interface PendingRequest {
   file: string;
   request: RefreshRequest;
@@ -96,14 +107,22 @@ export class Store {
   done: RefreshRequest[] = [];
   /** The payments marked, or undone, that wait for the Mac. */
   private waitingMarks: PendingMark[] = [];
-  /** Those the Mac has recorded while the app was open, and the finish each was. */
-  private taken: { mark: PendingMark; finish: number }[] = [];
+  /** Those the Mac has recorded while the app was open, and when that was seen: each until medrec's list shows it. */
+  private taken: { mark: PendingMark; seen: number }[] = [];
+  /** Those taken back, when, and whether here: the Mac may have read one before. */
+  private back = new Map<string, { mark: PendingMark; at: number; here: boolean }>();
   /** Those the Mac has answered. */
   answeredMarks: MarkRequest[] = [];
+  /** Those it refused while the app was open: the answer names only the request. */
+  private refusedMarks: MarkRequest[] = [];
   /** False when this account may only view the folder. */
   mayRequest = true;
   /** The medrec that wrote the views, when views.json reads. */
   medrec: string | undefined;
+  /** The medrec that answers requests, when the status reads. */
+  get refresher(): string | undefined {
+    return this.status.kind === 'ok' ? this.status.status.refresher.medrec_version : undefined;
+  }
   /** Requests medrec refused as invalid, which keep no scope. */
   refused: RefusedRequest[] = [];
   /** Whether `_requests/` exists: the Mac set up refresh for this folder. */
@@ -139,9 +158,14 @@ export class Store {
     await Promise.all([this.loadRecords(), this.loadRefreshState()]);
   }
 
-  /** Whether a request this app saw waiting has finished since the records were last read. */
+  /** Whether a request this app saw waiting has finished since the records were last read, or they do not show what it did. */
   get owed(): boolean {
-    return this.finished > this.readUpTo;
+    return this.finished > this.readUpTo || this.recorded.length > 0;
+  }
+
+  /** The payments the Mac has recorded that medrec's list does not show yet. */
+  private get recorded(): { mark: PendingMark; seen: number }[] {
+    return this.taken.filter((t) => Date.now() - t.seen < TAKEN_MS);
   }
 
   /**
@@ -176,6 +200,11 @@ export class Store {
       if (error && this.indexes.get(p.id)?.rev) throw new Error(`${p.name}’s records could not be read: ${error}`);
     }
     if (this.hasViews && !next.hasViews && !next.viewsError) throw new Error('medrec’s views are not in the folder.');
+    // medrec answers a payment's request before it writes the list that shows it: until then the one here stands.
+    for (const { mark } of this.recorded) {
+      const { person } = (mark.request.paid ?? mark.request.unpaid)!;
+      if (this.indexes.get(person)?.bills && !next.indexes.get(person)?.bills) throw new Error(next.billsNotes.get(person) ?? 'medrec’s list of what is paid is not in the folder.');
+    }
     this.folder = next.folder;
     this.household = next.household;
     this.indexes = next.indexes;
@@ -191,7 +220,7 @@ export class Store {
     this.loadedAt = next.loadedAt;
     this.snapshot = next.snapshot;
     this.readUpTo = upTo;
-    this.taken = this.taken.filter((t) => t.finish > upTo);
+    this.taken = this.recorded.filter((t) => !markRecorded(t.mark.request, this.indexes));
   }
 
   private async loadHousehold(): Promise<void> {
@@ -443,7 +472,7 @@ export class Store {
     const asked = <T extends { file: string }>(of: T[]) => of.filter((p) => !before.has(p.file) && !names.has(p.file));
     this.pending = [...waiting.filter(isRefresh), ...asked(this.pending)];
     this.waitingMarks = [...waiting.filter(isMark), ...asked(this.waitingMarks)];
-    const finished = this.watch(new Set(listed.map((e) => e.name)), doneNames);
+    const finished = this.watch(new Set(listed.map((e) => e.name)), doneNames, before);
     // Only the latest outcomes matter on screen; the names sort by time.
     const doneFiles = (doneEntries ?? [])
       .filter((e) => !e.folder && e.name.endsWith('.json'))
@@ -454,11 +483,17 @@ export class Store {
     this.done = done.map(parseRequest).filter((x): x is RefreshRequest => x !== null);
     this.answeredMarks = done.map(parseMark).filter((x): x is MarkRequest => x !== null);
     const recorded = new Set(this.answeredMarks.filter((r) => r.handled?.outcome === 'ok').map((r) => r.id));
-    for (const [file, finish] of finished) {
-      const mark = before.get(file);
-      if (mark && isMark(mark) && recorded.has(mark.request.id) && finish > this.readUpTo) this.taken.push({ mark: { ...mark, cancellable: false, taken: true }, finish });
-    }
     this.refused = done.map(parseRefused).filter((x): x is RefusedRequest => x !== null);
+    for (const file of finished) {
+      const back = this.back.get(file);
+      const mark = back?.mark ?? before.get(file);
+      this.back.delete(file);
+      if (!mark || !isMark(mark)) continue;
+      if (recorded.has(mark.request.id) && !markRecorded(mark.request, this.indexes)) this.taken.push({ mark: { ...mark, cancellable: false, taken: true, ...(back?.here ? { late: true } : {}) }, seen: Date.now() });
+      const refused = this.refused.find((r) => r.id === mark.request.id);
+      if (refused) this.refusedMarks.push({ ...mark.request, handled: refused.handled });
+    }
+    this.answeredMarks.push(...this.refusedMarks);
   }
 
   /** Whether any of the household's items are off shared screens because no list says which are private. */
@@ -483,23 +518,43 @@ export class Store {
 
   /** The payments marked, or undone, that the records do not show yet. */
   get marks(): PendingMark[] {
-    return [...this.waitingMarks, ...this.taken.map((t) => t.mark)];
+    return [...this.waitingMarks, ...this.recorded.map((t) => t.mark)];
   }
 
   /**
    * Counts the watched requests that finished: the folder has their answer.
    * One gone with no answer, at two looks, was cancelled; at one, its answer
-   * may have come between the two listings. Gives each finish its number.
+   * may have come between the two listings. A payment's is looked for until
+   * no pass that read it before can still be at work.
    */
-  private watch(listed: Set<string>, done: Set<string>): Map<string, number> {
-    const finished = new Map<string, number>();
+  private watch(listed: Set<string>, done: Set<string>, before: ReadonlyMap<string, PendingRequest | PendingMark>): string[] {
+    const finished: string[] = [];
     for (const [file, gone] of [...this.watched]) {
-      if (done.has(file)) finished.set(file, (this.finished += 1));
-      if (done.has(file) || (!listed.has(file) && gone)) this.watched.delete(file);
-      else this.watched.set(file, !listed.has(file));
+      if (done.has(file)) {
+        this.finished += 1;
+        finished.push(file);
+        this.watched.delete(file);
+        continue;
+      }
+      const mark = before.get(file);
+      if (mark && isMark(mark) && !listed.has(file) && !this.back.has(file)) this.back.set(file, { mark, at: Date.now(), here: false });
+      const back = this.back.get(file);
+      if (listed.has(file) || !gone || (back && this.mayBeFiling(back.at))) this.watched.set(file, !listed.has(file));
+      else {
+        this.watched.delete(file);
+        this.back.delete(file);
+      }
     }
     for (const p of [...this.pending, ...this.waitingMarks]) this.watched.set(p.file, false);
     return finished;
+  }
+
+  /** Whether a pass that began before `at` may still be at work. */
+  private mayBeFiling(at: number): boolean {
+    const now = Date.now();
+    if (now - at < BACK_MS) return true;
+    const attempts = this.status.kind === 'ok' ? this.status.status.sources.flatMap((s) => (s.last_attempt ? [s.last_attempt] : [])) : [];
+    return attempts.some((a) => a.outcome === 'running' || (!!a.finished_at && now - Date.parse(a.finished_at) < ENDING_MS));
   }
 
   person(id: string): Person | undefined {
@@ -582,12 +637,33 @@ export class Store {
     return p;
   }
 
-  /** Takes a request back; false when the Mac had taken it. A payment's is watched on: the Mac may have read it just before. */
+  /**
+   * Takes a request back; false when the Mac had taken it: for a payment's,
+   * also when its answer is there, before or after. A payment's is watched
+   * on, as a pass may have read it before.
+   */
   async cancel(p: PendingRequest | PendingMark): Promise<boolean> {
-    const taken = !(await this.folder.deleteRequest(p.file));
-    this.pending = this.pending.filter((x) => x.file !== p.file);
+    if (!isMark(p)) {
+      const taken = !(await this.folder.deleteRequest(p.file));
+      this.pending = this.pending.filter((x) => x.file !== p.file);
+      this.watched.delete(p.file);
+      return !taken;
+    }
+    const had = (await this.answered(p.file)) ? false : await this.folder.deleteRequest(p.file);
+    // Taken back or not when this fails, a pass may have read it: the watch says.
+    if (!had || (await this.answered(p.file).catch(() => false))) {
+      // Its answer is read at the next look; without one, it was taken back elsewhere.
+      this.waitingMarks = this.waitingMarks.map((x) => (x.file === p.file ? { ...x, cancellable: false } : x));
+      return false;
+    }
     this.waitingMarks = this.waitingMarks.filter((x) => x.file !== p.file);
-    if (!isMark(p)) this.watched.delete(p.file);
-    return !taken;
+    this.watched.set(p.file, false);
+    this.back.set(p.file, { mark: p, at: Date.now(), here: true });
+    return true;
+  }
+
+  private async answered(file: string): Promise<boolean> {
+    this.folder.forget(`${REQUESTS_DIR}/done`);
+    return ((await this.folder.list(`${REQUESTS_DIR}/done`)) ?? []).some((e) => e.name === file);
   }
 }

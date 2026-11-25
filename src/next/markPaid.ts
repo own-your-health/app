@@ -18,14 +18,18 @@ import { billMarks, unmarkedCents } from './money';
 
 const RECENT_MS = 14 * 86_400_000;
 
-/** Whether this account can ask the household's medrec for what a version of it added. */
-const canAsk = (ctx: Ctx, since: [number, number, number]): boolean => ctx.canWrite && ctx.store.requestsReady && ctx.store.mayRequest && atLeast(ctx.store.medrec, since);
-const canMark = (ctx: Ctx): boolean => canAsk(ctx, [0, 9, 1]);
-const canUnmark = (ctx: Ctx): boolean => canAsk(ctx, [0, 9, 7]);
+/**
+ * Whether this account can ask for what a version of medrec added: of the one
+ * that answers requests, and while the household's payments can be read, as
+ * medrec then writes none.
+ */
+const canAsk = (ctx: Ctx, idx: PersonIndex, since: [number, number, number]): boolean => ctx.canWrite && ctx.store.requestsReady && ctx.store.mayRequest && atLeast(ctx.store.refresher, since) && idx.bills?.marksUnreadable === false;
+const canMark = (ctx: Ctx, idx: PersonIndex): boolean => canAsk(ctx, idx, [0, 9, 1]);
+const canUnmark = (ctx: Ctx, idx: PersonIndex): boolean => canAsk(ctx, idx, [0, 9, 7]);
 
 /** Where a request stands with the Mac. */
 function waitText(ctx: Ctx, m: PendingMark): string {
-  if (m.taken) return 'The Mac has recorded it.';
+  if (m.taken) return m.late ? 'The Mac had read it before you took it back, and has recorded it.' : 'The Mac has recorded it.';
   const now = ctx.now();
   return requestWait(m.request, ctx.store.sources(now), ctx.store.mac(now), now).kind === 'late' ? 'The Mac has not taken it yet.' : 'Waiting for the Mac.';
 }
@@ -41,29 +45,36 @@ function waitingLine(ctx: Ctx, m: PendingMark): HTMLElement {
 
 const requestedAt = (r: MarkRequest) => Date.parse(r.requested_at);
 
-/** The last payment marked on a bill, when the Mac could not record it and nothing was marked since. */
-function notRecorded(ctx: Ctx, idx: PersonIndex, bill: Bill): MarkRequest | undefined {
-  const store = ctx.store;
-  const mine = store.answeredMarks.filter((r) => billMarks(idx, bill, [{ file: '', request: r, cancellable: false }]).length > 0);
-  const last = mine.sort((a, b) => requestedAt(b) - requestedAt(a))[0];
-  if (!last || (last.handled?.outcome !== 'failed' && last.handled?.outcome !== 'invalid') || billMarks(idx, bill, store.marks).length) return undefined;
+/** The last of some answered requests, when the Mac could not record it. */
+function lastFailed(ctx: Ctx, of: (r: MarkRequest) => boolean): MarkRequest | undefined {
+  const last = ctx.store.answeredMarks.filter(of).sort((a, b) => requestedAt(b) - requestedAt(a))[0];
+  if (last?.handled?.outcome !== 'failed' && last?.handled?.outcome !== 'invalid') return undefined;
   return ctx.now().getTime() - requestedAt(last) < RECENT_MS ? last : undefined;
 }
 
+/** The last payment marked on a bill, when the Mac could not record it and nothing was marked since. */
+function notRecorded(ctx: Ctx, idx: PersonIndex, bill: Bill): MarkRequest | undefined {
+  if (billMarks(idx, bill, ctx.store.marks).length) return undefined;
+  return lastFailed(ctx, (r) => billMarks(idx, bill, [{ file: '', request: r, cancellable: false }]).length > 0);
+}
+
+const provider = (bill: Bill): string => bill.provider ?? 'the bill';
+
 /** Whose bill it is and what it asks, for the form and for a screen reader's list of buttons. */
-const billName = (bill: Bill): string => `${bill.provider ?? 'the bill'}${bill.date ? `, ${dateText(bill.date)}` : ''}`;
+const billName = (bill: Bill): string => `${provider(bill)}${bill.date ? `, ${dateText(bill.date)}` : ''}`;
 
 /**
  * What marks a bill paid: the payments that wait for the Mac, and the button
- * for what is left. `named` puts the provider on the button, where several
- * bills share a row. Null when there is neither.
+ * for what is left, where medrec's list says what that is. `named` puts the
+ * provider on the button, where several bills share a row. Null when there is
+ * neither.
  */
 export function paidControl(ctx: Ctx, idx: PersonIndex, bill: Bill, named = false): HTMLElement | null {
   if (bill.settled || bill.replacedBy) return null;
   const marks = billMarks(idx, bill, ctx.store.marks);
   const cents = unmarkedCents(bill, marks);
   const failed = notRecorded(ctx, idx, bill);
-  const mark = cents > 0 && canMark(ctx) ? button(named ? `Mark paid: ${bill.provider ?? 'a provider'}` : 'Mark paid', (ev) => openForm(ctx, idx, bill, cents, ev.currentTarget as HTMLElement), { small: true }) : null;
+  const mark = cents > 0 && bill.medrec && canMark(ctx, idx) ? button(named ? `Mark paid: ${provider(bill)}` : 'Mark paid', (ev) => openForm(ctx, idx, bill, cents, ev.currentTarget as HTMLElement), { small: true }) : null;
   mark?.setAttribute('aria-label', `Mark paid: ${billName(bill)}, ${formatMoney(fromCents(cents, bill.left!.currency))}`);
   if (!marks.length && !failed && !mark) return null;
   return h(
@@ -84,15 +95,17 @@ export function markedPayments(ctx: Ctx, idx: PersonIndex, bill: Bill): HTMLElem
     const what = `${[formatMoney(p.amount), 'marked paid'].filter(Boolean).join(' ')}${p.on ? `, ${dateText(p.on)}` : ''}`;
     const asked = undoing.get(id);
     if (asked)
-      return [h('div', { class: 'mark-line' }, h('span', { class: 'small' }, asked.taken ? `${what}. The Mac has undone it.` : `${what}. Undo asked; ${waitText(ctx, asked).replace(/^./, (c) => c.toLowerCase())}`), asked.cancellable ? button('Keep the payment', () => void ctx.cancel(asked), { small: true }) : null)];
-    if (canUnmark(ctx)) {
+      return [h('div', { class: 'mark-line' }, h('span', { class: 'small' }, asked.taken ? `${what}. ${asked.late ? 'The Mac had read the undo before you took it back, and has undone it.' : 'The Mac has undone it.'}` : `${what}. Undo asked; ${waitText(ctx, asked).replace(/^./, (c) => c.toLowerCase())}`), asked.cancellable ? button('Keep the payment', () => void ctx.cancel(asked), { small: true }) : null)];
+    const failed = lastFailed(ctx, (r) => r.unpaid?.person === idx.person && r.unpaid.payment === id);
+    const why = failed ? [h('p', { class: 'small attention' }, `The undo was not recorded. ${failed.handled?.message ?? ''}`.trim())] : [];
+    if (canUnmark(ctx, idx)) {
       const undo = button('Undo', () => void ctx.mark({ unpaid: { person: idx.person, payment: id } }), { small: true });
       undo.setAttribute('aria-label', `Undo: ${what}`);
-      return [h('div', { class: 'mark-line' }, h('span', { class: 'small' }, what), undo)];
+      return [...why, h('div', { class: 'mark-line' }, h('span', { class: 'small' }, what), undo)];
     }
-    return canMark(ctx)
-      ? [h('details', { class: 'mark-undo' }, h('summary', null, `Undo: ${what}`), h('p', { class: 'small muted' }, 'It is filed, so it is undone on the Mac. Run this in a terminal, with your medrec profile’s name at the end:'), command(`medrec bills undo ${id} --profile `, ctx))]
-      : [];
+    return canMark(ctx, idx)
+      ? [...why, h('details', { class: 'mark-undo' }, h('summary', null, `Undo: ${what}`), h('p', { class: 'small muted' }, 'It is filed, so it is undone on the Mac. Run this in a terminal, with your medrec profile’s name at the end:'), command(`medrec bills undo ${id} --profile `, ctx))]
+      : why;
   });
   return lines.length ? h('div', { class: 'mark-paid' }, lines) : null;
 }
@@ -128,9 +141,13 @@ function openForm(ctx: Ctx, idx: PersonIndex, bill: Bill, left: number, from: HT
     if (!/^\d{4}-\d{2}-\d{2}$/.test(on.value)) return refuse(on, 'Choose the day it was paid.');
     if (on.value > today) return refuse(on, 'That day is still to come. Mark it once it is paid.');
     if (!paid) return refuse(amount, 'Enter the amount paid, like 120.00.');
-    send.disabled = true;
-    const sent = await ctx.mark({ paid: { person: idx.person, document: bill.doc.id, on: on.value, amount: paidAmount(paid) } });
-    send.disabled = false;
+    // Kept focusable while it is sent: a disabled button loses the keyboard's place.
+    if (send.getAttribute('aria-disabled') === 'true') return;
+    send.setAttribute('aria-disabled', 'true');
+    problem.textContent = '';
+    for (const f of [on, amount]) f.setAttribute('aria-invalid', 'false');
+    const sent = await ctx.mark({ paid: { person: idx.person, document: bill.doc.id, on: on.value, amount: paidAmount(paid) } }, (text) => (problem.textContent = text));
+    send.removeAttribute('aria-disabled');
     if (!sent) return;
     close();
     document.querySelector<HTMLElement>(`[data-mark="${CSS.escape(bill.doc.id)}"]`)?.focus();

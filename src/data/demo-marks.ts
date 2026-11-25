@@ -45,8 +45,8 @@ function settle(b: Bill): void {
   b.settled = due <= total;
 }
 
-/** Records a marked payment, or drops one, and says how that went. */
-export async function applyMark(folder: DemoFolder, req: MarkRequest, now: Date): Promise<{ outcome: 'ok' | 'invalid' | 'failed'; message: string }> {
+/** Records a marked payment, or drops one, and says how that went; `writeViews` then writes the list that shows it. */
+export async function applyMark(folder: DemoFolder, req: MarkRequest, now: Date): Promise<{ outcome: 'ok' | 'invalid' | 'failed'; message: string; writeViews?: () => void }> {
   const read = async (path: string): Promise<unknown> => {
     const text = await folder.readText(path);
     return text === null ? null : (JSON.parse(text) as unknown);
@@ -84,9 +84,11 @@ export async function applyMark(folder: DemoFolder, req: MarkRequest, now: Date)
   entry.marks = marksMd5;
   entry.files['bills.json'] = billsMd5;
   folder.writeAsMac(`${home}/marks.json`, JSON.stringify(marks, null, 2), marksMd5);
-  folder.writeAsMac(`views/${person}/bills.${billsMd5.slice(0, 12)}.json`, JSON.stringify(bills), billsMd5);
-  folder.writeAsMac('views/views.json', JSON.stringify(views));
-  return { outcome: 'ok', message: req.paid ? 'Marked paid.' : 'Undone.' };
+  const writeViews = () => {
+    folder.writeAsMac(`views/${person}/bills.${billsMd5.slice(0, 12)}.json`, JSON.stringify(bills), billsMd5);
+    folder.writeAsMac('views/views.json', JSON.stringify(views));
+  };
+  return { outcome: 'ok', message: req.paid ? 'Marked paid.' : 'Undone.', writeViews };
 }
 
 /** A marked amount with two places, as medrec keeps it. */

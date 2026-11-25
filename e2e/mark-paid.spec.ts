@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { demoJson, paidCase, privateCase, type Overlay } from '../test/helpers';
 import { rewritten } from './alter';
 import { CLIENT, FakeGoogle, FOLDER_NAME } from './fake-google';
-import { lay } from './lay';
+import { lay as layOver } from './lay';
 
 // Mark paid: the form, where it is, what a marked bill says while it waits for
 // the Mac, its undo, and what the Mac's answer brings.
@@ -19,9 +19,18 @@ test.beforeEach(async ({ page }) => {
   page.on('console', (m) => (m.type() === 'error' || m.type() === 'warning') && problems.push(m.text()));
   page.on('pageerror', (e) => problems.push(String(e)));
   await page.clock.setFixedTime(new Date(NOW));
+  await lay(page, {});
 });
 
 test.afterEach(() => expect(problems).toEqual([]));
+
+/** The sample's status, as a Mac with this medrec writes it. */
+const statusBy = (medrec: string | undefined) => {
+  const status = demoJson<{ refresher: object }>('_status/status.json');
+  return JSON.stringify({ ...status, refresher: { ...status.refresher, medrec_version: medrec } });
+};
+/** Lays files over the sample, whose requests a medrec that records payments answers. */
+const lay = (page: Page, overlay: Overlay, medrec = '0.9.6') => layOver(page, { '_status/status.json': statusBy(medrec), ...overlay });
 
 const go = (page: Page, path: string) => page.goto(`./?demo${path}`);
 const card = (page: Page, title: string | RegExp) => page.locator('.card', { has: page.locator('.card-head h2', { hasText: title }) });
@@ -89,7 +98,7 @@ test('while it waits, Home, Money, the visit and the bill say it is marked, and 
     await expect(page.locator('.mark-line')).toContainText(UNDO);
   }
   await page.getByRole('button', { name: 'Undo: $175.00 marked paid, Nov 22, 2026' }).click();
-  await expect(page.locator('.toast')).toHaveText('Undone: the bill is not marked paid');
+  await expect(page.locator('.toast')).toHaveText('The request is taken back');
   await expect(page.locator('.mark-line')).toHaveCount(0);
   await expect(markButton(page, SURGERY)).toBeVisible();
   await page.evaluate(() => (location.hash = '#/'));
@@ -232,19 +241,53 @@ test('a visit with two copies of one statement has one Mark paid, and so has one
 
 test('a bill that asks less than its claims say has Mark paid under Worth a look', async ({ page }) => {
   const bill = doc('Sam Example', '175.00');
-  const overlay = rewritten({}, (files) => {
-    for (const d of files.index.documents) if (d.id === bill) d.statement = { ...(d.statement as object), amount_due: { amount: '150.00', currency: 'USD' } };
-  });
-  // medrec's own list never asks about a bill for less; the app's comparison does, where there is no list.
-  const views = JSON.parse(overlay['views/views.json']!) as { people: Record<string, { files: Record<string, string> }> };
-  delete views.people[SAM]!.files['bills.json'];
-  await lay(page, { ...overlay, 'views/views.json': JSON.stringify(views) });
-  await go(page, `#/money/calls`);
+  await lay(
+    page,
+    rewritten({}, ({ index, bills }) => {
+      const listed = bills.bills[bill];
+      if (!listed) return;
+      for (const d of index.documents) if (d.id === bill) d.statement = { ...(d.statement as object), amount_due: { amount: '150.00', currency: 'USD' } };
+      Object.assign(listed, { amount_due: '150.00', left: '150.00' });
+      bills.worth_a_call.push({ reason: 'asks_less', bill, asked: '150.00', owed: '175.00', currency: 'USD' } as { bill: string });
+    }),
+  );
+  await go(page, '#/money/calls');
   await markButton(page, SURGERY).click();
   await expect(page.getByLabel('Amount')).toHaveValue('150.00');
   await page.getByLabel('Amount').fill('50');
   await send(page).click();
   await expect(card(page, /^Worth a look$/).locator('.mark-line')).toContainText('$50.00 marked paid, Nov 22, 2026.');
+});
+
+test('where medrec’s list does not say what is left there is no Mark paid, and what waits is still said', async ({ page }) => {
+  const bill = doc('Sam Example', '175.00');
+  const views = demoJson<{ people: Record<string, { marks: string | null; files: Record<string, string> }> }>('views/views.json');
+  const of = (change: (sam: { marks: string | null; files: Record<string, string> }) => void) => {
+    const changed = structuredClone(views);
+    change(changed.people[SAM]!);
+    return { 'views/views.json': JSON.stringify(changed) };
+  };
+  const waiting = { '_requests/20261122T195900Z_x_abcdefghijklmnopqrst.json': request('x_abcdefghijklmnopqrst', bill, '75.00', '2026-11-22T19:59:00Z') };
+  const unreadable = rewritten({}, (files) => files.name === 'Sam Example' && Object.assign(files.bills, { marks_unreadable: true }));
+  const leftOut = rewritten({}, (files) => files.name === 'Sam Example' && delete files.bills.bills[bill]);
+  for (const [name, overlay] of Object.entries({
+    // Payments were recorded since the list was written.
+    behind: of((sam) => (sam.marks = '0'.repeat(32))),
+    arriving: of((sam) => (sam.files['bills.json'] = `${'0'.repeat(32)}`)),
+    none: of((sam) => delete sam.files['bills.json']),
+    unreadable,
+    leftOut,
+  }) as [string, Overlay][]) {
+    await lay(page, { ...overlay, ...waiting });
+    for (const path of [`#/money/bills?who=${SAM}`, `#/p/${SAM}/r/${bill}`, `#/p/${SAM}/e/${eventOf(SAM, bill)}`, '#/']) {
+      await go(page, path);
+      await expect(page.locator('.main'), `${name} ${path}`).toContainText('Example');
+      if (path !== '#/') await expect(page.locator('.mark-line').first(), `${name} ${path}`).toContainText('$75.00 marked paid, Nov 1, 2026. Waiting for the Mac.');
+      await expect(markButton(page, SURGERY), `${name} ${path}`).toHaveCount(0);
+    }
+    await page.unrouteAll();
+    await page.goto('about:blank');
+  }
 });
 
 test('on Home, of two bills for one visit only the one marked is, and one not yet due says what is marked of it', async ({ page }) => {
@@ -301,7 +344,7 @@ test('a filed payment is undone on the Mac, or from medrec 0.9.7 here', async ({
   await expect(undo.locator('code')).toHaveText(/^medrec bills undo o_[a-z2-7]{20} --profile $/);
 
   await page.goto('about:blank');
-  await lay(page, { 'views/views.json': JSON.stringify({ ...demoJson<object>('views/views.json'), medrec: '0.9.7' }) });
+  await lay(page, {}, '0.9.7');
   await go(page, `#/p/${SAM}/r/${bill}`);
   await markButton(page, SURGERY).click();
   await send(page).click();
@@ -311,14 +354,15 @@ test('a filed payment is undone on the Mac, or from medrec 0.9.7 here', async ({
   await button.click();
   await expect(page.locator('.mark-line')).toContainText('$175.00 marked paid, Nov 22, 2026. Undo asked; waiting for the Mac.');
   await page.getByRole('button', { name: 'Keep the payment' }).click();
-  await expect(page.locator('.toast')).toHaveText('The payment stays');
+  await expect(page.locator('.toast')).toHaveText('The request is taken back');
   await button.click();
   await expect(markButton(page, SURGERY)).toBeVisible({ timeout: 20_000 });
   await expect(page.locator('.mark-line')).toHaveCount(0);
 });
 
-test('an older medrec, or none, has no Mark paid', async ({ page }) => {
-  for (const overlay of [{ 'views/views.json': JSON.stringify({ ...demoJson<object>('views/views.json'), medrec: '0.9.0' }) }, { 'views/views.json': null }] as Overlay[]) {
+test('an older medrec on the Mac that answers requests, or none, has no Mark paid, whichever wrote the views', async ({ page }) => {
+  const status = (version: string | undefined) => ({ '_status/status.json': statusBy(version) });
+  for (const overlay of [status('0.9.0'), status(undefined), status('soon'), { '_status/status.json': null }, { '_status/status.json': '{' }, { 'views/views.json': null }] as Overlay[]) {
     await lay(page, overlay);
     await go(page, `#/money/bills?who=${SAM}`);
     await expect(billRow(page, SURGERY).first()).toBeVisible();
@@ -373,14 +417,8 @@ test('an undo asked on another device waits here, and one naming another person 
   const base = paidCase();
   const [, list] = Object.entries(base).find(([f]) => f.startsWith(`views/${SAM}/bills.`))!;
   const payment = (JSON.parse(list!) as { bills: Record<string, { paid: { id: string }[] }> }).bills[bill]!.paid[0]!.id;
-  const views = JSON.stringify({ ...(JSON.parse(base['views/views.json']!) as object), medrec: '0.9.7' });
-  const undo = (person: string) => {
-    const asked = JSON.parse(request('x_abcdefghijklmnopqrst', bill, '120.00', '2026-11-22T19:59:00Z')) as Record<string, unknown>;
-    delete asked.paid;
-    return JSON.stringify({ ...asked, unpaid: { person, payment } });
-  };
   for (const [person, waits] of [[SAM, true], [ROBIN, false]] as const) {
-    await lay(page, { ...base, 'views/views.json': views, '_requests/20261122T195900Z_x_abcdefghijklmnopqrst.json': undo(person) });
+    await lay(page, { ...base, '_requests/20261122T195900Z_x_abcdefghijklmnopqrst.json': undoRequest('x_abcdefghijklmnopqrst', person, payment, '2026-11-22T19:59:00Z') }, '0.9.7');
     await go(page, `#/p/${SAM}/r/${bill}`);
     const line = page.locator('.mark-line');
     await expect(line).toContainText(waits ? 'Undo asked; waiting for the Mac.' : '$120.00 marked paid, Nov 20, 2026');
@@ -390,9 +428,34 @@ test('an undo asked on another device waits here, and one naming another person 
   }
 });
 
+test('an undo the Mac could not record says why beside the payment, for two weeks', async ({ page }) => {
+  const bill = doc('Sam Example', '120.00');
+  const base = paidCase();
+  const [, list] = Object.entries(base).find(([f]) => f.startsWith(`views/${SAM}/bills.`))!;
+  const payment = (JSON.parse(list!) as { bills: Record<string, { paid: { id: string }[] }> }).bills[bill]!.paid[0]!.id;
+  const answered = (n: string, at: string, outcome: string, of = payment, person = SAM) => ({ [`_requests/done/${at.replace(/[-:]/g, '')}_x_${n.repeat(20)}.json`]: undoRequest(`x_${n.repeat(20)}`, person, of, at, { outcome, message: `Reason ${n}.` }) });
+  const waiting = { '_requests/20261122T195900Z_x_abcdefghijklmnopqrst.json': undoRequest('x_abcdefghijklmnopqrst', SAM, payment, '2026-11-22T19:59:00Z') };
+  const said = page.locator('.mark-paid p.attention');
+  for (const [overlay, text, medrec] of [
+    [{ ...answered('a', '2026-11-20T12:00:00Z', 'failed'), ...answered('b', '2026-11-21T12:00:00Z', 'invalid') }, ['The undo was not recorded. Reason b.'], '0.9.7'],
+    [answered('c', '2026-11-21T12:00:00Z', 'failed'), ['The undo was not recorded. Reason c.'], '0.9.6'],
+    [answered('d', '2026-11-08T20:00:00Z', 'failed'), [], '0.9.7'],
+    [{ ...answered('e', '2026-11-20T12:00:00Z', 'failed'), ...answered('f', '2026-11-21T12:00:00Z', 'ok') }, [], '0.9.7'],
+    [{ ...answered('g', '2026-11-20T12:00:00Z', 'failed'), ...waiting }, [], '0.9.7'],
+    [{ ...answered('h', '2026-11-20T12:00:00Z', 'failed', 'o_aaaaaaaaaaaaaaaaaaaa'), ...answered('i', '2026-11-20T12:00:00Z', 'failed', payment, ROBIN) }, [], '0.9.7'],
+  ] as [Overlay, string[], string][]) {
+    await lay(page, { ...base, ...overlay }, medrec);
+    await go(page, `#/p/${SAM}/r/${bill}`);
+    await expect(page.locator('.mark-paid').filter({ hasText: '$120.00 marked paid, Nov 20, 2026' })).toBeVisible();
+    await expect(said).toHaveText(text);
+    await page.unrouteAll();
+    await page.goto('about:blank');
+  }
+});
+
 test('an undo the Mac has done says so until the records can be read again', async ({ page }) => {
   const base = paidCase();
-  await lay(page, { ...base, 'views/views.json': JSON.stringify({ ...(JSON.parse(base['views/views.json']!) as object), medrec: '0.9.7' }) });
+  await lay(page, base, '0.9.7');
   await go(page, `#/p/${SAM}/r/${doc('Sam Example', '120.00')}`);
   const line = page.locator('.mark-line');
   await line.getByRole('button', { name: /^Undo/ }).click();
@@ -498,6 +561,13 @@ function request(id: string, document: string, amount: string, at: string, handl
   });
 }
 
+/** A request from another device to undo a payment; with `handled`, one the Mac answered. */
+function undoRequest(id: string, person: string, payment: string, at: string, handled?: { outcome: string; message: string }): string {
+  const asked = JSON.parse(request(id, '', '1.00', at)) as Record<string, unknown>;
+  delete asked.paid;
+  return JSON.stringify({ ...asked, unpaid: { person, payment }, ...(handled ? { handled: { picked_up_at: at, finished_at: at, sources: [], by: 'medrec 0.9.7', ...handled } } : {}) });
+}
+
 /** A receipt for the surgery center's bill on a day, with no amount that reads. */
 function withReceipt(on: string): Overlay {
   return rewritten({}, (files) => {
@@ -511,6 +581,7 @@ test.describe('signed in', () => {
 
   test.beforeEach(async ({ context }) => {
     google = new FakeGoogle();
+    google.writeAsMac('_status/status.json', google.shift(statusBy('0.9.6')));
     await google.install(context);
   });
 
@@ -649,6 +720,16 @@ test.describe('signed in', () => {
     await expect(billRow(page, SURGERY)).toHaveCount(1);
   });
 
+  test('a payment tapped twice is sent once', async ({ page }) => {
+    await page.clock.setFixedTime(new Date());
+    await open(page);
+    await markButton(page, SURGERY).click();
+    // Both before anything is answered.
+    await send(page).evaluate((b: HTMLButtonElement) => [b.click(), b.click()]);
+    await expect(card(page, /^Marked paid$/).locator('.mark-line')).toHaveCount(1);
+    expect(google.changes).toHaveLength(1);
+  });
+
   test('a payment Drive did not take stays in the form', async ({ page }) => {
     await page.clock.setFixedTime(new Date());
     await open(page);
@@ -656,14 +737,55 @@ test.describe('signed in', () => {
     await page.getByLabel('Amount').fill('75');
     google.failing = '*';
     await send(page).click();
-    await expect(page.locator('.toast')).toBeVisible();
+    // Said in the form, where the keyboard still is, and nowhere else.
+    await expect(page.locator('#paid-problem')).not.toBeEmpty();
+    await expect(send(page)).toBeFocused();
+    await expect(send(page)).not.toHaveAttribute('aria-disabled', 'true');
+    await expect(page.locator('.toast')).toHaveCount(0);
     await expect(page.getByLabel('Amount')).toHaveValue('75');
     google.failing = null;
-    await send(page).click();
+    await page.keyboard.press('Enter');
     await expect(form(page)).toHaveCount(0);
     await expect(card(page, 'Due now').locator('.row', { hasText: SURGERY }).locator('.mark-line')).toContainText('$75.00 marked paid');
     expect(problems.filter((x) => !x.includes('503'))).toEqual([]);
     problems = [];
+  });
+
+  test('a payment taken back that the Mac had read says so, and medrec’s list before it stands until it has written the next', async ({ page }) => {
+    await page.clock.setFixedTime(new Date());
+    await open(page);
+    await markButton(page, SURGERY).click();
+    await send(page).click();
+    const path = google.changes[0]!.path;
+    const written = JSON.parse(google.read(path)!) as object;
+    await page.getByRole('button', { name: /^Undo/ }).click();
+    await expect(page.locator('.toast')).toHaveText('The request is taken back');
+    const due = card(page, 'Due now').locator('.row', { hasText: SURGERY });
+    await expect(due).toHaveCount(1);
+    for (let i = 0; i < 3; i++) await look(page);
+    google.writeAsMac('Sam Example/marks.json', JSON.stringify({ schema: 'medrec-marks/v1', person: SAM, payments: [] }));
+    google.writeAsMac(path.replace('_requests/', '_requests/done/'), JSON.stringify({ ...written, handled: { picked_up_at: now(), finished_at: now(), outcome: 'ok', sources: [], message: '', by: 'medrec 0.9.6' } }));
+    await look(page);
+    const line = card(page, /^Marked paid$/).locator('.mark-line');
+    await expect(line).toContainText('The Mac had read it before you took it back, and has recorded it.');
+    await expect(line.getByRole('button')).toHaveCount(0);
+    await expect(due).toHaveCount(0);
+    // The other bills are as medrec's list had them, not judged by receipts alone.
+    await expect(page.locator('.main')).not.toContainText('older than their records');
+    await expect(markButton(page, 'Example Billing')).toHaveCount(1);
+  });
+
+  test('an undo whose request the Mac has answered and left says so', async ({ page }) => {
+    await page.clock.setFixedTime(new Date());
+    await open(page);
+    await markButton(page, SURGERY).click();
+    await send(page).click();
+    await expect(card(page, /^Marked paid$/)).toBeVisible();
+    const path = google.changes[0]!.path;
+    google.writeAsMac(path.replace('_requests/', '_requests/done/'), JSON.stringify({ ...(JSON.parse(google.read(path)!) as object), handled: { picked_up_at: now(), finished_at: now(), outcome: 'ok', sources: [], message: '', by: 'medrec 0.9.6' } }));
+    await page.getByRole('button', { name: /^Undo/ }).click();
+    await expect(page.locator('.toast')).toHaveText('The Mac had already taken it');
+    await expect(card(page, /^Marked paid$/).locator('.mark-line')).toContainText('The Mac has recorded it.');
   });
 
   test('an undo the Mac came before says so', async ({ page }) => {

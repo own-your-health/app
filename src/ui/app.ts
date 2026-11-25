@@ -394,7 +394,8 @@ export class App {
         this.writing = mark ? 'undo' : 'cancel';
         try {
           const back = await this.store!.cancel(p);
-          this.toast(!back ? 'The Mac had already taken it' : !mark ? 'Request cancelled' : mark.paid ? 'Undone: the bill is not marked paid' : 'The payment stays');
+          this.toast(!back ? 'The Mac had already taken it' : mark ? 'The request is taken back' : 'Request cancelled');
+          if (!back) void this.pollOnce();
         } catch (e) {
           // A renewal is leaving the page; it says so when it comes back.
           if (this.renewing) return;
@@ -404,7 +405,7 @@ export class App {
         }
         this.renderKeepingScroll();
       },
-      mark: (mark) => this.mark(mark),
+      mark: (mark, failed) => this.mark(mark, failed),
       signOut: () => this.signOut(),
     };
   }
@@ -413,13 +414,13 @@ export class App {
     await this.ask('refresh', (store) => store.requestRefresh(scope, this.user, VERSION), `Asked the Mac to refresh ${what}`);
   }
 
-  private mark(mark: Mark): Promise<boolean> {
+  private mark(mark: Mark, failed?: (text: string) => void): Promise<boolean> {
     const paid = 'paid' in mark;
-    return this.ask(paid ? 'paid' : 'undo', (store) => store.requestMark(mark, this.user, VERSION), paid ? 'Marked paid. The Mac files it on its next pass.' : 'Asked the Mac to undo the payment');
+    return this.ask(paid ? 'paid' : 'undo', (store) => store.requestMark(mark, this.user, VERSION), paid ? 'Marked paid. The Mac files it on its next pass.' : 'Asked the Mac to undo the payment', failed);
   }
 
   /** Writes a request, and says whether it was sent. */
-  private async ask(writing: Unsent, send: (store: Store) => Promise<{ file: string }>, sent: string): Promise<boolean> {
+  private async ask(writing: Unsent, send: (store: Store) => Promise<{ file: string }>, sent: string, failed = (text: string) => this.toast(text, 'error')): Promise<boolean> {
     const store = this.store;
     if (!store) return false;
     this.writing = writing;
@@ -439,7 +440,7 @@ export class App {
           : e instanceof Error
             ? e.message
             : 'The request could not be written.';
-      this.toast(text, 'error');
+      failed(text);
     } finally {
       this.writing = null;
     }

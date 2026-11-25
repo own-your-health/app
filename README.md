@@ -660,10 +660,16 @@ dropped from the address.
   (medrec 0.9.1 and later; `src/next/markPaid.ts`). Until then the bill is
   marked, not settled: it is listed under Marked paid, out of Ready to pay,
   Worth a call and Home's totals when the payment covers what is left, and
-  **Undo** takes the request back. A filed payment is undone from the bill's
-  page with medrec 0.9.7 and later, and before with the command that page
-  gives. One the Mac could not record says so beside the bill. An account that
-  may only view the folder has no Mark paid.
+  **Undo** takes the request back. A pass reads every request when it begins,
+  so one taken back is looked for until no pass that read it can still be at
+  work, and a payment filed after all says so. medrec answers a request before
+  it writes the list that shows it, so a recorded payment is kept until that
+  list does, for a quarter of an hour at most. A filed payment is undone from
+  the bill's page with medrec 0.9.7 and later, and before with the command that
+  page gives. What the Mac could not record says so beside the bill. Which
+  medrec answers requests is the status's `refresher.medrec_version`. An account
+  that may only view the folder has no Mark paid, and neither has a bill whose
+  payments medrec's list does not give now.
 - **Health** (`#/health`, from Where everyone stands on Home) gives each
   person a card: what the records can know about them (doctors' records and
   claims, doctors' records only, claims and papers only, or no records

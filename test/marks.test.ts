@@ -2,12 +2,14 @@
 // records show once they are read again, and what a marked bill is meanwhile.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { startDemoMac } from '../src/data/demo-mac';
+import { applyMark } from '../src/data/demo-marks';
 import { Store } from '../src/data/store';
 import type { DemoFolder } from '../src/folder';
 import { billList } from '../src/model/billing';
 import { householdEvents } from '../src/next/calendar';
+import { markRecorded } from '../src/model/requests';
 import { billMarks, callsSummary, mayBePaid, openBills, toPay, unmarkedCents, worthACall } from '../src/next/money';
-import type { MarkRequest, MedDocument, PaidMark, PendingMark, PersonIndex, UnpaidMark } from '../src/model/types';
+import type { MarkRequest, MedDocument, PaidMark, PendingMark, PersonIndex, RefreshStatus, UnpaidMark } from '../src/model/types';
 import { demoFolder, demoFolderWith, demoJson } from './helpers';
 
 const NOW = new Date('2026-11-22T20:00:00Z');
@@ -37,6 +39,15 @@ function answer(folder: DemoFolder, m: PendingMark, outcome: string): void {
   folder.writeAsMac(`_requests/done/${m.file}`, JSON.stringify({ ...m.request, handled: { picked_up_at: '2026-11-22T20:01:00Z', finished_at: '2026-11-22T20:01:01Z', outcome, sources: [], message: outcome, by: 'medrec 0.9.6' } }));
   folder.removeAsMac(`_requests/${m.file}`);
 }
+
+/** What medrec does when it records a request: its marks, then its answer. Gives what writes the list that shows it, which comes after. */
+async function file(folder: DemoFolder, m: PendingMark): Promise<() => void> {
+  const { writeViews } = await applyMark(folder, m.request, NOW);
+  answer(folder, m, 'ok');
+  return writeViews!;
+}
+
+const minutes = (n: number) => vi.setSystemTime(new Date(Date.now() + n * 60_000));
 
 describe('a payment marked', () => {
   it('is one request, waits for the Mac, and is taken back by removing it', async () => {
@@ -105,10 +116,11 @@ describe('a payment marked', () => {
     const { folder, store } = await loaded();
     const m = await store.requestMark(paid(ROBIN, owing(store.index(ROBIN)!, '53.68').id, '53.68'), {}, '0.1.0');
     const reading = store.reload();
-    answer(folder, m, 'ok');
+    const writeViews = await file(folder, m);
     await store.loadRefreshState();
-    await reading;
+    await reading.catch(() => undefined);
     expect([store.marks.map((x) => x.file), store.owed]).toEqual([[m.file], true]);
+    writeViews();
     await store.reload();
     expect([store.marks, store.owed]).toEqual([[], false]);
   });
@@ -116,7 +128,7 @@ describe('a payment marked', () => {
   it('recorded is not shown as waiting by a look the records were read during', async () => {
     const { folder, store } = await loaded();
     const m = await store.requestMark(paid(ROBIN, owing(store.index(ROBIN)!, '53.68').id, '53.68'), {}, '0.1.0');
-    answer(folder, m, 'ok');
+    (await file(folder, m))();
     const read = folder.readText.bind(folder);
     folder.readText = async (path) => {
       // The answer is read after the listing that shows it, and the records in between.
@@ -125,6 +137,57 @@ describe('a payment marked', () => {
     };
     await store.loadRefreshState();
     expect([store.marks, store.owed, store.answeredMarks.map((r) => r.id)]).toEqual([[], false, [m.request.id]]);
+  });
+
+  it('recorded is shown as that until medrec’s list shows it, and the list before it stands', async () => {
+    const { folder, store } = await loaded();
+    const doc = owing(store.index(ROBIN)!, '53.68').id;
+    const bill = () => billList(store.index(ROBIN)!).find((b) => b.doc.id === doc)!;
+    const m = await store.requestMark(paid(ROBIN, doc, '53.68'), {}, '0.1.0');
+    // medrec's marks and its answer are there; its list is of before them.
+    const writeViews = await file(folder, m);
+    await store.loadRefreshState();
+    for (let i = 0; i < 2; i++) {
+      await expect(store.reload()).rejects.toThrow('medrec’s list of what is paid is older than their records.');
+      expect([store.marks.map((x) => [x.file, x.taken, x.late]), store.owed]).toEqual([[[m.file, true, undefined]], true]);
+      expect([bill().medrec !== undefined, bill().settled]).toEqual([true, false]);
+    }
+    writeViews();
+    await store.reload();
+    expect([store.marks, store.owed, bill().settled]).toEqual([[], false, true]);
+  });
+
+  it('recorded that the list never shows is dropped after a quarter of an hour', async () => {
+    const { folder, store } = await loaded();
+    const m = await store.requestMark(paid(ROBIN, owing(store.index(ROBIN)!, '53.68').id, '53.68'), {}, '0.1.0');
+    // A folder that gives the marks and the list of before, or an undo on the Mac since.
+    answer(folder, m, 'ok');
+    await store.loadRefreshState();
+    await store.reload();
+    expect([store.marks.map((x) => x.file), store.owed]).toEqual([[m.file], true]);
+    minutes(14);
+    await store.reload();
+    expect([store.marks.map((x) => x.file), store.owed]).toEqual([[m.file], true]);
+    minutes(1);
+    expect([store.marks, store.owed]).toEqual([[], false]);
+  });
+
+  it('is found in the list by its bill, or the first copy of it, its day and its amount', async () => {
+    const { store } = await loaded();
+    const idx = store.index(ROBIN)!;
+    const doc = owing(idx, '53.68');
+    const held = (p: object, documents = idx.documents): PersonIndex => ({ ...idx, documents, bills: { ...idx.bills!, states: new Map([...idx.bills!.states, [doc.id, { settled: true, payments: [{ from: 'household' as const, id: 'o_1', on: '2026-11-20', amount: { amount: '53.68', currency: 'USD' }, ...p }] }]]) } });
+    const shows = (index: PersonIndex | undefined, mark: ReturnType<typeof paid> | { unpaid: UnpaidMark }) => markRecorded({ ...mark } as MarkRequest, new Map(index ? [[ROBIN, index]] : []));
+    const asked = paid(ROBIN, doc.id, '53.68');
+    expect(shows(held({}), asked)).toBe(true);
+    expect(shows(held({ amount: { amount: '53.680', currency: 'USD' } }), asked)).toBe(true);
+    for (const p of [{ from: 'receipt' }, { on: '2026-11-19' }, { amount: { amount: '53.67', currency: 'USD' } }, { amount: { amount: '53.68', currency: 'EUR' } }, { amount: undefined }]) expect(shows(held(p), asked)).toBe(false);
+    expect(shows(held({}, [...idx.documents, { ...doc, id: 'd_copy', same_statement_as: doc.id }]), paid(ROBIN, 'd_copy', '53.68'))).toBe(true);
+    expect(shows(held({}), paid(ROBIN, 'd_copy', '53.68'))).toBe(false);
+    const undo = (payment: string) => ({ unpaid: { person: ROBIN, payment } });
+    expect([shows(held({}), undo('o_1')), shows(held({}), undo('o_2'))]).toEqual([false, true]);
+    // No list says nothing.
+    for (const index of [undefined, { ...idx, bills: undefined }]) expect([shows(index, asked), shows(index, undo('o_2'))]).toEqual([false, false]);
   });
 
   it('that did not read this time still waits', async () => {
@@ -142,7 +205,7 @@ describe('a payment marked', () => {
   it('is shown as recorded until the records are read again, and then only as they have it', async () => {
     const { folder, store } = await loaded();
     const m = await store.requestMark(paid(ROBIN, owing(store.index(ROBIN)!, '53.68').id, '53.68'), {}, '0.1.0');
-    answer(folder, m, 'ok');
+    (await file(folder, m))();
     await store.loadRefreshState();
     expect(store.marks).toEqual([{ ...m, cancellable: false, taken: true }]);
     expect([store.owed, store.answeredMarks.map((r) => r.id)]).toEqual([true, [m.request.id]]);
@@ -164,21 +227,168 @@ describe('a payment marked', () => {
     }
   });
 
-  it('taken back just after the Mac read it is read for once its answer is there', async () => {
+  it('the Mac refused, with an answer that names only the request, is kept with what it said', async () => {
     const { folder, store } = await loaded();
-    const m = await store.requestMark(paid(ROBIN, owing(store.index(ROBIN)!, '53.68').id, '53.68'), {}, '0.1.0');
-    expect(await store.cancel(m)).toBe(true);
-    expect([store.marks, store.waiting]).toEqual([[], true]);
-    answer(folder, m, 'ok');
-    await store.loadRefreshState();
-    expect([store.owed, store.waiting]).toEqual([true, false]);
+    const doc = owing(store.index(ROBIN)!, '53.68').id;
+    const m = await store.requestMark(paid(ROBIN, doc, '53.68'), {}, '0.1.0');
+    const refuse = (of: string, name: string, message: string) => folder.writeAsMac(`_requests/done/${name}`, JSON.stringify({ schema: 'medrec-request/v1', id: of, received: { bytes: 9, sha256: '0' }, handled: { outcome: 'invalid', sources: [], message, by: 'medrec 0.9.0' } }));
+    refuse('x_aaaaaaaaaaaaaaaaaaaa', '20261122T190000Z_x_aaaaaaaaaaaaaaaaaaaa.json', 'It is too large.');
+    refuse(m.request.id, m.file, 'It names no scope.');
+    folder.removeAsMac(`_requests/${m.file}`);
+    for (let i = 0; i < 2; i++) {
+      await store.loadRefreshState();
+      expect([store.marks, store.answeredMarks]).toEqual([[], [{ ...m.request, handled: expect.objectContaining({ outcome: 'invalid', message: 'It names no scope.' }) }]]);
+    }
   });
 
-  it('the Mac has already taken says so when it is taken back', async () => {
+  it('taken back just after the Mac read it is read for once its answer is there, however many looks that takes', async () => {
+    const { folder, store } = await loaded();
+    const doc = owing(store.index(ROBIN)!, '53.68').id;
+    const m = await store.requestMark(paid(ROBIN, doc, '53.68'), {}, '0.1.0');
+    expect(await store.cancel(m)).toBe(true);
+    for (let i = 0; i < 4; i++) {
+      await store.loadRefreshState();
+      expect([store.marks, store.waiting, store.owed]).toEqual([[], true, false]);
+      minutes(3);
+    }
+    const writeViews = await file(folder, m);
+    await store.loadRefreshState();
+    expect([store.marks.map((x) => [x.file, x.taken, x.late]), store.owed, store.waiting]).toEqual([[[m.file, true, true]], true, false]);
+    writeViews();
+    await store.reload();
+    expect([store.marks, store.owed, billList(store.index(ROBIN)!).find((b) => b.doc.id === doc)!.settled]).toEqual([[], false, true]);
+  });
+
+  it('taken back is looked for while a pass that read it before may be at work, and then no more', async () => {
+    const status = demoJson<RefreshStatus>('_status/status.json');
+    const { folder, store } = await loaded();
+    const at = (ms: number) => new Date(Date.now() - ms).toISOString().replace(/\.\d{3}Z$/, 'Z');
+    const attempts = (last: object | null) => folder.writeAsMac('_status/status.json', JSON.stringify({ ...status, sources: status.sources.map((s, i) => ({ ...s, last_attempt: i ? null : last })) }));
+    const waits = async () => {
+      await store.loadRefreshState();
+      return store.waiting;
+    };
+    attempts(null);
+    const taken = async () => {
+      const m = await store.requestMark(paid(ROBIN, owing(store.index(ROBIN)!, '53.68').id, '53.68'), {}, '0.1.0');
+      expect(await store.cancel(m)).toBe(true);
+      expect([await waits(), await waits()]).toEqual([true, true]);
+    };
+    await taken();
+    minutes(14);
+    expect(await waits()).toBe(true);
+    minutes(1);
+    expect(await waits()).toBe(false);
+    // While an import runs, and two minutes after the last of them.
+    await taken();
+    minutes(20);
+    attempts({ outcome: 'running', started_at: at(60_000), finished_at: null, requests: [] });
+    expect(await waits()).toBe(true);
+    minutes(1);
+    attempts({ outcome: 'ok', started_at: at(120_000), finished_at: at(119_000), requests: [] });
+    expect(await waits()).toBe(true);
+    attempts({ outcome: 'ok', started_at: at(180_000), finished_at: at(120_000), requests: [] });
+    expect(await waits()).toBe(false);
+    // With no status, its time alone.
+    await taken();
+    folder.removeAsMac('_status/status.json');
+    expect(await waits()).toBe(true);
+    minutes(15);
+    expect(await waits()).toBe(false);
+  });
+
+  it('taken back on another device is looked for here as well', async () => {
     const { folder, store } = await loaded();
     const m = await store.requestMark(paid(ROBIN, owing(store.index(ROBIN)!, '53.68').id, '53.68'), {}, '0.1.0');
-    answer(folder, m, 'ok');
+    const here = new Store(folder);
+    await here.load();
+    await store.cancel(m);
+    for (let i = 0; i < 4; i++) {
+      await here.loadRefreshState();
+      expect([here.marks, here.waiting]).toEqual([[], true]);
+    }
+    (await file(folder, m))();
+    await here.loadRefreshState();
+    expect([here.marks.map((x) => [x.taken, x.late]), here.owed]).toEqual([[[true, undefined]], true]);
+    await here.reload();
+    expect([here.marks, here.owed, here.waiting]).toEqual([[], false, false]);
+  });
+
+  it('the Mac has already answered says so when it is taken back, before or after its file goes', async () => {
+    for (const when of ['before', 'after'] as const) {
+      const { folder, store } = await loaded();
+      const m = await store.requestMark(paid(ROBIN, owing(store.index(ROBIN)!, '53.68').id, '53.68'), {}, '0.1.0');
+      const done = () => folder.writeAsMac(`_requests/done/${m.file}`, JSON.stringify({ ...m.request, handled: { outcome: 'ok', sources: [], message: 'ok', by: 'medrec 0.9.6' } }));
+      const remove = folder.deleteRequest.bind(folder);
+      let removed = 0;
+      folder.deleteRequest = async (name) => {
+        removed += 1;
+        const was = await remove(name);
+        if (when === 'after') done();
+        return was;
+      };
+      // medrec left the file: it is another account's.
+      if (when === 'before') done();
+      expect(await store.cancel(m)).toBe(false);
+      expect(removed).toBe(when === 'before' ? 0 : 1);
+      // It stays in sight until the next look reads the answer.
+      expect(store.marks).toEqual([{ ...m, cancellable: false }]);
+      await store.loadRefreshState();
+      expect([store.marks.map((x) => [x.taken, x.late]), store.owed]).toEqual([[[true, undefined]], true]);
+    }
+  });
+
+  it('is taken back only after the answers are listed anew', async () => {
+    const { folder, store } = await loaded();
+    const doc = owing(store.index(ROBIN)!, '53.68').id;
+    // A folder that keeps its listings until they are forgotten, as Drive's does.
+    const [listings, list] = [new Map<string, ReturnType<DemoFolder['list']>>(), folder.list.bind(folder)];
+    folder.list = (path) => listings.get(path) ?? listings.set(path, list(path)).get(path)!;
+    folder.forget = (...[prefix]: [string?]) => [...listings.keys()].forEach((k) => (k === prefix || k.startsWith(`${prefix}/`)) && listings.delete(k));
+    const m = await store.requestMark(paid(ROBIN, doc, '53.68'), {}, '0.1.0');
+    await store.loadRefreshState();
+    folder.writeAsMac(`_requests/done/${m.file}`, JSON.stringify({ ...m.request, handled: { outcome: 'ok', sources: [], message: '', by: 'medrec 0.9.6' } }));
     expect(await store.cancel(m)).toBe(false);
+  });
+
+  it('whose file is gone with no answer was taken back elsewhere', async () => {
+    const { folder, store } = await loaded();
+    const m = await store.requestMark(paid(ROBIN, owing(store.index(ROBIN)!, '53.68').id, '53.68'), {}, '0.1.0');
+    folder.removeAsMac(`_requests/${m.file}`);
+    expect(await store.cancel(m)).toBe(false);
+    await store.loadRefreshState();
+    expect([store.marks, store.waiting]).toEqual([[], true]);
+  });
+
+  it('is taken back though its answer could not be looked for after, and not when it could not be before', async () => {
+    const { folder, store } = await loaded();
+    const doc = owing(store.index(ROBIN)!, '53.68').id;
+    const list = folder.list.bind(folder);
+    let fails = 1;
+    folder.list = async (path) => {
+      if (path === '_requests/done' && (fails -= 1) === 0) throw new Error('Drive did not answer.');
+      return list(path);
+    };
+    const m = await store.requestMark(paid(ROBIN, doc, '53.68'), {}, '0.1.0');
+    await expect(store.cancel(m)).rejects.toThrow('Drive did not answer.');
+    expect([store.marks, await folder.readText(`_requests/${m.file}`) !== null]).toEqual([[m], true]);
+    fails = 2;
+    expect(await store.cancel(m)).toBe(true);
+    expect([store.marks, store.waiting]).toEqual([[], true]);
+  });
+
+  it('a refresh taken back is looked for no more', async () => {
+    const { store } = await loaded();
+    const p = await store.requestRefresh({ all: true }, {}, '0.1.0');
+    expect(await store.cancel(p)).toBe(true);
+    expect([store.pending, store.waiting]).toEqual([[], false]);
+  });
+
+  it('is asked of the medrec that answers requests', async () => {
+    const status = demoJson<RefreshStatus>('_status/status.json');
+    const of = async (text: string | null) => (await loaded(demoFolderWith({ '_status/status.json': text }))).store.refresher;
+    expect(await of(JSON.stringify({ ...status, refresher: { ...status.refresher, medrec_version: '0.9.7' } }))).toBe('0.9.7');
+    expect([await of(JSON.stringify({ ...status, refresher: {} })), await of(null), await of('{')]).toEqual([undefined, undefined, undefined]);
   });
 
   it('is asked of a medrec that records it, by an account that may', async () => {

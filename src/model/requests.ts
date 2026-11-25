@@ -2,7 +2,7 @@
 // medrec's data contract). One asks the Mac to refresh, or to mark a bill paid.
 
 import { toCents, type Money } from './records';
-import { REQUEST_SCHEMA, type MarkRequest, type PaidMark, type PendingMark, type RefreshRequest, type RequestHead, type RequestScope, type UnpaidMark } from './types';
+import { REQUEST_SCHEMA, type MarkRequest, type PaidMark, type PendingMark, type PersonIndex, type RefreshRequest, type RequestHead, type RequestScope, type UnpaidMark } from './types';
 
 const ALPHABET = 'abcdefghijklmnopqrstuvwxyz234567';
 const ID_RE = /^x_[a-z2-7]{20}$/;
@@ -89,6 +89,18 @@ export function marksTotal(marks: readonly PendingMark[], currency: string): num
     const a = m.request.paid && markedAmount(m.request.paid);
     return a?.currency === currency ? t + (toCents(a) ?? 0) : t;
   }, 0);
+}
+
+/** Whether medrec's list of bills shows what a request did: the payment marked, or that it is gone. */
+export function markRecorded(r: MarkRequest, indexes: ReadonlyMap<string, PersonIndex>): boolean {
+  const { paid, unpaid } = r;
+  const idx = indexes.get((paid ?? unpaid)?.person ?? '');
+  const states = idx?.bills?.states;
+  if (!idx || !states) return false;
+  if (!paid) return ![...states.values()].some((s) => s.payments.some((p) => p.id === unpaid?.payment));
+  const asked = markedAmount(paid);
+  const copyOf = idx.documents.find((d) => d.id === paid.document)?.same_statement_as ?? '';
+  return !!(states.get(paid.document) ?? states.get(copyOf))?.payments.some((p) => p.from === 'household' && p.on === paid.on && p.amount?.currency === asked.currency && toCents(p.amount) === toCents(asked));
 }
 
 /** Whether a request's scope covers one source of one person. */

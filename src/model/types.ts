@@ -386,8 +386,10 @@ export interface PendingMark {
   request: MarkRequest;
   /** Whether the app may remove it: it made it, and the Mac has not answered. */
   cancellable: boolean;
-  /** The Mac has recorded it, and the records have not been read again since. */
+  /** The Mac has recorded it, and the records do not show it yet. */
   taken?: boolean;
+  /** It was taken back, and the Mac, which had read it before, recorded it. */
+  late?: boolean;
 }
 
 /** A request medrec refused: it keeps only what it can show safely. */
