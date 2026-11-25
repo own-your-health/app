@@ -2,6 +2,7 @@
 
 import { h, type Child } from '../ui/dom';
 import { count } from '../ui/format';
+import { AppFileError, appFile } from './files';
 import { paperType, type PaperType } from './kind';
 import { cdaPaper, decodeText, hasParts, htmlPaper } from './markup';
 import { partNodes, type Draw } from './parts';
@@ -120,7 +121,7 @@ function sized(page: HTMLElement, width: number, height: number): void {
 const PDF_WIDTH = 900;
 
 async function drawPdf(place: Place, read: Uint8Array): Promise<void> {
-  const { openPdf, PdfError } = await import('./pdf');
+  const { openPdf, PdfError } = await appFile(import('./pdf'));
   let pdf: Pdf;
   let first: PdfPage;
   try {
@@ -134,7 +135,7 @@ async function drawPdf(place: Place, read: Uint8Array): Promise<void> {
   for (const s of slots) s.shape(first);
   // Sharp again once the size settles.
   let soon: number | undefined;
-  const box = boxFor(place, h('div', { class: 'paper-pages' }, slots.map((s) => s.el)), () => {
+  const box = boxFor(place, h('div', { class: 'paper-pages' }, slots.flatMap((s) => [s.note, s.el])), () => {
     window.clearTimeout(soon);
     soon = window.setTimeout(() => slots.forEach((s) => s.again()), 200);
   });
@@ -155,6 +156,8 @@ async function drawPdf(place: Place, read: Uint8Array): Promise<void> {
 /** One page of a PDF: its place, and the page drawn there while it is near. */
 class Slot {
   readonly el: HTMLElement;
+  /** Above the page, where a picture is left out. */
+  readonly note: HTMLElement;
   private drawing: AbortController | null = null;
   private isNear = false;
   /** How wide it is drawn, in pixels. */
@@ -167,6 +170,7 @@ class Slot {
     private page?: PdfPage,
   ) {
     this.el = h('div', { class: 'paper-page', role: 'group', 'aria-label': `Page ${n} of ${pdf.pages}` });
+    this.note = h('p', { class: 'paper-note small attention', role: 'status', hidden: true });
   }
 
   shape(page: PdfPage): void {
@@ -195,6 +199,7 @@ class Slot {
     this.drawn = 0;
     for (const c of this.el.querySelectorAll('canvas')) c.width = c.height = 0;
     this.el.replaceChildren();
+    this.page?.release();
   }
 
   private async draw(): Promise<void> {
@@ -210,17 +215,21 @@ class Slot {
       if (!width) return;
       const canvas = h('canvas', { class: 'paper-canvas', 'aria-hidden': 'true' });
       const words = h('div', { class: 'textLayer' });
-      await this.page.draw(canvas, width, mine.signal);
+      const out = await this.page.draw(canvas, width, mine.signal);
       if (mine.signal.aborted) return;
+      this.note.hidden = out === 'none';
+      this.note.textContent = out === 'none' ? '' : `A picture ${out === 'own' ? `on page ${this.n}` : 'that pages share'} could not be drawn here. Open the paper in Drive to see it.`;
       // What was there stays, stretched, until this is ready.
       for (const c of this.el.querySelectorAll('canvas')) c.width = c.height = 0;
       this.el.replaceChildren(canvas, words);
       this.drawn = width;
-      await this.page.words(words, this.el.clientWidth, mine.signal);
-    } catch {
+      // Without its words to select, the page is still whole.
+      await this.page.words(words, this.el.clientWidth, mine.signal).catch(() => words.replaceChildren());
+    } catch (e) {
       // Let go while it was drawn; a page that does not draw says so.
       if (mine.signal.aborted || this.place.signal.aborted) return;
-      this.el.replaceChildren(h('p', { class: 'paper-failed small' }, `Page ${this.n} could not be drawn here. ${NOT_SHOWN}`));
+      this.note.hidden = true;
+      this.el.replaceChildren(h('p', { class: 'paper-failed small' }, `Page ${this.n} could not be drawn here${e instanceof AppFileError ? ': a file of the app did not load. Reload the app, or open the paper in Drive.' : `. ${NOT_SHOWN}`}`));
     }
   }
 }

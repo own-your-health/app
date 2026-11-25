@@ -2724,6 +2724,13 @@ a.cal-day:hover .cal-date {
   padding: 12px;
 }
 
+.paper-note {
+  position: sticky;
+  left: 8px;
+  width: var(--box);
+  margin: 0;
+}
+
 .paper-text {
   --zoom: 1;
   padding: 12px;

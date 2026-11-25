@@ -21,7 +21,7 @@ interface Place {
  */
 export function zoomable(box: HTMLElement, inner: HTMLElement, changed: () => void, signal: AbortSignal): HTMLElement {
   let value = 1;
-  const says = h('span', { class: 'paper-zoom' }, '100%');
+  const says = h('span', { class: 'paper-zoom', 'aria-live': 'polite' }, '100%');
   const middle = (): Place => ({ x: box.clientWidth / 2, y: box.clientHeight / 2 });
   const set = (to: number, at: Place) => {
     const next = Math.min(MOST, Math.max(LEAST, to));
@@ -33,14 +33,19 @@ export function zoomable(box: HTMLElement, inner: HTMLElement, changed: () => vo
     box.scrollLeft = left;
     box.scrollTop = top;
     says.textContent = `${Math.round(next * 100)}%`;
-    smaller.disabled = next === LEAST;
-    larger.disabled = next === MOST;
+    ends();
     changed();
   };
-  const smaller = button('−', () => set(value / STEP, middle()), { small: true, disabled: true });
+  const smaller = button('−', () => set(value / STEP, middle()), { small: true });
   smaller.setAttribute('aria-label', 'Smaller');
   const larger = button('+', () => set(value * STEP, middle()), { small: true });
   larger.setAttribute('aria-label', 'Larger');
+  // Said, not disabled: the button that reached the end keeps its focus.
+  const ends = () => {
+    smaller.setAttribute('aria-disabled', String(value === LEAST));
+    larger.setAttribute('aria-disabled', String(value === MOST));
+  };
+  ends();
 
   // Two fingers: the box scrolls with one (touch-action in styles.css), and grows with two.
   let from: { apart: number; zoom: number } | undefined;

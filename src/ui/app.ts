@@ -32,6 +32,7 @@ import { healthView, leaveOutPrivate } from '../next/healthView';
 import { papersView } from '../next/papersView';
 import { eventView } from '../next/eventView';
 import { providerView } from '../next/providerView';
+import { RECHECK } from '../paper/view';
 
 /** What the app says when a renewal interrupted a write the person asked for. */
 const UNSENT_TEXT: Record<Unsent, string> = {
@@ -349,6 +350,8 @@ export class App {
     // Held back, not dropped: the poll stops once nothing is pending, so the change is drawn when the input is let go.
     if (this.holdsInput()) {
       this.stale = true;
+      // What is open may be no longer.
+      for (const p of this.main.querySelectorAll('.paper:not([hidden])')) p.dispatchEvent(new Event(RECHECK));
       return;
     }
     this.signature = sig;

@@ -8,9 +8,14 @@
 // worker started from an address is under the headers of that address alone,
 // and GitHub Pages sends none, so it could connect anywhere. One from a blob
 // is under this page's Content-Security-Policy, as the page is.
+//
+// pdf.js draws what it can of a page and says nothing of the rest. So a file of
+// the app's that a page needs and does not get is a failure here, not a page
+// with something missing, and a picture it left out is said.
 
-import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist';
+import type { PDFDocumentLoadingTask, PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist';
 import workerFile from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
+import { AppFileError, appFile } from './files';
 
 /** Where the build puts pdf.js's fonts and character maps, and its readers of older picture formats (vite.config.ts). */
 const FILES = `${import.meta.env.BASE_URL}pdfjs/${__PDFJS_VERSION__}/`;
@@ -39,10 +44,27 @@ function scriptUrl(url: string): string {
   return policy.createScriptURL(url);
 }
 
-async function startWorker(signal: AbortSignal): Promise<{ worker: Worker; stop: () => void }> {
-  const res = await fetch(workerFile, { signal });
-  if (!res.ok) throw new Error('The app’s PDF reader did not load.');
-  const url = URL.createObjectURL(new Blob([await res.text()], { type: 'text/javascript' }));
+/** One of the app's own files. */
+async function fetched(url: string, signal: AbortSignal): Promise<Response> {
+  const res = await fetch(url, { signal });
+  if (!res.ok) throw new AppFileError(`A file of the app answered ${res.status}.`);
+  return res;
+}
+
+const filesAt = (dir: string): string => new URL(`${FILES}${dir}/`, location.href).href;
+
+// Its readers of JPEG 2000, and of JBIG2 and fax pictures, as scripts: the
+// policy runs no WebAssembly. pdf.js loads one when a page needs it, and where
+// it does not load leaves the picture out. Loaded as the worker starts, they
+// are there when a page asks.
+const READERS = ['openjpeg_nowasm_fallback.js', 'jbig2_nowasm_fallback.js'];
+const READERS_SAID = 'oyh-readers';
+
+async function startWorker(signal: AbortSignal): Promise<{ worker: Worker; ready: Promise<void>; stop: () => void }> {
+  const code = await appFile(fetched(workerFile, signal).then((res) => res.text()));
+  const loads = READERS.map((f) => `import(${JSON.stringify(filesAt('wasm') + f)})`).join(',');
+  const say = (ok: boolean) => `() => self.postMessage({ ${JSON.stringify(READERS_SAID)}: ${ok} })`;
+  const url = URL.createObjectURL(new Blob([`Promise.all([${loads}]).then(${say(true)}, ${say(false)});\n`, code], { type: 'text/javascript' }));
   ours.add(url);
   let worker: Worker;
   try {
@@ -50,8 +72,16 @@ async function startWorker(signal: AbortSignal): Promise<{ worker: Worker; stop:
   } finally {
     ours.delete(url);
   }
+  const ready = new Promise<void>((resolve, reject) => {
+    worker.addEventListener('message', ({ data }: MessageEvent<Record<string, unknown> | undefined>) => {
+      if (data?.[READERS_SAID] === true) resolve();
+      else if (data?.[READERS_SAID] === false) reject(new AppFileError('A picture reader did not load.'));
+    });
+  });
+  ready.catch(() => undefined);
   return {
     worker,
+    ready,
     stop: () => {
       worker.terminate();
       URL.revokeObjectURL(url);
@@ -62,14 +92,19 @@ async function startWorker(signal: AbortSignal): Promise<{ worker: Worker; stop:
 /** Why a PDF was not opened, in words for the page. */
 export class PdfError extends Error {}
 
+/** Pictures left out: none, the page's own, or one that pages share, this one or another. */
+export type LeftOut = 'none' | 'own' | 'shared';
+
 export interface PdfPage {
   /** Its size at 72 to the inch. */
   width: number;
   height: number;
-  /** Draws it on a canvas, at so many pixels across. */
-  draw(canvas: HTMLCanvasElement, pixels: number, signal: AbortSignal): Promise<void>;
+  /** Draws it on a canvas, at so many pixels across, and says which pictures were left out, as they do not read. */
+  draw(canvas: HTMLCanvasElement, pixels: number, signal: AbortSignal): Promise<LeftOut>;
   /** Puts its words over it, at their places, for a page this wide. */
   words(box: HTMLElement, width: number, signal: AbortSignal): Promise<void>;
+  /** Lets go of what was read to draw it. */
+  release(): void;
 }
 
 export interface Pdf {
@@ -81,41 +116,62 @@ export interface Pdf {
 /** Opens a PDF. The bytes go to the worker, and `signal` ends it. */
 export async function openPdf(bytes: Uint8Array, signal: AbortSignal): Promise<Pdf> {
   const starting = startWorker(signal);
-  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs').catch((e: unknown) => {
+  // Heard below, once pdf.js is here.
+  starting.catch(() => undefined);
+  const pdfjs = await appFile(import('pdfjs-dist/legacy/build/pdf.mjs')).catch((e: unknown) => {
     void starting.then((w) => w.stop()).catch(() => undefined);
     throw e;
   });
-  const { worker, stop } = await starting;
+  const { worker, ready, stop } = await starting;
   const failed = new Promise<never>((_, reject) => {
     worker.addEventListener('error', () => reject(new PdfError('This browser could not start the app’s PDF reader.')), { once: true });
     signal.addEventListener('abort', () => reject(signal.reason), { once: true });
   });
   failed.catch(() => undefined);
-  const files = (dir: string) => new URL(`${FILES}${dir}/`, location.href).href;
   // Its warnings may quote the file: none is logged.
   const port = pdfjs.PDFWorker.create({ port: worker, verbosity: 0 });
-  const task = pdfjs.getDocument({
-    data: bytes,
-    worker: port,
-    cMapUrl: files('cmaps'),
-    cMapPacked: true,
-    standardFontDataUrl: files('standard_fonts'),
-    // Its readers of JPEG 2000 and JBIG2 pictures, as scripts: the policy runs no WebAssembly.
-    wasmUrl: files('wasm'),
-    useWasm: false,
-    // A font in the file is drawn as shapes, never loaded as a font of the page.
-    disableFontFace: true,
-    useSystemFonts: false,
-    enableXfa: false,
-    disableWorkerRendering: true,
-    verbosity: 0,
-  });
+  const needs: Needs = { missing: undefined };
+  /** Its fonts and character maps, from the app's own files. Where one does not load, pdf.js goes on without it, and does not ask again. */
+  class Files {
+    async fetch({ kind, filename }: { kind: string; filename: string }): Promise<Uint8Array> {
+      try {
+        const res = await appFile(fetched(filesAt(kind === 'cMapUrl' ? 'cmaps' : 'standard_fonts') + filename, signal));
+        return new Uint8Array(await appFile(res.arrayBuffer()));
+      } catch (e) {
+        if (!signal.aborted) needs.missing ??= e;
+        throw e;
+      }
+    }
+  }
+  let task: PDFDocumentLoadingTask | undefined;
+  const read = async (): Promise<PDFDocumentProxy> => {
+    await ready;
+    signal.throwIfAborted();
+    task = pdfjs.getDocument({
+      data: bytes,
+      worker: port,
+      cMapUrl: filesAt('cmaps'),
+      cMapPacked: true,
+      standardFontDataUrl: filesAt('standard_fonts'),
+      wasmUrl: filesAt('wasm'),
+      useWasm: false,
+      useWorkerFetch: false,
+      BinaryDataFactory: Files,
+      // A font in the file is drawn as shapes, never loaded as a font of the page.
+      disableFontFace: true,
+      useSystemFonts: false,
+      enableXfa: false,
+      disableWorkerRendering: true,
+      verbosity: 0,
+    });
+    return task.promise;
+  };
   let closed = false;
   const close = () => {
     if (closed) return;
     closed = true;
     pdfjs.TextLayer.cleanup();
-    void task.destroy().catch(() => undefined);
+    void task?.destroy().catch(() => undefined);
     port.destroy();
     stop();
   };
@@ -126,24 +182,32 @@ export async function openPdf(bytes: Uint8Array, signal: AbortSignal): Promise<P
   signal.addEventListener('abort', close, { once: true });
   let doc: PDFDocumentProxy;
   try {
-    doc = await Promise.race([task.promise, failed]);
+    doc = await Promise.race([read(), failed]);
   } catch (e) {
     close();
-    if (e instanceof PdfError || signal.aborted) throw e;
+    if (e instanceof PdfError || e instanceof AppFileError || signal.aborted) throw e;
     const name = e instanceof Error ? e.name : '';
     throw new PdfError(name === 'PasswordException' ? 'This PDF needs a password.' : name === 'InvalidPDFException' ? 'This file does not read as a PDF.' : 'This PDF could not be read here.');
   }
   return {
     pages: doc.numPages,
-    page: async (n) => pdfPage(pdfjs, await doc.getPage(n)),
+    page: async (n) => pdfPage(pdfjs, needs, await doc.getPage(n)),
     close,
   };
 }
 
-// Phones hold a canvas of no more than 16 million pixels or so.
-const MOST_PIXELS = 12_000_000;
+/** What a file's pages need of the app's own files: why one did not load. */
+interface Needs {
+  missing: unknown;
+}
 
-function pdfPage(pdfjs: typeof import('pdfjs-dist'), page: PDFPageProxy): PdfPage {
+// Some 290 to the inch of a letter page. Phones hold a few canvases of this size, and not of twice it.
+const MOST_PIXELS = 8_000_000;
+
+/** Whether a picture was read and is not there: what pdf.js holds in place of one that it could not decode. */
+const lacksPicture = (held: PDFPageProxy['objs']): boolean => [...held].some((x) => Array.isArray(x) && x[1] === null);
+
+function pdfPage(pdfjs: typeof import('pdfjs-dist'), needs: Needs, page: PDFPageProxy): PdfPage {
   const base = page.getViewport({ scale: 1 });
   const at = (width: number) => page.getViewport({ scale: width / base.width });
   return {
@@ -157,6 +221,8 @@ function pdfPage(pdfjs: typeof import('pdfjs-dist'), page: PDFPageProxy): PdfPag
       const task: RenderTask = page.render({ canvas, viewport, background: '#fff' });
       signal.addEventListener('abort', () => task.cancel(), { once: true });
       await task.promise;
+      if (needs.missing) throw needs.missing;
+      return lacksPicture(page.objs) ? 'own' : lacksPicture(page.commonObjs) ? 'shared' : 'none';
     },
     async words(box, width, signal) {
       const viewport = at(width);
@@ -164,6 +230,9 @@ function pdfPage(pdfjs: typeof import('pdfjs-dist'), page: PDFPageProxy): PdfPag
       const layer = new pdfjs.TextLayer({ textContentSource: page.streamTextContent(), container: box, viewport });
       signal.addEventListener('abort', () => layer.cancel(), { once: true });
       await layer.render();
+    },
+    release() {
+      page.cleanup();
     },
   };
 }

@@ -377,7 +377,8 @@ installed shortcut. It has no service worker, so it needs a connection, as it
 does in the browser, and each launch loads the version on the site (GitHub
 Pages lets a browser keep the page for up to 10 minutes; the rest of the
 app's files are named by their contents, so a new version never mixes with an
-old one). An installed app that comes back from the background keeps the
+old one, and pdf.js's copied files by its version; a page open since before a new
+version says so when a paper needs a file the site no longer has). An installed app that comes back from the background keeps the
 version it opened with, so when it comes to the front it asks the site for
 its page, at most every 5 minutes, and says **A new version of the app is
 ready** with a **Reload** button when the site has another.
@@ -489,7 +490,7 @@ visit. What it is goes by its first bytes, as a portal's own type may be wrong.
 
 | Paper | How it is shown |
 |---|---|
-| PDF | Drawn on canvases by pdf.js, in a worker, with its words over them to select. Forms are drawn as they are filled in. Its scripts, forms, links and XFA are off: the app uses none of pdf.js's layers for them. A page is drawn when it comes near, so a long one holds few. |
+| PDF | Drawn on canvases by pdf.js, in a worker, with its words over them to select. Forms are drawn as they are filled in. Its scripts, forms, links and XFA are off: the app uses none of pdf.js's layers for them. A page is drawn when it comes near, so a long one holds few. A picture in it that does not read is left out, and said. |
 | PNG, JPEG, GIF, WebP | As a picture, from a blob URL that ends when it is closed. |
 | HTML, C-CDA XML | As headings, text, lists and tables built from text by the app. The file is never given to the browser to parse: the app reads it (`src/paper/markup.ts`), keeps a fixed set of parts and no attribute but a cell's span, and leaves out scripts, styles, frames, objects and forms' controls. A link is its words and its address, not a link. A picture outside the file is named and never loaded. |
 | RTF | Its text only, which the page says. |
@@ -515,9 +516,10 @@ eval is allowed: pdf.js reads JPEG 2000 and JBIG2 pictures with its JavaScript
 readers. The privacy page keeps the policy without these lines.
 
 pdf.js (`pdfjs-dist`, pinned to one version) is the app's one dependency. Its code
-is in the app's own files, loaded with the first PDF, and the build copies the
-fonts, character maps and readers it may need to `pdfjs/<version>/`, with their
-licences: pdf.js is Apache-2.0; the maps, the Foxit fonts, OpenJPEG and PDFium's
+is in the app's own files, loaded with the first PDF. The build copies its two
+picture readers, also loaded then, and the fonts and character maps a page may
+need to `pdfjs/<version>/`. Where one of these does not load, the page says so and
+is not shown without it. They come with their licences: pdf.js is Apache-2.0; the maps, the Foxit fonts, OpenJPEG and PDFium's
 JBIG2 reader are BSD; the Liberation fonts are GPL-2.0 with its font exceptions
 (unchanged, their sources at https://github.com/liberationfonts).
 

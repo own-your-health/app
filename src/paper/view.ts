@@ -9,10 +9,18 @@ import type { MedDocument } from '../model/types';
 import { button, type Ctx } from '../ui/components';
 import { h } from '../ui/dom';
 import { bytes as sizeText } from '../ui/format';
+import { AppFileError, appFile } from './files';
 import { mayShow, MOST_BYTES, SAY_BYTES } from './kind';
 
-/** A paper's button, null where it does not show here, and the place it opens in. */
-export function paperView(ctx: Ctx, d: MedDocument): { button: HTMLElement | null; panel: HTMLElement | null } {
+/** Heard by an open paper when the page under it would be drawn again and is not (App.holdsInput): it closes where it may no longer be shown. */
+export const RECHECK = 'recheck';
+
+/**
+ * A paper's button, null where it does not show here, and the place it opens
+ * in. `allowed` is asked again at the tap and while it is open, as the page
+ * may be older than what the folder says now.
+ */
+export function paperView(ctx: Ctx, d: MedDocument, allowed: () => boolean = () => true): { button: HTMLElement | null; panel: HTMLElement | null } {
   if (!mayShow(d.media_type) || d.size > MOST_BYTES) return { button: null, panel: null };
   const title = documentTitle(d);
   const panel = h('div', { class: 'paper', id: `paper-${d.id}`, hidden: true });
@@ -27,10 +35,19 @@ export function paperView(ctx: Ctx, d: MedDocument): { button: HTMLElement | nul
     // The page may draw what it held back (App.holdsInput).
     panel.dispatchEvent(new Event('close', { bubbles: true }));
   };
+  const refuse = () => {
+    if (open) shut();
+    toggle.remove();
+    ctx.toast('That paper is not shown on this page now.', 'error');
+  };
+  panel.addEventListener(RECHECK, () => {
+    if (open && !allowed()) refuse();
+  });
   const toggle = button(
     label,
     () => {
       if (open) return shut();
+      if (!allowed()) return refuse();
       open = new AbortController();
       ctx.leaving.addEventListener('abort', () => open?.abort(), { once: true, signal: open.signal });
       panel.hidden = false;
@@ -52,12 +69,12 @@ export function paperView(ctx: Ctx, d: MedDocument): { button: HTMLElement | nul
 async function show(ctx: Ctx, d: MedDocument, panel: HTMLElement, title: string, signal: AbortSignal): Promise<void> {
   const status = h('p', { class: 'small muted', role: 'status' }, 'Reading the paper…');
   // What draws a paper is loaded with the first one asked for.
-  const drawing = import('./draw');
+  const drawing = appFile(import('./draw'));
   drawing.catch(() => undefined);
   const progress = h('progress', { class: 'paper-progress', max: d.size || 1, value: 0, 'aria-label': 'Read so far' });
   const bar = h('div', { class: 'paper-bar' }, status);
   panel.replaceChildren(bar, progress);
-  const fail = (why: string) => panel.replaceChildren(h('p', { class: 'small attention', role: 'alert' }, why));
+  const fail = (why: string, ...more: HTMLElement[]) => panel.replaceChildren(h('p', { class: 'small attention', role: 'alert' }, why), ...more);
   try {
     const read = await ctx.store.folder.readBytes(d.path, { signal, progress: (done) => (progress.value = done) });
     signal.throwIfAborted();
@@ -67,6 +84,7 @@ async function show(ctx: Ctx, d: MedDocument, panel: HTMLElement, title: string,
   } catch (e) {
     // Closed, or its page left, while it was read.
     if (signal.aborted) return;
+    if (e instanceof AppFileError) return fail('The part of the app that shows papers did not load. Check the connection, or reload the app: it may have a newer version.', button('Reload', () => location.reload(), { small: true }));
     fail(e instanceof DriveError ? `${e.status === 401 ? 'Your Google sign-in ended.' : 'Drive did not give the file.'} Try again, or open it in Drive.` : 'The file was not read. Check the connection and try again.');
   }
 }

@@ -304,10 +304,122 @@ test('a JPEG 2000 picture in a PDF is read without WebAssembly', async ({ page }
   );
   const paper = await open(page, ROBIN, PDF);
   await expect.poll(() => inked(paper.locator('canvas'))).toBeGreaterThan(0.05);
-  expect(asked.filter((a) => a.startsWith('pdfjs/')).map((a) => a.split('/').pop())).toEqual(['openjpeg_nowasm_fallback.js']);
+  // Both picture readers are there before a page asks for one, as scripts.
+  expect(asked.filter((a) => a.startsWith('pdfjs/')).map((a) => a.split('/').pop()).sort()).toEqual(['jbig2_nowasm_fallback.js', 'openjpeg_nowasm_fallback.js']);
+  await expect(paper.locator('.paper-note')).toBeHidden();
+});
+
+const picture = (filter: string, body: string) => `<< /Type /XObject /Subtype /Image /Width 32 /Height 32 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /${filter} /Length ${body.length} >>\nstream\n${body}\nendstream`;
+for (const filter of ['JPXDecode', 'DCTDecode'])
+  test(`a page that lacks a picture says so, and no other page does: ${filter}`, async ({ page }) => {
+    await put(page, PDF, makePdf([line('The first page'), `${line('The second page')} q 200 0 0 200 72 300 cm /I Do Q`, line('The last page')], { resources: '/XObject << /I 100 0 R >>', extra: [picture(filter, 'not a picture')] }));
+    const paper = await open(page, ROBIN, PDF);
+    const second = paper.getByRole('group', { name: 'Page 2 of 3' });
+    await second.scrollIntoViewIfNeeded();
+    // What can be drawn of it is.
+    await expect(second.locator('.textLayer')).toContainText('The second page');
+    await expect.poll(() => inked(second.locator('canvas'))).toBeGreaterThan(0.0003);
+    await expect(paper.locator('.paper-note:visible')).toHaveText(['A picture on page 2 could not be drawn here. Open the paper in Drive to see it.']);
+    await expect(paper.locator('.paper-note:visible')).toHaveRole('status');
+    await paper.getByRole('group', { name: 'Page 3 of 3' }).scrollIntoViewIfNeeded();
+    await expect(paper.getByRole('group', { name: 'Page 3 of 3' }).locator('.textLayer')).toContainText('The last page');
+    await expect(paper.locator('.paper-note:visible')).toHaveCount(1);
+  });
+
+test('a picture that pages share and that cannot be drawn is said on them', async ({ page }) => {
+  await put(page, PDF, makePdf(Array.from({ length: 4 }, (_, i) => `${line(`Page ${i + 1}`)} q 200 0 0 200 72 300 cm /I Do Q`), { resources: '/XObject << /I 100 0 R >>', extra: [picture('JPXDecode', 'not a picture')] }));
+  const paper = await open(page, ROBIN, PDF);
+  for (const n of [1, 2, 3, 4]) {
+    const one = paper.getByRole('group', { name: `Page ${n} of 4` });
+    await one.scrollIntoViewIfNeeded();
+    await expect(one.locator('.textLayer')).toContainText(`Page ${n}`);
+  }
+  await expect(paper.locator('.paper-note:visible')).toHaveCount(4);
+  await expect(paper.locator('.paper-note:visible').last()).toHaveText('A picture that pages share could not be drawn here. Open the paper in Drive to see it.');
+});
+
+test('a file of the app that does not load is said, with a way to reload', async ({ page }) => {
+  for (const file of [/\/assets\/draw-/, /\/assets\/pdf-/, /\/assets\/pdf\.worker/, /openjpeg_nowasm/, /jbig2_nowasm/]) {
+    await page.goto('about:blank');
+    let refused = 0;
+    await page.route(file, (route) => {
+      refused += 1;
+      return refused % 2 ? route.abort() : route.fulfill({ status: 404, body: '' });
+    });
+    // It does not answer, and then it is gone.
+    for (let n = 0; n < 2; n++) {
+      await page.goto('about:blank');
+      await page.goto(`./?demo#/p/${ROBIN}/r/${PDF.id}`);
+      await page.getByRole('button', { name: /^View\b/ }).click();
+      await expect(page.locator('.paper').getByRole('alert')).toHaveText('The part of the app that shows papers did not load. Check the connection, or reload the app: it may have a newer version.');
+      expect(page.workers()).toHaveLength(0);
+    }
+    expect(refused).toBeGreaterThan(1);
+    await page.unrouteAll();
+    await page.locator('.paper').getByRole('button', { name: 'Reload' }).click();
+    await expect(page.getByRole('button', { name: /^View\b/ })).toBeVisible();
+    await page.getByRole('button', { name: /^View\b/ }).click();
+    await expect(page.locator('.textLayer').first()).toContainText('After visit summary');
+  }
+  problems = problems.filter((p) => !/Failed to load resource|Failed to fetch dynamically imported module/.test(p));
+});
+
+test('a page whose font or character map does not load is not shown without it, nor any later one', async ({ page }) => {
+  const cases: [RegExp, Buffer][] = [
+    [/standard_fonts/, makePdf([line('One'), line('Two')])],
+    [
+      /cmaps/,
+      makePdf(['BT /J 24 Tf 72 700 Td <3042> Tj ET', 'BT /J 24 Tf 72 700 Td <3044> Tj ET'], {
+        resources: '/Font << /J 100 0 R >>',
+        extra: ['<< /Type /Font /Subtype /Type0 /BaseFont /Sample /Encoding /UniJIS-UCS2-H /DescendantFonts [101 0 R] >>', '<< /Type /Font /Subtype /CIDFontType0 /BaseFont /Sample /CIDSystemInfo << /Registry (Adobe) /Ordering (Japan1) /Supplement 2 >> >>'],
+      }),
+    ],
+  ];
+  for (const [file, pdf] of cases) {
+    await page.unrouteAll();
+    await page.goto('about:blank');
+    await put(page, PDF, pdf);
+    await page.route(file, (route) => route.abort());
+    const paper = await open(page, ROBIN, PDF);
+    for (const n of [1, 2]) {
+      const one = paper.getByRole('group', { name: `Page ${n} of 2` });
+      await one.scrollIntoViewIfNeeded();
+      await expect(one).toHaveText(`Page ${n} could not be drawn here: a file of the app did not load. Reload the app, or open the paper in Drive.`);
+      await expect(one.locator('canvas')).toHaveCount(0);
+    }
+  }
+  problems = problems.filter((p) => !/Failed to load resource/.test(p));
+});
+
+test('the buttons that make a paper larger and smaller keep their focus at the ends, and say how large it is', async ({ page }) => {
+  const paper = await open(page, ROBIN, PICTURE);
+  const [smaller, larger, says] = [paper.getByRole('button', { name: 'Smaller' }), paper.getByRole('button', { name: 'Larger' }), paper.locator('.paper-zoom')];
+  await expect(says).toHaveAttribute('aria-live', 'polite');
+  await expect(smaller).toHaveAttribute('aria-disabled', 'true');
+  await larger.focus();
+  for (let i = 0; i < 8; i++) await page.keyboard.press('Enter');
+  await expect(says).toHaveText('600%');
+  await expect(larger).toBeFocused();
+  await expect(larger).toHaveAttribute('aria-disabled', 'true');
+  await expect(smaller).toHaveAttribute('aria-disabled', 'false');
+  await smaller.focus();
+  for (let i = 0; i < 8; i++) await page.keyboard.press('Enter');
+  await expect(says).toHaveText('100%');
+  await expect(smaller).toBeFocused();
 });
 
 test('a long PDF holds only the pages near the part in sight', async ({ page }) => {
+  // Each time pdf.js has its worker read a page to draw it.
+  await page.addInitScript(() => {
+    const read: number[] = [];
+    Object.assign(window, { readPages: read });
+    const post = Worker.prototype.postMessage;
+    Worker.prototype.postMessage = function (this: Worker, m: { action?: string; data?: { pageIndex: number } }, ...rest: unknown[]) {
+      if (m?.action === 'GetOperatorList') read.push(m.data!.pageIndex);
+      return Reflect.apply(post, this, [m, ...rest]) as void;
+    } as typeof post;
+  });
+  const reads = (n: number) => page.evaluate((i) => (window as unknown as { readPages: number[] }).readPages.filter((x) => x === i).length, n - 1);
   await put(page, PDF, makePdf(Array.from({ length: 40 }, (_, i) => line(`Page ${i + 1}`))));
   const paper = await open(page, ROBIN, PDF);
   await expect(paper.getByRole('status')).toHaveText('40 pages');
@@ -317,6 +429,12 @@ test('a long PDF holds only the pages near the part in sight', async ({ page }) 
   await expect(paper.getByRole('group', { name: 'Page 30 of 40' }).locator('.textLayer')).toContainText('Page 30');
   await expect(paper.getByRole('group', { name: 'Page 1 of 40' }).locator('canvas')).toHaveCount(0);
   expect(await paper.locator('canvas').count()).toBeLessThan(8);
+  // One let go is read and drawn again: nothing of it was held.
+  expect(await reads(1)).toBe(1);
+  await paper.getByRole('group', { name: 'Page 1 of 40' }).scrollIntoViewIfNeeded();
+  await expect(paper.getByRole('group', { name: 'Page 1 of 40' }).locator('.textLayer')).toHaveText('Page 1');
+  await expect.poll(() => inked(paper.getByRole('group', { name: 'Page 1 of 40' }).locator('canvas'))).toBeGreaterThan(0.0003);
+  expect(await reads(1)).toBe(2);
 });
 
 test('what does not show here says why, beside Open in Drive', async ({ page }) => {
@@ -405,24 +523,25 @@ test('each paper of a visit has its own View', async ({ page }) => {
   expect(index.documents.length).toBeGreaterThan(n);
 });
 
+/** medrec's X2: two of Robin's papers, in Drew's visit, some private. */
+let visit = '';
+const filed = (...isPrivate: Doc[]) =>
+  rewritten({}, (f) => {
+    if (f.name === 'Drew Example') {
+      const event = f.events.events[0]!;
+      visit = event.id;
+      for (const d of [PICTURE, PDF]) event.members!.push({ ...event.members!.find((m) => m.document)!, document: d.id, person: ROBIN, kind: 'document', rule: 'X2' } as { document: string });
+    }
+    if (f.name === 'Robin Example') for (const d of isPrivate) f.list.documents[d.id] = 'household';
+  });
+
 test('a visit shows another person’s paper filed under them, and not one that is private', async ({ page }) => {
-  // medrec's X2: Robin's paper, in Drew's visit.
-  let visit = '';
-  const filed = (isPrivate: boolean) =>
-    rewritten({}, (f) => {
-      if (f.name === 'Drew Example') {
-        const event = f.events.events[0]!;
-        visit = event.id;
-        event.members!.push({ ...event.members!.find((m) => m.document)!, document: PICTURE.id, person: ROBIN, kind: 'document', rule: 'X2' } as { document: string });
-      }
-      if (f.name === 'Robin Example' && isPrivate) f.list.documents[PICTURE.id] = 'household';
-    });
   for (const isPrivate of [false, true]) {
     await page.unrouteAll();
-    await lay(page, filed(isPrivate));
+    await lay(page, isPrivate ? filed(PICTURE) : filed());
     await page.goto('about:blank');
     await page.goto(`./?demo#/p/${DREW}/e/${visit}`);
-    const paper = page.locator('.row', { hasText: 'filed under Robin' });
+    const paper = page.locator('.row', { hasText: 'filed under Robin' }).filter({ hasText: PICTURE.title ?? '' }).filter({ hasNotText: 'After visit summary' });
     await expect(paper).toBeVisible();
     await expect(paper.getByRole('button', { name: /^View: / })).toHaveCount(isPrivate ? 0 : 1);
   }
@@ -497,5 +616,55 @@ test.describe('signed in', () => {
     await page.getByRole('button', { name: /^Hide: / }).click();
     await expect(page.locator('.card[data-drawn]')).toHaveCount(0);
     await expect(page.getByRole('button', { name: /^View\b/ })).toBeVisible();
+  });
+
+  const NO_LONGER = 'That paper is not shown on this page now.';
+  /** The folder as medrec writes it next, read again by the app: a request it saw waiting is done. */
+  async function writes(page: Page, files: ReturnType<typeof filed>, n: number): Promise<void> {
+    const look = () => page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    const [at, id] = [new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'), `x_${'abcdefghij'[n]!.repeat(20)}`];
+    const name = `20261122T20031${n}Z_${id}.json`;
+    const asking = { schema: 'medrec-request/v1', id, requested_at: at, requested_by: { email: 'sam@example.com' }, scope: { all: true }, app: { name: 'own-your-health-app', version: '0.1.0' } };
+    const reads = (path: string) => google.reads.filter((r) => r === path).length;
+    google.writeAsMac(`_requests/${name}`, JSON.stringify(asking));
+    const before = reads(`_requests/${name}`);
+    await look();
+    await expect.poll(() => reads(`_requests/${name}`)).toBeGreaterThan(before);
+    for (const [path, text] of Object.entries(files)) google.writeAsMac(path, text!);
+    google.writeAsMac(`_requests/done/${name}`, JSON.stringify({ ...asking, handled: { picked_up_at: at, finished_at: at, outcome: 'ok', sources: [], message: 'loaded', by: 'medrec 0.9.7' } }));
+    google.removeAsMac(`_requests/${name}`);
+    const views = reads('views/views.json');
+    await expect(async () => {
+      await look();
+      expect(reads('views/views.json')).toBeGreaterThan(views);
+    }).toPass();
+  }
+
+  test('a paper of someone else’s marked private while its page is open is not shown there, and one that is open closes', async ({ page }) => {
+    for (const [path, text] of Object.entries(filed())) google.writeAsMac(path, text!);
+    await page.reload();
+    await expect(page.locator('.signin-notice')).toBeVisible();
+    await page.evaluate((to) => (location.hash = to), `#/p/${DREW}/e/${visit}`);
+    const rows = page.locator('.row', { hasText: 'filed under Robin' });
+    const view = rows.getByRole('button', { name: /^View\b/ });
+    await expect(view).toHaveCount(2);
+    // One is open, and the other becomes private: the page stays as it was drawn, and the other's View opens nothing.
+    const pdf = rows.filter({ hasText: 'After visit summary' });
+    await pdf.getByRole('button', { name: /^View\b/ }).click();
+    await expect(pdf.locator('.textLayer').first()).toContainText('After visit summary');
+    await writes(page, filed(PICTURE), 1);
+    await expect(view).toHaveCount(1);
+    const read = google.reads.filter((r) => r === PICTURE.path).length;
+    await view.click();
+    await expect(page.getByText(NO_LONGER)).toBeVisible();
+    await expect(view).toHaveCount(0);
+    await expect(pdf.locator('.textLayer').first()).toContainText('After visit summary');
+    expect(google.reads.filter((r) => r === PICTURE.path)).toHaveLength(read);
+    // The one that is open becomes private: it closes, and the page is drawn without it.
+    await writes(page, filed(PICTURE, PDF), 2);
+    await expect(page.locator('canvas, .paper-box')).toHaveCount(0);
+    await expect(rows).toHaveCount(2);
+    await expect(rows.getByRole('button', { name: /^(View|Hide)\b/ })).toHaveCount(0);
+    expect(page.workers()).toHaveLength(0);
   });
 });

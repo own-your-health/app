@@ -318,8 +318,11 @@ function papersCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
       ? e.papers.map((p) => {
           // A paper filed under someone else is shown here unless it is private: then it is seen from their own pages alone.
           const other = p.person && p.person !== idx.person ? p.person : undefined;
-          const theirs = other ? ctx.store.index(other) : undefined;
-          const paper = other && (!theirs || paperPrivate(theirs, p.doc.id)) ? null : paperView(ctx, p.doc);
+          const allowed = () => {
+            const theirs = other ? ctx.store.index(other) : idx;
+            return !!theirs && !(other && paperPrivate(theirs, p.doc.id));
+          };
+          const paper = allowed() ? paperView(ctx, p.doc, allowed) : null;
           return row({
             route: itemRoute(p.person ?? idx.person, p.doc.id),
             title: documentTitle(p.doc),
