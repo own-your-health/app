@@ -15,6 +15,7 @@ function driveWith(tree: Record<string, DriveFile[]>, contents: Record<string, s
     const parent = url.searchParams.get('q')?.match(/^'([^']+)' in parents/)?.[1];
     if (parent) return json({ files: tree[parent] ?? [] });
     const id = url.pathname.split('/').pop()!;
+    if (id === 'generateIds') return json(fixture('drive/generated-ids.json'));
     if (init.method === 'DELETE') return new Response(null, { status: 204 });
     if (init.method === 'POST') return json(fixture('drive/created.json'));
     if (!url.searchParams.get('alt') && id in meta) return json(meta[id]);
@@ -124,38 +125,59 @@ describe('DriveFolder', () => {
     await expect(new DriveFolder(drive, 'root', 'x').createRequest('a.json', {})).rejects.toThrow('no _requests folder');
   });
 
-  it('looks for a request whose answer from Drive was lost, and says when it cannot tell', async () => {
+  it('sends a request whose answer from Drive was lost once more, under the same id, and says when it cannot tell', async () => {
     const name = '20261122T201500Z_x_aaaaaaaaaaaaaaaaaaaa.json';
-    const done: DriveFile = { id: 'folder-done', name: 'done', mimeType: 'application/vnd.google-apps.folder' };
-    // `stored` is where the file is once Drive was asked; `then`, whether Drive still answers.
-    const asked = async (fault: number | 'none', stored: 'waiting' | 'answered' | null, then = true) => {
-      const tree: Record<string, DriveFile[]> = { ...ROOT, 'folder-requests': [...ROOT['folder-requests']!.filter((f) => f.name !== 'done'), done], 'folder-done': [] };
-      let posts = 0;
+    /** A folder whose Drive answers each create in turn, and the ids the creates gave. */
+    const answering = (...answers: (number | 'lost')[]) => {
+      const [sent, calls]: [string[], string[]] = [[], []];
       const drive = new Drive(() => 'tok', (async (input: RequestInfo | URL, init: RequestInit = {}) => {
-        if (init.method === 'POST') {
-          posts += 1;
-          const at = stored === 'waiting' ? 'folder-requests' : 'folder-done';
-          if (stored) tree[at] = [...tree[at]!, { id: 'file-new', name, mimeType: 'application/json' }];
-          if (fault === 'none') throw new TypeError('Failed to fetch');
-          return json({ error: { code: fault, message: 'no', errors: [{ reason: 'no' }] } }, fault);
-        }
-        if (posts && !then) throw new TypeError('Failed to fetch');
-        return json({ files: tree[new URL(String(input)).searchParams.get('q')!.match(/^'([^']+)' in parents/)![1]!] ?? [] });
+        const url = new URL(String(input));
+        calls.push(`${init.method ?? 'GET'} ${url.pathname}`);
+        if (url.pathname.endsWith('/generateIds')) return json({ ...fixture<object>('drive/generated-ids.json'), ids: [`id-${calls.length}`] });
+        if (init.method !== 'POST') return json({ files: ROOT[url.searchParams.get('q')!.match(/^'([^']+)' in parents/)![1]!] ?? [] });
+        sent.push((JSON.parse(String(init.body).split('\r\n\r\n')[1]!.split('\r\n')[0]!) as { id: string }).id);
+        const status = answers.shift()!;
+        if (status === 'lost') throw new TypeError('Failed to fetch');
+        return status === 200 ? json(fixture('drive/created.json')) : json(fixture(status === 409 ? 'drive/error-409.json' : 'drive/error-403.json'), status);
       }) as typeof fetch);
-      const folder = new DriveFolder(drive, 'root', 'x');
-      // Listed before, as an open app has.
-      await folder.list('_requests/done');
-      await folder.createRequest(name, {});
-      expect((await folder.list(stored === 'answered' ? '_requests/done' : '_requests'))!.map((e) => e.name)).toContain(name);
+      return { folder: new DriveFolder(drive, 'root', 'x'), sent, calls };
     };
-    for (const fault of [500, 503, 'none'] as const) {
-      await asked(fault, 'waiting');
-      await asked(fault, 'answered');
-      await expect(asked(fault, null)).rejects.toThrow(Unanswered);
-      await expect(asked(fault, 'waiting', false)).rejects.toThrow('Google Drive did not answer, so this may or may not have been sent.');
+    for (const first of [500, 503, 'lost'] as const)
+      for (const then of [200, 409]) {
+        const { folder, sent } = answering(first, then);
+        await folder.createRequest(name, {});
+        expect([sent.length, new Set(sent).size]).toEqual([2, 1]);
+      }
+    for (const then of ['lost', 503, 403, 429] as const) {
+      const { folder, sent } = answering('lost', then, 409);
+      await expect(folder.createRequest(name, {})).rejects.toThrow(Unanswered);
+      // Sent again by the person, also once the records were read again, it is the same file.
+      await folder.fresh().createRequest(name, {});
+      expect([sent.length, new Set(sent).size]).toEqual([3, 1]);
     }
-    // A refusal is one, whatever is there.
-    for (const status of [400, 403, 404, 429, 499]) await expect(asked(status, 'waiting')).rejects.toThrow(DriveError);
+    // Drive has the file already.
+    const had = answering(409);
+    await had.folder.createRequest(name, {});
+    expect(had.sent).toHaveLength(1);
+    // A refusal is one, and is not sent again. Another request is another file.
+    for (const status of [400, 403, 404, 429, 499]) {
+      const { folder, sent } = answering(status, 200);
+      await expect(folder.createRequest(name, {})).rejects.toThrow(DriveError);
+      await folder.createRequest(name.replace('aaaa', 'bbbb'), {});
+      expect(new Set(sent).size).toBe(2);
+    }
+  });
+
+  it('writes no request without an id from Drive', async () => {
+    const calls: string[] = [];
+    const drive = new Drive(() => 'tok', (async (input: RequestInfo | URL, init: RequestInit = {}) => {
+      const url = new URL(String(input));
+      calls.push(init.method ?? 'GET');
+      if (url.pathname.endsWith('/generateIds')) return json({ ...fixture<object>('drive/generated-ids.json'), ids: [] });
+      return json({ files: ROOT[url.searchParams.get('q')!.match(/^'([^']+)' in parents/)![1]!] ?? [] });
+    }) as typeof fetch);
+    await expect(new DriveFolder(drive, 'root', 'x').createRequest('a.json', {})).rejects.toThrow('gave no id');
+    expect(calls).not.toContain('POST');
   });
 
   it('deletes a pending request by name', async () => {

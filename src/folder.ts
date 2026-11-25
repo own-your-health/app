@@ -57,8 +57,11 @@ export function splitPath(path: string): string[] {
 
 export const REQUESTS_DIR = '_requests';
 
-/** Drive's answer to writing a request was lost, and the file was not found: it may be stored all the same. */
+/** Drive did not answer whether it wrote a request: it may be there all the same. */
 export class Unanswered extends Error {}
+
+/** A refusal stored nothing. With no answer, or a fault of Drive's, it may have. */
+const mayBeStored = (e: unknown): boolean => !(e instanceof DriveError) || e.status >= 500;
 
 export class DriveFolder implements RecordsFolder {
   readonly kind = 'drive' as const;
@@ -71,6 +74,8 @@ export class DriveFolder implements RecordsFolder {
     private readonly drive: Drive,
     readonly id: string,
     readonly name: string,
+    /** Drive's ids for the requests written, by name: the same one sent again is the same file. */
+    private readonly ids = new Map<string, string>(),
   ) {}
 
   private listing(dirPath: string, dirId: string): Promise<Map<string, DriveFile>> {
@@ -166,16 +171,26 @@ export class DriveFolder implements RecordsFolder {
   async createRequest(name: string, body: unknown): Promise<void> {
     const dir = await this.resolve(REQUESTS_DIR);
     if (!dir || dir.mimeType !== FOLDER_MIME) throw new Error('The records folder has no _requests folder.');
+    const id = this.ids.get(name) ?? (await this.drive.newId());
+    this.ids.set(name, id);
     try {
-      await this.drive.createJson(dir.id, name, body);
+      await this.create(dir.id, name, body, id);
     } catch (e) {
-      // A refusal stored nothing. With no answer, or a fault of Drive's, it may have.
-      if (e instanceof DriveError && e.status < 500) throw e;
-      this.forget(REQUESTS_DIR);
-      const found = await Promise.all([REQUESTS_DIR, `${REQUESTS_DIR}/done`].map((d) => this.resolve(`${d}/${name}`))).catch(() => []);
-      if (!found.some((f) => f)) throw new Unanswered('Google Drive did not answer, so this may or may not have been sent. The app is looking for it. Sending the same again counts once.');
+      if (!mayBeStored(e)) throw e;
+      await this.create(dir.id, name, body, id).catch(() => {
+        throw new Unanswered('Google Drive did not answer, so this may or may not have been sent. The app is looking for it. Sending the same again counts once.');
+      });
     } finally {
       this.forget(REQUESTS_DIR);
+    }
+  }
+
+  /** Writes one request; where Drive has it already, under its id, it is written. */
+  private async create(dir: string, name: string, body: unknown, id: string): Promise<void> {
+    try {
+      await this.drive.createJson(dir, name, body, id);
+    } catch (e) {
+      if (!(e instanceof DriveError && e.status === 409)) throw e;
     }
   }
 
@@ -202,7 +217,7 @@ export class DriveFolder implements RecordsFolder {
   }
 
   fresh(): DriveFolder {
-    return new DriveFolder(this.drive, this.id, this.name);
+    return new DriveFolder(this.drive, this.id, this.name, this.ids);
   }
 }
 

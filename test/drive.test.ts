@@ -85,6 +85,16 @@ describe('Drive', () => {
     expect(parts[3]).toBe('--\r\n');
   });
 
+  it('creates it under an id Drive gave', async () => {
+    const { fetchImpl, calls } = fakeFetch([json(fixture('drive/generated-ids.json')), json(fixture('drive/created.json'))]);
+    const drive = new Drive(() => 'tok', fetchImpl);
+    const id = await drive.newId();
+    await drive.createJson('folder-requests', 'a.json', {}, id);
+    expect(id).toBe('file-new');
+    expect(calls[0]!.url.pathname + calls[0]!.url.search).toBe('/drive/v3/files/generateIds?count=1&space=drive&type=files&fields=ids');
+    expect(JSON.parse(String(calls[1]!.init.body).split('\r\n\r\n')[1]!.split('\r\n')[0]!)).toEqual({ id: 'file-new', name: 'a.json', parents: ['folder-requests'], mimeType: 'application/json' });
+  });
+
   it('deletes with DELETE', async () => {
     const { fetchImpl, calls } = fakeFetch([new Response(null, { status: 204 })]);
     await new Drive(() => 'tok', fetchImpl).remove('file-mine');

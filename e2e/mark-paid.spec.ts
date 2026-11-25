@@ -754,7 +754,7 @@ test.describe('signed in', () => {
     problems = [];
   });
 
-  test('a payment Drive stored without answering is found, and sent once', async ({ page }) => {
+  test('a payment Drive stored without answering is sent once', async ({ page }) => {
     await page.clock.setFixedTime(new Date());
     await open(page);
     await markButton(page, SURGERY).click();
@@ -763,7 +763,12 @@ test.describe('signed in', () => {
     await expect(form(page)).toHaveCount(0);
     await expect(card(page, /^Marked paid$/).locator('.mark-line')).toContainText('$175.00 marked paid');
     expect(google.changes).toHaveLength(1);
-    expect(problems.filter((x) => !x.includes('503'))).toEqual([]);
+    // And there is one file to take back.
+    google.losing = false;
+    await page.getByRole('button', { name: /^Undo/ }).click();
+    await expect(page.locator('.toast')).toHaveText('The request is taken back');
+    expect(google.list('_requests').filter((f) => f.endsWith('.json'))).toEqual([]);
+    expect(problems.filter((x) => !x.includes('503') && !x.includes('409'))).toEqual([]);
     problems = [];
   });
 

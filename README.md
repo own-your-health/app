@@ -667,9 +667,10 @@ dropped from the address.
   list does, for a quarter of an hour at most; so is one another device asked
   for that was answered after the records here were read. The folder is looked
   at once more before a request is written: when what is left to pay is no
-  longer what the form was opened on, nothing is sent. Where Drive does not
-  answer, the request is looked for, and the same asked again is that one, so
-  it counts once. A filed payment is undone from
+  longer what the form was opened on, nothing is sent. Each request is created
+  under an id Drive gives first, so one whose answer is lost is sent again as
+  the same file, and where Drive still does not answer it is looked for; the
+  same asked again is that one, and counts once. A filed payment is undone from
   the bill's page with medrec 0.9.7 and later, and before with the command that
   page gives. What the Mac could not record says so beside the bill. Which
   medrec answers requests is the status's `refresher.medrec_version`. An account
