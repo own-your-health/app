@@ -87,7 +87,9 @@ and this one never uses it.
    household's own client that asks for a Drive permission, in Testing or
    published. Click **Continue**.
 4. Allow both permissions.
-5. Choose the records folder.
+5. Choose the records folder. If it is someone else's, they share it with this
+   account in Google Drive first: as **Viewer** to read the records, or as
+   **Editor** to refresh and mark bills paid as well.
 
 Each browser and phone you use needs the client id once. The browser keeps
 the client id, the folder, the email of the account that signed in, a theme

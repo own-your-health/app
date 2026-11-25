@@ -5,6 +5,7 @@ import { startDemoMac } from '../data/demo-mac';
 import { Rereads } from '../data/rereads';
 import { Store } from '../data/store';
 import { Drive, DriveError } from '../drive';
+import { whyNotOpened } from '../find-folder';
 import { DemoFolder, DriveFolder } from '../folder';
 import { FolderError } from '../model/parse';
 import { needsAttention } from '../model/sources';
@@ -286,7 +287,7 @@ export class App {
         return this.show({ name: 'message', title: 'Update the app', text: e.message, actions: [button('Reload', () => location.reload(), { primary: true })] });
       }
       setFolder(null);
-      const text = e instanceof Error ? e.message : 'The folder could not be read.';
+      const text = await whyNotOpened(this.drive, f.id, e, this.user.email);
       return this.show({ name: 'message', title: 'That folder could not be opened', text, actions: [button('Choose a folder', () => this.show({ name: 'folder' }), { primary: true })] });
     }
     setFolder(f);
@@ -576,7 +577,7 @@ export class App {
         return;
       case 'folder':
         if (!this.drive) return this.show({ name: 'signin' });
-        this.main.append(folderView(this.drive, (f) => this.openFolder(f)));
+        this.main.append(folderView(this.drive, { account: this.user.email, onPick: (f) => this.openFolder(f), onDifferentAccount: () => this.differentAccount() }));
         return;
       case 'message':
         this.main.append(messageView(p.title, p.text, p.actions));

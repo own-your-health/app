@@ -18,7 +18,7 @@ import { recordTitle, visitTitle } from '../../model/titles';
 import type { ImagingStudy, Json, MedDocument, MedRecord, PersonIndex, Provenance } from '../../model/types';
 import { claimContext, visitKind, visitOf } from '../../model/visits';
 import { partOfEvent } from '../../next/eventView';
-import { markedPayments, paidControl } from '../../next/markPaid';
+import { markedPayments, paidControl, viewOnlyNote } from '../../next/markPaid';
 import { paymentText, unreadText } from '../../next/money';
 import { rangeBar, resultChart } from '../chart';
 import { button, card, chip, command, driveLink, empty, flagChip, jsonBlock, kv, link, outLink, phoneLink, row, type Ctx } from '../components';
@@ -597,7 +597,7 @@ function documentView(ctx: Ctx, idx: PersonIndex, d: MedDocument): Child[] {
         ['Same statement as', same ? link({ name: 'item', person: idx.person, id: same.id }, documentTitle(same)) : undefined],
         ['Pages', d.pages !== undefined ? String(d.pages) : undefined],
       ]),
-      bill ? [markedPayments(ctx, idx, bill), paidControl(ctx, idx, bill)] : null,
+      bill ? [markedPayments(ctx, idx, bill), paidControl(ctx, idx, bill), viewOnlyNote(ctx, idx, bill)] : null,
       d.text?.chars ? h('div', null, showText, textBox) : null,
     ),
     technical(

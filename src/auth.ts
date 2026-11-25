@@ -221,7 +221,7 @@ export async function verifyToken(fetchImpl: typeof fetch, token: string, client
 export function signInErrorText(error: string): string {
   switch (error) {
     case 'access_denied':
-      return 'Google sign-in was cancelled, or the account is not a test user of this Google client.';
+      return 'Google sign-in was cancelled. If Google refused the account, the household’s Google client is in Testing and does not list it as a test user.';
     case 'state_mismatch':
       return 'That sign-in answer did not come from this page. Sign in again.';
     case 'interaction_required':
