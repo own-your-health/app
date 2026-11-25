@@ -225,7 +225,7 @@ describe('a person whose list can’t be used is held back', () => {
     // Money.
     const idx = index(UNREADABLE, sam);
     expect(openBills(idx, mine, TODAY)).toHaveLength(2);
-    expect(forShared(openBills(idx, mine, TODAY))).toEqual([]);
+    expect(forShared(idx, openBills(idx, mine, TODAY))).toEqual([]);
     expect(unbilledShares(idx, mine).every((u) => u.private === HELD)).toBe(true);
     const claims = idx.records.filter((r) => r.kind === 'claim').map((r) => r.id);
     expect([...quietClaims(UNREADABLE, TODAY).keys()].sort()).toEqual(claims.sort());
@@ -252,7 +252,7 @@ describe('what the household marked', () => {
     for (const c of knee.claims) expect(recordPrivate(index(MARKED, sam), c.record.id)).toBe('household');
     const bills = openBills(index(MARKED, sam), events(MARKED).filter((x) => x.person.id === sam), TODAY);
     expect(bills.map((b) => [b.bill.provider, b.private])).toEqual([['Example Billing', undefined], ['Example Surgery Center', 'household']]);
-    expect(forShared(bills).map((b) => b.bill.provider)).toEqual(['Example Billing']);
+    expect(forShared(index(MARKED, sam), bills).map((b) => b.bill.provider)).toEqual(['Example Billing']);
     expect(shown(events(MARKED), undefined, false).events.some((x) => x.event.id === knee.id)).toBe(false);
   });
 
@@ -271,12 +271,12 @@ describe('what the household marked', () => {
     const idx = index(MARKED, sam);
     const knee = events(MARKED).find((x) => x.person.id === sam && x.event.start === day)!;
     const bill = openBills(idx, events(MARKED).filter((x) => x.person.id === sam), TODAY).find((b) => b.event?.event.id === knee.event.id)!;
-    expect(forShared([bill])).toEqual([]);
+    expect(forShared(idx, [bill])).toEqual([]);
     const cleared = { ...bill };
     delete cleared.private;
     const shared = { ...cleared };
     delete shared.event;
-    expect(forShared([cleared])).toEqual([shared]);
+    expect(forShared(idx, [cleared])).toEqual([shared]);
   });
 
   it('a visit marked not private shows, though its records stay private', () => {

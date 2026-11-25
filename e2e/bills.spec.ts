@@ -19,10 +19,15 @@ const kv = (page: Page, label: string) => page.locator('.kv-row', { has: page.lo
 const docOf = (folder: string, amount: string) => demoJson<{ documents: { id: string; statement?: { amount_due?: { amount: string } } }[] }>(`${folder}/index.json`).documents.find((d) => d.statement?.amount_due?.amount === amount)!.id;
 const billsFile = (person: string) => filesUnder(DEMO).find((f) => f.startsWith(`views/${person}/bills.`))!;
 
+interface BillsView {
+  bills: Record<string, { superseded_by?: string }>;
+  worth_a_call: object[];
+}
+
 /** The folder with one person's bills.json changed, named and checked as medrec would. */
-function withBills(person: string, base: Overlay, change: (bills: { worth_a_call: object[] }) => void): Overlay {
+function withBills(person: string, base: Overlay, change: (bills: BillsView) => void): Overlay {
   const views = (base['views/views.json'] ? JSON.parse(base['views/views.json']) : demoJson('views/views.json')) as { people: Record<string, { files: Record<string, string> }> };
-  const bills = demoJson<{ worth_a_call: object[] }>(billsFile(person));
+  const bills = demoJson<BillsView>(billsFile(person));
   change(bills);
   const text = JSON.stringify(bills);
   const md5 = createHash('md5').update(text).digest('hex');
@@ -55,7 +60,6 @@ test('a bill the household marked paid is nowhere open, and one partly paid says
   await expect(card(page, /^Paid$/).locator('.row-meta')).toHaveText([
     'Robin · Lab tests, Oct 3, 2026 · $10.00 marked paid, Nov 2, 2026 · $9.28 marked paid, Nov 16, 2026',
     'Sam · Lab tests, Jul 9, 2026 · Marked paid, Nov 20, 2026',
-    'Robin · Office visit, Mar 10, 2025 · receipt Apr 20, 2025',
   ]);
 
   // medrec 0.9.5 keeps the settled bill among those worth a call; the app does not.
@@ -93,7 +97,8 @@ test('a bill’s own page lists its payments, what is left and the statement tha
   await expect(kv(page, 'Left to pay')).toHaveText('$33.68');
   await expect(kv(page, 'Later statement')).toHaveCount(0);
   await go(page, `#/p/${ROBIN}/r/${docOf('Robin Example', '51.18')}`);
-  await expect(kv(page, 'Paid')).toHaveText('receipt Apr 20, 2025, amount not read');
+  await expect(kv(page, 'Paid')).toHaveText('Receipt filed Apr 20, 2025; its amount could not be read');
+  await expect(kv(page, 'Left to pay')).toHaveCount(0);
   await expect(kv(page, 'Later statement')).toHaveText('Its balance includes this one: Statement from Example Health');
   // One nothing is paid on says nothing of it.
   await go(page, `#/p/${SAM}/r/${docOf('Sam Example', '175.00')}`);
@@ -115,6 +120,57 @@ test('a list that can’t be used yet is said, and receipts alone say what is pa
   // Sam's marked bill is open again until then.
   await go(page, '#/');
   await expect(card(page, /^Needs you$/).locator('.row', { hasText: 'Worth a call' })).toContainText('Example Billing asks $120.00');
+});
+
+test('a bill with a receipt whose amount could not be read may be paid, and is not chased', async ({ page }) => {
+  // Robin's bill of 2025, with no later statement to stand for it and no claim to back it.
+  const doc = docOf('Robin Example', '51.18');
+  await lay(
+    page,
+    withBills(ROBIN, {}, (b) => {
+      delete b.bills[doc]!.superseded_by;
+      b.worth_a_call.push({ reason: 'no_claim', bill: doc, claim: null, event: null, asked: '51.18', owed: null, currency: 'USD' });
+    }),
+  );
+  const said = 'Receipt filed Apr 20, 2025; its amount could not be read';
+  await go(page, '#/');
+  const need = card(page, /^Needs you$/).locator('.row', { hasText: 'Office visit, Mar 10, 2025' });
+  await expect(need.locator('.need-kind')).toHaveText('May be paid');
+  await expect(need.locator('.need-kind')).toHaveClass(/need-soon/);
+  await expect(need.locator('.row-meta')).toHaveText(`Robin · Example Health $51.18 · ${said}`);
+  await expect(page.locator('.stand', { hasText: 'Robin' }).locator('.kv-row').first()).toHaveText('To pay$72.96 in 2 bills; 1 more may be paid');
+
+  await go(page, '#/money');
+  await expect(card(page, /^Bills$/).locator('.row-title')).toHaveText(['3 bills ready to pay', '1 bill worth a call', '1 bill may be paid', 'Not billed yet']);
+  await go(page, '#/money/bills');
+  await expect(page.locator('.money-hero')).toContainText('3 bills, each asking what its claim says you owe. 1 more bill is worth a call first.');
+  await expect(card(page, 'Check before paying')).not.toContainText('$51.18');
+  const maybe = card(page, 'May be paid');
+  await expect(maybe.locator('.row-meta')).toHaveText(`Robin · Office visit, Mar 10, 2025 · statement Apr 2, 2025 · ${said}`);
+  await expect(maybe.locator('.row-aside')).toHaveText('$51.18');
+  await expect(maybe).not.toContainText('Was due');
+  await expect(maybe.locator('.chip')).toHaveCount(0);
+  await maybe.getByRole('link', { name: 'The receipt' }).click();
+  await expect(kv(page, 'Paid')).toHaveText('The amount could not be read');
+  await go(page, '#/money/calls');
+  await expect(page.locator('.call')).toHaveCount(1);
+  await expect(page.locator('main')).not.toContainText('$51.18');
+});
+
+test('a list that isn’t used is said with no bill open, and not for someone with no bill or held back', async ({ page }) => {
+  const sam = demoJson<{ documents: { statement?: { amount_due?: { amount: string } } }[] }>('Sam Example/index.json');
+  for (const d of sam.documents) if (d.statement?.amount_due) d.statement.amount_due.amount = '0.00';
+  const alex = demoJson<{ people: { id: string; name: string }[] }>('household.json').people.find((p) => p.name === 'Alex Example')!.id;
+  await lay(page, { 'Sam Example/index.json': JSON.stringify(sam), [billsFile(alex)]: null });
+  await go(page, `#/money?who=${SAM}`);
+  await expect(card(page, /^Bills$/).locator('.row-title')).toHaveText(['Not billed yet']);
+  await expect(card(page, /^Bills$/)).toContainText('Meanwhile only receipts say which of Sam’s bills are paid.');
+  // Sam's items are held back from shared screens, the note with them.
+  for (const path of ['#/', '#/money', `#/money/bills?who=${alex}`]) {
+    await go(page, path);
+    await expect(page.locator('main .card').first()).toBeVisible();
+    await expect(page.locator('main')).not.toContainText('list of what is paid');
+  }
 });
 
 test('marks that don’t read are said where the bills are', async ({ page }) => {

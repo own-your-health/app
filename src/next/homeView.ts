@@ -17,7 +17,7 @@ import type { Route } from '../ui/router';
 import { householdEvents, type PersonEvent } from './calendar';
 import { recentCard } from './calendarView';
 import { eventRoute, eventWhen } from './eventView';
-import { forShared, openBills, partText, worthACall, type OpenBill } from './money';
+import { forShared, mayBePaid, openBills, partText, unreadText, worthACall, type OpenBill } from './money';
 import { billNotes } from './moneyParts';
 import { anyLeftOff, heldNotes, privateCount } from './shared';
 import { daysBetween, refillsDue, vaccineNeeds, type DoseVisit, type Refill, type VaccineNeeds } from './needs';
@@ -68,20 +68,23 @@ function callRow(p: Person, b: OpenBill, own: boolean): HTMLElement {
 function payRows(p: Person, bills: OpenBill[], own: boolean): Dated[] {
   const groups = new Map<string, OpenBill[]>();
   for (const b of bills) {
-    const k = `${b.event?.event.id ?? b.bill.doc.id}|${b.private ?? ''}`;
+    const k = `${b.event?.event.id ?? b.bill.doc.id}|${b.private ?? ''}|${mayBePaid(b)}`;
     groups.set(k, [...(groups.get(k) ?? []), b]);
   }
   return [...groups.values()].map((bs) => {
     const first = bs[0]!;
-    const overdue = bs.some((b) => b.overdue);
-    const dues = bs.map((b) => b.bill.due).filter((d): d is string => !!d).sort();
+    // One that may be paid is not chased: it says what is known, without its due date.
+    const maybe = mayBePaid(first);
+    const overdue = !maybe && bs.some((b) => b.overdue);
+    const dues = maybe ? [] : bs.map((b) => b.bill.due).filter((d): d is string => !!d).sort();
     const unpaid = bs.every((b) => !b.bill.payments.length);
-    const el = needRow(overdue ? (unpaid ? 'No payment on file' : 'Not all paid') : bs.length > 1 ? 'Bills to pay' : 'Bill to pay', overdue ? 'attention' : 'soon', {
+    const el = needRow(maybe ? 'May be paid' : overdue ? (unpaid ? 'No payment on file' : 'Not all paid') : bs.length > 1 ? 'Bills to pay' : 'Bill to pay', overdue ? 'attention' : 'soon', {
       route: first.event ? eventRoute(p.id, first.event.event.id) : { name: 'item', person: p.id, id: first.bill.doc.id },
       title: first.event ? visitText(first.event) : `Bill from ${biller(first)}`,
       meta: [
         own ? null : called(p),
         ...bs.map((b) => [`${biller(b)} ${money(b.cents)}`, partText(b)].filter(Boolean).join(', ')),
+        ...new Set(bs.map((b) => unreadText(b.bill.unread))),
         bs.length === 1 && first.verdict === 'matches' ? 'matches the claim' : null,
         dues[0] ? `${overdue ? 'was due' : 'due'} ${dateText(dues[0])}` : null,
       ]
@@ -159,7 +162,8 @@ function standing(s: Standing, today: string, left: boolean, error?: string): HT
   if (!s.idx) return h('div', { class: 'stand' }, head, h('p', { class: 'small muted' }, error ?? 'Loading…'));
   if (s.held) return h('div', { class: 'stand' }, head, h('p', { class: 'small muted' }, p.birth_date ? ageWords(p.birth_date, today) : null), h('p', null, 'Left off Home'));
   const calls = s.bills.filter(worthACall).length;
-  const owed = s.bills.reduce((t, b) => t + b.cents, 0);
+  const maybe = s.bills.filter(mayBePaid).length;
+  const owed = s.bills.reduce((t, b) => t + (mayBePaid(b) ? 0 : b.cents), 0);
   const v = s.vaccines;
   const dueNow = v ? v.due.length + (v.flu ? 1 : 0) : 0;
   const dueNames = v ? [...v.due.map((d) => `${d.name}, dose ${d.next.dose}`), ...(v.flu ? [`Flu, ${v.flu.season} season`] : [])] : [];
@@ -182,9 +186,9 @@ function standing(s: Standing, today: string, left: boolean, error?: string): HT
         .filter(Boolean)
         .join(' · '),
     ),
-    owed || nexts.length
+    owed || maybe || nexts.length
       ? kv([
-          ['To pay', owed ? `${money(owed)} in ${count(s.bills.length, 'bill')}${calls ? `, ${calls} worth a call` : ''}` : null],
+          ['To pay', [owed ? `${money(owed)} in ${count(s.bills.length - maybe, 'bill')}${calls ? `, ${calls} worth a call` : ''}` : null, maybe ? `${count(maybe, owed ? 'more' : 'bill', owed ? 'more' : undefined)} may be paid` : null].filter(Boolean).join('; ') || null],
           ['Next', nexts[0]?.text ?? null],
         ])
       : h('p', null, left ? 'Nothing due listed here' : 'Nothing due'),
@@ -208,7 +212,7 @@ function personNeeds(p: Person, idx: PersonIndex, mine: PersonEvent[], today: st
   if (held) return { calls: [], pay: [], vaccines: [], refills: [], soon: [], kept: 0, standing: { person: p, idx, bills: [], refills: [], held } };
   const allBills = openBills(idx, mine, today);
   const allRefills = refillsDue(idx, today);
-  const bills = own ? allBills : forShared(allBills);
+  const bills = own ? allBills : forShared(idx, allBills);
   const refills = own ? allRefills : allRefills.filter((r) => !r.private);
   const vaccines = vaccineNeeds(p.birth_date, idx, today);
   const vRow = vaccines ? vaccinesDueRow(p, vaccines, own) : null;
@@ -270,6 +274,5 @@ export function nextHome(ctx: Ctx, signIn: HTMLElement | null): HTMLElement[] {
     needs.push(n);
     stands.push(standing(n.standing, today, left));
   }
-  const billed = needs.filter((n) => n.calls.length || n.pay.length).map((n) => n.standing.person);
-  return [needsCard(needs, [...billNotes(ctx, billed), ...heldNotes(ctx, 'Home')])!, ...(signIn ? [signIn] : []), card({ title: 'Where everyone stands' }, stands, h('p', { class: 'small' }, link({ name: 'health' }, 'Health: what each person has now and what is worth a look'))), recentCard(ctx)];
+  return [needsCard(needs, [...billNotes(ctx, undefined), ...heldNotes(ctx, 'Home')])!, ...(signIn ? [signIn] : []), card({ title: 'Where everyone stands' }, stands, h('p', { class: 'small' }, link({ name: 'health' }, 'Health: what each person has now and what is worth a look'))), recentCard(ctx)];
 }

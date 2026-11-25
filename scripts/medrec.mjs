@@ -1,7 +1,8 @@
 // Runs medrec over a folder of invented records. It runs under a scratch home
 // and profile, so this machine's own medrec setup is never touched: it gets
 // only the variables below, every config, data, cache and state directory
-// inside the scratch home, a Keychain service with nothing in it, and no
+// inside the scratch home (a new one under the system's temporary folder,
+// which the system clears), a Keychain service with nothing in it, and no
 // MEDREC_* setting of the shell's. The time zone is fixed (a US one, as
 // medrec reads a UTC time's day in the writing machine's zone), so a visit's
 // local days are the same on every machine. MEDREC names the binary, else
@@ -9,7 +10,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -45,13 +46,9 @@ export function withMedrec(root, steps) {
     NO_COLOR: '1',
   };
   const medrec = (...args) => execFileSync(MEDREC, ['-q', ...args], { env, stdio: ['ignore', 'ignore', 'inherit'] });
-  try {
-    medrec('profiles', 'add', 'demo');
-    medrec('init', root);
-    steps(medrec);
-  } finally {
-    rmSync(home, { recursive: true, force: true });
-  }
+  medrec('profiles', 'add', 'demo');
+  medrec('init', root);
+  steps(medrec);
 }
 
 /** The views the app reads: each person's events, bills, private items and code names, by the name medrec stores them under. */

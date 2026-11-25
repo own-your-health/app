@@ -7,7 +7,7 @@
 import type { BillState, Payment } from './bills';
 import { claimAmounts, type ClaimAmounts, type ClaimPart, claimProvider, isPharmacyClaim } from './claims';
 import { providerKey, sameProvider } from './providers';
-import { isWithdrawn, sortByDateDesc, str, toCents, type Money } from './records';
+import { fromCents, isWithdrawn, sortByDateDesc, str, toCents, type Money } from './records';
 import type { MedDocument, MedRecord, PersonIndex } from './types';
 
 // ---- Bills ----
@@ -22,6 +22,8 @@ export interface Bill {
   account?: string;
   /** What was paid on it: receipts, and payments the household marked. */
   payments: BillPayment[];
+  /** The receipts that can be for it whose amounts did not read, oldest first, when no payment is known. */
+  unread: MedDocument[];
   /** What is left to pay of its amount; none once it is settled, or when it gives no amount. */
   left?: Money;
   /** Nothing is left to pay. */
@@ -39,61 +41,76 @@ export interface BillPayment extends Payment {
 /** The days after a bill in which medrec takes a receipt as one for it. */
 const RECEIPT_DAYS = 120;
 
-/** The bill a receipt whose amount did not read is for, by medrec's rule without the amount: the only one its provider, or its account, dated in the RECEIPT_DAYS before it. */
-function onlyBillOf(receipt: MedDocument, bills: Bill[]): Bill | undefined {
-  const [on, account] = [receipt.statement?.paid_on ?? receipt.date, receipt.statement?.account];
-  if (!on) return undefined;
+/** The day a receipt says it was paid, else its own. */
+export const receiptDay = (receipt: MedDocument): string | undefined => receipt.statement?.paid_on ?? receipt.date;
+
+/** The bills a receipt can be for, by medrec's rule: from its provider, or for its account where both give one, and dated in the RECEIPT_DAYS before it. */
+function couldPay(receipt: MedDocument, bills: Bill[]): Bill[] {
+  const [on, account] = [receiptDay(receipt), receipt.statement?.account];
+  if (!on) return [];
   const since = addDays(on, -RECEIPT_DAYS);
-  const could = bills.filter((b) => !!b.date && b.date <= on && b.date >= since && (account && b.account ? account === b.account : sameProvider(receipt.organization, b.provider)));
-  return could.length === 1 ? could[0] : undefined;
+  return bills.filter((b) => !!b.date && b.date <= on && b.date >= since && (account && b.account ? account === b.account : sameProvider(receipt.organization, b.provider)));
+}
+
+const currencyOf = (m: Money) => m.currency ?? 'USD';
+
+/** The bill a receipt's amount pays, by medrec's rule: the only one that asks just that, else the only one it can be for. */
+function paidBill(receipt: MedDocument, bills: Bill[]): Bill | undefined {
+  const paid = receipt.statement!.amount_paid!;
+  const could = couldPay(receipt, bills);
+  const equal = could.filter((b) => b.amount && toCents(b.amount) === toCents(paid) && currencyOf(b.amount) === currencyOf(paid));
+  return equal.length === 1 ? equal[0] : could.length === 1 ? could[0] : undefined;
 }
 
 /**
  * Every bill, newest first. A copy medrec found to be the same statement as
  * another (a scan and the portal's PDF) is left out for the one it copies.
- * medrec's list says what was paid: what the receipts' amounts come to, and
- * the payments the household marked. A receipt whose amount did not read is
- * not in it, and pays the one bill it can be for when nothing else is known to
- * be paid on it. Without the list, a receipt from a bill's provider filed on or
- * after it pays it.
+ * medrec's list alone says what was paid and whether a bill is settled.
+ * Without it, what the receipts' amounts come to does, by medrec's rule for
+ * which bill a receipt pays. A receipt whose amount did not read settles
+ * nothing either way: the bills it can be for name it, until a payment is
+ * known.
  */
 export function billList(index: PersonIndex): Bill[] {
   const docs = new Map(index.documents.map((d) => [d.id, d]));
-  const receipts = index.documents.filter((d) => d.doc_type === 'receipt');
+  const receipts = index.documents.filter((d) => d.doc_type === 'receipt').sort((a, b) => (receiptDay(a) ?? '').localeCompare(receiptDay(b) ?? '') || a.id.localeCompare(b.id));
   const bills = sortByDateDesc(
     index.documents
       .filter((d) => d.doc_type === 'bill' && !(d.same_statement_as && docs.has(d.same_statement_as)))
       .map((doc): Bill => {
-        const date = doc.statement?.statement_date ?? doc.date;
-        const bill: Bill = { doc, provider: doc.organization, date, amount: doc.statement?.amount_due, due: doc.statement?.due_date, account: doc.statement?.account, payments: [], settled: false };
+        const bill: Bill = { doc, provider: doc.organization, date: doc.statement?.statement_date ?? doc.date, amount: doc.statement?.amount_due, due: doc.statement?.due_date, account: doc.statement?.account, payments: [], unread: [], settled: false };
         const medrec = index.bills?.states.get(doc.id);
-        if (medrec) {
-          const payments = medrec.payments.map((p) => ({ ...p, ...(p.document && docs.has(p.document) ? { receipt: docs.get(p.document)! } : {}) }));
-          return { ...bill, medrec, payments, settled: medrec.settled, left: medrec.left, ...(medrec.replacedBy && docs.has(medrec.replacedBy) ? { replacedBy: medrec.replacedBy } : {}) };
-        }
-        const receipt = sortByDateDesc(receipts.filter((r) => sameProvider(r.organization, doc.organization) && !!date && !!r.date && r.date >= date)).pop();
-        return receipt ? paidBy(bill, receipt) : bill;
+        if (!medrec) return bill;
+        const payments = medrec.payments.map((p) => ({ ...p, ...(p.document && docs.has(p.document) ? { receipt: docs.get(p.document)! } : {}) }));
+        return { ...bill, medrec, payments, settled: medrec.settled, left: medrec.left, ...(medrec.replacedBy && docs.has(medrec.replacedBy) ? { replacedBy: medrec.replacedBy } : {}) };
       }),
   );
-  const unread = receipts.filter((r) => !r.statement?.amount_paid).map((r) => [onlyBillOf(r, bills), r] as const);
+  const read = receipts.filter((r) => toCents(r.statement?.amount_paid) !== undefined);
+  const unread = receipts.filter((r) => !read.includes(r));
   const newest = new Map<string, string>();
   return bills.map((b) => {
-    const receipt = b.medrec && !b.settled && !b.payments.length ? unread.find(([of]) => of === b)?.[1] : undefined;
-    const out = receipt ? paidBy(b, receipt) : b;
+    const known = b.medrec ? b : paidBy(b, read.filter((r) => paidBill(r, bills) === b));
+    const out: Bill = known.settled ? { ...known, left: undefined } : { ...known, unread: known.payments.length ? [] : unread.filter((r) => couldPay(r, bills).includes(b)) };
     // Without medrec's list, the newest statement of a provider and account stands for the earlier ones.
-    if (b.medrec || !b.amount || !b.provider) return left(out);
+    if (b.medrec || !b.amount || !b.provider) return out;
     const k = `${providerKey(b.provider)}|${b.account ?? ''}`;
     const by = newest.get(k);
     if (by === undefined) newest.set(k, b.doc.id);
-    return left(by === undefined ? out : { ...out, replacedBy: by });
+    return by === undefined ? out : { ...out, replacedBy: by };
   });
 }
 
-const paidBy = (b: Bill, receipt: MedDocument): Bill => ({ ...b, settled: true, payments: [...b.payments, { from: 'receipt', document: receipt.id, receipt, ...(receipt.date ? { on: receipt.date } : {}) }] });
-
-function left(b: Bill): Bill {
-  const rest = b.settled ? undefined : (b.left ?? b.amount);
-  return { ...b, left: rest };
+/** A bill with the receipts that pay it, as medrec would list them. */
+function paidBy(b: Bill, receipts: MedDocument[]): Bill {
+  const payments = receipts.map((r): BillPayment => {
+    const amount = r.statement!.amount_paid!;
+    const on = receiptDay(r);
+    return { from: 'receipt', document: r.id, receipt: r, ...(on ? { on } : {}), amount, ...(b.amount && currencyOf(amount) !== currencyOf(b.amount) ? { apart: true } : {}) };
+  });
+  const due = toCents(b.amount);
+  if (due === undefined) return { ...b, payments };
+  const rest = Math.max(0, due - payments.reduce((t, p) => t + (p.apart ? 0 : toCents(p.amount)!), 0));
+  return { ...b, payments, settled: rest === 0, left: fromCents(rest, currencyOf(b.amount!)) };
 }
 
 /** The statement that stands for a bill now: the last of those that replace it. */

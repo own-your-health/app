@@ -6,15 +6,24 @@
 //
 // medrec gives a mark its time and a random id, so the marks made once are
 // kept and each run writes the views from them again; --marks makes them anew.
+//
+// Nothing is deleted. medrec works on a copy of the sample in a new folder
+// under the system's temporary one, which the system clears. A case is
+// written only into its own folder, over what it wrote there before, and a
+// file there that is no longer part of it stops the run, named, for a person
+// to remove.
 
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { APP_VIEW, md5Of, withMedrec } from './medrec.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const DEMO = join(ROOT, 'public', 'demo');
+const FIXTURES = join(ROOT, 'test', 'fixtures');
+/** The cases' own folders under test/fixtures/: nothing is written anywhere else. */
+const CASES = ['bills/paid', 'private/marked', 'private/unreadable'];
 
 /** Every file under a folder, by its path in it. */
 function filesIn(dir, at = '') {
@@ -28,35 +37,31 @@ export function only(folder, list, fits, what) {
   return found[0].id;
 }
 
+/** Whether a file of the folder belongs in a case: the marks, and the views the app reads. */
+const inCase = (f) => f.endsWith('marks.json') || f === join('views', 'views.json') || (f.startsWith(`views${sep}`) && APP_VIEW.test(f.split(sep).at(-1)));
+
 /** Writes test/fixtures/<dir>/: what differs from the sample once `before` has changed its folder and `steps` has run medrec on it. */
 export function writeCase(dir, before, steps) {
-  const out = join(ROOT, 'test', 'fixtures', dir);
-  const root = mkdtempSync(join(tmpdir(), 'medrec-case-'));
-  try {
-    cpSync(DEMO, root, { recursive: true });
-    rmSync(join(root, 'manifest.json'));
-    before(root);
-    withMedrec(root, steps);
-    rmSync(out, { recursive: true, force: true });
-    const keep = filesIn(root).filter((f) => {
-      const base = f.split('/').at(-1);
-      const wanted = base === 'marks.json' || f === join('views', 'views.json') || (f.startsWith('views/') && APP_VIEW.test(base));
-      const same = existsSync(join(DEMO, f)) && md5Of(readFileSync(join(DEMO, f))) === md5Of(readFileSync(join(root, f)));
-      return wanted && !same;
-    });
-    for (const f of keep) {
-      mkdirSync(join(out, dirname(f)), { recursive: true });
-      cpSync(join(root, f), join(out, f));
-    }
-    console.log(`wrote ${keep.length} files under test/fixtures/${dir}/`);
-  } finally {
-    rmSync(root, { recursive: true, force: true });
+  if (!CASES.includes(dir)) throw new Error(`${dir} is not one of the cases' folders`);
+  const out = join(FIXTURES, dir);
+  const root = join(mkdtempSync(join(tmpdir(), 'medrec-case-')), 'records');
+  cpSync(DEMO, root, { recursive: true, filter: (f) => relative(DEMO, f) !== 'manifest.json' });
+  before(root);
+  withMedrec(root, steps);
+  const same = (f) => existsSync(join(DEMO, f)) && md5Of(readFileSync(join(DEMO, f))) === md5Of(readFileSync(join(root, f)));
+  const keep = filesIn(root).filter((f) => inCase(f) && !same(f));
+  for (const f of keep) {
+    mkdirSync(join(out, dirname(f)), { recursive: true });
+    cpSync(join(root, f), join(out, f));
   }
+  console.log(`wrote ${keep.length} files under test/fixtures/${dir}/`);
+  const extra = filesIn(out).filter((f) => !keep.includes(f));
+  if (extra.length) throw new Error(`no longer part of test/fixtures/${dir}/, so remove by hand:\n${extra.map((f) => `  ${f}`).join('\n')}`);
 }
 
 /** A case with the household's marks in it: `marks` are medrec's arguments for each, used when none are kept. */
 export function writeMarked(dir, marks) {
-  const kept = join(ROOT, 'test', 'fixtures', dir);
+  const kept = join(FIXTURES, dir);
   const made = !process.argv.includes('--marks') && existsSync(kept) ? filesIn(kept).filter((f) => f.endsWith('marks.json')) : [];
   const bytes = made.map((f) => [f, readFileSync(join(kept, f))]);
   writeCase(

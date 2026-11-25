@@ -123,10 +123,10 @@ test('a visit its portal names by a billing descriptor leads with its kind, says
   await expect(details.locator('.event-descriptors li')).toHaveText(['YEARLY EXAM RETURNING ADULT']);
 });
 
-test('a bill with a receipt after it is paid, and a fill is paid at pickup', async ({ page }) => {
+test('a bill with a receipt whose amount could not be read says so, and a fill is paid at pickup', async ({ page }) => {
   await openRobinVisit(page, '2025-03-10');
-  await expect(page.locator('.event-settled')).toHaveText('Paid');
-  await expect(card(page, 'Bills and payments').locator('.row-meta')).toHaveText('$51.18 due by May 2, 2025 · paid, receipt Apr 20, 2025');
+  await expect(page.locator('.event-settled')).toHaveText('$51.18 billed · Receipt filed Apr 20, 2025; its amount could not be read');
+  await expect(card(page, 'Bills and payments').locator('.row-meta')).toHaveText('$51.18 due by May 2, 2025 · Receipt filed Apr 20, 2025; its amount could not be read · a later statement has its balance');
 
   await openRobinVisit(page, '2026-11-12');
   // The fill is named for the pharmacy's record of the drug, not the claim's line.

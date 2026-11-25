@@ -501,7 +501,10 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   freshness check. No view is written by hand: the cases the tests lay over
   the sample (`test/fixtures/private/`, and `test/fixtures/bills/paid/` with
   payments marked) are medrec's too, made by `node scripts/private-fixtures.mjs`
-  and `node scripts/bill-fixtures.mjs`. CI runs all three scripts.
+  and `node scripts/bill-fixtures.mjs`. Those two delete nothing: medrec works
+  in a new temporary folder, each case is written only into its own, and a
+  file no longer part of one is named for a person to remove. CI runs all
+  three scripts.
 - The PNG icons in `public/` (for the manifest and the iPhone Home Screen) are
   drawn from `public/icon.svg` by `npm run icons`. Run it after changing the
   icon, and commit them.
@@ -577,7 +580,8 @@ dropped from the address.
   - bills to pay, one row per visit, overdue first, until a receipt or a
     payment the household marked covers the bill. One partly paid gives what
     is left; one past its due date says "No payment on file", or "Not all
-    paid";
+    paid"; one with a receipt whose amount could not be read says "May be
+    paid", after the others and without its due date;
   - vaccine doses the CDC schedule places by now that the records don't
     show, and this season's flu dose;
   - a refill, from two weeks before the last fill's days' supply runs out
@@ -629,14 +633,18 @@ dropped from the address.
   and later; `src/model/bills.ts`), when the MD5s in `views/views.json` are
   the folder's, the person's `marks.json` too. A settled bill is never open,
   overdue or worth a call, whatever the list's `worth_a_call` says. Payments
-  in another currency are named, and not taken off. A receipt whose amount
-  medrec could not read is not in its list: it pays the one bill it can be for
-  (same provider or account, dated in the 120 days before it) when nothing
-  else is known to be paid on that bill, and says "amount not read". Without
-  the list, the newest statement of each provider and account with no receipt
-  filed after it is open, its visit's claims say whether it is worth a call,
-  and a line on Home and Money says why the list is not used. A list medrec is
-  still writing is read for again, as code names are.
+  in another currency are named, and not taken off. The list alone says
+  whether a bill is settled. A receipt whose amount medrec could not read is
+  not in it, so a bill that receipt can be for (same provider or account,
+  dated in the 120 days before it) with no known payment **may be paid**: it
+  says "Receipt filed Apr 20, 2025; its amount could not be read", stays open
+  in a group of its own, and is never overdue, "No payment on file" or worth a
+  call. Without the list, the newest statement of each provider and account is
+  open until receipts whose amounts read cover it, its visit's claims say
+  whether it is worth a call, and a line on Home and Money says why the list
+  is not used, for each person with a bill, open or not (on a shared screen, a
+  bill that is not private). A list medrec is still writing is read for again,
+  as code names are.
 - **Health** (`#/health`, from Where everyone stands on Home) gives each
   person a card: what the records can know about them (doctors' records and
   claims, doctors' records only, claims and papers only, or no records
@@ -679,7 +687,8 @@ dropped from the address.
   folder, newest first by year, each with the visit it belongs to as a
   link. A paper is with a visit when the visit holds it, when a record of
   the visit links it (an explanation of benefits names its claim), or when
-  it is the receipt for a bill the visit holds; a parent's paper in a
+  it is the receipt for a bill the visit holds (or the only one it can be
+  for); a parent's paper in a
   newborn's visit (medrec's X2) is with that visit. A paper with none says
   why: it fits several visits, which it names (medrec's `pending`), it is a
   kind about no one visit (an explanation of benefits whose claim is in no

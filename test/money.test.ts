@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import type { BillCall, BillState } from '../src/model/bills';
 import type { MedDocument, PersonIndex } from '../src/model/types';
 import { householdEvents } from '../src/next/calendar';
-import { billPrivate, byDue, callsSummary, deskPayments, explainedLines, openBills, overAsked, paidBills, paidText, partText, paymentText, unbilledShares, worthACall, type OpenBill } from '../src/next/money';
+import { anyBill, billPrivate, byDue, callsSummary, deskPayments, explainedLines, forShared, mayBePaid, openBills, overAsked, paidBills, paidText, partText, paymentText, toPay, unbilledShares, unreadText, worthACall, type OpenBill } from '../src/next/money';
 import { demo, personNamed } from './demo-data';
 
 const TODAY = '2026-11-22';
@@ -40,10 +40,67 @@ describe('shares not billed yet', () => {
   });
 });
 
+const usd = (amount: string) => ({ amount, currency: 'USD' });
+
 describe('paid bills', () => {
-  it('are those with a receipt from their provider filed after them', () => {
-    expect(paidBills(index('Robin Example'), events('Robin Example')).map((p) => [p.bill.provider, p.cents, p.bill.payments[0]?.receipt?.date, p.event?.event.start])).toEqual([['Example Health', 5118, '2025-04-20', '2025-03-10']]);
+  const robin = index('Robin Example');
+  const read = (idx: PersonIndex) => paidBills(idx, events('Robin Example')).map((p) => [p.bill.provider, p.cents, p.bill.payments[0]?.receipt?.date, p.event?.event.start]);
+
+  it('are those a receipt’s amount covers, not one whose receipt’s amount did not read', () => {
+    expect(read(robin)).toEqual([]);
+    const documents = robin.documents.map((d) => (d.doc_type === 'receipt' ? { ...d, statement: { amount_paid: usd('51.18'), paid_on: '2025-04-20' } } : d));
+    expect(read({ ...robin, documents, bills: undefined })).toEqual([['Example Health', 5118, '2025-04-20', '2025-03-10']]);
+    // medrec's list alone says, when it is here.
+    expect(read({ ...robin, documents })).toEqual([]);
     expect(paidBills(index('Sam Example'), events('Sam Example'))).toEqual([]);
+  });
+});
+
+describe('bills that may be paid', () => {
+  const name = 'Sam Example';
+  const sam = index(name);
+  const billing = sam.documents.find((d) => d.organization === 'Example Billing')!;
+  const receipt: MedDocument = { ...billing, id: 'd_unread', doc_type: 'receipt', date: '2026-08-20', statement: undefined };
+  const open = (idx: PersonIndex) => openBills(idx, events(name), TODAY).find((b) => b.bill.doc.id === billing.id)!;
+  const withReceipt: PersonIndex = { ...sam, documents: [...sam.documents, receipt] };
+
+  it('are open, and neither worth a call nor to pay', () => {
+    expect([worthACall(open(sam)), mayBePaid(open(sam)), toPay(open(sam))]).toEqual([true, false, false]);
+    expect([worthACall(open(withReceipt)), mayBePaid(open(withReceipt)), toPay(open(withReceipt))]).toEqual([false, true, false]);
+    expect(open(withReceipt).cents).toBe(12000);
+    const surgery = openBills(sam, events(name), TODAY).find((b) => b.bill.doc.id !== billing.id)!;
+    expect([worthACall(surgery), mayBePaid(surgery), toPay(surgery)]).toEqual([false, false, true]);
+    for (const [cents, kind] of [[12000, 'asksMore'], [3000, 'asksLess']] as const) {
+      expect(callsSummary([{ ...open(sam), asked: cents }], (b) => b)[kind]).toHaveLength(1);
+      expect(callsSummary([{ ...open(withReceipt), asked: cents }], (b) => b)).toMatchObject({ asksMore: [], asksLess: [], overCents: 0 });
+    }
+  });
+
+  it('say when the receipt was filed', () => {
+    expect([unreadText([]), unreadText([receipt]), unreadText([receipt, { ...receipt, statement: { paid_on: '2026-09-02' } }])]).toEqual([
+      undefined,
+      'Receipt filed Aug 20, 2026; its amount could not be read',
+      '2 receipts filed, the last Sep 2, 2026; their amounts could not be read',
+    ]);
+  });
+
+  it('are as if the receipt were not here on a shared screen, when it is private', () => {
+    const known = { kind: 'known' as const, records: new Map<string, string>(), documents: new Map([[receipt.id, 'household']]), events: new Map<string, string>(), studies: new Map<string, string>(), unreported: new Set<string>() };
+    const marked: PersonIndex = { ...withReceipt, privacy: known };
+    expect(mayBePaid(open(marked))).toBe(true);
+    const [shared] = forShared(marked, [open(marked)]);
+    expect([mayBePaid(shared!), worthACall(shared!)]).toEqual([false, true]);
+    expect(mayBePaid(forShared(withReceipt, [open(withReceipt)])[0]!)).toBe(true);
+    // A payment by it is named without its day.
+    const paid = { ...open(sam), bill: { ...open(sam).bill, payments: [{ from: 'receipt' as const, document: receipt.id, receipt, on: '2026-08-20', amount: usd('20.00') }, { from: 'household' as const, on: '2026-11-20' }] } };
+    expect(forShared(marked, [paid])[0]!.bill.payments).toEqual([{ from: 'receipt' }, { from: 'household', on: '2026-11-20' }]);
+  });
+
+  it('and any other are spoken of on a shared screen only when one is not private', () => {
+    const isPrivate = (...ids: string[]): PersonIndex => ({ ...sam, privacy: { kind: 'known', records: new Map(), documents: new Map(ids.map((id) => [id, 'household'])), events: new Map(), studies: new Map(), unreported: new Set() } });
+    const bills = sam.documents.filter((d) => d.doc_type === 'bill').map((d) => d.id);
+    expect([anyBill(isPrivate(), events(name), true), anyBill(isPrivate(bills[0]!), events(name), true), anyBill(isPrivate(...bills), events(name), true), anyBill(isPrivate(...bills), events(name), false)]).toEqual([true, true, false, true]);
+    expect(anyBill({ ...sam, documents: [] }, events(name), false)).toBe(false);
   });
 });
 
@@ -83,7 +140,6 @@ describe('bills as medrec’s list has them', () => {
   const name = 'Sam Example';
   const sam = index(name);
   const [billing, surgery] = ['120.00', '175.00'].map((a) => sam.documents.find((d) => d.statement?.amount_due?.amount === a)!);
-  const usd = (amount: string) => ({ amount, currency: 'USD' });
   const state = (extra: Partial<BillState> = {}): BillState => ({ payments: [], settled: false, left: usd('120.00'), ...extra });
   /** Sam's bills with one state for the billing company's, and these calls. */
   const open = (s: BillState, calls: BillCall[], evs = events(name)) => {

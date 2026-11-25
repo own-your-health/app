@@ -1,18 +1,20 @@
 // Bills against what the claims say, for Home and Money.
 // A bill with something left to pay is open: to pay, or worth a call when it
 // asks something else than its claim says or no claim in these records backs
-// it. medrec's list says which, when it is here. Without it, a provider's
-// newest statement with no receipt filed after it is open, and is put beside
-// what the claims say that provider is owed for the visit.
+// it. One with a receipt whose amount did not read may be paid, which is
+// neither. medrec's list says what is left and what is worth a call, when it
+// is here. Without it, a provider's newest statement that no receipt's amount
+// covers is open, and is put beside what the claims say that provider is owed
+// for the visit.
 
-import { billList, openList, type Bill, type BillPayment } from '../model/billing';
+import { billList, openList, receiptDay, type Bill, type BillPayment } from '../model/billing';
 import type { BillState } from '../model/bills';
 import { sameProvider } from '../model/providers';
 import { claimLines, type ClaimLine } from '../model/claims';
 import { inVisit, paperPrivate, recordPrivate, recordsPrivate, takenOut } from '../model/private';
 import { formatMoney, fromCents, str, toCents } from '../model/records';
 import type { MedDocument, MedRecord, PersonIndex } from '../model/types';
-import { dateText } from '../ui/format';
+import { count, dateText } from '../ui/format';
 import type { PersonEvent } from './calendar';
 import { eventOf, paidAtCounter } from './event';
 
@@ -54,15 +56,21 @@ export function billPrivate(idx: PersonIndex, doc: MedDocument, event?: PersonEv
   return paperPrivate(idx, doc.id) ?? (event && (inVisit(idx, doc.id) || takenOut(idx, doc.id)) ? undefined : event?.private);
 }
 
-/** What a shared screen shows of some bills: those not private, without the visit of one whose visit is. */
-export function forShared<T extends { private?: string; event?: PersonEvent }>(bills: T[]): T[] {
+/** What a shared screen shows of some bills: those not private, without the visit of one whose visit is, or a receipt that is. */
+export function forShared<T extends { private?: string; event?: PersonEvent; bill?: Bill }>(idx: PersonIndex, bills: T[]): T[] {
+  const isPrivate = (receipt: MedDocument) => !!paperPrivate(idx, receipt.id);
   return bills.flatMap((b) => {
     if (b.private) return [];
-    if (!b.event?.private) return [b];
     const shown = { ...b };
-    delete shown.event;
+    if (b.event?.private) delete shown.event;
+    if (b.bill) shown.bill = { ...b.bill, unread: b.bill.unread.filter((r) => !isPrivate(r)), payments: b.bill.payments.map((p) => (p.receipt && isPrivate(p.receipt) ? { from: p.from } : p)) };
     return [shown];
   });
+}
+
+/** Whether a page may speak of a person's bills: a shared one only of those that are not private. */
+export function anyBill(idx: PersonIndex, events: PersonEvent[], shared: boolean): boolean {
+  return idx.documents.some((d) => d.doc_type === 'bill' && !(shared && billPrivate(idx, d, events.find((x) => eventOf([x.event], d.id)))));
 }
 
 /** Open bills in the order they are listed: overdue first, then by due date. */
@@ -112,8 +120,24 @@ function medrecSays(idx: PersonIndex, bill: Bill, state: BillState, event: Perso
   return said.verdict === 'matches' ? said : { claimSaysVisit: false, verdict: 'unmatched' };
 }
 
+type Judged = Pick<OpenBill, 'verdict'> & { bill: Pick<Bill, 'unread'> };
+
+/** Whether a bill may be paid: a receipt that can be for it is here, its amount could not be read, and no payment is known. */
+export const mayBePaid = (b: Pick<Judged, 'bill'>): boolean => b.bill.unread.length > 0;
+
 /** Whether a bill is worth a call before it is paid: it asks something other than its claim says, or no claim backs it. */
-export const worthACall = (b: Pick<OpenBill, 'verdict'>): boolean => b.verdict === 'differs' || b.verdict === 'no_claim';
+export const worthACall = (b: Judged): boolean => !mayBePaid(b) && (b.verdict === 'differs' || b.verdict === 'no_claim');
+
+/** Whether a bill is one to pay, with nothing to ask about first. */
+export const toPay = (b: Judged): boolean => !mayBePaid(b) && !worthACall(b);
+
+/** "Receipt filed Nov 1, 2026; its amount could not be read". */
+export function unreadText(receipts: MedDocument[]): string | undefined {
+  const last = receipts[receipts.length - 1];
+  if (!last) return undefined;
+  const day = dateText(receiptDay(last));
+  return receipts.length === 1 ? `Receipt filed ${day}; its amount could not be read` : `${count(receipts.length, 'receipt')} filed, the last ${day}; their amounts could not be read`;
+}
 
 /** A payment at a visit above what its claims say you owe, as medrec's list has it. */
 export interface DeskPayment {
@@ -227,11 +251,11 @@ export const overAsked = (b: OpenBill): number => Math.min(b.cents, Math.max(0, 
 export function callsSummary<T>(items: T[], bill: (x: T) => OpenBill): CallsSummary<T> {
   const asksMore = items.filter((x) => {
     const b = bill(x);
-    return b.verdict === 'no_claim' || (b.verdict === 'differs' && b.asked > b.claimSays!);
+    return worthACall(b) && (b.verdict === 'no_claim' || b.asked > b.claimSays!);
   });
   const asksLess = items.filter((x) => {
     const b = bill(x);
-    return b.verdict === 'differs' && b.asked < b.claimSays!;
+    return worthACall(b) && b.verdict === 'differs' && b.asked < b.claimSays!;
   });
   return {
     asksMore,
