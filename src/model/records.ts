@@ -4,7 +4,7 @@
 import type { Household, ImagingStudy, ImportRun, Json, JsonObject, MedDocument, MedRecord, PersonIndex, Provenance } from './types';
 import { parseRange, type Bound } from './flags';
 import { isObject } from './parse';
-import { resultName } from './labtests';
+import { labTest, resultName } from './labtests';
 import { practiceName, practiceOf } from './practices';
 import { placeName } from './words';
 
@@ -131,7 +131,7 @@ export function recordDetail(r: MedRecord): string | undefined {
   const f = r.fields;
   switch (r.kind) {
     case 'result':
-      return [resultReading(f).text, str(f.interpretation)].filter(Boolean).join(' · ') || undefined;
+      return [readingOf(r).text, str(f.interpretation)].filter(Boolean).join(' · ') || undefined;
     case 'encounter':
       return [str(f.class), str(f.practitioner), str(f.location) ?? str(f.service_provider)].filter(Boolean).join(' · ') || undefined;
     case 'medication':
@@ -148,6 +148,11 @@ export function recordDetail(r: MedRecord): string | undefined {
   }
 }
 
+const QUANTITY = new Set(['value', 'unit', 'system', 'code', 'comparator']);
+
+/** Whether an object is a quantity: a value with its unit, and not a part of a result, whose code and value are objects. */
+export const isQuantity = (v: JsonObject): boolean => 'value' in v && Object.entries(v).every(([k, x]) => QUANTITY.has(k) && (typeof x !== 'object' || x === null));
+
 /** A result's value as one string: "5.4 mmol/L", "Positive". */
 export function valueText(v: Json | undefined): string | undefined {
   if (v === null || v === undefined) return undefined;
@@ -157,13 +162,22 @@ export function valueText(v: Json | undefined): string | undefined {
     const n = v.value;
     if (n === null || n === undefined) return undefined;
     const unit = str(v.unit as Json);
-    return unit ? `${String(n)} ${unit}` : String(n);
+    const number = `${comparatorOf(v)}${String(n)}`;
+    return unit ? `${number} ${unit}` : number;
   }
   return undefined;
 }
 
+/** A quantity's comparator as it stands before its number: "<", or a word and a space. */
+function comparatorOf(v: JsonObject): string {
+  const c = str(v.comparator as Json)?.trim();
+  return !c ? '' : /^\w/.test(c) ? `${c} ` : c;
+}
+
 /**
- * A result's value as this app reads it. A quantity is a number in its unit.
+ * A result's value as this app reads it. A quantity is a number in its unit,
+ * and one with a comparator is a bound, or text where that is none this app
+ * knows. A quantity whose value is text ("128/76") is text.
  * A bare number sent as text ("95", a FHIR valueString) is a number too,
  * in the unit the lab's range names, or none. A bound ("<0.5", ">60") stays
  * text, with that unit, and reads against the range only when it can.
@@ -181,7 +195,13 @@ const OPS: Record<string, Bound['op']> = { '<': '<', '<=': '<=', '≤': '<=', '>
 
 export function resultReading(fields: JsonObject): Reading {
   const v = fields.value;
-  if (typeof v !== 'string') return { value: numericValue(v), unit: unitOf(v), text: valueText(v) };
+  if (typeof v !== 'string') {
+    const [n, unit, text] = [numericValue(v), unitOf(v), valueText(v)];
+    const comparator = isObject(v) ? comparatorOf(v) : '';
+    if (!comparator) return { value: n, unit, text };
+    const op = OPS[comparator];
+    return op && n !== undefined ? { bound: { op, n }, unit, text } : { unit, text };
+  }
   const t = v.trim();
   const range = str(fields.reference_range);
   const unit = range ? parseRange(range)?.unit : undefined;
@@ -192,10 +212,63 @@ export function resultReading(fields: JsonObject): Reading {
   return { text: v };
 }
 
+/** The records a report or a panel lists, in its order (medrec 0.9.10 and later). */
+export const memberIds = (fields: JsonObject): string[] => (Array.isArray(fields.members) ? fields.members.filter((x): x is string => typeof x === 'string') : []);
+
+/** Fields no screen prints and no search reads: the dates a record's date is one of, and the ids it lists. */
+export const UNSAID: ReadonlySet<string> = new Set(['when', 'members']);
+
+/**
+ * A result with no value that its source lists results for, whether they are
+ * filed or not: their heading, and no test. `members` alone says so where an
+ * earlier medrec wrote the index last, and has lost what was listed.
+ */
+export const isHeading = (r: MedRecord): boolean => r.kind === 'result' && !valueText(r.fields.value) && ((isObject(r.lists) && Object.keys(r.lists).length > 0) || r.fields.members !== undefined);
+
+/** What a result's page and the lists give as its value. */
+export const readingOf = (r: MedRecord): Reading => (isHeading(r) ? { text: 'Panel' } : resultReading(r.fields));
+
+/** A result's part: what it names, and the part as a point of its own. */
+export interface ResultPart {
+  key: string;
+  name: string;
+  point: ResultPoint;
+}
+
+/** The parts of a result of several (a blood pressure's two), in the source's order (medrec 0.9.10 and later). */
+export function resultParts(r: MedRecord): ResultPart[] {
+  const list = r.kind === 'result' && Array.isArray(r.fields.components) ? r.fields.components : [];
+  return list.flatMap((c): ResultPart[] => {
+    if (!isObject(c)) return [];
+    const code: JsonObject = isObject(c.code) ? c.code : {};
+    const [system, id, display] = [str(code.system), str(code.code), str(code.display)];
+    const name = labTest({ system, code: id })?.name ?? display ?? id;
+    return name ? [{ key: id ? `${system ?? ''}|${id}` : `display|${name.toLowerCase()}`, name, point: pointOf(r, c) }] : [];
+  });
+}
+
+/** The parts a chart can follow: those named once. One named twice is two readings of one thing. */
+const oncePerKey = (parts: ResultPart[]): ResultPart[] => parts.filter((p) => parts.filter((q) => q.key === p.key).length === 1);
+
+function pointOf(r: MedRecord, fields: JsonObject, { value, bound, unit, text }: Reading = resultReading(fields)): ResultPoint {
+  return { id: r.id, date: r.date, value, bound, text: text ?? '—', unit, range: str(fields.reference_range), interpretation: str(fields.interpretation) };
+}
+
 /** A result as a point of its series. */
 export function resultPoint(r: MedRecord): ResultPoint {
-  const { value, bound, unit, text } = resultReading(r.fields);
-  return { id: r.id, date: r.date, value, bound, text: text ?? '—', unit, range: str(r.fields.reference_range), interpretation: str(r.fields.interpretation) };
+  const parts = resultParts(r);
+  return { ...pointOf(r, r.fields, readingOf(r)), ...(parts.length ? { parts } : {}) };
+}
+
+/** Each part of a result over time: the same part of each result of its test. */
+export function partSeries(index: PersonIndex, r: MedRecord): ResultSeries[] {
+  const all = index.records.filter((x) => x.kind === 'result' && seriesKey(x) === seriesKey(r));
+  return oncePerKey(resultParts(r)).map((part) => {
+    const points = all
+      .flatMap((x) => oncePerKey(resultParts(x)).filter((p) => p.key === part.key).map((p) => p.point))
+      .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+    return seriesOf(part.key, part.name, points);
+  });
 }
 
 export function numericValue(v: Json | undefined): number | undefined {
@@ -222,6 +295,8 @@ export interface ResultPoint {
   unit?: string;
   range?: string;
   interpretation?: string;
+  /** The parts of a result of several. */
+  parts?: ResultPart[];
 }
 
 export interface ResultSeries {
@@ -232,10 +307,16 @@ export interface ResultSeries {
   points: ResultPoint[];
 }
 
+/** Points, oldest first, as a series. */
+function seriesOf(key: string, name: string, points: ResultPoint[]): ResultSeries {
+  const units = new Set(points.map((p) => p.unit).filter(Boolean));
+  return { key, name, unit: units.size === 1 ? [...units][0] : undefined, latest: points[points.length - 1], points };
+}
+
 export function resultSeries(index: PersonIndex): ResultSeries[] {
   const groups = new Map<string, MedRecord[]>();
   for (const r of index.records) {
-    if (r.kind !== 'result') continue;
+    if (r.kind !== 'result' || isHeading(r)) continue;
     const k = seriesKey(r);
     const g = groups.get(k);
     if (g) g.push(r);
@@ -244,17 +325,10 @@ export function resultSeries(index: PersonIndex): ResultSeries[] {
   const out: ResultSeries[] = [];
   for (const [key, rs] of groups) {
     const points = rs.map(resultPoint).sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
-    const units = new Set(points.map((p) => p.unit).filter(Boolean));
     // The newest record's own name: what medrec shows, and what the source
     // calls the test today.
     const named = [...rs].sort((x, y) => (y.date ?? '').localeCompare(x.date ?? ''))[0]!;
-    out.push({
-      key,
-      name: resultName(named),
-      unit: units.size === 1 ? [...units][0] : undefined,
-      latest: points[points.length - 1],
-      points,
-    });
+    out.push(seriesOf(key, resultName(named), points));
   }
   return out.sort((a, b) => (b.latest?.date ?? '').localeCompare(a.latest?.date ?? '') || a.name.localeCompare(b.name));
 }

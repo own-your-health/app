@@ -4,13 +4,13 @@
 
 import { errorsOf } from '../../model/inError';
 import { conditionName } from '../../model/codeNames';
-import { originNames, seriesKey, sortByDateDesc, str, studyTitle } from '../../model/records';
+import { isHeading, originNames, seriesKey, sortByDateDesc, str, studyTitle } from '../../model/records';
 import { isOutOfRange, rangeFor, resultFlag } from '../../model/flags';
 import type { LatestResult } from '../../model/overview';
 import { allergyList, conditionList, CRITICALITY_TEXT, medicineList, statusText, underHeadings, vaccineList, type AllergyItem, type ConditionItem, type ItemStanding, type MedicineItem } from '../../model/lists';
 import { resultGroups } from '../../model/panels';
 import { COMING_UP_DAYS, FLU, fluSeason, SCHEDULE_SOURCE, scheduleDigest, scheduleFor, type DoseState, type FluSeason, type ScheduleRow } from '../../model/schedule';
-import type { Person, PersonIndex, Provenance } from '../../model/types';
+import type { MedRecord, Person, PersonIndex, Provenance } from '../../model/types';
 import { resultChart, resultSparkline } from '../chart';
 import { aboutNote, unsureNote } from '../about';
 import { button, card, chip, command, empty, flagChip, link, row, type Ctx } from '../components';
@@ -137,12 +137,15 @@ function resultRow(personId: string, t: LatestResult): HTMLElement {
   });
 }
 
+/** A result that is a test, not the heading of others. */
+const isTest = (r: MedRecord): boolean => r.kind === 'result' && !isHeading(r);
+
 function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLElement {
   const groups = resultGroups(idx);
   if (sub) {
     const group = groups.find((g) => g.tests.some((t) => t.series.key === sub));
     const t = group?.tests.find((x) => x.series.key === sub);
-    const wrong = errorsNote(errorsOf(idx, { record: (r) => r.kind === 'result' && seriesKey(r) === sub }));
+    const wrong = errorsNote(errorsOf(idx, { record: (r) => isTest(r) && seriesKey(r) === sub }));
     if (!group || !t) return card({}, empty('This test is not in the records.'), wrong);
     const s = t.series;
     const chart = resultChart(s.points, s.unit, s.name);
@@ -183,7 +186,7 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
       others.length ? card({ title: `Also in ${group.name}` }, others.map((x) => resultRow(person.id, x))) : null,
     );
   }
-  const notes = [errorsNote(errorsOf(idx, { record: (r) => r.kind === 'result' })), aboutNote(idx)];
+  const notes = [errorsNote(errorsOf(idx, { record: isTest })), aboutNote(idx)];
   if (!groups.length) return card({ title: 'Results' }, empty('No results yet.'), unsureNote(idx), ...notes);
   return h(
     'div',

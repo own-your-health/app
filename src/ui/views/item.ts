@@ -12,7 +12,7 @@ import { labTest } from '../../model/labtests';
 import { learnMore } from '../../model/learn';
 import { allergyList, conditionList, CRITICALITY_TEXT, isFill, medicineList, saidOf, statusText, type ItemStanding } from '../../model/lists';
 import { isObject } from '../../model/parse';
-import { AMOUNT_LABELS, asMoney, docTypeLabel, documentTitle, findItem, formatMoney, importFor, isDoseGiven, KIND_LABELS, LINE_AMOUNT_ORDER, originNames, resultPoint, resultReading, str, studyTitle, toCents, valueText } from '../../model/records';
+import { AMOUNT_LABELS, asMoney, docTypeLabel, documentTitle, findItem, formatMoney, importFor, isDoseGiven, isHeading, isQuantity, KIND_LABELS, LINE_AMOUNT_ORDER, memberIds, originNames, partSeries, readingOf, resultPoint, str, studyTitle, toCents, UNSAID, valueText, type ResultSeries } from '../../model/records';
 import { resultContext, unitText, verdict } from '../../model/result';
 import { partSays } from '../../model/parts';
 import { recordTitle, visitTitle } from '../../model/titles';
@@ -51,7 +51,7 @@ function fieldValue(v: Json): Child {
   if (isObject(v)) {
     const money = asMoney(v);
     if (money && Object.keys(v).length <= 2) return formatMoney(money);
-    if ('value' in v && Object.keys(v).every((k) => ['value', 'unit', 'system', 'code'].includes(k))) return valueText(v) ?? jsonBlock(v);
+    if (isQuantity(v)) return valueText(v) ?? jsonBlock(v);
     if (Object.keys(v).every((k) => k === 'start' || k === 'end')) {
       const fmt = (x: Json | undefined) => (typeof x === 'string' ? (DATETIME.test(x) ? dateTime(x) : dateText(x)) : '');
       return [fmt(v.start), fmt(v.end)].filter(Boolean).join(' to ');
@@ -192,7 +192,7 @@ function technical(...cards: Child[]): HTMLElement {
 
 /** The record as medrec keeps it: its code, status and every field. */
 function fieldsCard(r: MedRecord, skip: string[], extra: [string, Child][]): HTMLElement {
-  const fields = Object.entries(r.fields).filter(([k]) => k !== 'when' && !skip.includes(k));
+  const fields = Object.entries(r.fields).filter(([k]) => !UNSAID.has(k) && !skip.includes(k));
   return card(
     { title: 'The record' },
     kv([
@@ -206,6 +206,19 @@ function fieldsCard(r: MedRecord, skip: string[], extra: [string, Child][]): HTM
       ...fields.map(([k, v]): [string, Child] => [fieldLabel(k), fieldValue(v)]),
     ]),
   );
+}
+
+/** The results a report or a panel lists, in its order. */
+function membersCard(idx: PersonIndex, r: MedRecord): HTMLElement | null {
+  const listed = memberIds(r.fields).flatMap((id) => idx.records.find((x) => x.id === id) ?? []);
+  if (!listed.length) return null;
+  return card({ title: 'Its results' }, listed.map((x) => resultRow(idx.person, x)));
+}
+
+/** A result among others: its name, its value and how it reads. */
+function resultRow(person: string, x: MedRecord): HTMLElement {
+  const value = readingOf(x).text;
+  return row({ route: itemRoute(person, x.id), title: recordTitle(x), meta: value ? (unitText(value) ?? value) : undefined, aside: flagChip(resultFlag(resultPoint(x))) });
 }
 
 /** A record whole, folded: without the fields to skip, and with what its page adds after its code. */
@@ -275,20 +288,28 @@ function resultView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   const v = verdict(point);
   const name = recordTitle(r);
   const test = labTest(r.code);
-  const value = resultReading(r.fields).text;
+  const value = readingOf(r).text;
   const shown = value ? (unitText(value) ?? value) : 'No value';
   const status = r.status && Object.hasOwn(RESULT_STATUS, r.status) ? RESULT_STATUS[r.status]! : undefined;
   const series = c.series;
-  const chart = series ? resultChart(series.points, series.unit, name) : null;
+  const drawn = (s: ResultSeries, title?: string) => {
+    const chart = resultChart(s.points, s.unit, s.name);
+    return chart ? [{ name: title, points: s.points, unit: s.unit, chart }] : [];
+  };
+  // A result of several parts has a line for each part, where the whole has none.
+  const whole = series ? drawn(series) : [];
+  const charts = whole.length ? whole : partSeries(idx, r).flatMap((p) => drawn(p, p.name));
+  const parts = point.parts ?? [];
+  const heading = isHeading(r);
   const sameDay = c.sameDraw.reduce((n, g) => n + g.records.length, 0);
   const seriesRoute: Route | undefined = series ? { name: 'person', person, section: 'results', sub: series.key } : undefined;
   return [
     head(
       name,
       status ? chip(status[0], status[1]) : null,
-      [c.panel, dateText(r.date), fromText(ctx, idx, r)],
-      h('p', { class: 'result-value' }, shown),
-      h('p', { class: ['verdict', v.flag?.level === 'normal' ? 'verdict-in' : null, v.outOfRange ? ['verdict-out', `verdict-${v.flag!.level}`] : null].flat() }, v.text),
+      [heading ? 'Panel' : c.panel, dateText(r.date), fromText(ctx, idx, r)],
+      heading ? null : h('p', { class: ['result-value', parts.length && shown.length > 24 ? 'result-value-text' : null] }, shown),
+      heading ? null : h('p', { class: ['verdict', v.flag?.level === 'normal' ? 'verdict-in' : null, v.outOfRange ? ['verdict-out', `verdict-${v.flag!.level}`] : null].flat() }, v.text),
       point.value !== undefined && v.range ? rangeBar(point.value, v.range, v.flag?.level, `${shown}. ${v.text}`) : null,
       test?.about
         ? h(
@@ -302,11 +323,30 @@ function resultView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
         : null,
       learnLink(r, name),
     ),
+    parts.length
+      ? card(
+          { title: 'Its parts' },
+          h(
+            'table',
+            { class: 'table' },
+            h('thead', null, h('tr', null, h('th', null, 'Part'), h('th', null, 'Value'), h('th', null, 'Range'))),
+            h(
+              'tbody',
+              null,
+              parts.map(({ name: part, point: p }) => {
+                const f = resultFlag(p);
+                return h('tr', null, h('td', null, part), h('td', { class: 'num' }, unitText(p.text) ?? p.text, isOutOfRange(f) ? [' ', flagChip(f)] : null), h('td', null, p.range ? (unitText(p.range) ?? p.range) : ''));
+              }),
+            ),
+          ),
+        )
+      : null,
+    membersCard(idx, r),
     series && series.points.length > 1
       ? card(
           { title: 'Over time' },
-          chart ? h('div', { class: 'chart-box' }, chart) : null,
-          chart && series.points.some((p) => rangeFor(p.range, p.unit ?? series.unit)) ? h('p', { class: 'small muted' }, 'The shaded band is the lab’s range at each result.') : null,
+          charts.map((x) => [x.name ? h('h3', { class: 'group-head' }, x.unit ? `${x.name} (${unitText(x.unit)})` : x.name) : null, h('div', { class: 'chart-box' }, x.chart)]),
+          charts.some((x) => x.points.some((p) => rangeFor(p.range, p.unit ?? x.unit))) ? h('p', { class: 'small muted' }, 'The shaded band is the lab’s range at each result.') : null,
           h(
             'table',
             { class: 'table' },
@@ -335,12 +375,7 @@ function resultView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
           { title: `Also tested on ${dateText(r.date)}` },
           c.sameDraw.map((g) => [
             c.sameDraw.length > 1 ? h('h3', { class: 'group-head' }, g.panel) : null,
-            g.records.map((x) => {
-              const xp = resultPoint(x);
-              const f = resultFlag(xp);
-              const xv = resultReading(x.fields).text;
-              return row({ route: itemRoute(person, x.id), title: recordTitle(x), meta: xv ? (unitText(xv) ?? xv) : undefined, aside: flagChip(f) });
-            }),
+            g.records.map((x) => resultRow(person, x)),
           ]),
         )
       : null,
@@ -554,7 +589,7 @@ function claimView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
           { title: 'Paid for' },
           c.visit ? row({ route: itemRoute(idx.person, c.visit.record.id), title: visitTitle(c.visit.record), meta: ['Visit', visitWhen(c.visit), str(c.visit.record.fields.location)].filter(Boolean).join(' · ') }) : null,
           c.results.map((x) => {
-            const reading = x.kind === 'result' ? resultReading(x.fields).text : undefined;
+            const reading = x.kind === 'result' ? readingOf(x).text : undefined;
             return row({ route: itemRoute(idx.person, x.id), title: recordTitle(x), meta: [KIND_LABELS[x.kind] ?? x.kind, dateText(x.date), reading ? (unitText(reading) ?? reading) : null].filter(Boolean).join(' · '), aside: x.kind === 'result' ? flagChip(resultFlag(resultPoint(x))) : null });
           }),
         )
@@ -585,6 +620,7 @@ function otherView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
       ]),
       learnLink(r, name),
     ),
+    membersCard(idx, r),
     docs.length ? card({ title: 'Documents' }, docs.map((d) => row({ route: itemRoute(idx.person, d.id), title: documentTitle(d), meta: [docTypeLabel(d.doc_type), dateText(d.date)].filter(Boolean).join(' · ') }))) : null,
     recordTechnical(ctx, idx, r),
   ];

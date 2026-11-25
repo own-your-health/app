@@ -115,10 +115,11 @@ Low, Abnormal, Critical), or, when it gave none the app can read, when the
 value falls outside the reference range in the same unit; the app labels
 those **Above range** or **Below range**, so it is clear the app worked it out.
 A number the lab sent as text ("95", a FHIR valueString) reads as a number,
-in the unit its range names. A value sent as a bound ("<0.5", ">60") stays
-text and reads against the range only when every value it allows sits on one
-side of it: ">60" against "60 or more" is within, "<0.5" against 0–1 says
-nothing.
+in the unit its range names. A value sent as a bound ("<0.5", ">60"), as text
+or as a quantity with a comparator, is never plotted and reads against the
+range only when every value it allows sits on one side of it: ">60" against
+"60 or more" is within, "<0.5" against 0–1 says nothing. A result of several
+parts with nothing said of the whole is out of range where a part is.
 
 Conditions, allergies, medicines and vaccines are listed once each, however
 many dates the records hold them on, by the newest record's status in words
@@ -318,7 +319,11 @@ receipts no claim covers are not counted. The rules are `src/model/costs.ts`.
 Results are grouped by panel (metabolic, lipid, A1c, liver, blood count,
 thyroid, vitamins and iron, urine, vital signs) by each test's LOINC code,
 from a table in `src/model/panels.ts`; a test outside the table goes by the
-category its source gave, or under Other tests. A panel with a critical
+category its source gave, or else under the newest panel of its source's that
+lists it (medrec 0.9.10 and later), or under Other tests. A panel that its
+source lists results for, filed or not, and that has no value is a heading and
+no test: it is in no list of results and stands for none in search, a visit
+names it as a panel, and its own page lists its results. A panel with a critical
 result comes first, then one with any result out of range, and within a
 panel the out-of-range tests come first, then the order a lab report uses.
 Each test's chart shades the reference range each result came with.
@@ -333,7 +338,10 @@ Every record's page leads with the plain answer. A result shows:
 - a sentence or two on what the test measures and what a high or low result
   can go with, written from the MedlinePlus page it links and stopping at
   "a question for your doctor";
-- its history, with the range band;
+- its parts, for a result of several (a blood pressure's two numbers), each
+  with its own range;
+- its history, with the range band, or each part's where the whole is no
+  number; a part its source names twice has no line;
 - the other tests from the same draw, and the visit and lab report it came
   with.
 

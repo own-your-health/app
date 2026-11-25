@@ -268,3 +268,45 @@ export const enteredInError = (): Overlay =>
     },
     '0.9.9',
   );
+
+/**
+ * The sample with what medrec 0.9.10 and later keeps of results: two readings
+ * of Robin's with two parts, a bound, a panel that lists two results of the
+ * same visit, one that lists some that are not filed, and one entered in error.
+ */
+export const resultDetails = (): Overlay =>
+  rewritten({}, ({ name, index, events, view }) => {
+    if (name !== 'Robin Example') return;
+    const of = (display: string, day: string) => index.records.find((r) => r.kind === 'result' && r.display === display && r.date?.startsWith(day))!;
+    const fields = (r: Item & { fields: Json }, more: Json) => Object.assign(r.fields, more);
+    const mmHg = (value: number) => ({ value, unit: 'mmHg' });
+    const LOINC = 'http://loinc.org';
+    const pressure = (from: Item & { fields: Json; date?: string }, n: string, top: number, low: number): Item & { kind: string; fields: Json } => ({
+      ...from,
+      id: `r_${n.repeat(20)}`,
+      kind: 'result',
+      key: `result|pressure|${n}`,
+      display: 'Blood pressure',
+      code: { system: LOINC, code: '85354-9', display: 'Blood pressure' },
+      fields: {
+        category: 'Vital Signs',
+        categories: ['vital-signs'],
+        value: { value: `${top}/${low}`, unit: 'mmHg' },
+        components: [
+          { code: { system: LOINC, code: '8480-6', display: 'Systolic blood pressure' }, value: mmHg(top), reference_range: '90-120 mmHg' },
+          { code: { system: LOINC, code: '8462-4', display: 'Diastolic blood pressure' }, value: mmHg(low), reference_range: '60-80 mmHg' },
+        ],
+      },
+    });
+    const [potassium, creatinine] = [of('Potassium', '2026-11-18'), of('Creatinine', '2026-11-18')];
+    const bound = of('Triglycerides', '2026-10-01');
+    fields(bound, { value: { ...(bound.fields.value as Json), comparator: '<' } });
+    const lists = { 'Robin Example/Records/panel.json': ['Robin Example/Records/one.json'] };
+    const panel = (n: string, display: string, more: Json) => ({ ...potassium, id: `r_${n.repeat(20)}`, key: `result|panel|${n}`, display, code: undefined, lists, fields: { category: 'Laboratory', ...more } });
+    const salts = panel('c', 'Sample salts panel', { members: [creatinine.id, potassium.id], interpretation: 'High' });
+    const unfiled = panel('d', 'Sample metals panel', {});
+    const wrong = { ...panel('e', 'Sample wrong panel', {}), status: 'entered-in-error' };
+    index.records.push(pressure(of('Sodium', '2025-03-10'), 'a', 118, 76), pressure(potassium, 'b', 134, 78), salts, unfiled, wrong);
+    view.in_error = { result: [wrong.id] };
+    events.events.find((e) => e.members!.some((m) => m.record === potassium.id))!.members!.push({ record: salts.id, kind: 'result', title: salts.display, date: '2026-11-18' } as Member);
+  }, '0.9.10');

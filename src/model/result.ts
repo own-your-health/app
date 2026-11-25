@@ -5,7 +5,7 @@
 import { isOutOfRange, rangeFor, resultFlag, type Range, type ResultFlag } from './flags';
 import { panelFor } from './panels';
 import { samePractice, through } from './practices';
-import { day, isWithdrawn, resultSeries, seriesKey, type ResultPoint, type ResultSeries } from './records';
+import { day, isHeading, isWithdrawn, memberIds, resultSeries, seriesKey, type ResultPoint, type ResultSeries } from './records';
 import { recordTitle } from './titles';
 import type { Household, MedDocument, MedRecord, PersonIndex } from './types';
 import { visitTimeline, type Visit } from './visits';
@@ -40,8 +40,15 @@ export interface Verdict {
  * unit, else what the lab marked. Never more than that: what it means for
  * the person is for their doctor.
  */
-export function verdict(p: Pick<ResultPoint, 'value' | 'bound' | 'unit' | 'range' | 'interpretation'>): Verdict {
+export function verdict(p: Pick<ResultPoint, 'value' | 'bound' | 'unit' | 'range' | 'interpretation' | 'parts'>): Verdict {
   const flag = resultFlag(p);
+  // Of several parts, with nothing said of the whole: each part outside its range, by name.
+  if (p.parts?.length && !resultFlag({ ...p, parts: undefined })) {
+    const read = p.parts.map((x) => ({ name: x.name, verdict: verdict(x.point) }));
+    const outside = read.filter((x) => x.verdict.outOfRange);
+    if (outside.length) return { text: outside.map((x) => `${x.name}: ${x.verdict.text}`).join(' '), outOfRange: true, flag };
+    if (!p.range && read.some((x) => x.verdict.flag)) return { text: 'No part that has a range is outside it.', outOfRange: false };
+  }
   const range = rangeFor(p.range, p.unit);
   const words = range ? rangeWords(range, p.unit) : p.range;
   const out = isOutOfRange(flag);
@@ -84,7 +91,8 @@ export function resultContext(index: PersonIndex, household: Household, person: 
   const atVisit = new Set(visit?.recorded.flatMap((g) => g.records));
   const mine = through(household, person, r.provenance);
   const together = (x: MedRecord) => atVisit.has(x) || through(household, person, x.provenance).some((t) => mine.some((m) => samePractice(m, t)));
-  const draw = index.records.filter((x) => x !== r && x.kind === 'result' && !isWithdrawn(x) && day(x.date) === d && together(x));
+  const listed = new Set(memberIds(r.fields));
+  const draw = index.records.filter((x) => x !== r && !listed.has(x.id) && x.kind === 'result' && !isHeading(x) && !isWithdrawn(x) && day(x.date) === d && together(x));
   const byPanel = new Map<string, { panel: string; order: number; records: { r: MedRecord; order: number }[] }>();
   for (const x of draw) {
     const p = panelFor(seriesKey(x), categoryOf(x));

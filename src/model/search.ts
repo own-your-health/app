@@ -14,7 +14,7 @@
 
 import { claimAmounts, claimDiagnoses, claimLines, claimProvider, diagnosisText, revenueText } from './claims';
 import { panelFor } from './panels';
-import { KIND_LABELS, asMoney, docTypeLabel, documentTitle, formatMoney, resultReading, seriesKey, str, studyTitle, toCents, valueText } from './records';
+import { KIND_LABELS, asMoney, docTypeLabel, documentTitle, formatMoney, isHeading, isQuantity, readingOf, seriesKey, str, studyTitle, toCents, UNSAID, valueText } from './records';
 import { unitText } from './result';
 import { statusText } from './lists';
 import { recordTitle } from './titles';
@@ -187,15 +187,18 @@ function fieldLabel(k: string): string {
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
+/** An item's id: a link, and no words of it. */
+const ITEM_ID = /^[a-z]_[a-z2-7]{20}$/;
+
 /** A field's value as words: money and quantities as they read, everything else by its leaves. */
 function fieldText(v: Json | undefined): string {
   if (v === null || v === undefined) return '';
-  if (typeof v === 'string') return v;
+  if (typeof v === 'string') return ITEM_ID.test(v) ? '' : v;
   if (typeof v === 'number' || typeof v === 'boolean') return String(v);
   if (Array.isArray(v)) return v.map(fieldText).filter(Boolean).join(' · ');
   const money = asMoney(v);
   if (money && Object.keys(v).length <= 2) return formatMoney(money) ?? '';
-  if ('value' in v && Object.keys(v).every((k) => ['value', 'unit', 'system', 'code'].includes(k))) return valueText(v) ?? '';
+  if (isQuantity(v)) return valueText(v) ?? '';
   return Object.entries(v)
     .filter(([k]) => k !== 'system' && k !== 'currency')
     .map(([, x]) => fieldText(x))
@@ -203,11 +206,9 @@ function fieldText(v: Json | undefined): string {
     .join(' ');
 }
 
-const SKIP_FIELDS = new Set(['when']);
-
 function fieldsOf(fields: Record<string, Json>, skip: string[] = []): [string, string][] {
   return Object.entries(fields)
-    .filter(([k]) => !SKIP_FIELDS.has(k) && !skip.includes(k))
+    .filter(([k]) => !UNSAID.has(k) && !skip.includes(k))
     .map(([k, v]): [string, string] => [fieldLabel(k), fieldText(v)])
     .filter(([, v]) => v.trim() !== '');
 }
@@ -263,9 +264,11 @@ function lineFields(r: MedRecord): [string, string, true][] {
 
 function recordExtra(r: MedRecord): Candidate['extra'] {
   if (r.kind === 'result') {
-    const key = seriesKey(r);
-    const panel = panelFor(key, str(r.fields.category));
-    const v = resultReading(r.fields).text;
+    const series = seriesKey(r);
+    const panel = panelFor(series, str(r.fields.category));
+    const v = readingOf(r).text;
+    // A heading is no result of the test it shares a code with: each is its own.
+    const key = isHeading(r) ? `heading|${r.id}` : series;
     return { test: { key, panel: panel.name, panelOrder: panel.order, value: v ? (unitText(v) ?? v) : undefined } };
   }
   if (r.kind === 'claim') {

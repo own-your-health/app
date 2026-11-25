@@ -1,12 +1,13 @@
 // Results grouped the way a lab report groups them. The index keeps each
-// result as its own record (a report record carries only how many results
-// it had), so the panel comes from the test's LOINC code, by a table of the
-// common panels, and otherwise from the result's category.
+// result as its own record, so the panel comes from the test's LOINC code, by
+// a table of the common panels; else from the panel that lists the result
+// (medrec 0.9.10 and later); else from the result's category.
 
 import { isOutOfRange } from './flags';
 import { latestResults, type LatestResult } from './overview';
-import { seriesKey } from './records';
-import type { PersonIndex } from './types';
+import { isHeading, isWithdrawn, memberIds, seriesKey } from './records';
+import { recordTitle } from './titles';
+import type { MedRecord, PersonIndex } from './types';
 
 interface Panel {
   id: string;
@@ -25,7 +26,7 @@ export const PANELS: Panel[] = [
   { id: 'thyroid', name: 'Thyroid', loinc: ['3016-3', '11580-8', '3024-7', '3051-0'] },
   { id: 'vitamins', name: 'Vitamins and iron', loinc: ['62292-8', '1989-3', '14635-7', '2132-9', '2284-8', '2498-4', '2500-7', '2276-4'] },
   { id: 'urine', name: 'Urine and kidney', loinc: ['14959-1', '2888-6', '5811-5', '5803-2'] },
-  { id: 'vitals', name: 'Vital signs', loinc: ['8480-6', '8462-4', '8867-4', '8310-5', '9279-1', '59408-5', '2708-6', '29463-7', '3141-9', '8302-2', '39156-5', '9843-4', '8287-5'] },
+  { id: 'vitals', name: 'Vital signs', loinc: ['85354-9', '55284-4', '8480-6', '8462-4', '8867-4', '8310-5', '9279-1', '59408-5', '2708-6', '29463-7', '3141-9', '8302-2', '39156-5', '9843-4', '8287-5'] },
 ];
 
 const BY_LOINC = new Map(PANELS.flatMap((p) => p.loinc.map((code, i) => [code, { panel: p, order: i }] as const)));
@@ -42,9 +43,24 @@ function loincOf(key: string): string | undefined {
   return system && /loinc/i.test(system) ? code : undefined;
 }
 
+/** The panel each result is listed by, and its place in it: the newest panel that lists it. */
+const headings = new WeakMap<PersonIndex, Map<string, { heading: MedRecord; order: number }>>();
+
+function headingsOf(index: PersonIndex): Map<string, { heading: MedRecord; order: number }> {
+  let out = headings.get(index);
+  if (!out) {
+    headings.set(index, (out = new Map()));
+    const panels = index.records.filter((r) => isHeading(r) && !isWithdrawn(r)).sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+    for (const heading of panels) for (const [order, id] of memberIds(heading.fields).entries()) out.set(id, { heading, order });
+  }
+  return out;
+}
+
 /** The group a test falls in, and its place there. */
-export function panelOf(t: LatestResult, category?: string): { id: string; name: string; order: number } {
-  return panelFor(t.series.key, category);
+export function panelOf(index: PersonIndex, t: LatestResult, category?: string): { id: string; name: string; order: number } {
+  const by = panelFor(t.series.key, category);
+  const listed = by.id === 'other-lab' ? headingsOf(index).get(t.latest.id) : undefined;
+  return listed ? { id: `panel:${seriesKey(listed.heading)}`, name: recordTitle(listed.heading), order: listed.order } : by;
 }
 
 /** The same, by a test's series key (records.ts's seriesKey). */
@@ -69,7 +85,7 @@ export function resultGroups(index: PersonIndex): ResultGroup[] {
   for (const r of index.records) if (r.kind === 'result' && typeof r.fields.category === 'string') category.set(seriesKey(r), r.fields.category);
   const groups = new Map<string, { group: ResultGroup; order: Map<LatestResult, number> }>();
   for (const t of latestResults(index)) {
-    const p = panelOf(t, category.get(t.series.key));
+    const p = panelOf(index, t, category.get(t.series.key));
     let g = groups.get(p.id);
     if (!g) groups.set(p.id, (g = { group: { id: p.id, name: p.name, tests: [], outOfRange: 0 }, order: new Map() }));
     g.group.tests.push(t);

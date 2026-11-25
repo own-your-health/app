@@ -123,14 +123,18 @@ const LABELS: Record<FlagLevel, string> = { high: 'High', low: 'Low', abnormal: 
 /**
  * Whether a result is out of its range: the source's interpretation when it
  * gave one this app can read, otherwise the value against the reference
- * range, when both are numbers in the same unit. Undefined when neither says.
+ * range, when both are numbers in the same unit. A result of several parts of
+ * which neither says is as the first part out of range, a critical one first.
+ * Undefined when nothing says.
  */
-export function resultFlag(p: Pick<ResultPoint, 'value' | 'bound' | 'unit' | 'range' | 'interpretation'>): ResultFlag | undefined {
+export function resultFlag(p: Pick<ResultPoint, 'value' | 'bound' | 'unit' | 'range' | 'interpretation' | 'parts'>): ResultFlag | undefined {
   const said = p.interpretation ? fromInterpretation(p.interpretation) : undefined;
   if (said) {
     const label = !said.critical ? LABELS[said.level] : said.level === 'abnormal' ? 'Critical' : `Critical ${LABELS[said.level].toLowerCase()}`;
     return { ...said, from: 'source', label };
   }
+  const outside = p.parts?.map((x) => resultFlag(x.point)).filter(isOutOfRange) ?? [];
+  if (outside.length) return outside.find((f) => f.critical) ?? outside[0];
   if ((p.value === undefined && !p.bound) || !p.range) return undefined;
   const level = fromRange(p, p.range, p.unit);
   if (!level) return undefined;

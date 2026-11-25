@@ -8,7 +8,7 @@ import { billList, standsFor, type Bill } from '../model/billing';
 import { claimLines } from '../model/claims';
 import { conditionName, diagnosisNames, inDetails, nameList } from '../model/codeNames';
 import { sameProvider } from '../model/providers';
-import { AMOUNT_LABELS, docTypeLabel, documentTitle, formatMoney, fromCents, KIND_LABELS, portalCounts, resultPoint, resultReading, str, toCents } from '../model/records';
+import { AMOUNT_LABELS, docTypeLabel, documentTitle, formatMoney, fromCents, KIND_LABELS, portalCounts, readingOf, resultPoint, str, toCents } from '../model/records';
 import { isOutOfRange, resultFlag } from '../model/flags';
 import { isInError } from '../model/inError';
 import { unitText } from '../model/result';
@@ -221,7 +221,7 @@ function resultsCard(idx: PersonIndex, e: CareEvent): HTMLElement | null {
       'ul',
       { class: 'event-results' },
       [...results].sort((a, b) => flagged(a) - flagged(b)).map((r) => {
-        const reading = resultReading(r.fields).text;
+        const reading = readingOf(r).text;
         const price = priceOf.get(r.id);
         return h(
           'li',

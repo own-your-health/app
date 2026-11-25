@@ -70,6 +70,6 @@ describe('results by panel', () => {
 
   it('places a known code by the table, before its category', () => {
     const t = { series: { key: `${LOINC}|8310-5`, name: 'Temperature', points: [] }, latest: { id: 'x', text: '36.7' } } as unknown as LatestResult;
-    expect(panelOf(t, 'Chemistry')).toMatchObject({ id: 'vitals' });
+    expect(panelOf(index('Robin Example'), t, 'Chemistry')).toMatchObject({ id: 'vitals' });
   });
 });
