@@ -41,7 +41,7 @@ export function chip(text: string, tone: Tone = 'muted'): HTMLElement {
   return h('span', { class: ['chip', `chip-${tone}`] }, text);
 }
 
-export function card(opts: { title?: string; class?: string; actions?: Child }, ...children: Child[]): HTMLElement {
+export function card(opts: { title?: Child; class?: string; actions?: Child }, ...children: Child[]): HTMLElement {
   return h(
     'section',
     { class: ['card', opts.class] },
@@ -49,6 +49,9 @@ export function card(opts: { title?: string; class?: string; actions?: Child }, 
     ...children,
   );
 }
+
+/** What a line says, dotted apart, with what is not there left out. */
+export const dotted = (parts: Child[]): Child[] => parts.filter((p) => p !== null && p !== undefined && p !== false && p !== '').flatMap((p, i) => (i ? [' · ', p] : [p]));
 
 export function link(route: Route, ...children: Child[]): HTMLAnchorElement {
   return h('a', { href: href(route) }, ...children);

@@ -25,6 +25,8 @@ describe('routes', () => {
     { name: 'costs', period: 'all', only: [{ by: 'person', key: P }, { by: 'code', key: 'CPT:99213' }] },
     { name: 'costs', only: [{ by: 'provider', key: 'example lab' }, { by: 'month', key: '2026-10' }] },
     { name: 'event', person: P, id: 'r_aaaaaaaaaaaaaaaaaaaa' },
+    { name: 'provider', person: P, id: 'r_aaaaaaaaaaaaaaaaaaaa', field: 'provider' },
+    { name: 'provider', person: P, id: 'd_aaaaaaaaaaaaaaaaaaaa', field: 'organization', all: true },
     { name: 'calendar' },
     { name: 'calendar', month: '2026-10' },
     { name: 'calendar', month: '2026-10', day: '2026-10-12', who: P },

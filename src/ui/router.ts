@@ -3,6 +3,8 @@
 // server. Ids are medrec's (`p_…`, `r_…`, `d_…`, `m_…`, `s_…`), which name
 // nothing about the person or the record.
 
+import { PROVIDER_FIELDS, type ProviderField } from '../model/providers';
+
 export const SECTIONS = [
   'overview',
   'timeline',
@@ -62,6 +64,8 @@ export type Route =
   | { name: 'item'; person: string; id: string }
   // An event: a visit, stay, test or fill, with its claims and papers.
   | { name: 'event'; person: string; id: string }
+  // The provider an item names in a field, so its name is in no address: one person's items, or (`all`) everyone's.
+  | { name: 'provider'; person: string; id: string; field: ProviderField; all?: true }
   // The calendar: a month (YYYY-MM) and a chosen day, the list (from the newest month, or before one), or what is ahead, for everyone or one person.
   | { name: 'calendar'; view?: 'list' | 'ahead'; month?: string; who?: string; day?: string; before?: string }
   // Money, for everyone or one person: the year (in a `period` as the costs screen's), the bills, those worth a
@@ -130,6 +134,9 @@ export function parseRoute(hash: string): Route {
     if (!b) return { name: 'person', person: a, section: 'overview' };
     if (b === 'r' && c && ID.test(c) && parts.length === 4) return { name: 'item', person: a, id: c };
     if (b === 'e' && c && ID.test(c) && parts.length === 4) return { name: 'event', person: a, id: c };
+    const field = PROVIDER_FIELDS.find((f) => f === parts[4]);
+    // `all=1` is everyone's, and any other value the person's: the item in the path is theirs either way.
+    if (b === 'provider' && c && ID.test(c) && field && parts.length === 5) return { name: 'provider', person: a, id: c, field, ...(query.get('all') === '1' ? { all: true as const } : {}) };
     if ((SECTIONS as readonly string[]).includes(b)) {
       const section = b as Section;
       const q = query.get('q') ?? undefined;
@@ -269,6 +276,8 @@ export function href(route: Route): string {
       return `#/p/${encodeURIComponent(route.person)}/r/${encodeURIComponent(route.id)}`;
     case 'event':
       return `#/p/${encodeURIComponent(route.person)}/e/${encodeURIComponent(route.id)}`;
+    case 'provider':
+      return `#/p/${encodeURIComponent(route.person)}/provider/${encodeURIComponent(route.id)}/${route.field}${route.all ? '?all=1' : ''}`;
     case 'person': {
       let h = `#/p/${encodeURIComponent(route.person)}`;
       if (route.section !== 'overview' || route.sub || route.query) h += `/${route.section}`;

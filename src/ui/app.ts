@@ -31,6 +31,7 @@ import { moneyView } from '../next/moneyView';
 import { healthView, leaveOutPrivate } from '../next/healthView';
 import { papersView } from '../next/papersView';
 import { eventView } from '../next/eventView';
+import { providerView } from '../next/providerView';
 
 /** What the app says when a renewal interrupted a write the person asked for. */
 const UNSENT_TEXT: Record<Unsent, string> = {
@@ -624,6 +625,8 @@ export class App {
         return itemView(ctx, r.person, r.id);
       case 'event':
         return eventView(ctx, r.person, r.id);
+      case 'provider':
+        return providerView(ctx, r);
       case 'health':
         return healthView(ctx, r);
       case 'papers':

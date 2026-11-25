@@ -152,6 +152,8 @@ export interface MedRecord {
   display: string;
   status?: string;
   fields: JsonObject;
+  /** What the sources say of the providers the fields name (medrec 0.9.6 and later): `{field, npi, state, city}` each. */
+  providers?: Json;
   documents: string[];
   provenance: Provenance[];
 }

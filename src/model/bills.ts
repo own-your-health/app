@@ -27,7 +27,8 @@ export interface BillState {
   settled: boolean;
   /** A later statement from the same biller, whose balance includes this one's. */
   replacedBy?: string;
-  /** The share of the claim it bills. */
+  /** The claim it bills, as medrec matched it, and that claim's share. */
+  claim?: string;
   owed?: Money;
 }
 
@@ -66,8 +67,8 @@ function payment(v: unknown): Payment {
 
 function state(v: unknown): BillState {
   if (!isObject(v) || typeof v.settled !== 'boolean' || !Array.isArray(v.paid)) throw new FolderError('malformed', 'a bill in it does not read.');
-  const [left, owed, replacedBy] = [moneyOf(v.left, v.currency), moneyOf(v.claim_you_owe, v.currency), text(v.superseded_by)];
-  return { payments: v.paid.map(payment), settled: v.settled, ...(left ? { left } : {}), ...(owed ? { owed } : {}), ...(replacedBy ? { replacedBy } : {}) };
+  const [left, claim, owed, replacedBy] = [moneyOf(v.left, v.currency), text(v.claim), moneyOf(v.claim_you_owe, v.currency), text(v.superseded_by)];
+  return { payments: v.paid.map(payment), settled: v.settled, ...(left ? { left } : {}), ...(claim ? { claim } : {}), ...(owed ? { owed } : {}), ...(replacedBy ? { replacedBy } : {}) };
 }
 
 /** A person's bills.json. Refused when it is not one, is a newer format, or is another person's. */
