@@ -7,6 +7,7 @@
 // events, load.ts reads those instead and this file is deleted.
 
 import { claimCategory, claimProvider, claimVisitId, countedLines, isPharmacyClaim } from '../model/claims';
+import { partOf } from '../model/parts';
 import { knownArea } from '../model/private';
 import { sameProvider } from '../model/providers';
 import { day, decimalCents, isWithdrawn, sortByDateDesc, str } from '../model/records';
@@ -14,6 +15,7 @@ import type { Household, MedRecord, PersonIndex } from '../model/types';
 import { samePractice } from '../model/practices';
 import { recentVisits, visitPlaces, visitTimeline, type Visit } from '../model/visits';
 
+import { count } from '../ui/format';
 import { eventMoney, eventPrivate, nameEvent, withoutPrivate, type CareEvent, type ClaimRole, type Confidence, type EventKind, type Rule } from './event';
 
 // ---- Claims (C) ----
@@ -217,6 +219,18 @@ function claimEvents(claims: Classified[]): CareEvent[] {
   return events;
 }
 
+/** What an event is, and what its claims were for, by the lines that are left of them: care of no said kind where those would not be one event. */
+function regroup(e: CareEvent): void {
+  const claims = e.claims.flatMap((c) => classify(c.record) ?? []);
+  const roles = new Map(claims.map((c) => [c.record.id, c.role]));
+  const events = claimEvents(claims);
+  const one = events.length === 1 ? events[0] : undefined;
+  e.claims = e.claims.map((c) => ({ ...c, role: roles.get(c.record.id) ?? 'service' }));
+  e.kind = one?.kind ?? 'service';
+  if (one?.noFacility) e.noFacility = true;
+  else delete e.noFacility;
+}
+
 // ---- The portal (E) and papers (D) ----
 
 const VISIT_KINDS = new Set(['ambulatory', 'AMB', 'emergency', 'EMER', 'inpatient', 'IMP', 'observation', 'OBSENC', 'virtual', 'VR', 'home health', 'HH']);
@@ -347,6 +361,9 @@ export function careEvents(index: PersonIndex, household: Household, today: stri
     nameEvent(e, household, index.person, { private: !!knownArea(area) });
     const rest = area ? undefined : withoutPrivate(e, index);
     if (!rest) continue;
+    regroup(rest);
+    const gone = rest.claims.reduce((n, c) => n + (partOf(index, c.record.id)?.lines.length ?? 0), 0);
+    if (gone) rest.says = `${count(gone, 'service')} not shown`;
     nameEvent(rest, household, index.person);
     e.shared = rest;
   }

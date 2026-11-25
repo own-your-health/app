@@ -133,11 +133,17 @@ function wholeClaimCategory(r: MedRecord): Category {
 /** What a shared screen leaves out of a claim, as a line. */
 export const NOT_SHOWN = 'Not shown here';
 
-/** What a claim's lines that count come to. */
-function lineSums(r: MedRecord): Cents {
-  const sums: Cents = {};
-  for (const l of claimLines(r)) if (l.counted) for (const [k, n] of Object.entries(lineCents(l.amounts)) as [keyof Cents, number][]) sums[k] = (sums[k] ?? 0) + n;
-  return sums;
+function plus(sums: Cents, more: Cents): Cents {
+  const out = { ...sums };
+  for (const k of AMOUNTS) if (more[k] !== undefined) out[k] = (out[k] ?? 0) + more[k]!;
+  return out;
+}
+
+/** What a claim's lines that count come to, by their day. */
+function daySums(r: MedRecord, service: string): Map<string, Cents> {
+  const days = new Map<string, Cents>();
+  for (const l of claimLines(r)) if (l.counted) days.set(l.date ?? service, plus(days.get(l.date ?? service) ?? {}, lineCents(l.amounts)));
+  return days;
 }
 
 /** Each amount of `all` that is more or less than these of it. */
@@ -168,7 +174,6 @@ export function costLines(person: string, index: PersonIndex, opts: CostOptions 
       insurer,
     };
     const lines = claimLines(r);
-    const sums: Cents = {};
     for (const l of lines) {
       const cents = lineCents(l.amounts);
       const date = l.date ?? service;
@@ -177,16 +182,19 @@ export function costLines(person: string, index: PersonIndex, opts: CostOptions 
         out.push({ ...line, cents: {}, uncounted: cents });
         continue;
       }
-      for (const k of AMOUNTS) if (cents[k] !== undefined) sums[k] = (sums[k] ?? 0) + cents[k]!;
       out.push({ ...line, cents });
     }
-    const inAll = { ...base, date: service, planYear: planYearOf(anniversary, service), planBasis, split: false };
-    // The lines a shared screen leaves out count all the same, in one that names none.
-    const hidden = r.without ? beyond(lineSums(r.without.whole), sums) : {};
-    if (Object.keys(hidden).length) out.push({ ...inAll, category: 'other', service: NOT_SHOWN, cents: hidden });
+    const onDay = (date: string) => ({ ...base, date, planYear: planYearOf(anniversary, date), planBasis, split: false });
+    const days = daySums(r, service);
+    const all = r.without ? daySums(r.without.whole, service) : days;
+    // The lines a shared screen leaves out count all the same, on their days, in one for each that names none.
+    for (const [date, sums] of all) {
+      const hidden = beyond(sums, days.get(date) ?? {});
+      if (Object.keys(hidden).length) out.push({ ...onDay(date), category: 'other', service: NOT_SHOWN, cents: hidden });
+    }
     // What the claim's totals hold beyond its lines.
-    const rest = beyond(claimCents(r), r.without ? lineSums(r.without.whole) : sums);
-    if (Object.keys(rest).length) out.push({ ...inAll, category: lines.length ? 'other' : wholeClaimCategory(r), service: lines.length ? 'Not split by line' : base.claimTitle, cents: rest });
+    const rest = beyond(claimCents(r), [...all.values()].reduce(plus, {}));
+    if (Object.keys(rest).length) out.push({ ...onDay(service), category: lines.length ? 'other' : wholeClaimCategory(r), service: lines.length ? 'Not split by line' : base.claimTitle, cents: rest });
   }
   return out.sort((a, b) => b.date.localeCompare(a.date) || a.claim.localeCompare(b.claim));
 }

@@ -159,7 +159,10 @@ export class DriveFolder implements RecordsFolder {
     if (!m) {
       m = this.drive.get(f.id).then(
         (x) => x.md5Checksum?.toLowerCase(),
-        () => undefined,
+        () => {
+          this.reread.delete(p);
+          return undefined;
+        },
       );
       this.reread.set(p, m);
     }

@@ -3,7 +3,7 @@ import { claimCents, claimLines, claimNotes } from '../src/model/claims';
 import { diagnosisNames } from '../src/model/codeNames';
 import { costLines, errorLines, totals } from '../src/model/costs';
 import { parseIndex, parseText } from '../src/model/parse';
-import { parseParts, partOf, partSays, sharedIndex, sharedRecord, sharedText, sharedTexts } from '../src/model/parts';
+import { parseParts, partOf, partSays, sharedIndex, sharedRecord, sharedText, sharedTexts, textUnfit } from '../src/model/parts';
 import { parsePrivate, type Privacy } from '../src/model/private';
 import { recordTitle } from '../src/model/titles';
 import { find } from '../src/model/search';
@@ -75,6 +75,14 @@ describe('a claim with a private part, on a shared screen', () => {
     expect(sharedRecord(past, record('r_second')).fields.items).toEqual(record('r_second').fields.items);
     const notAList = { ...record('r_mixed'), fields: { items: 'none' } } as MedRecord;
     expect(sharedRecord(index, notAList).fields).toEqual({});
+    // Nor the name medrec gave all of it, where it gives none for what is left.
+    const r = record('r_mixed');
+    const titled = (part: object) => recordTitle(sharedRecord(made({ [r.id]: part }), r));
+    expect([recordTitle({ ...r, fields: { ...r.fields, items: [] } }), titled({ lines: [9], display: 'Sample visit' }), titled({ lines: [9] })]).toEqual(['Sample visit, Quick feelings form and 1 more', 'Sample visit', 'Claim from Example Pediatrics']);
+    const none = made({ [r.id]: { lines: [0, 1, 2] } });
+    expect(find([{ person: 'p', index: sharedIndex(none), text }], 'Quick feelings').hits.map((h) => h.id)).not.toContain(r.id);
+    // One whose private part is in no line is named as before.
+    expect(sharedRecord(made({ [r.id]: { diagnoses: [0] } }), r).display).toBe(r.display);
   });
 
   it('is itself where it has none, and is not cut twice', () => {
@@ -132,6 +140,29 @@ describe('an index, as shared screens go by it', () => {
     expect(costLines('p', { ...index, records: [record('r_second')] }).filter((l) => !l.split)).toEqual(costLines('p', sharedIndex({ ...index, records: [record('r_second')] })).filter((l) => !l.split));
   });
 
+  it('has them on their own days, so a year or a month comes to what it does on its person’s own pages', () => {
+    const r = record('r_mixed');
+    const on = (dates: (string | undefined)[]): PersonIndex => {
+      const items = (r.fields.items as Record<string, Json>[]).map((x, i) => ({ ...x, ...(dates[i] ? { serviced: dates[i] } : {}) }));
+      return { ...made({ [r.id]: { lines: [0, 1] } }), records: [{ ...r, fields: { ...r.fields, items } }] };
+    };
+    const days = (x: PersonIndex) => {
+      const by: Record<string, number> = {};
+      for (const l of costLines('p', x)) by[`${l.date} ${l.planYear.start}`] = (by[`${l.date} ${l.planYear.start}`] ?? 0) + (l.cents.billed ?? 0);
+      return by;
+    };
+    const hidden = (x: PersonIndex) => costLines('p', sharedIndex(x)).filter((l) => l.service === 'Not shown here').map((l) => [l.date, l.cents.billed, l.split]);
+    const stay = on(['2023-12-31', '2024-01-01', '2024-01-01']);
+    expect(days(sharedIndex(stay))).toEqual(days(stay));
+    expect(days(stay)).toEqual({ '2023-12-31 2023-01-01': 2000, '2024-01-01 2024-01-01': 4000, '2024-08-05 2024-01-01': 0 });
+    expect(hidden(stay)).toEqual([
+      ['2024-01-01', 2000, false],
+      ['2023-12-31', 2000, false],
+    ]);
+    // One line for a day, and the claim's own where they give none.
+    expect([hidden(on(['2024-01-01', '2024-01-01'])), hidden(on([]))]).toEqual([[['2024-01-01', 4000, false]], [['2024-08-05', 4000, false]]]);
+  });
+
   it('judges no line that is left as one the plan left out, for want of those that are not', () => {
     const both = (amount: string) => ({ billed: { amount, currency: 'USD' }, you_owe: { amount, currency: 'USD' } });
     const item = (display: string, amount: string) => ({ service: { system: 'http://www.ama-assn.org/go/cpt', code: '99213', display }, amounts: both(amount) });
@@ -187,6 +218,7 @@ describe('a paper’s text, on a shared screen', () => {
     const other = { ...text, md5: 'a newer text' };
     const unsaid = parseText(fixture('parts/medrec/text.json'))!;
     expect([sharedTexts(index, other), sharedTexts(index, unsaid), sharedTexts(made({}), other)]).toEqual([null, null, null]);
+    expect([textUnfit(index, other), textUnfit(index, unsaid), textUnfit(index, text), textUnfit(index, null), textUnfit(made(undefined), other)]).toEqual(['changed', 'unchecked', undefined, undefined, undefined]);
     expect(sharedTexts({ ...index, privacy: of({}) }, unsaid)).toBeNull();
     // A list of before 0.9.9 judged no lines: the text is as it was.
     expect(sharedTexts(made(undefined), other)).toBe(other);
@@ -203,6 +235,8 @@ describe('private.json’s parts', () => {
     expect(p.get('e_1')!.event).toEqual({ kind: 'office', title: 'Office visit', what: null, place: 'Example Place', placeFrom: 'claims', expected: [{ what: 'bill', why: 'Because', since: '2024-01-02' }] });
     expect(p.get('e_2')!.event).toEqual({ place: null, placeFrom: null, expected: null });
     expect(p.get('e_2')!.says).toBeUndefined();
+    // Where a place is from, in a way the app does not know, is not said.
+    expect(parseParts({ e_1: { place_from: 'a new way' } })!.get('e_1')!.event).toEqual({ placeFrom: null });
   });
 
   it('that do not read refuse the list: what they would leave out is not known', () => {

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { linesPrivate, rewritten } from './alter';
 import { lay } from './lay';
 import { CLIENT, FakeGoogle, FOLDER_NAME } from './fake-google';
@@ -99,19 +99,44 @@ test('what is left out fits a phone', async ({ page }) => {
   }
 });
 
-test('the text of papers that changed since medrec said what in it is private is in one person’s search, not everyone’s', async ({ page, context }) => {
+/** Signed in to Drive, whose folder has the private parts. */
+async function signedIn(page: Page, context: BrowserContext): Promise<FakeGoogle> {
   const google = new FakeGoogle(new Date('2026-11-22T20:00:00Z'));
   for (const [path, text] of Object.entries(linesPrivate(SAID))) if (text !== null) google.writeAsMac(path, text);
   await google.install(context);
   await page.goto(`./?client=${CLIENT}`);
   await page.locator('.row', { hasText: FOLDER_NAME }).getByRole('button', { name: 'Open' }).click();
   await expect(page.locator('.signin-notice')).toBeVisible();
+  return google;
+}
+
+test('the text of papers Drive did not say the MD5 of is on everyone’s search once it has', async ({ page, context }) => {
+  const google = await signedIn(page, context);
+  google.unsaid = 'Robin Example/text.json';
+  await page.evaluate(() => (location.hash = '#/search?q=billing'));
+  const unchecked = 'The text of Robin’s papers is not searched here: it could not be checked against what medrec said is private in it. The next search checks again.';
+  await expect(main(page)).toContainText(unchecked);
+  await expect(main(page)).not.toContainText('it changed since');
+  // While Drive does not say, each search asks again, and reads no text again.
+  const reads = () => google.reads.filter((x) => x === 'Robin Example/text.json').length;
+  expect(reads()).toBe(1);
+  await page.getByRole('searchbox').fill('billing code');
+  await expect(main(page)).toContainText(unchecked);
+  google.unsaid = null;
+  await page.getByRole('searchbox').fill('billing');
+  await expect(main(page)).not.toContainText('is not searched here');
+  expect(reads()).toBe(1);
+  expect(google.strays).toEqual([]);
+});
+
+test('the text of papers that changed since medrec said what in it is private is in one person’s search, not everyone’s', async ({ page, context }) => {
+  const google = await signedIn(page, context);
   const path = 'Robin Example/text.json';
   const text = JSON.parse(google.read(path)!) as { texts: Record<string, string> };
   text.texts[BILL] = `A new line\nPlaceholder words\n${text.texts[BILL]}`;
   google.writeAsMac(path, JSON.stringify(text));
   await page.evaluate(() => (location.hash = '#/search?q=placeholder'));
-  await expect(main(page)).toContainText('The text of Robin’s papers is not searched here: it changed since medrec said what in it is private.');
+  await expect(main(page)).toContainText('The text of Robin’s papers is not searched here: it changed since medrec said what in it is private. medrec says it again after its next import or refresh.');
   await expect(main(page).locator('.row', { hasText: 'Placeholder words' })).toHaveCount(0);
   await page.getByRole('group', { name: 'Filter by person' }).getByRole('button', { name: 'Robin' }).click();
   await expect(main(page).locator('.row', { hasText: 'Placeholder words' })).toHaveCount(1);

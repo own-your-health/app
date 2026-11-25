@@ -78,6 +78,39 @@ describe('a visit with a private part', () => {
     expect(shared!.what).not.toBe('Its words');
   });
 
+  it('is at a place judged as what is left has it, and not as all of it', () => {
+    const at = (m: object, part: object, change: (idx: PersonIndex) => void = () => {}) => {
+      const idx = withParts({ [VISIT.id]: part });
+      Object.assign(idx.events!.events.find((e) => e.id === VISIT.id)!, { place: 'Placeholder Hospital', placeFrom: 'portal', bornDuring: [], ...m });
+      change(idx);
+      const e = all(idx).find((x) => x.id === VISIT.id)!;
+      return [e.place, e.shared!.place];
+    };
+    const own = 'Placeholder Hospital';
+    expect(at({}, {})).toEqual([own, own]);
+    // Another person's stay gave it, and nothing says that is not private: nothing takes its place.
+    expect(at({}, { place: 'Their Hospital', place_from: 'linked' })).toEqual([own, undefined]);
+    expect(at({}, { place_from: 'linked' })).toEqual([own, undefined]);
+    expect(at({ placeFrom: 'linked' }, { place: 'Open Hospital', place_from: 'portal' })).toEqual([undefined, 'Open Hospital']);
+    expect(at({ placeFrom: 'linked' }, {})).toEqual([undefined, undefined]);
+    // With none, or one that is another person's, its open items name it.
+    const theirs = SAMPLE.household.sources.find((s) => s.person === sam && s.organization_name && !SAMPLE.household.sources.some((x) => x.person === robin && x.organization_name === s.organization_name))!.organization_name!;
+    expect([at({}, { place: theirs }), at({ placeFrom: 'linked' }, { place: null })]).toEqual([
+      [own, VISIT.place],
+      [undefined, VISIT.place],
+    ]);
+    // A private paper told it, or told another.
+    const told = (organization: string) => (idx: PersonIndex) => {
+      const document = idx.documents.find((d) => !VISIT.papers.some((p) => p.doc.id === d.id))!.id;
+      idx.events!.aliases = [{ organization, document }];
+      if (idx.privacy?.kind === 'known') idx.privacy.documents.set(document, 'household');
+    };
+    expect(at({}, { place: 'Told Hospital', place_from: 'alias' }, told('Told Hospital'))).toEqual([own, VISIT.place]);
+    expect(at({ placeFrom: 'alias' }, { place: 'Open Hospital', place_from: 'portal' }, told(own))).toEqual([own, 'Open Hospital']);
+    expect(at({}, { place_from: 'alias' }, told(own))).toEqual([own, VISIT.place]);
+    expect(at({ placeFrom: 'alias' }, { place_from: 'a new way' }, told(own))).toEqual([own, own]);
+  });
+
   it('is of the kind that is left, named for it, with what is expected of that', () => {
     expect(visit({ kind: 'tests' }).shared).toMatchObject({ kind: 'tests' });
     expect(visit({ kind: 'a new kind', title: 'Sample visit' }).shared).toMatchObject({ kind: 'service', title: 'Sample visit' });
@@ -144,6 +177,55 @@ describe('a visit with a private part', () => {
     if (idx.privacy?.kind === 'known') idx.privacy.records.set(CLAIM.id, 'household');
     expect(careEvents(idx, SAMPLE.household, TODAY).filter((e) => e.shared)).toEqual([]);
   });
+
+  describe('where the app groups the records itself', () => {
+    const line = (display: string, code = '99999', category?: string) => ({ ...(category ? { category } : {}), service: { system: 'http://www.ama-assn.org/go/cpt', code, display }, amounts: {} });
+    const DAY = '2026-11-02';
+    /** Claims of these kinds, whose first lines are private but where `open`; all of one day and one hospital. */
+    const group = (claims: { type: string; items: object[]; part?: object; provider?: string }[]) => {
+      const ids = claims.map((_, i) => `r_made${i}`.padEnd(22, 'a'));
+      const idx = withParts(Object.fromEntries(claims.flatMap((c, i) => (c.part ? [[ids[i]!, c.part]] : []))));
+      delete idx.events;
+      idx.records = claims.map((c, i) => ({ ...structuredClone(CLAIM), id: ids[i]!, date: DAY, fields: { provider: c.provider ?? 'Placeholder Hospital', billable_period: { start: DAY, end: DAY }, type: c.type, items: c.items } }) as MedRecord);
+      idx.documents = [];
+      const events = careEvents(idx, SAMPLE.household, TODAY);
+      expect(events).toHaveLength(1);
+      const said = (e: CareEvent) => [e.kind, ...e.claims.map((c) => c.role)];
+      return { own: said(events[0]!), shared: said(events[0]!.shared!), e: events[0]!.shared!, whole: events[0]! };
+    };
+    const first = { lines: [0] };
+
+    it('is of the kind its open lines make it', () => {
+      const er = group([{ type: 'institutional', items: [line('Emergency department visit'), line('Sample scan')], part: first }]);
+      expect([er.own, er.shared, er.e.title]).toEqual([['er', 'facility'], ['outpatient', 'facility'], group([{ type: 'institutional', items: [line('Sample scan')], part: {} }]).whole.title]);
+      const shot = group([{ type: 'pharmacy', items: [line('Sample vaccine', '90686', 'vaccine'), line('Sample tablet')], part: first }]);
+      expect([shot.own, shot.shared]).toEqual([['vaccine', 'pharmacy'], ['fill', 'pharmacy']]);
+      expect(JSON.stringify([shot.e.title, shot.e.what])).not.toMatch(/vaccine/i);
+      const office = group([{ type: 'professional', items: [line('Office visit', '99213', 'visit'), line('Sample care', '99999', 'medicine')], part: first }]);
+      expect([office.own, office.shared]).toEqual([['office', 'office'], ['service', 'service']]);
+    });
+
+    it('is care of no said kind where those would not be one event', () => {
+      const doctor = { type: 'professional', items: [line('Emergency department visit')], provider: 'Placeholder Doctors' };
+      const split = group([{ type: 'institutional', items: [line('Emergency room'), line('Sample scan')], part: first }, doctor]);
+      expect([split.own, split.shared, split.e.title]).toEqual([['er', 'facility', 'hospital'], ['service', 'facility', 'hospital'], 'Care']);
+      const none = group([{ type: 'professional', items: [line('Office visit', '99213', 'visit')], part: first }]);
+      expect([none.own, none.shared]).toEqual([['office', 'office'], ['service', 'service']]);
+    });
+
+    it('is a hospital’s doctors’ no more where only a private line says so', () => {
+      const alone = group([{ type: 'professional', items: [line('Hospital care'), line('Sample care')], part: first }]);
+      expect([alone.own, alone.whole.noFacility, alone.shared, 'noFacility' in alone.e]).toEqual([['stay', 'hospital'], true, ['service', 'service'], false]);
+      const still = group([{ type: 'professional', items: [line('Sample care'), line('Hospital care')], part: first }]);
+      expect([still.shared, still.e.noFacility]).toEqual([['stay', 'hospital'], true]);
+    });
+
+    it('says how many services are left out of it, in medrec’s words', () => {
+      const items = [line('Sample care'), line('Sample scan'), line('Sample visit')];
+      const says = (...parts: object[]) => group(parts.map((part) => ({ type: 'professional', items, part }))).e.says;
+      expect([says(first), says(first, { lines: [0, 1], says: '2 services not shown' }), says({ diagnoses: [0], says: '1 diagnosis not shown' })]).toEqual(['1 service not shown', '3 services not shown', undefined]);
+    });
+  });
 });
 
 it('a line the plan did not count is not explained on a shared screen when it is private', () => {
@@ -177,6 +259,26 @@ describe('the text medrec judged', () => {
     silent.md5 = () => Promise.reject(new Error('offline'));
     const unsaid = await other.text(robin);
     expect([Object.keys(unsaid!.texts).length > 0, unsaid!.md5, sharedTexts(idx, unsaid)]).toEqual([true, undefined, null]);
+    // It is asked again the next time, of the text as read, and not once it has said.
+    let [asked, read] = [0, 0];
+    const { readText } = silent;
+    silent.readText = (path) => (read++, readText.call(silent, path));
+    silent.md5 = async () => (asked++, idx.privacy?.kind === 'known' ? idx.privacy.text : undefined);
+    const now = await other.text(robin);
+    expect([now!.md5, now!.texts === unsaid!.texts, sharedTexts(idx, now) === null]).toEqual([before!.md5, true, false]);
+    expect([await other.text(robin), asked, read]).toEqual([now, 1, 0]);
+    // A person with no text.json is looked for once; one that did not read is read again.
+    const bare = demoFolderWith({ 'Robin Example/text.json': null });
+    const third = new Store(bare);
+    await third.load();
+    const looked: string[] = [];
+    const reads = bare.readText.bind(bare);
+    bare.readText = (path) => (looked.push(path), reads(path));
+    expect([await third.text(robin), await third.text(robin), looked]).toEqual([null, null, ['Robin Example/text.json']]);
+    bare.readText = () => Promise.reject(new Error('offline'));
+    await expect(third.text(sam)).rejects.toThrow('offline');
+    bare.readText = reads;
+    expect((await third.text(sam))!.md5).toBeDefined();
     expect(sharedIndex(idx)).toBe(idx);
   });
 });

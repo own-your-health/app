@@ -104,10 +104,9 @@ const requestPaths = (entries: Entry[] | null, done: Entry[] | null): string[] =
 const isRefresh = (p: PendingRequest | PendingMark): p is PendingRequest => 'scope' in p.request;
 const isMark = (p: PendingRequest | PendingMark): p is PendingMark => !isRefresh(p);
 
-/** A person's text.json, with its MD5 asked after the read: of this one or a newer. */
-async function readTexts(folder: RecordsFolder, path: string): Promise<PersonText | null> {
-  const text = parseText(await readJson(folder, path));
-  if (!text) return null;
+/** A person's text.json as read, with its MD5 asked after the read: of this one or a newer. */
+async function withMd5(folder: RecordsFolder, path: string, text: PersonText | null): Promise<PersonText | null> {
+  if (!text || text.md5 !== undefined) return text;
   const md5 = await folder.md5(path).catch(() => undefined);
   return { ...text, ...(md5 ? { md5 } : {}) };
 }
@@ -667,14 +666,15 @@ export class Store {
     return this.indexes.get(personId);
   }
 
+  /** The text of a person's papers, read once. While the folder has not said its MD5, it is asked again each time. */
   text(personId: string): Promise<PersonText | null> {
-    let t = this.texts.get(personId);
-    if (!t) {
-      const p = this.person(personId);
-      t = p ? readTexts(this.folder, `${p.folder}/text.json`) : Promise.resolve(null);
-      t.catch(() => this.texts.delete(personId));
-      this.texts.set(personId, t);
-    }
+    const p = this.person(personId);
+    if (!p) return Promise.resolve(null);
+    const at = `${p.folder}/text.json`;
+    const read = this.texts.get(personId) ?? readJson(this.folder, at).then(parseText);
+    const t = read.then((x) => withMd5(this.folder, at, x));
+    t.catch(() => this.texts.delete(personId));
+    this.texts.set(personId, t);
     return t;
   }
 

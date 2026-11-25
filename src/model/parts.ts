@@ -7,6 +7,7 @@
 // places, which are of the index.json and text.json that private.json was made
 // from, the only ones the store reads it with.
 
+import { placeFrom, type PlaceFrom } from './events';
 import { FolderError, isObject } from './parse';
 import type { Json, MedRecord, PersonIndex, PersonText } from './types';
 
@@ -16,7 +17,7 @@ export interface EventPart {
   title?: string | null;
   what?: string | null;
   place?: string | null;
-  placeFrom?: string | null;
+  placeFrom?: PlaceFrom | null;
   expected?: { what: string; why: string; since?: string }[] | null;
 }
 
@@ -65,7 +66,7 @@ function eventPart(raw: Record<string, unknown>): EventPart {
   if (title !== undefined) out.title = title;
   if (what !== undefined) out.what = what;
   if (at !== undefined) out.place = at;
-  if (from !== undefined) out.placeFrom = from;
+  if (from !== undefined) out.placeFrom = placeFrom(from).placeFrom ?? null;
   if (raw.expected === null) out.expected = null;
   else if (raw.expected !== undefined) {
     if (!Array.isArray(raw.expected)) throw bad();
@@ -124,7 +125,9 @@ export function sharedRecord(index: PersonIndex, r: MedRecord): MedRecord {
   put('diagnoses', without(fields.diagnoses, part.diagnoses));
   put('payer_notes', without(fields.payer_notes, part.payerNotes));
   if (part.category !== undefined) put('category', part.category ?? undefined);
-  return { ...r, ...(part.display ? { display: part.display } : {}), fields, without: { whole: r, ...(part.says ? { says: part.says } : {}) } };
+  // A name medrec gave the whole claim can be a private line's.
+  const display = part.display ?? (part.lines.length ? '' : r.display);
+  return { ...r, display, fields, without: { whole: r, ...(part.says ? { says: part.says } : {}) } };
 }
 
 const twins = new WeakMap<PersonIndex, PersonIndex>();
@@ -158,13 +161,16 @@ export function sharedText(text: string, gone: [number, number][]): string | und
 
 const texts = new WeakMap<PersonIndex, { of: PersonText; twin: PersonText }>();
 
-/**
- * A person's texts as a shared screen goes by them: null for a text.json other
- * than the one medrec said the private lines of.
- */
+/** Why a text.json is on no shared screen: it is another than the one medrec said the private lines of, or the folder did not say which it is. */
+export function textUnfit(index: PersonIndex, text: PersonText | null): 'changed' | 'unchecked' | undefined {
+  if (!text || index.privacy?.kind !== 'known' || !index.privacy.parts) return undefined;
+  return text.md5 === undefined ? 'unchecked' : text.md5 !== index.privacy.text ? 'changed' : undefined;
+}
+
+/** A person's texts as a shared screen goes by them: null for one that is on none. */
 export function sharedTexts(index: PersonIndex, text: PersonText | null): PersonText | null {
+  if (textUnfit(index, text)) return null;
   if (!text || index.privacy?.kind !== 'known' || !index.privacy.parts) return text;
-  if (text.md5 === undefined || text.md5 !== index.privacy.text) return null;
   const hit = texts.get(index);
   if (hit?.of === text) return hit.twin;
   const left = Object.entries(text.texts).flatMap(([id, body]) => {

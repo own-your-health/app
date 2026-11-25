@@ -14,6 +14,7 @@ import { allergyList, conditionList, CRITICALITY_TEXT, isFill, medicineList, sai
 import { isObject } from '../../model/parse';
 import { AMOUNT_LABELS, asMoney, docTypeLabel, documentTitle, findItem, formatMoney, importFor, isDoseGiven, KIND_LABELS, LINE_AMOUNT_ORDER, originNames, resultPoint, resultReading, str, studyTitle, toCents, valueText } from '../../model/records';
 import { resultContext, unitText, verdict } from '../../model/result';
+import { partSays } from '../../model/parts';
 import { recordTitle, visitTitle } from '../../model/titles';
 import type { ProviderField } from '../../model/providers';
 import type { ImagingStudy, Json, MedDocument, MedRecord, PersonIndex, Provenance } from '../../model/types';
@@ -737,5 +738,5 @@ export function itemView(ctx: Ctx, personId: string, id: string): HTMLElement {
   const item = findItem(idx, id);
   if (!item) return h('div', { class: 'stack' }, back, card({}, empty('This record is not in the index. It may have been merged or removed by medrec.')));
   const body = item.type === 'record' ? recordView(ctx, idx, item.record) : item.type === 'document' ? documentView(ctx, idx, item.document, !!item.inError) : studyView(ctx, idx, item.study);
-  return h('div', { class: 'stack' }, back, partOfEvent(ctx, personId, idx, id), partNote(idx, id), errorCard(ctx, idx, id, item), ...body);
+  return h('div', { class: 'stack' }, back, partOfEvent(ctx, personId, idx, id), partNote(partSays(idx, id)), errorCard(ctx, idx, id, item), ...body);
 }

@@ -83,6 +83,15 @@ describe('DriveFolder', () => {
     expect(await folder.md5('Robin Example/index.json')).toBe('abcdef0123456789abcdef0123456789');
     expect(await folder.md5('Robin Example/index.json')).toBe('abcdef0123456789abcdef0123456789');
     expect(calls.filter((c) => c === 'GET /drive/v3/files/file-robin-index')).toHaveLength(1);
+    // What Drive did not say is asked again.
+    const other = new DriveFolder(drive, 'root', 'x');
+    await other.readText('Robin Example/index.json');
+    const get = drive.get.bind(drive);
+    drive.get = () => Promise.reject(new Error('offline'));
+    expect(await other.md5('Robin Example/index.json')).toBeUndefined();
+    drive.get = get;
+    calls.length = 0;
+    expect([await other.md5('Robin Example/index.json'), await other.md5('Robin Example/index.json'), calls]).toEqual(['abcdef0123456789abcdef0123456789', 'abcdef0123456789abcdef0123456789', ['GET /drive/v3/files/file-robin-index']]);
     // Forgotten, it is as listed again.
     folder.forget('Robin Example');
     expect(await folder.md5('Robin Example/index.json')).toBe('5f2b8c1e9a7d4b3c6e0f1a2b3c4d5e6f');
