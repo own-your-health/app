@@ -30,6 +30,8 @@ describe('routes', () => {
     { name: 'calendar', month: '2026-10', day: '2026-10-12', who: P },
     { name: 'calendar', view: 'list', who: P },
     { name: 'calendar', view: 'list', before: '2026-07' },
+    { name: 'calendar', view: 'ahead' },
+    { name: 'calendar', view: 'ahead', who: P },
     { name: 'money' },
     { name: 'money', view: 'calls' },
     { name: 'money', view: 'calls', who: P },
@@ -92,6 +94,8 @@ describe('routes', () => {
     // A day picks its month; the list has neither.
     expect(parseRoute('#/calendar?month=2026-01&day=2026-10-12')).toEqual({ name: 'calendar', month: '2026-10', day: '2026-10-12' });
     expect(parseRoute('#/calendar?view=list&month=2026-10&day=2026-10-12')).toEqual({ name: 'calendar', view: 'list' });
+    expect(parseRoute('#/calendar?view=ahead&month=2026-10&day=2026-10-12&before=2026-07')).toEqual({ name: 'calendar', view: 'ahead' });
+    expect(href({ name: 'calendar', view: 'ahead', before: '2026-07' })).toBe('#/calendar?view=ahead');
     expect(parseRoute('#/calendar/x')).toEqual({ name: 'not_found' });
   });
 

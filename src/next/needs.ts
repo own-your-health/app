@@ -9,7 +9,7 @@ import { recordsPrivate } from '../model/private';
 import type { PersonIndex } from '../model/types';
 
 const DAY_MS = 86_400_000;
-const addDays = (day: string, n: number) => new Date(Date.parse(`${day}T00:00:00Z`) + n * DAY_MS).toISOString().slice(0, 10);
+export const addDays = (day: string, n: number) => new Date(Date.parse(`${day}T00:00:00Z`) + n * DAY_MS).toISOString().slice(0, 10);
 
 /** Whole days from one day to another; negative when `to` is earlier. */
 export const daysBetween = (from: string, to: string) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS);

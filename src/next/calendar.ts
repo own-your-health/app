@@ -63,6 +63,10 @@ export function isMonth(s: string | undefined): s is string {
 
 export const monthOf = (day: string): string => day.slice(0, 7);
 
+export const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+export const monthLabel = (month: string): string => `${MONTHS[Number(month.slice(5, 7)) - 1]} ${month.slice(0, 4)}`;
+
 /** The month n months after this one (n may be negative). */
 export function shiftMonth(month: string, n: number): string {
   const [y, m] = month.split('-').map(Number) as [number, number];

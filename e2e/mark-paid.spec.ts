@@ -83,16 +83,22 @@ test('a bill is marked paid from Bills, waits for the Mac, and is paid once file
 test('while it waits, Home, Money, the visit and the bill say it is marked, and undo takes it back', async ({ page }) => {
   const bill = doc('Sam Example', '90.50');
   await go(page, '#/');
-  const needs = card(page, /^Needs you$/);
-  const row = needs.locator('.row', { hasText: CENTER });
-  await expect(row.locator('.need-kind')).toHaveText('No payment on file, unless it was paid elsewhere');
-  const before = await page.locator('.stand', { hasText: 'Sam' }).locator('.kv-row').first().innerText();
+  const bills = card(page, /^Bills$/);
+  const row = bills.locator('.row', { hasText: 'Hospital visit' });
+  const sam = page.locator('.stand', { hasText: 'Sam' }).locator('.row-aside');
+  await expect(row.locator('.need-kind')).toHaveText('No payment on file');
+  await expect(bills.locator('.card-head')).toHaveText(/4 · \$283\.46$/);
+  await expect(sam).toHaveText('2 bills');
   await markButton(page, CENTER).click();
   await send(page).click();
-  await expect(row.locator('.need-kind')).toHaveText('Marked paid');
-  await expect(row).not.toContainText('was due');
-  await expect(row).toContainText(`$90.50 marked paid, Nov 22, 2026. Waiting for the Mac.`);
-  await expect(page.locator('.stand', { hasText: 'Sam' }).locator('.kv-row').first()).toHaveText('To pay$120.00 in 1 bill, 1 worth a call');
+  // Home asks for it no more, says how many are marked, and the keyboard is on the way to them.
+  await expect(row).toHaveCount(0);
+  await expect(bills.locator('.card-head')).toHaveText(/3 · \$192\.96$/);
+  await expect(bills.locator('.home-quiet')).toHaveText('Besides, 1 is marked paid.');
+  await expect(bills.getByRole('link', { name: 'All 4 bills' })).toBeFocused();
+  await expect(sam).toHaveText('1 bill');
+  await page.evaluate(() => (location.hash = '#/money/bills'));
+  await expect(card(page, /^Marked paid$/).locator('.mark-line')).toContainText('$90.50 marked paid, Nov 22, 2026. Waiting for the Mac.');
   for (const path of [`#/p/${SAM}/e/${eventOf(SAM, bill)}`, `#/p/${SAM}/r/${bill}`]) {
     await page.evaluate((to) => (location.hash = to), path);
     await expect(page.locator('.mark-line')).toContainText(UNDO);
@@ -102,8 +108,9 @@ test('while it waits, Home, Money, the visit and the bill say it is marked, and 
   await expect(page.locator('.mark-line')).toHaveCount(0);
   await expect(markButton(page, CENTER)).toBeVisible();
   await page.evaluate(() => (location.hash = '#/'));
-  await expect(row.locator('.need-kind')).toHaveText('No payment on file, unless it was paid elsewhere');
-  expect(await page.locator('.stand', { hasText: 'Sam' }).locator('.kv-row').first().innerText()).toBe(before);
+  await expect(row.locator('.need-kind')).toHaveText('No payment on file');
+  await expect(bills.locator('.home-quiet')).toHaveCount(0);
+  await expect(sam).toHaveText('2 bills');
 });
 
 test('a part paid leaves the rest to pay and to mark', async ({ page }) => {
@@ -187,9 +194,7 @@ test('a bill that may be paid starts from its receipt’s day, and is no longer 
   await expect(maybe).toHaveCount(0);
   await expect(card(page, /^Marked paid$/).locator('.mark-line')).toContainText('$90.50 marked paid, Oct 5, 2026.');
   await page.evaluate(() => (location.hash = '#/'));
-  const row = card(page, /^Needs you$/).locator('.row', { hasText: CENTER });
-  await expect(row.locator('.need-kind')).toHaveText('Marked paid');
-  await expect(row).not.toContainText('could not be read');
+  await expect(card(page, /^Bills$/).locator('.home-quiet')).toHaveText('Besides, 1 is marked paid.');
 });
 
 test('a receipt dated ahead of today leaves today in the form', async ({ page }) => {
@@ -207,9 +212,9 @@ test('every page a bill is on has Mark paid: Worth a call, the bill, its visit, 
     await expect(markButton(page, 'Example Billing, Aug 1, 2026, \\$120.00')).toHaveCount(1);
   }
   await go(page, '#/');
-  await expect(card(page, /^Needs you$/).locator('.row', { hasText: 'No payment on file' }).getByRole('button', { name: /^Mark paid/ })).toHaveCount(2);
-  // Not yet due, and worth a call, Home has no control for.
-  for (const kind of ['Worth a call', 'Bill to pay']) await expect(card(page, /^Needs you$/).locator('.row', { hasText: kind }).getByRole('button')).toHaveCount(0);
+  await expect(card(page, /^Bills$/).locator('.row', { hasText: 'No payment on file' }).getByRole('button', { name: /^Mark paid/ })).toHaveCount(1);
+  // Worth a call, Home has no control for.
+  await expect(card(page, /^Bills$/).locator('.row', { hasText: 'Worth a call' }).getByRole('button')).toHaveCount(0);
   // A statement whose balance a later one has is paid there.
   await go(page, `#/p/${ROBIN}/r/${doc('Robin Example', '51.18')}`);
   await expect(page.locator('.kv')).toContainText(['Later statement']);
@@ -290,18 +295,33 @@ test('where medrec’s list does not say what is left there is no Mark paid, and
   }
 });
 
-test('on Home, of two bills for one visit only the one marked is, and one not yet due says what is marked of it', async ({ page }) => {
+/** The sample with Robin's two bills one visit's, the second due on this day. */
+const oneVisit = (due: string) => {
   const [first, second] = [doc('Robin Example', '53.68'), doc('Robin Example', '19.28')];
-  await lay(
-    page,
-    rewritten({}, (files) => {
-      const [to, from] = [first, second].map((id) => files.events.events.find((e) => e.members?.some((m) => m.document === id)));
-      if (!to || !from) return;
-      to.members!.push(...from.members!.filter((m) => m.document === second));
-      from.members = from.members!.filter((m) => m.document !== second);
-    }),
-  );
-  await go(page, '#/money/bills');
+  return rewritten({}, (files) => {
+    const [to, from] = [first, second].map((id) => files.events.events.find((e) => e.members?.some((m) => m.document === id)));
+    if (!to || !from) return;
+    to.members!.push(...from.members!.filter((m) => m.document === second));
+    from.members = from.members!.filter((m) => m.document !== second);
+    for (const d of files.index.documents) if (d.id === second) d.statement = { ...(d.statement as object), due_date: due };
+    const listed = files.bills.bills[second];
+    if (listed) listed.due_date = due;
+  });
+};
+
+test('on Home, the bills of one visit share a row, marked one by one on its page, and the last says what is marked of it', async ({ page }) => {
+  await lay(page, oneVisit('2026-10-27'));
+  await go(page, '#/');
+  const row = card(page, /^Bills$/).locator('.row', { hasText: 'Robin' });
+  // Both are past due: the visit's total, and no button that marks one of them.
+  await expect(row.locator('.need-kind')).toHaveText('No payment on file');
+  await expect(row.locator('.row-meta')).toHaveText('Robin · 2 bills · was due Oct 27 · unless it was paid elsewhere');
+  await expect(row.locator('.row-aside')).toHaveText('$72.96');
+  await expect(row.getByRole('button')).toHaveCount(0);
+  await row.locator('a.row-main').click();
+  await expect(page.locator('.event h1')).toHaveText('Office visit');
+
+  await page.evaluate(() => (location.hash = '#/money/bills'));
   await markButton(page, 'Example Lab').click();
   await page.getByLabel('Amount').fill('5');
   await send(page).click();
@@ -309,28 +329,22 @@ test('on Home, of two bills for one visit only the one marked is, and one not ye
   await send(page).click();
   await expect(card(page, /^Marked paid$/).locator('.mark-line')).toHaveCount(1);
   await page.evaluate(() => (location.hash = '#/'));
-  const rows = card(page, /^Needs you$/).locator('.row', { hasText: 'Robin' }).filter({ hasText: 'Example' });
-  await expect(rows.locator('.mark-line')).toHaveText([/^\$5\.00 marked paid/, /^\$53\.68 marked paid/]);
-  await expect(rows.filter({ hasText: '$53.68 marked paid' }).locator('.need-kind')).toHaveText('Marked paid');
-  await expect(rows.filter({ hasText: '$5.00 marked paid' }).locator('.need-kind')).toHaveText('Bill to pay');
+  await expect(row.locator('.need-kind')).toHaveText('No payment on file');
+  await expect(row.locator('.row-meta')).toHaveText('Robin · $5.00 marked paid · was due Oct 27 · matches the claim · unless it was paid elsewhere');
+  await expect(row.locator('.row-aside')).toHaveText('$19.28');
+  await expect(card(page, /^Bills$/).locator('.home-quiet')).toHaveText('Besides, 1 is marked paid.');
 });
 
-test('on Home, a bill that shares its row with another has its provider on its button', async ({ page }) => {
-  const [first, second] = [doc('Robin Example', '53.68'), doc('Robin Example', '19.28')];
-  await lay(
-    page,
-    rewritten({}, (files) => {
-      const [to, from] = [first, second].map((id) => files.events.events.find((e) => e.members?.some((m) => m.document === id)));
-      if (!to || !from) return;
-      to.members!.push(...from.members!.filter((m) => m.document === second));
-      from.members = from.members!.filter((m) => m.document !== second);
-      for (const d of files.index.documents) if (d.id === second) d.statement = { ...(d.statement as object), due_date: '2026-11-18' };
-      const listed = files.bills.bills[second];
-      if (listed) listed.due_date = '2026-11-18';
-    }),
-  );
-  await go(page, '#/');
-  await expect(page.locator('.mark-paid').getByRole('button', { name: /Example (Health|Lab)/ })).toHaveText(['Mark paid: Example Lab', 'Mark paid: Example Health']);
+test('on Home, a visit’s bills with one past due are past due together, and those to come wait', async ({ page }) => {
+  await lay(page, oneVisit('2026-11-27'));
+  await go(page, '#/money/bills');
+  await markButton(page, CENTER).click();
+  await send(page).click();
+  await expect(card(page, /^Marked paid$/).locator('.mark-line')).toHaveCount(1);
+  await page.evaluate(() => (location.hash = '#/'));
+  const rows = card(page, /^Bills$/).locator('.row');
+  await expect(rows.locator('.need-kind')).toHaveText(['Worth a call', 'No payment on file']);
+  await expect(rows.last().locator('.row-meta')).toHaveText('Robin · 2 bills · was due Nov 19 · unless it was paid elsewhere');
 });
 
 test('a filed payment is undone on the Mac, or from medrec 0.9.7 here', async ({ page }) => {
@@ -486,7 +500,7 @@ test('a private bill is marked on its person’s own pages, and nothing of that 
   await go(page, `#/money/bills?who=${SAM}`);
   const mine = page.locator('.main .row', { has: page.locator('.chip', { hasText: 'Private' }) }).filter({ has: page.getByRole('button', { name: /^Mark paid/ }) });
   await expect(mine).toHaveCount(1);
-  const provider = await mine.locator('.row-title').innerText();
+  const provider = await mine.locator('.row-title span').last().innerText();
   const shared = async () => {
     const out: string[] = [];
     for (const path of ['#/', '#/money', '#/money/bills', '#/money/calls']) {

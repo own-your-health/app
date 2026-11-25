@@ -77,8 +77,10 @@ export function row(opts: { route?: Route; title: Child; meta?: Child; aside?: C
     h('div', { class: 'row-title' }, opts.title),
     opts.meta ? h('div', { class: 'row-meta' }, opts.meta) : null,
   );
-  const main = opts.route ? h('a', { class: 'row-main', href: href(opts.route) }, body, h('span', { class: 'row-chevron' }, icon('next', 18))) : h('div', { class: 'row-main' }, body);
-  return h('div', { class: ['row', opts.class] }, h('div', { class: 'row-line' }, main, opts.aside ? h('div', { class: 'row-aside' }, opts.aside) : null), opts.extra ?? null);
+  const aside = opts.aside ? h('div', { class: 'row-aside' }, opts.aside) : null;
+  // The arrow is last, at the right edge, so amounts line up and the text keeps its width.
+  const main = opts.route ? h('a', { class: 'row-main', href: href(opts.route) }, body, aside, h('span', { class: 'row-chevron' }, icon('next', 18))) : h('div', { class: 'row-main' }, body, aside);
+  return h('div', { class: ['row', opts.class] }, h('div', { class: 'row-line' }, main), opts.extra ?? null);
 }
 
 export function button(label: Child, onClick: (ev: Event) => void, opts: { primary?: boolean; ghost?: boolean; icon?: string; disabled?: boolean; title?: string; small?: boolean } = {}): HTMLButtonElement {
@@ -138,7 +140,7 @@ export function driveLink(ctx: Ctx, path: string, label = 'Open in Drive'): HTML
 }
 
 /** Refresh for a scope: a button, or the request already waiting with a cancel. */
-export function refreshControl(ctx: Ctx, scope: RequestScope, what: string, opts: { primary?: boolean } = {}): HTMLElement {
+export function refreshControl(ctx: Ctx, scope: RequestScope, what: string, opts: { primary?: boolean; named?: boolean } = {}): HTMLElement {
   const store = ctx.store;
   const held = store.pendingFor(scope);
   if (held) {
@@ -170,7 +172,7 @@ export function refreshControl(ctx: Ctx, scope: RequestScope, what: string, opts
   }
   if (!store.requestsReady) return h('span', { class: 'muted small' }, 'Refresh is not set up on the Mac');
   if (!ctx.canWrite) return h('span', { class: 'muted small' }, 'Refresh needs the Drive file permission (Settings)');
-  return button(
+  const refresh = button(
     opts.primary ? `Refresh ${what}` : 'Refresh',
     (ev) => {
       const b = ev.currentTarget as HTMLButtonElement;
@@ -179,6 +181,8 @@ export function refreshControl(ctx: Ctx, scope: RequestScope, what: string, opts
     },
     { primary: opts.primary, icon: 'refresh', small: !opts.primary, title: `Ask the Mac to load ${what} again` },
   );
+  if (opts.named) refresh.setAttribute('aria-label', `Refresh ${what}`);
+  return refresh;
 }
 
 function sameScopeText(p: PendingRequest, scope: RequestScope): boolean {

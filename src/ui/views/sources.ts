@@ -3,8 +3,8 @@
 // person.
 
 import { headline, isRecentAnswer, needsAttention, needsPerson, NEEDS_PERSON, type AnsweredRequest, type MacState, type SourceView } from '../../model/sources';
-import { h, icon, type Child } from '../dom';
-import { card, chip, command, empty, link, refreshControl, row, type Ctx, type Tone } from '../components';
+import { h, type Child } from '../dom';
+import { card, chip, command, empty, refreshControl, row, type Ctx, type Tone } from '../components';
 import { clock, dateTime, duration, relative } from '../format';
 import type { ErrorInfo, Handled, Person } from '../../model/types';
 import type { Route } from '../router';
@@ -225,12 +225,6 @@ export function signInWords(views: SourceView[]): { text: string; route: Route }
         ? `${label(needs[0]!)} and ${label(needs[1]!)} need ${what} on the Mac`
         : `${needs.length} sources need ${what} on the Mac`;
   return { text, route: needs.length === 1 ? { name: 'source', source: needs[0]!.source.id } : { name: 'sources' } };
-}
-
-/** signInWords as a link, for home and a person's overview. */
-export function signInNotice(views: SourceView[]): HTMLElement | null {
-  const words = signInWords(views);
-  return words ? h('p', { class: 'signin-notice' }, link(words.route, h('span', null, words.text), icon('next', 18))) : null;
 }
 
 /** The shorter words for `n` sources with an outcome, counted among others ("2 too soon after their last tries"). */

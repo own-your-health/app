@@ -16,10 +16,9 @@ const card = (page: Page, title: string | RegExp) => page.locator('.card', { has
 test('home leads to the calendar, which opens on this month with a lane per person', async ({ page }) => {
   await open(page);
   const recent = card(page, /^Recently$/);
-  // Each row leads with the kind and the place, and says what it was beneath.
-  await expect(recent.locator('.row-title')).toHaveText(['Office visit · Example Pediatrics', 'Office visit · Example Health Main Clinic', 'Lisinopril 10 mg tablet · Example Pharmacy']);
-  await expect(recent.locator('.row-meta')).toHaveText(['Alex · Ear pain', 'Robin · Cholesterol and potassium recheck', 'Robin · Pharmacy']);
-  await recent.getByRole('link', { name: /^Calendar/ }).click();
+  await expect(recent.locator('.row-title')).toHaveText(['Office visit', 'Office visit']);
+  await expect(recent.locator('.row-meta')).toHaveText(['Alex · Example Pediatrics', 'Robin · Example Health Main Clinic']);
+  await recent.getByRole('link', { name: /^Calendar$/ }).click();
   await expect(page).toHaveURL(/#\/calendar$/);
   await expect(page.locator('main h1')).toHaveText('Calendar');
 

@@ -68,16 +68,16 @@ export function isAnswered(r: RefreshRequest): r is AnsweredRequest {
   return typeof r.handled?.finished_at === 'string';
 }
 
-/** Answered within ANSWER_SHOWN_MS before `now` (a finish time ahead of the clock is not). */
-export function isRecentAnswer(r: RefreshRequest, now: Date): r is AnsweredRequest {
+/** Answered within `ms` before `now` (a finish time ahead of the clock is not). */
+export function isRecentAnswer(r: RefreshRequest, now: Date, ms = ANSWER_SHOWN_MS): r is AnsweredRequest {
   if (!isAnswered(r)) return false;
   const age = now.getTime() - Date.parse(r.handled.finished_at);
-  return age >= 0 && age < ANSWER_SHOWN_MS;
+  return age >= 0 && age < ms;
 }
 
-/** The newest recent answer: the one home shows. */
-export function latestAnswered(done: RefreshRequest[], now: Date): AnsweredRequest | undefined {
-  return done.filter((r): r is AnsweredRequest => isRecentAnswer(r, now)).sort((a, b) => b.handled.finished_at.localeCompare(a.handled.finished_at))[0];
+/** The newest answer within `ms` before `now`: the one home shows. */
+export function latestAnswered(done: RefreshRequest[], now: Date, ms = ANSWER_SHOWN_MS): AnsweredRequest | undefined {
+  return done.filter((r): r is AnsweredRequest => isRecentAnswer(r, now, ms)).sort((a, b) => b.handled.finished_at.localeCompare(a.handled.finished_at))[0];
 }
 
 /** Counts medrec did not give are unknown, never zero. */

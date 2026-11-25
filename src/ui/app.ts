@@ -360,7 +360,7 @@ export class App {
   /**
    * Whether drawing the page again would lose what someone is doing: a search
    * page (its words, filters and results), or any text field on the page that
-   * has focus or has been typed in (the home screen's search field).
+   * has focus or has been typed in (the setup screens').
    */
   private holdsInput(): boolean {
     const r = parseRoute(location.hash);

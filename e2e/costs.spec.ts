@@ -22,11 +22,12 @@ test.afterEach(() => {
 });
 
 test('costs this plan year across everyone, broken down, and down to one month and back', async ({ page }) => {
-  // Home's Money card, then Money's way to every claim.
+  // Home's line for the year's money, then Money's way to every claim.
   await page.goto('./?demo');
-  const glance = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Money$/ }) });
-  await expect(glance.locator('.glance-answer')).toHaveText('$497.86 your share this plan year');
-  await glance.getByRole('link', { name: 'The year, the bills and the biggest costs' }).click();
+  const line = page.locator('.money-line');
+  await expect(line.locator('.row-title')).toHaveText('Your share this plan year');
+  await expect(line.locator('.row-aside')).toHaveText('$497.86');
+  await line.getByRole('link').click();
   await page.getByRole('link', { name: 'Every claim, by provider, kind of care and month' }).click();
   await expect(page).toHaveURL(/#\/costs$/);
   await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Money' })).toHaveAttribute('aria-current', 'page');

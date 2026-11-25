@@ -44,6 +44,11 @@ export function dateText(d: string | undefined | null): string {
   return date.toLocaleDateString(undefined, da ? { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' } : { year: 'numeric', month: 'short', timeZone: 'UTC' });
 }
 
+/** A day without its year: "Nov 24". */
+export function monthDayText(d: string): string {
+  return new Date(`${d}T00:00:00Z`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+
 export function yearOf(d: string | undefined): string {
   return d && /^\d{4}/.test(d) ? d.slice(0, 4) : 'No date';
 }

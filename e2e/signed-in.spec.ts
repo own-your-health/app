@@ -128,7 +128,7 @@ test('with no account stored, a browser with two Google accounts asks once', asy
 test('an hour later the sign-in renews itself, as the same account, on the same screen', async ({ page }) => {
   await page.clock.install();
   await signIn(page);
-  await page.locator('.stand-name').getByRole('link', { name: 'Robin' }).click();
+  await page.locator('.stand').getByRole('link', { name: /^Robin/ }).click();
   const lead = page.locator('main .lead');
   await expect(lead).toHaveText('Where Robin stands: what is due, what is current, and what is worth a look.');
   const route = new URL(page.url()).hash;

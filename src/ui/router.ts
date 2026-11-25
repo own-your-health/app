@@ -62,8 +62,8 @@ export type Route =
   | { name: 'item'; person: string; id: string }
   // An event: a visit, stay, test or fill, with its claims and papers.
   | { name: 'event'; person: string; id: string }
-  // The calendar: a month (YYYY-MM) and a chosen day, or the list (from the newest month, or before one), for everyone or one person.
-  | { name: 'calendar'; view?: 'list'; month?: string; who?: string; day?: string; before?: string }
+  // The calendar: a month (YYYY-MM) and a chosen day, the list (from the newest month, or before one), or what is ahead, for everyone or one person.
+  | { name: 'calendar'; view?: 'list' | 'ahead'; month?: string; who?: string; day?: string; before?: string }
   // Money, for everyone or one person: the year (in a `period` as the costs screen's), the bills, those worth a
   // call (and the bill a row named), or where the money went (by network price, by your share, or by network discount).
   | { name: 'money'; view?: MoneyView; who?: string; bill?: string; period?: string; sort?: 'share' | 'discount' }
@@ -165,7 +165,8 @@ const DAY = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 const isDay = (d: string) => DAY.test(d) && new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) === d;
 
 function calendarRoute(query: URLSearchParams): Route {
-  const view = query.get('view') === 'list' ? ('list' as const) : undefined;
+  const asked = query.get('view');
+  const view = asked === 'list' || asked === 'ahead' ? asked : undefined;
   const month = query.get('month') ?? '';
   const before = query.get('before') ?? '';
   const who = query.get('who') ?? '';
@@ -176,7 +177,7 @@ function calendarRoute(query: URLSearchParams): Route {
     ...(!view && MONTH.test(month) ? { month } : {}),
     ...(ID.test(who) ? { who } : {}),
     ...(!view && isDay(day) ? { day, month: day.slice(0, 7) } : {}),
-    ...(view && MONTH.test(before) ? { before } : {}),
+    ...(view === 'list' && MONTH.test(before) ? { before } : {}),
   };
 }
 
@@ -184,7 +185,7 @@ function calendarQuery(r: Extract<Route, { name: 'calendar' }>): string {
   const q = new URLSearchParams();
   if (r.view) q.set('view', r.view);
   if (r.month && !r.view) q.set('month', r.month);
-  if (r.before && r.view) q.set('before', r.before);
+  if (r.before && r.view === 'list') q.set('before', r.before);
   if (r.day && !r.view) q.set('day', r.day);
   if (r.who) q.set('who', r.who);
   const t = q.toString();

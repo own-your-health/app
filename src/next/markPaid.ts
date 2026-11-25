@@ -8,7 +8,7 @@ import { billList, receiptDay, type Bill } from '../model/billing';
 import { called } from '../model/people';
 import { atLeast } from '../model/private';
 import { formatMoney, fromCents, toCents, type Money } from '../model/records';
-import { markedAmount, paidAmount, typedAmount } from '../model/requests';
+import { markedAmount, marksTotal, paidAmount, typedAmount } from '../model/requests';
 import { requestWait } from '../model/sources';
 import type { MarkRequest, PendingMark, PersonIndex } from '../model/types';
 import { button, command, sheet, type Ctx } from '../ui/components';
@@ -66,6 +66,22 @@ const provider = (bill: Bill): string => bill.provider ?? 'the bill';
 /** Whose bill it is and what it asks, for the form and for a screen reader's list of buttons. */
 const billName = (bill: Bill): string => `${provider(bill)}${bill.date ? `, ${dateText(bill.date)}` : ''}`;
 
+/** The button that marks what is left of a bill paid, while there is something left and this account may. */
+export function markButton(ctx: Ctx, idx: PersonIndex, bill: Bill, named = false): HTMLElement | null {
+  const cents = bill.settled ? 0 : toMark(ctx, idx, bill);
+  if (cents <= 0 || !canMark(ctx, idx)) return null;
+  const mark = button(named ? `Mark paid: ${provider(bill)}` : 'Mark paid', (ev) => openForm(ctx, idx, bill, cents, ev.currentTarget as HTMLElement), { small: true });
+  mark.setAttribute('aria-label', `Mark paid: ${billName(bill)}, ${formatMoney(fromCents(cents, bill.left!.currency))}`);
+  return mark;
+}
+
+/** What a bill's row says of the payments marked on it: what waits for the Mac, or that the last was not recorded. */
+export function markNote(ctx: Ctx, idx: PersonIndex, bill: Bill): string | null {
+  const marks = billMarks(idx, bill, ctx.store.marks);
+  if (marks.length) return `${formatMoney(fromCents(marksTotal(marks, bill.left?.currency ?? 'USD'), bill.left?.currency))} marked paid`;
+  return notRecorded(ctx, idx, bill) ? 'the payment marked on it was not recorded' : null;
+}
+
 /**
  * What marks a bill paid: the payments that wait for the Mac, and the button
  * for what is left, where medrec's list says what that is. `named` puts the
@@ -75,10 +91,8 @@ const billName = (bill: Bill): string => `${provider(bill)}${bill.date ? `, ${da
 export function paidControl(ctx: Ctx, idx: PersonIndex, bill: Bill, named = false): HTMLElement | null {
   if (bill.settled || bill.replacedBy) return null;
   const marks = billMarks(idx, bill, ctx.store.marks);
-  const cents = toMark(ctx, idx, bill);
   const failed = notRecorded(ctx, idx, bill);
-  const mark = cents > 0 && canMark(ctx, idx) ? button(named ? `Mark paid: ${provider(bill)}` : 'Mark paid', (ev) => openForm(ctx, idx, bill, cents, ev.currentTarget as HTMLElement), { small: true }) : null;
-  mark?.setAttribute('aria-label', `Mark paid: ${billName(bill)}, ${formatMoney(fromCents(cents, bill.left!.currency))}`);
+  const mark = markButton(ctx, idx, bill, named);
   if (!marks.length && !failed && !mark) return null;
   return h(
     'div',
@@ -159,7 +173,8 @@ function openForm(ctx: Ctx, idx: PersonIndex, bill: Bill, left: number, from: HT
     send.removeAttribute('aria-disabled');
     if (!sent) return;
     close();
-    document.querySelector<HTMLElement>(`[data-mark="${CSS.escape(bill.doc.id)}"]`)?.focus();
+    // Where the bill now says it is marked, or the way to the list that does.
+    (document.querySelector<HTMLElement>(`[data-mark="${CSS.escape(bill.doc.id)}"]`) ?? document.querySelector<HTMLElement>('[data-mark-rest]'))?.focus();
   };
   const form = h(
     'form',

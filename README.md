@@ -4,10 +4,11 @@ A web page that shows a household's medical records from the household's own
 Google Drive. It reads the records folder that
 [medrec](https://github.com/own-your-health/medrec-cli) keeps, and shows:
 
-- **Home**: what needs someone (bills worth a call, bills to pay, vaccine
-  doses, refills), where everyone stands, and what happened recently;
+- **Home**: what to do now (vaccine doses, refills, sign-ins), the bills to
+  pay or worth a call, what is coming up, where everyone stands, and what
+  happened recently;
 - **Calendar**: the household's visits, stays, tests and fills, a month at a
-  time with a lane per person, or as one list;
+  time with a lane per person, or as one list, and what is ahead;
 - each **visit**: what happened, its results, how the price came down to
   what you owe, who charged what, bills, papers and the claims;
 - **Money**: what care cost by plan year or calendar year, bills beside their
@@ -21,8 +22,7 @@ Google Drive. It reads the records folder that
 - **Papers**: every file in the folder, each with the visit it belongs to,
   for everyone or one person, by kind of paper;
 - one search over everyone's records, documents and imaging, and the text
-  medrec extracted from documents, from Home or the search button in the
-  bar;
+  medrec extracted from documents, from the search button in the bar;
 - for any record, the raw FHIR the source served, where it came from, and the
   import that brought it in;
 - each source's last load (when, and how many records were new, changed and
@@ -81,10 +81,10 @@ the app and Refresh.
 
 Home, Calendar, Money, Health and Papers are tabs: at the bottom of a
 phone's screen, and a row above the page from 640px wide. The bar's menu
-holds Sources and Settings. Home closes with one line for a
-sign-in that needs a person ("Example Pediatrics needs a sign-in on the
-Mac"), which opens the source, then when the records last loaded and
-**Refresh everything**. **Sources** (`#/sources`, in the bar's menu, which
+holds Sources and Settings. A sign-in that needs a person is a line of Home's
+Do now ("Example Pediatrics needs a sign-in on the Mac"), which opens the
+source; Home closes with when the records last loaded, which opens Sources,
+and **Refresh**, which asks for everything. **Sources** (`#/sources`, in the bar's menu, which
 carries a dot while a source needs attention) has every source: its
 sign-in, its last load and attempt, and when the Mac loads it next. A
 source's page says in one sentence what happened and gives the medrec
@@ -93,7 +93,7 @@ tool's commands, is folded under **Error details**. When the Mac skips a
 source because it loaded or tried it too recently, the answer says when it
 may load again.
 
-For a child under 19, Home, Health and the Immunizations list set the
+For a child under 19, Home, Ahead, Health and the Immunizations list set the
 recorded doses beside the routine rows of the CDC's child and adolescent
 immunization schedule (the July 2, 2025 version, which CDC restored after a
 court stayed its January 2026 changes on March 16, 2026; the page says so):
@@ -154,13 +154,12 @@ Results come in groups by kind:
   value and how many results it has, and opens its history;
 - a claim shows its provider and what you owe (your share, when the payer
   gives only its parts), and the line or diagnosis that matched
-  ("Diagnosis: Otitis media, unspecified (H66.90)"). The ids and amounts
-  medrec gives a claim are not searched as words.
+  ("Diagnosis: Ringworm (B35.4)"). The ids and amounts medrec gives a claim
+  are not searched as words.
 
 Each person's `text.json` is read from Drive once a search is coming (the
-search page opens, or the home screen's search field is chosen), so it
-downloads while the words are typed, and nothing leaves the browser. `#/search?q=<words>` is the search page's
-address, with `&words=1` when the words are searched as written and
+search page opens), so it downloads while the words are typed, and nothing
+leaves the browser. `#/search?q=<words>` is the search page's address, with `&words=1` when the words are searched as written and
 `&who=<person id>` when its person filter starts on someone. The rules are
 `src/model/search.ts`.
 
@@ -586,32 +585,41 @@ dropped from the address.
   names it. A store's number is said once. People go by their first name,
   or their full name where two share one, except in Settings and on the
   doctor's sheet (`src/model/people.ts`).
-- **Home** leads with **Needs you**, quiet when nothing does:
-  - a bill worth a call: one that asks something other than what the
-    claims say you owe, or that no claim in these records backs
-    (`src/next/money.ts`);
-  - bills to pay, one row per visit, overdue first, until a receipt or a
-    payment the household marked covers the bill. One partly paid gives what
-    is left; one past its due date says "No payment on file, unless it was
-    paid elsewhere", or "Not all paid"; one with a receipt whose amount could not be read says "May be
-    paid", after the others and without its due date. Those rows have **Mark
-    paid**, and one whose payment is marked says "Marked paid" until the Mac
-    has filed it;
-  - vaccine doses the CDC schedule places by now that the records don't
-    show, and this season's flu dose;
-  - a refill, from two weeks before the last fill's days' supply runs out
-    to two weeks after;
-  - doses coming up within 90 days, grouped into the visit that gives
-    them ("2-month vaccines").
+- **Home** (`src/next/homeView.ts`) leads with three cards, each with a count,
+  the most urgent rows and a link to the rest, so its length does not grow
+  with how much waits: two screens of a 390 px phone at most, with 50 things
+  waiting too (`e2e/home.spec.ts`). A card with nothing in it is not there,
+  and with none of them Home says that nothing listed needs you.
+  - **Do now**: what is overdue or due today, but for bills: vaccine doses
+    the CDC schedule places by now that the records don't show, this season's
+    flu dose, refills whose last fill's days' supply has run out, and a
+    sign-in that needs a person. Three rows.
+  - **Bills**: two rows, those past due first, then those worth a call (one
+    that asks something other than what the claims say you owe, or that no
+    claim in these records backs; `src/next/money.ts`), then the others by due
+    date. The bills of one visit share a row, but for those worth a call. One
+    past its due date says "No payment on file", with "unless it was paid
+    elsewhere" beside the claim's verdict, or "Not all paid" and what is paid
+    of it, and has **Mark paid**. The card's head gives how many are open and
+    what they ask. One whose payment is marked, or that a receipt whose amount
+    could not be read may be for, is counted in a line of its own and asked
+    for no more.
+  - **Coming up**: refills from two weeks before the last fill runs out, and
+    the doses coming up within 90 days. Three rows.
 
-  The schedule is CDC's of July 2, 2025, which CDC restored after a court
-  stayed its January 2026 changes on March 16, 2026; Home and the
-  person's page name that version and date. **Where everyone stands**
-  follows, a few lines a person: their age, their last visit, what is
-  open to pay and what comes next. **Recently** closes it. A person's own
-  Health (vaccines and refills) and Money (bills) list the same needs,
-  private ones marked.
-- **Money** (`#/money`, from Home's Money card) opens on the year: the
+  One person's refills of one week share a line, and so do their doses; a
+  private refill shares with none that is not (`src/next/ahead.ts`). **Where
+  everyone stands** follows, a line a person: their last visit, and the most
+  urgent thing. Then **Recently**, two events, and one line each for the
+  year's money and how fresh the records are. A person's own Health (vaccines
+  and refills) and Money (bills) list the same needs, private ones marked.
+
+  **Ahead** (`#/calendar?view=ahead`) lists every line of Do now and Coming up
+  by month, for everyone or one person, with how the schedule and the refills
+  are judged. The schedule is CDC's of July 2, 2025, which CDC restored after
+  a court stayed its January 2026 changes on March 16, 2026; Ahead and the
+  person's page name that version and date.
+- **Money** (`#/money`, a tab, and Home's line for the year) opens on the year: the
   household's share of this plan year's care, with what the providers
   charged, what the network took off and what the plans paid, from the
   claims' own lines. Bills to act on come next, then each person's
@@ -724,7 +732,7 @@ dropped from the address.
   `views/views.json` lists is not there yet, is stale or could not be read,
   the records are read again with the same waits as after a Refresh; one the
   app refuses (a newer layout, say) is not waited for.
-- **Papers** (`#/papers`, a tab, also from Recently on Home and each
+- **Papers** (`#/papers`, a tab, also from each
   person's Health): every paper in the Drive
   folder, newest first by year, each with the visit it belongs to as a
   link. A paper is with a visit when the visit holds it, when a record of
@@ -749,8 +757,8 @@ page count. Papers took the place of each person's list of documents. A
   events a month at a time, with a lane per person (a dot for a visit or
   tests, a ring for a pharmacy trip or vaccine, a bar across the days of an
   emergency room visit or a hospital stay) and the month's events listed
-  below with one number each; or every event as one list, by month. A day
-  opens its own list. The list shows twelve months at a time.
+  below with one number each; or every event as one list, by month; or what
+  is ahead. A day opens its own list. The list shows twelve months at a time.
 - **Private items.** medrec 0.9.1 and later list each person's private
   records, papers and events, by area, in
   `views/<person id>/private.json`, from their codes and the household's own
