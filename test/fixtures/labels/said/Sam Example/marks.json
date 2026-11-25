@@ -1,0 +1,27 @@
+{
+  "schema": "medrec-marks/v1",
+  "person": "p_74kjconqhpreh6ybsgna",
+  "payments": [],
+  "providers": [
+    {
+      "id": "o_zqqql47cxzxw32wxyo77",
+      "printed": [
+        "Example Health",
+        "Example Health Orthopedics"
+      ],
+      "same": false,
+      "at": "2026-11-22T20:00:00Z"
+    },
+    {
+      "id": "o_p6fwxaorvc7ryhnakzo3",
+      "printed": [
+        "Example Billing"
+      ],
+      "set": {
+        "practice": "Example Lab",
+        "phone": "555-010-0140"
+      },
+      "at": "2026-11-22T20:00:00Z"
+    }
+  ]
+}

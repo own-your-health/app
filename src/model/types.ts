@@ -5,6 +5,7 @@
 import type { Unsure } from './aboutAnother';
 import type { MedrecBills } from './bills';
 import type { CodeNames } from './codeNames';
+import type { ProviderLabels } from './providerLabels';
 import type { Standings } from './standing';
 import type { MedrecEvents } from './events';
 import type { Privacy } from './private';
@@ -246,6 +247,8 @@ export interface PersonIndex {
   privacy?: Privacy;
   /** The names of these conditions' and claim diagnoses' codes (src/model/codeNames.ts), when the store found them written from this index. */
   codeNames?: CodeNames;
+  /** The labels of the providers these items print (src/model/providerLabels.ts), when the store found them written from this index. */
+  providerLabels?: ProviderLabels;
   /** What is current by every source's word (src/model/standing.ts), when the store found it written from this index: without it, a record's own status says. */
   standing?: Standings;
   /** What medrec says of these bills (src/model/bills.ts), when the store found it written from this index: without it, the receipts say what is paid. */

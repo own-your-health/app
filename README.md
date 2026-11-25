@@ -185,9 +185,13 @@ everyone's (`?all=1`, and no other value), newest first:
   procedures, papers, and the people or places named at its visits.
 
 Names are one provider when the records give one National Provider Identifier
-for them (never shown), or when one source of one person's prints the same
-name: one sign-in, or the papers filed by hand. Names that are only alike are
-listed under "May be the same" and never put together. A name that only a
+for them (never shown), when one source of one person's prints the same
+name (one sign-in, or the papers filed by hand), or when medrec gives them one
+label that is the household's or that it is sure of. Names the records give
+different identifiers for are one only where the household says so, and names
+it said are not one provider are apart whatever else they share. Names that are
+only alike, or share a likely label, are never put together; alike ones are
+listed under "May be the same". A name that only a
 sign-in several practices share would give is no link. Everyone's page leaves
 private items off, so a provider named only by private items has none. The
 rules are `src/next/providerNames.ts` (which names are one provider) and
@@ -584,9 +588,9 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   (`scripts/sample/moment.c`, built with `cc`), so the same sources give the
   same bytes on every machine. CI runs 0.9.7's Linux build, checked against its
   SHA-256, and compares. Only `views/views.json` and each person's
-  `events.json`, `bills.json`, `private.json` and `code-names.json` are kept.
-  The app also reads `standing.json`, which medrec 0.9.9 and later write, so the
-  0.9.7 sample has none. medrec keeps the code names from the committed
+  `events.json`, `bills.json`, `private.json`, `code-names.json` and
+  `providers.json` are kept. The app also reads `standing.json`, which medrec
+  0.9.9 and later write, so the 0.9.7 sample has none. medrec keeps the code names from the committed
   files, so they need the published table only when someone gains a code or
   their id changes, and the script then says so: set `ICD10CM_ZIP` to the zip
   `medrec tables list` names, downloaded, for that run. `manifest.json` gives
@@ -594,13 +598,18 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   in the folder are medrec's own, written for a real household. Everything there
   is invented, and nothing is put into it by hand, `inbox/` included.
 - What the tests read besides the sample is medrec's too: the cases laid over
-  it (`test/fixtures/private/`, and `test/fixtures/bills/paid/` with payments
-  marked), made by `node scripts/private-fixtures.mjs` and
-  `node scripts/bill-fixtures.mjs` once the sample is in place, and the records
+  it (`test/fixtures/private/`, `test/fixtures/bills/paid/` with payments
+  marked, and `test/fixtures/labels/said/` with providers labelled from an
+  invented directory), made by `node scripts/private-fixtures.mjs`,
+  `node scripts/bill-fixtures.mjs` and `node scripts/label-fixtures.mjs` once
+  the sample is in place, and the records
   that give each reading rule a case (`test/fixtures/rules/`, from
-  `scripts/sample/rules.mjs`), made by `node scripts/rule-fixtures.mjs`. They
+  `scripts/sample/rules.mjs`), made by `node scripts/rule-fixtures.mjs`.
+  `test/fixtures/labels/medrec/` is medrec's own fixture for readers of its
+  labels, as it is. Every National Provider Identifier in the sample and these
+  begins with 0, which CMS never issues. The scripts
   delete nothing: medrec works in a new temporary folder, and a file no longer
-  part of a case is named for a person to remove. CI runs all five scripts.
+  part of a case is named for a person to remove. CI runs all six scripts.
   `test/fixtures/standing/medrec/` is medrec's own fixture for readers of
   `standing.json`, as `tests/fixtures/standing/` of its 0.9.9 has it, and
   `test/fixtures/errors/medrec/` is its fixture of what is entered in error
@@ -903,7 +912,8 @@ dropped from the address.
   be owed back. One opened by its id says that it is entered in error, what
   each source says and when that was read, and what the household decided of
   it, which medrec keeps and does not apply (`not_applied` in `events.json` and
-  `bills.json`). So does a visit that is none without it. One that some source
+  `bills.json`, `applied` in `providers.json`). So does a visit that is none
+  without it. One that some source
   still stands by stays, with **Sources differ** and what each says. A source
   whose word is not kept is not heard, and does not say so.
   Where `views.json` does not read, or was made from another index, what the
@@ -911,6 +921,26 @@ dropped from the address.
   earlier medrec are made of the whole index, so beside those nothing is taken
   out: as before, a record whose own status says so is treated as withdrawn,
   and none of the counts and cards above is of it.
+- **Labels for providers.** medrec 0.9.7 and later say who the providers are
+  that a person's items print, in `views/<person id>/providers.json`
+  (`src/model/providerLabels.ts`): a name, a practice, what they are, a phone,
+  how sure that is and why. The source's own words lead, and the label is
+  under them (`src/next/labelView.ts`): on the page of a visit's record, a
+  claim, a medicine, a vaccine, another record and a paper, at the head of a
+  visit and of a provider's page, and in a few words on a visit's rows. What
+  the printed words say already is not said again. A phone says where it is
+  from: the directory and its date, the paper, or the household. One that is
+  not sure is marked Likely and says why. What the household said of a name
+  is said too: that the label was wrong, or that two names are or are not one
+  provider. A bill worth a call that gives no number has its organization's,
+  unless it is only likely.
+  A label adds no item to a list and changes no order: nothing is searched,
+  sorted or filtered by one, and the doctor's sheet and the care team keep
+  the sources' words. A label only private items have is on those items and
+  their own person's pages. On a shared screen a label is without what a
+  private paper says of it, and a likely one with no other reason is not
+  there. No label holds a National Provider Identifier. The file is used, and
+  read for again, as code names are, and nothing says so when there is none.
 - **Papers** (`#/papers`, a tab, also from each
   person's Health): every paper in the Drive folder but those about another
   person or entered in error (both above), newest first by year, each with the visit it belongs to as a

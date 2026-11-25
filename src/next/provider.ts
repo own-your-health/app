@@ -6,6 +6,7 @@
 import { claimCents, claimLines } from '../model/claims';
 import { billList, type Bill } from '../model/billing';
 import { isHeld, itemPrivate, knownArea, recordPrivate, recordsPrivate } from '../model/private';
+import { saidOn, sharedLabel, type LabelSaid, type ProviderLabel } from '../model/providerLabels';
 import { sameProvider, type ProviderField } from '../model/providers';
 import { isWithdrawn, originNames } from '../model/records';
 import type { Household, ImagingStudy, MedDocument, MedRecord, PendingMark, PersonIndex } from '../model/types';
@@ -13,7 +14,7 @@ import { asShared, householdEvents, type PersonEvent } from './calendar';
 import type { CareEvent } from './event';
 import { copiesOf, forShared, mayBePaid, openBills, sharedOpen, unbilledShares, type OpenBill } from './money';
 import { papersOf } from './papers';
-import { Providers, providersNamed, sameName, type Named } from './providerNames';
+import { Providers, providersNamed, saidApart, sameName, type Named } from './providerNames';
 
 /** What the page reads: the household's items, everyone's for a shared page. */
 export interface Records {
@@ -128,6 +129,14 @@ export interface Alike {
   items: { kind: string; n: number }[];
 }
 
+/** What medrec and the household say of names these records print: the label as the first of them has it. */
+export interface Labelled {
+  person: string;
+  printed: string;
+  label?: ProviderLabel;
+  said: LabelSaid[];
+}
+
 export interface Visit {
   event: PersonEvent;
   /** What its own claims there say you owe. */
@@ -141,6 +150,8 @@ export interface ProviderPage {
   /** The other ways the same provider is printed, and the sources that print it. */
   also: string[];
   from: string[];
+  /** What labels say of it, each once. */
+  labels: Labelled[];
   first?: string;
   last?: string;
   /** Anything listed is private, on a person's own page. */
@@ -204,7 +215,7 @@ export function providerPage(of: Records, anchor: { person: string; id: string; 
   const scope = scopeOf(of, quiet, everyone ? undefined : anchor.person);
   const named = scope.named.find((n) => n.person === anchor.person && n.id === anchor.id && n.field === anchor.field);
   if (!named) return undefined;
-  const providers = new Providers(scope.named);
+  const providers = new Providers(scope.named, scope.people.flatMap((id) => saidApart(of.indexes.get(id)!, !everyone)));
   const same = providers.same(named);
   const its: Its = { of, quiet, scope, providers, named, same, ids: new Set(same.map(atNamed)), billed: new Set(same.filter((n) => n.field === 'provider').map(atNamed)) };
 
@@ -224,6 +235,7 @@ export function providerPage(of: Records, anchor: { person: string; id: string; 
     named,
     also: [...new Set(same.map((n) => n.name))].filter((n) => n !== named.name),
     from: sourcesOf(same, of.household),
+    labels: labelsOf(its),
     ...(days.length ? { first: days[0], last: days.at(-1) } : {}),
     private: listed.some((x) => knownArea(x.private)),
     charged: sum(cents.map((c) => c.billed)),
@@ -325,6 +337,29 @@ function moneyOf({ of, quiet, scope, ids, billed }: Its): Pick<ProviderPage, 'bi
   return { bills: bills.sort(newest((x) => x.item.bill.date)), receipts: receipts.sort(byDate), papers: papers.sort(byDate), ...(open !== undefined ? { open } : {}), ...(unbilled ? { unbilled } : {}) };
 }
 
+/** What a label says, whoever's records it is in, but for what `said` tells of itself. */
+function saysOf(l: ProviderLabel, said: LabelSaid[]): string {
+  const why = l.evidence.filter((e) => !(e.from === 'household' && said.some((s) => s.id === e.id)));
+  return JSON.stringify([l.name, l.practice, l.role, l.phone, l.phoneFrom, l.confidence === 'likely', why.map((e) => [e.from, e.document, e.city, e.state, e.at])]);
+}
+
+/** The labels of its names, the named item's first, then the newest, one that says the same once; each with what the household said of the names it is for. */
+function labelsOf({ of, scope, named, same }: Its): Labelled[] {
+  const out = new Map<string, Labelled>();
+  const order = [named, ...[...same].sort(newest((n) => n.date))];
+  for (const n of order) {
+    if (n.printed === undefined) continue;
+    const idx = of.indexes.get(n.person)!;
+    const label = n.label && (scope.shared ? sharedLabel(idx, n.label.label, (id) => scope.may('document', n.person, id)) : n.label.label);
+    const said = saidOn(idx, n.id, n.printed);
+    const key = label ? saysOf(label, said) : `${n.person}|${n.printed}`;
+    const held = out.get(key) ?? { person: n.person, printed: n.printed, ...(label ? { label } : {}), said: [] };
+    for (const s of said) if (!held.said.some((x) => x.id === s.id)) held.said.push(s);
+    out.set(key, held);
+  }
+  return [...out.values()].filter((x) => x.label || x.said.length);
+}
+
 /** Those of its names everyone's page holds too. */
 function everyonesNames({ quiet, same }: Its): Named[] {
   return same.filter((n) => quiet.shared(n.kind, n.person, n.id));
@@ -339,7 +374,7 @@ function alikeTo({ of, providers, named, same }: Its): Alike[] {
   const alike = (o: Named) => names.some((n) => sameName(o.name, n) || sameProvider(o.name, n));
   return providers
     .others(named)
-    .filter((all) => all.some(alike))
+    .filter((all) => all.some(alike) && !all.some((o) => same.some((n) => providers.saidApart(o, n))))
     .map((all): Alike => {
       const items = new Map<string, Set<string>>();
       for (const n of all) items.set(n.kind, (items.get(n.kind) ?? new Set()).add(atNamed(n)));

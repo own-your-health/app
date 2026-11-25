@@ -1,0 +1,42 @@
+{
+  "schema": "medrec-provider-state/v1",
+  "person": "p_5kqwz7cb4mhit56zoy36",
+  "directory": {
+    "id": "nppes",
+    "version": "2026-11",
+    "date": "2026-11-08"
+  },
+  "by_npi": {
+    "0000000022": {
+      "name": "Morgan Placeholder, MD",
+      "role": "pediatrician",
+      "phone": "555-010-0122",
+      "phone_from": {
+        "from": "directory",
+        "date": "2026-11-08"
+      },
+      "confidence": "sure",
+      "evidence": [
+        {
+          "from": "npi"
+        }
+      ]
+    },
+    "0000000030": {
+      "name": "Example Pediatrics",
+      "role": "primary care clinic",
+      "phone": "555-010-0126",
+      "phone_from": {
+        "from": "directory",
+        "date": "2026-11-08"
+      },
+      "confidence": "sure",
+      "evidence": [
+        {
+          "from": "npi"
+        }
+      ]
+    }
+  },
+  "matched": {}
+}

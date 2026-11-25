@@ -19,6 +19,7 @@ import { eventRoute, eventWhen, headline } from './eventView';
 import { mayBePaid, paidText, partText, unreadText } from './money';
 import { money, privateChip } from './moneyParts';
 import { providerPage, type Alike, type Mine, type ProviderPage, type Seen, type Visit } from './provider';
+import { noteOf } from './labelView';
 import { namedOn, placeNamed, type Named } from './providerNames';
 import { heldNotes, privateLine } from './shared';
 import type { CareEvent } from './event';
@@ -111,6 +112,17 @@ function totalsCard(p: ProviderPage): HTMLElement | null {
   return card({ title: 'In all' }, h('div', { class: 'event-ladder' }, figures), h('p', { class: 'small muted' }, says.filter(Boolean).join(' ')));
 }
 
+/** What labels say of it, a note each; several people's that say the same are one. */
+function labelNotes(ctx: Ctx, page: ProviderPage): HTMLElement[] {
+  const seen = new Set<string>();
+  return page.labels.flatMap((x) => {
+    const note = noteOf(ctx.store.index(x.person)!, x.label, x.said, x.printed);
+    if (!note || seen.has(note.textContent ?? '')) return [];
+    seen.add(note.textContent ?? '');
+    return [note];
+  });
+}
+
 export function providerView(ctx: Ctx, route: ProviderRoute): HTMLElement {
   const { store } = ctx;
   const everyone = !!route.all;
@@ -171,6 +183,7 @@ export function providerView(ctx: Ctx, route: ProviderRoute): HTMLElement {
       h('div', { class: 'card-head' }, h('h1', null, page.named.name)),
       period ? h('p', { class: 'muted' }, period) : null,
       h('p', { class: 'small muted' }, `${page.from.length === 1 ? 'Source' : 'Sources'}: ${page.from.join(', ')}.${page.also.length ? ` Also printed as ${page.also.join(', ')}.` : ''}`),
+      labelNotes(ctx, page),
       page.private ? h('p', { class: 'event-private small' }, chip('Private', 'muted'), ' Private items are marked. Everyone’s page leaves them off.') : null,
       h(
         'div',
@@ -196,7 +209,7 @@ export function providerView(ctx: Ctx, route: ProviderRoute): HTMLElement {
     section('People seen', 'people', page.people, seenRow, 'Named by the visits here.'),
     section('Places', 'places', page.places, seenRow, 'Named by the visits here.'),
     section('May be the same', 'names', page.alike, alikeRow, 'Names like this one that nothing in these records says are the same provider. None of theirs is on this page.'),
-    h('p', { class: 'small muted' }, 'Names are taken as one provider when the records give one National Provider Identifier for them, or one source of one person’s prints the same name. Names that are only alike are never put together.'),
+    h('p', { class: 'small muted' }, 'Names are taken as one provider when the records give one National Provider Identifier for them, when one source of one person’s prints the same name, or when a label that is not marked likely is the same. Names that are only alike are never put together, nor are those the household said are apart.'),
     notes,
   );
 }

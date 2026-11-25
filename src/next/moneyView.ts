@@ -18,6 +18,7 @@ import { eventRoute, eventWhen } from './eventView';
 import { callsSummary, mayBePaid, NO_CLAIM_EXPECTED, overAsked, overdueLabel, PAID_ELSEWHERE, paymentText, partText, toPay, unreadText, worthACall, type OpenBill, type PaidBill } from './money';
 import { billErrors, billNotes, forBill, gather, head, listLine, money, num, privateChip, visitText, type Mine, type MoneyRoute } from './moneyParts';
 import { eventsPage, overviewPage } from './moneyYear';
+import { labelPhone } from './labelView';
 import { providerLink } from './providerView';
 import { heldNotes } from './shared';
 import { called } from '../model/people';
@@ -210,6 +211,7 @@ function callCard(ctx: Ctx, m: Mine<OpenBill>, named: boolean): HTMLElement {
   const e = b.event;
   const over = overAsked(b);
   const s = b.bill.doc.statement;
+  const phone = s?.phone ? phoneLink(s.phone) : labelPhone(ctx.store.index(m.person.id)!, b.bill.doc, named);
   const shares = (e?.money.charges ?? []).filter((c) => (c.share ?? 0) > 0);
   const el = card(
     { title: providerLink(ctx, ctx.store.index(m.person.id), b.bill.doc.id, ['organization'], b.bill.provider, named) ?? 'A provider', class: 'call', actions: privateChip(b.private) },
@@ -217,7 +219,7 @@ function callCard(ctx: Ctx, m: Mine<OpenBill>, named: boolean): HTMLElement {
     over > 0 ? h('p', { class: 'call-number' }, num(over), h('span', null, ' may not be owed')) : null,
     b.claimSays === undefined ? h('p', { class: 'small' }, 'If it went through insurance, its claim may not be in these records yet. If it didn’t, it may not be an insurance bill.') : null,
     kv([
-      ['Call', s?.phone ? phoneLink(s.phone) : null],
+      ['Call', phone],
       ['Whose', named ? called(m.person) : null],
       ['Visit', e ? link(eventRoute(m.person.id, e.event.id), visitText(e)) : 'None in these records'],
       ['Statement', [dateText(s?.statement_date ?? b.bill.date), s?.account ? `account ${s.account}` : null, b.bill.due ? `${b.overdue ? 'was due' : 'due'} ${dateText(b.bill.due)}` : null].filter(Boolean).join(' · ')],
@@ -227,7 +229,7 @@ function callCard(ctx: Ctx, m: Mine<OpenBill>, named: boolean): HTMLElement {
       ['Left to pay', b.cents < b.asked ? money(b.cents) : null],
     ]),
     h('div', { class: 'call-script' }, h('p', { class: 'call-script-label' }, 'What to say'), h('p', null, script(b))),
-    s?.phone ? null : h('p', { class: 'small muted' }, 'The bill’s phone number isn’t in these records; it is on the paper.'),
+    s?.phone ? null : h('p', { class: 'small muted' }, phone ? 'The bill’s own phone number isn’t in these records; it is on the paper.' : 'The bill’s phone number isn’t in these records; it is on the paper.'),
     h('div', { class: 'bill-links' }, link({ name: 'item', person: m.person.id, id: b.bill.doc.id }, 'The bill'), driveLink(ctx, b.bill.doc.path, 'Open the bill in Drive')),
     markOf(ctx, m),
   );

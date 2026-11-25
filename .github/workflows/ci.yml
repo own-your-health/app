@@ -63,13 +63,14 @@ jobs:
           mkdir -p "$RUNNER_TEMP/medrec-0.9.9"
           tar xzf "$RUNNER_TEMP/medrec-0.9.9.tar.gz" -C "$RUNNER_TEMP/medrec-0.9.9"
       # So are the cases the tests read: medrec writes each, never a hand.
-      - name: Private-items, bill, rule and entered-in-error cases match their generators
+      - name: Private-items, bill, label, rule and entered-in-error cases match their generators
         env:
           MEDREC: ${{ runner.temp }}/medrec/medrec
           MEDREC_099: ${{ runner.temp }}/medrec-0.9.9/medrec
         run: |
           node scripts/private-fixtures.mjs
           node scripts/bill-fixtures.mjs
+          node scripts/label-fixtures.mjs
           node scripts/rule-fixtures.mjs
           MEDREC="$MEDREC_099" node scripts/error-fixtures.mjs
           git diff --exit-code -- test/fixtures

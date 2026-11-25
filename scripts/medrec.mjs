@@ -95,7 +95,7 @@ export function scratchMachine(root, { alone = false, release = VERSION } = {}) 
   return { home, bin, root: records, medrec };
 }
 
-/** The views of the sample's medrec that the app reads: each person's events, bills, private items and code names, by the name medrec stores them under. */
-export const APP_VIEW = /^(events|bills|private|code-names)\.[0-9a-f]{12}\.json$/;
+/** The views of the sample's medrec that the app reads: each person's events, bills, private items, code names and provider labels, by the name medrec stores them under. */
+export const APP_VIEW = /^(events|bills|private|code-names|providers)\.[0-9a-f]{12}\.json$/;
 
 export const md5Of = (bytes) => createHash('md5').update(bytes).digest('hex');

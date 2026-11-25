@@ -41,6 +41,12 @@ export function privateCase(name: 'marked' | 'unreadable'): Overlay {
   return Object.fromEntries(filesUnder(dir).map((f) => [f, readFileSync(join(dir, f), 'utf8')]));
 }
 
+/** The sample as medrec labels its providers from an invented directory, once the household has said who some are (scripts/label-fixtures.mjs). */
+export function labelCase(): Overlay {
+  const dir = join(FIXTURES, 'labels', 'said');
+  return Object.fromEntries(filesUnder(dir).map((f) => [f, readFileSync(join(dir, f), 'utf8')]));
+}
+
 /** The sample once the household has marked payments, as medrec wrote it (scripts/bill-fixtures.mjs). */
 export function paidCase(): Overlay {
   const dir = join(FIXTURES, 'bills', 'paid');

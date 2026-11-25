@@ -26,6 +26,7 @@ import { groupedByMedrec, personEvents } from './load';
 import { paidControl } from './markPaid';
 import { eventInError } from './medrecEvents';
 import { billsShares, NO_CLAIM_EXPECTED, paidText, selfPay, unreadText } from './money';
+import { labelLine, labelNote } from './labelView';
 import { namedOn } from './providerNames';
 import { placeLink, providerRoute } from './providerView';
 import { called } from '../model/people';
@@ -85,6 +86,7 @@ function headCard(ctx: Ctx, idx: PersonIndex, e: CareEvent, m: EventMoney): HTML
     h('div', { class: 'card-head' }, h('h1', null, title), confidence !== 'sure' ? chip(confidence === 'likely' ? 'Likely' : 'Unsure', 'muted') : null),
     e.what ? h('p', { class: 'event-what' }, e.what) : null,
     h('p', { class: 'muted' }, dotted([eventWhen(e), placeLink(ctx, idx, e), person ? called(person) : null])),
+    labelNote(idx, e.id, e.place),
     sourcesStrip(ctx, idx, e),
     number ? h('p', { class: 'result-value' }, m.share === 0 ? 'Nothing for you to pay' : `${m.shareAdded ? 'Your share' : 'You owe'} ${number}`) : null,
     settledLine(idx, e, m),
@@ -163,6 +165,7 @@ function happenedCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
           title: visitTitle(v),
           // The reason, unless it already names the row.
           meta: [plainWords(str(v.fields.reason)) === visitTitle(v) ? null : plainWords(str(v.fields.reason)), str(v.fields.practitioner) ? `with ${str(v.fields.practitioner)}` : null, str(v.fields.location)].filter(Boolean).join(' · '),
+          extra: labelLines([labelLine(idx, v.id, v.fields.practitioner)]),
         }),
       ),
       conditions.length ? h('p', null, h('span', { class: 'muted' }, conditions.length === 1 ? 'Diagnosis: ' : 'Diagnoses: '), nameList(conditions)) : null,
@@ -226,6 +229,9 @@ function resultsCard(idx: PersonIndex, e: CareEvent): HTMLElement | null {
   );
 }
 
+/** What labels say, a line each. */
+const labelLines = (lines: (string | null)[]): HTMLElement[] => [...new Set(lines.filter((x): x is string => !!x))].map((x) => h('p', { class: 'small label-line' }, x));
+
 const REASON_WORDS: Record<EventMoney['reasons'][number]['name'], string> = { deductible: 'toward the deductible', copay: 'a copay', coinsurance: 'coinsurance', notCovered: 'not covered' };
 
 function costCard(e: CareEvent, m: EventMoney): HTMLElement | null {
@@ -278,7 +284,10 @@ function chargesCard(ctx: Ctx, idx: PersonIndex, e: CareEvent, m: EventMoney): H
         title: ch.provider,
         meta: [ch.role, ch.claims.length > 1 ? count(ch.claims.length, 'claim') : null].filter(Boolean).join(' · '),
         aside: ch.share !== undefined ? h('span', { class: 'num' }, ch.share === 0 ? 'Nothing to pay' : money(ch.share)) : null,
-        extra: h('p', { class: 'small muted' }, [ch.billed !== undefined ? `Charged ${money(ch.billed)}` : null, ch.price !== undefined ? `plan’s price ${money(ch.price)}` : null, ch.planPaid !== undefined ? `plan paid ${money(ch.planPaid)}` : null].filter(Boolean).join(' · ')),
+        extra: [
+          labelLines(ch.claims.map((c) => labelLine(idx, c.id, c.fields.provider))),
+          h('p', { class: 'small muted' }, [ch.billed !== undefined ? `Charged ${money(ch.billed)}` : null, ch.price !== undefined ? `plan’s price ${money(ch.price)}` : null, ch.planPaid !== undefined ? `plan paid ${money(ch.planPaid)}` : null].filter(Boolean).join(' · ')),
+        ],
       });
     }),
   );

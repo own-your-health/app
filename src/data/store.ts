@@ -12,6 +12,7 @@ import { atLeast, held, isHeld, noList, parsePrivate, type HeldWhy, type Privacy
 import { parseCodeNames } from '../model/codeNames';
 import { aboutAnother, stillAbout, withoutAbout, type About } from '../model/aboutAnother';
 import { inErrorIds, withoutErrors } from '../model/inError';
+import { parseProviderLabels } from '../model/providerLabels';
 import { parseStanding } from '../model/standing';
 import { parseViews, viewOf, type PersonView, type ViewFile } from '../model/views';
 import type { AttemptLine, Household, MarkRequest, PaidMark, PendingMark, Person, PersonIndex, PersonText, RefreshRequest, RefreshStatus, RefusedRequest, RequestScope, UnpaidMark } from '../model/types';
@@ -274,7 +275,7 @@ export class Store {
       this.viewsError,
       ...this.household.people.map((p) => {
         const index = this.indexes.get(p.id);
-        return [index?.rev, index?.aboutUnsure, this.indexErrors.get(p.id), this.eventsNotes.get(p.id), index?.privacy?.kind === 'held' ? index.privacy.text : null, !!index?.codeNames, !!index?.standing, this.standingNotes.get(p.id), this.billsNotes.get(p.id)];
+        return [index?.rev, index?.aboutUnsure, this.indexErrors.get(p.id), this.eventsNotes.get(p.id), index?.privacy?.kind === 'held' ? index.privacy.text : null, !!index?.codeNames, !!index?.providerLabels, !!index?.standing, this.standingNotes.get(p.id), this.billsNotes.get(p.id)];
       }),
     ]);
   }
@@ -397,10 +398,11 @@ export class Store {
   }
 
   /**
-   * medrec's names for each person's codes (0.9.4 and later) and what is
-   * current of theirs by every source's word (0.9.9 and later). Without a file
-   * that reads and matches the folder, the sources' words and statuses stand;
-   * of the names nothing says so, and standingNotes says why for the second.
+   * medrec's names for each person's codes (0.9.4 and later), its labels for
+   * the providers their items print (0.9.7 and later) and what is current of
+   * theirs by every source's word (0.9.9 and later). Without a file that reads
+   * and matches the folder, the sources' words and statuses stand; of the names
+   * and the labels nothing says so, and standingNotes says why for the third.
    * One that may still come is read for again.
    */
   private async loadNames(views: Record<string, unknown> | null, household: Promise<string | null | undefined>): Promise<void> {
@@ -429,6 +431,7 @@ export class Store {
         if (!index) return [];
         return [
           read(p, 'code-names.json', (raw) => (index.codeNames = parseCodeNames(raw, p.id))),
+          read(p, 'providers.json', (raw) => (index.providerLabels = parseProviderLabels(raw, p.id))),
           read(
             p,
             'standing.json',

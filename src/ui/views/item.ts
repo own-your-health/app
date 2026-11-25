@@ -15,12 +15,14 @@ import { isObject } from '../../model/parse';
 import { AMOUNT_LABELS, asMoney, docTypeLabel, documentTitle, findItem, formatMoney, importFor, isDoseGiven, KIND_LABELS, LINE_AMOUNT_ORDER, originNames, resultPoint, resultReading, str, studyTitle, toCents, valueText } from '../../model/records';
 import { resultContext, unitText, verdict } from '../../model/result';
 import { recordTitle, visitTitle } from '../../model/titles';
+import type { ProviderField } from '../../model/providers';
 import type { ImagingStudy, Json, MedDocument, MedRecord, PersonIndex, Provenance } from '../../model/types';
 import { claimContext, visitKind, visitOf } from '../../model/visits';
 import { tidyName } from '../../model/words';
 import { partOfEvent } from '../../next/eventView';
 import { markedPayments, paidControl, viewOnlyNote } from '../../next/markPaid';
 import { paymentText, selfPay, unreadText } from '../../next/money';
+import { labelNote } from '../../next/labelView';
 import { providerLink } from '../../next/providerView';
 import { paperView } from '../../paper/view';
 import { rangeBar, resultChart } from '../chart';
@@ -381,7 +383,9 @@ function medicationView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   };
   const days = (x: MedRecord) => (typeof x.fields.days_supply === 'number' ? `${x.fields.days_supply} days` : undefined);
   // The record of the medicine that prints the name.
-  const named = (field: 'prescriber' | 'pharmacy', text: string | undefined) => providerLink(ctx, idx, (m?.records ?? []).find((x) => tidyName(str(x.fields[field])) === tidyName(text))?.id ?? r.id, [field], text);
+  const printing = (field: 'prescriber' | 'pharmacy', text: string | undefined) => (m?.records ?? []).find((x) => tidyName(str(x.fields[field])) === tidyName(text)) ?? r;
+  const named = (field: 'prescriber' | 'pharmacy', text: string | undefined) => providerLink(ctx, idx, printing(field, text).id, [field], text);
+  const noted = (field: 'prescriber' | 'pharmacy', text: string | undefined) => (text ? labelNote(idx, printing(field, text).id, printing(field, text).fields[field]) : null);
   // By the sources' words a fill is a fact of its own, beside the prescriptions of its medicine.
   const fill = idx.standing !== undefined && isFill(r);
   const state = st ? st.is : fill ? fillText(idx, r) : m ? (m.active ? 'Taking now' : 'Past medicine') : (statusText(r.status) ?? undefined);
@@ -394,8 +398,8 @@ function medicationView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
       st ? differing(m?.standing) : null,
       str(r.fields.dosage) ? h('p', { class: 'result-value result-value-text' }, str(r.fields.dosage)) : null,
       kv([
-        ['Prescribed by', named('prescriber', prescriber)],
-        ['Last filled', m?.lastFill ? [dateText(m.lastFill.date), m.lastFill.pharmacy ? [' at ', named('pharmacy', m.lastFill.pharmacy)] : null, m.lastFill.daysSupply ? ` for ${m.lastFill.daysSupply} days` : null] : undefined],
+        ['Prescribed by', prescriber ? [named('prescriber', prescriber), noted('prescriber', prescriber)] : undefined],
+        ['Last filled', m?.lastFill ? [dateText(m.lastFill.date), m.lastFill.pharmacy ? [' at ', named('pharmacy', m.lastFill.pharmacy)] : null, m.lastFill.daysSupply ? ` for ${m.lastFill.daysSupply} days` : null, noted('pharmacy', m.lastFill.pharmacy)] : undefined],
         ['How the records know of it', m?.known.length ? m.known.join(', ') : undefined],
         ...(st ? [st.says] : []),
       ]),
@@ -461,6 +465,12 @@ function allergyView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   ];
 }
 
+/** A provider a record names in a field, with its label. */
+function where(ctx: Ctx, idx: PersonIndex, r: MedRecord, field: ProviderField): Child {
+  const text = str(r.fields[field]);
+  return text ? [providerLink(ctx, idx, r.id, [field], text), labelNote(idx, r.id, r.fields[field])] : undefined;
+}
+
 function immunizationView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   const name = recordTitle(r);
   const given = isDoseGiven(r);
@@ -471,7 +481,7 @@ function immunizationView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
       given ? null : chip(statusText(r.status) ?? 'Not given', 'muted'),
       ['Vaccine', given ? `given ${dateText(r.date)}` : dateText(r.date), fromText(ctx, idx, r)],
       kv([
-        ['Where', providerLink(ctx, idx, r.id, ['performer'], str(r.fields.performer))],
+        ['Where', where(ctx, idx, r, 'performer')],
         ['Site', str(r.fields.site)],
         ['How', route !== undefined ? fieldValue(route) : undefined],
         ['Lot', str(r.fields.lot_number)],
@@ -494,8 +504,8 @@ function encounterView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
       [kind ?? 'Visit', visit ? visitWhen(visit) : dateText(r.date), fromText(ctx, idx, r)],
       kv([
         ['Reason', str(r.fields.reason) === title ? undefined : str(r.fields.reason)],
-        ['With', providerLink(ctx, idx, r.id, ['practitioner'], str(r.fields.practitioner))],
-        ['Where', providerLink(ctx, idx, r.id, ['location', 'service_provider'], str(r.fields.location) ?? str(r.fields.service_provider))],
+        ['With', where(ctx, idx, r, 'practitioner')],
+        ['Where', where(ctx, idx, r, 'location') ?? where(ctx, idx, r, 'service_provider')],
         ['Status', r.status && r.status !== 'finished' ? (statusText(r.status) ?? r.status) : undefined],
       ]),
     ),
@@ -524,6 +534,7 @@ function claimView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
       recordTitle(r),
       null,
       ['Claim', dateText(start ?? r.date), providerLink(ctx, idx, r.id, ['provider'], claimProvider(r)), str(r.fields.insurer) ? `by ${str(r.fields.insurer)}` : null],
+      labelNote(idx, r.id, r.fields.provider),
       // The payer's figure is what you owe; the parts added up are your share.
       a.yourShare ? h('p', { class: 'result-value' }, toCents(a.yourShare) === 0 ? 'Nothing for you to pay' : `${a.shareAdded ? 'Your share' : 'You owe'} ${formatMoney(a.yourShare)}`) : null,
       kv([
@@ -567,7 +578,7 @@ function otherView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
       [KIND_LABELS[r.kind] ?? r.kind, statusText(r.status), dateText(r.date), fromText(ctx, idx, r)],
       kv([
         ['Conclusion', str(r.fields.conclusion)],
-        ['Where', providerLink(ctx, idx, r.id, ['location'], str(r.fields.location))],
+        ['Where', where(ctx, idx, r, 'location')],
         ['Plan', str(r.fields.plan)],
         ['Paid by', str(r.fields.payer)],
       ]),
@@ -624,6 +635,7 @@ function documentView(ctx: Ctx, idx: PersonIndex, d: MedDocument, inError: boole
       { class: 'card' },
       h('div', { class: 'card-head card-head-paper' }, h('h1', null, documentTitle(d)), h('div', { class: 'chips-aside' }, differChip({ type: 'document', document: d }), chip(docTypeLabel(d.doc_type), 'muted'))),
       h('p', { class: 'muted' }, dotted([dateText(d.date), providerLink(ctx, idx, d.id, ['organization'], d.organization)])),
+      labelNote(idx, d.id, d.organization),
       h('div', { class: 'row-actions' }, paper.button, driveLink(ctx, d.path, 'Open in Drive')),
       paper.panel,
       kv([

@@ -85,7 +85,7 @@ test('a provider’s page adds up its claims and bills, and lists what it did, n
   await rows(page, 'People seen').getByRole('link').click();
   await expect(page.locator('h1')).toHaveText('Dr. Jordan Sample');
   await expect(rows(page, 'Places').locator('.row-title')).toHaveText(['Example Health Main Clinic']);
-  await expect(page.getByText('Names that are only alike are never put together.')).toBeVisible();
+  await expect(page.getByText('Names that are only alike are never put together, nor are those the household said are apart.')).toBeVisible();
 });
 
 test('Everyone holds each person’s, and opens each one’s own', async ({ page }) => {
