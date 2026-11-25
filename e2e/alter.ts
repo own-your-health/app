@@ -76,13 +76,10 @@ function disguised<T extends object>(item: T): T {
   return change(item) as T;
 }
 
-/** Whether only a private paper says where an event is. */
-const toldInPrivate = ({ events, list }: PersonFiles, e: Item): boolean => {
-  const by = e.place_from === 'alias' ? (events.aliases ?? []).filter((a) => a.organization === e.place) : [];
-  return by.length > 0 && by.every((a) => a.document in list.documents);
-};
+/** Whether a private paper says where an event is. */
+const toldInPrivate = ({ events, list }: PersonFiles, e: Item): boolean => e.place_from === 'alias' && (events.aliases ?? []).some((a) => a.organization === e.place && a.document in list.documents);
 
-/** The folder with everyone's private items, and the places only private papers say, under other names and days. */
+/** The folder with everyone's private items, and the places private papers say, under other names and days. */
 export const renamed = (base: Overlay): Overlay =>
   rewritten(base, (files) => {
     const { index, events, bills, list } = files;

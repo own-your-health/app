@@ -216,7 +216,7 @@ for (const [name, base, lists] of [
   ['parts of visits that are not', partsPrivate(), PARTS],
   ['the portal visits of visits that are not', partsPrivate('encounter'), PARTS],
   ['the claims and portal visits of visits that are not', partsPrivate('claim', 'encounter'), PARTS.filter(([path]) => !BILLS.includes(path))],
-  ['what only a private paper says of where visits are', placesPrivate(), PARTS],
+  ['what a private paper says of where visits are', placesPrivate(), PARTS],
 ] as const) {
   test(`every shared screen reads the same whatever its private items are called and on which day: ${name}`, async ({ page, browser }) => {
     const other = await browser.newPage();

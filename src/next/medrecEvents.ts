@@ -98,7 +98,7 @@ export function fromMedrec(file: MedrecEvents, index: PersonIndex, household: Ho
     if (m.confidence === 'unsure') e.doubt = m.could_join.length > 1 ? `It could be part of any of ${m.could_join.length} other visits` : m.could_join.length ? 'It could be part of another visit' : 'medrec is not sure what it belongs with';
     const given = { ...(title ? { title } : {}), ...(m.what ? { what: m.what } : {}) };
     const area = eventPrivate(e, index);
-    // A place only a private paper says it is at is private too.
+    // A place a private paper says it is at is private, whatever other paper does: which of them gave it is not said.
     const told = !!m.placeFromAlias && file.aliases.some((a) => a.organization === m.place && paperPrivate(index, a.document));
     const rest = area ? undefined : (withoutPrivate(e, index) ?? (told ? { ...e } : undefined));
     nameEvent(e, household, index.person, { ...given, private: !!knownArea(area) });

@@ -44,6 +44,8 @@ export interface OpenBill {
   claimSays?: number;
   /** Whether claimSays is the whole visit's share rather than this provider's. */
   claimSaysVisit: boolean;
+  /** The one claim claimSays is of; without one, it is of the visit's. */
+  saidBy?: string;
   verdict: BillVerdict;
   /** Past its due date, with something left to pay. */
   overdue: boolean;
@@ -93,11 +95,10 @@ const holdsPrivateClaim = (event: PersonEvent | undefined): boolean => !!event &
 export function sharedOpen(idx: PersonIndex, bills: OpenBill[]): OpenBill[] {
   const said = bills.map((b): OpenBill => {
     if (b.claimSays === undefined && b.verdict !== 'no_claim') return b;
-    // What they say is of the claim medrec matched, else of any the visit has.
-    const claim = b.bill.medrec?.claim;
-    if (claim ? !recordPrivate(idx, claim) : !holdsPrivateClaim(b.event)) return b;
+    if (b.saidBy ? !recordPrivate(idx, b.saidBy) : !holdsPrivateClaim(b.event)) return b;
     const quiet: OpenBill = { ...b, claimSaysVisit: false, verdict: 'unmatched' };
     delete quiet.claimSays;
+    delete quiet.saidBy;
     return quiet;
   });
   return forShared(idx, said);
@@ -151,7 +152,7 @@ export function openBills(idx: PersonIndex, events: PersonEvent[], today: string
     .sort(byDue);
 }
 
-type Against = Pick<OpenBill, 'claimSays' | 'claimSaysVisit' | 'verdict'>;
+type Against = Pick<OpenBill, 'claimSays' | 'claimSaysVisit' | 'saidBy' | 'verdict'>;
 
 /** A bill against what its visit's claims say, without medrec's list. */
 function claimsSay(bill: Bill, event: PersonEvent | undefined, asked: number): Against {
@@ -168,8 +169,9 @@ function medrecSays(idx: PersonIndex, bill: Bill, state: BillState, event: Perso
   const owed = toCents(call?.owed ?? state.owed);
   // A claim from another provider is the visit's: the bill is a billing company's.
   const claimSaysVisit = !!event && !event.money.charges.some((c) => sameProvider(c.provider, bill.provider));
-  if (call) return owed === undefined ? { claimSaysVisit: false, verdict: 'no_claim' } : { claimSays: owed, claimSaysVisit, verdict: 'differs' };
-  const said: Against = owed === undefined ? claimsSay(bill, event, asked) : { claimSays: owed, claimSaysVisit, verdict: owed === asked ? 'matches' : 'unmatched' };
+  const by = { claimSaysVisit, ...(state.claim ? { saidBy: state.claim } : {}) };
+  if (call) return owed === undefined ? { claimSaysVisit: false, verdict: 'no_claim' } : { claimSays: owed, ...by, verdict: 'differs' };
+  const said: Against = owed === undefined ? claimsSay(bill, event, asked) : { claimSays: owed, ...by, verdict: owed === asked ? 'matches' : 'unmatched' };
   return said.verdict === 'matches' ? said : { claimSaysVisit: false, verdict: 'unmatched' };
 }
 
