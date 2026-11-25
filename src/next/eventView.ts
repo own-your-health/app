@@ -22,7 +22,7 @@ import { href, type Route } from '../ui/router';
 import { eventConfidence, eventMoney, eventOf, kindText, paidAtCounter, eventPrivate, ruleText, type CareEvent, type EventMoney } from './event';
 import { groupedByMedrec, personEvents } from './load';
 import { paidControl } from './markPaid';
-import { NO_CLAIM_EXPECTED, paidText, selfPay, unreadText } from './money';
+import { billsShares, NO_CLAIM_EXPECTED, paidText, selfPay, unreadText } from './money';
 import { namedOn } from './providerNames';
 import { placeLink, providerRoute } from './providerView';
 import { called } from '../model/people';
@@ -108,11 +108,11 @@ const billerOf = <T,>(m: EventMoney, bills: T[], sender: (b: T) => string | unde
 /** Each provider this event's claims say you owe, with its bill from the event's papers, else a billing company's, and the statement that stands for it now. */
 function owedBills(idx: PersonIndex, e: CareEvent, m: EventMoney): { provider: string; share: number; bill?: Bill; now?: Bill }[] {
   const all = billList(idx);
-  const bills = all.filter((b) => e.papers.some((p) => p.doc.id === b.doc.id));
+  const bills = all.filter((b) => e.papers.some((p) => p.doc.id === b.doc.id) && billsShares(idx, b.doc));
   return m.charges
     .filter((c) => (c.share ?? 0) > 0)
     .map((c) => {
-      const bill = bills.find((b) => sameProvider(c.provider, b.provider)) ?? billerOf(m, bills.filter((b) => !b.medrec?.selfPay), (b) => b.provider);
+      const bill = bills.find((b) => sameProvider(c.provider, b.provider)) ?? billerOf(m, bills, (b) => b.provider);
       return { provider: c.provider, share: c.share!, ...(bill ? { bill, now: bill.settled || bill.unread.length ? bill : standsFor(bill, all) } : {}) };
     });
 }
@@ -302,7 +302,8 @@ function billsCard(ctx: Ctx, idx: PersonIndex, e: CareEvent, m: EventMoney): HTM
       extra: bill && (d.id === bill.doc.id || !bills.some((x) => x.id === bill.doc.id)) ? paidControl(ctx, idx, bill) : null,
     });
   };
-  const unbilled = billerOf(m, bills.filter((d) => d.doc_type === 'bill' && !selfPay(idx, d)), (d) => d.organization) ? [] : owed.filter((c) => !bills.some((d) => sameProvider(c.provider, d.organization)));
+  const billed = bills.filter((d) => billsShares(idx, d));
+  const unbilled = billerOf(m, billed.filter((d) => d.doc_type === 'bill'), (d) => d.organization) ? [] : owed.filter((c) => !billed.some((d) => sameProvider(c.provider, d.organization)));
   return card(
     { title: 'Bills and payments' },
     bills.map(billRow),

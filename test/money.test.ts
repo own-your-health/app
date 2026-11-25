@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import type { BillCall, BillState } from '../src/model/bills';
 import type { MedDocument, PersonIndex } from '../src/model/types';
 import { householdEvents } from '../src/next/calendar';
-import { anyBill, billPrivate, byDue, callsSummary, deskPayments, explainedLines, forShared, mayBePaid, openBills, overAsked, paidBills, paidText, partText, paymentText, selfPay, toPay, unbilledShares, unreadText, worthACall, type OpenBill } from '../src/next/money';
+import { anyBill, billPrivate, billsShares, byDue, callsSummary, deskPayments, explainedLines, forShared, mayBePaid, openBills, overAsked, paidBills, paidText, partText, paymentText, selfPay, toPay, unbilledShares, unreadText, worthACall, type OpenBill } from '../src/next/money';
 import { readyText } from '../src/next/moneyView';
 import { demo, personNamed } from './demo-data';
 
@@ -180,6 +180,16 @@ describe('bills as medrec’s list has them', () => {
     // Its visit's shares are another's to bill: it is no billing company's bill for them.
     expect([shares(name, sam), shares(name, idx)].map((s) => s.filter(([start]) => start === '2026-07-09'))).toEqual([[], [['2026-07-09', 'Example Lab', 5070]]]);
     expect([selfPay(idx, billing!), selfPay(idx, center!), selfPay(sam, billing!), selfPay({ ...sam, bills: undefined }, billing!)]).toEqual([true, false, false, false]);
+    // Nor is it the bill of a provider that has a claim there, or a receipt that paid it theirs for the claim.
+    const lab = (extra: Partial<MedDocument>[], selfPaid: boolean): PersonIndex => ({
+      ...idx,
+      documents: [...sam.documents.map((d) => (d.id === billing!.id ? { ...d, organization: 'Example Lab' } : d)), ...extra.map((x) => ({ ...billing!, statement: undefined, ...x }))],
+      bills: { ...idx.bills!, states: new Map([...sam.bills!.states, [billing!.id, { ...state(selfPaid ? { selfPay: true } : {}), payments: [{ from: 'receipt' as const, document: 'd_paid' }] }]]) },
+    });
+    const paid = { id: 'd_paid', doc_type: 'receipt', organization: 'Example Lab', date: '2026-07-20' };
+    const july = (of: PersonIndex) => unbilledShares(of, householdEvents(household, (id) => (id === of.person ? of : indexes.get(id)), TODAY).filter((x) => x.person.id === of.person)).filter((u) => u.event.event.start === '2026-07-09').map((u) => u.cents);
+    expect([july(lab([], true)), july(lab([paid], true)), july(lab([], false)), july(lab([{ ...paid, id: 'd_other' }], true))]).toEqual([[5070], [5070], [], []]);
+    expect([paid.id, 'd_other'].map((id) => billsShares(lab([paid], true), { ...billing!, ...paid, id }))).toEqual([false, true]);
     // A copy of the statement is the same bill; a paper that is in the list itself goes by its own line.
     expect([selfPay(idx, { ...center!, id: 'd_copy', same_statement_as: billing!.id }), selfPay(idx, { ...center!, same_statement_as: billing!.id })]).toEqual([true, false]);
   });

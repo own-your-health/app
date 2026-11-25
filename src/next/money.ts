@@ -148,6 +148,9 @@ type Judged = Pick<OpenBill, 'verdict' | 'marked'> & { bill: Pick<Bill, 'unread'
 /** Whether no insurer is billed for what a bill charges for, as medrec has it. A copy's is its first's. */
 export const selfPay = (idx: PersonIndex, d: MedDocument): boolean => !!(idx.bills?.states.get(d.id) ?? idx.bills?.states.get(d.same_statement_as ?? ''))?.selfPay;
 
+/** Whether a bill or receipt can be for a share the claims give: not a bill no insurer is billed for, nor a receipt that paid one. */
+export const billsShares = (idx: PersonIndex, d: MedDocument): boolean => (d.doc_type === 'bill' ? !selfPay(idx, d) : ![...(idx.bills?.states.values() ?? [])].some((s) => s.selfPay && s.payments.some((p) => p.document === d.id)));
+
 /** What no claim is set beside a bill for, in words. */
 export const NO_CLAIM_EXPECTED = 'No claim expected';
 
@@ -225,19 +228,19 @@ export interface Unbilled {
  * The shares no paper accounts for yet, newest visit first. A pharmacy takes
  * its share at the counter, so a fill has none. A bill in the visit from a
  * provider with no claim of its own (a billing company) accounts for all of
- * the visit's shares, unless no insurer is billed for what it charges for, as
- * does a receipt from the provider on or after it. On
- * a shared screen a private paper accounts for none: a share it left out would
- * say that there is one.
+ * the visit's shares, as does a receipt from the provider on or after it. A
+ * bill no insurer is billed for, or a receipt that paid one, accounts for none,
+ * whoever sent it. On a shared screen a private paper accounts for none: a
+ * share it left out would say that there is one.
  */
 export function unbilledShares(idx: PersonIndex, events: PersonEvent[], shared = false): Unbilled[] {
-  const counts = (d: MedDocument) => !shared || !paperPrivate(idx, d.id);
+  const counts = (d: MedDocument) => billsShares(idx, d) && !(shared && paperPrivate(idx, d.id));
   const receipts = idx.documents.filter((d) => d.doc_type === 'receipt' && counts(d));
   return events.flatMap((x): Unbilled[] => {
     const e = x.event;
     if (paidAtCounter(e)) return [];
     const papers = e.papers.map((p) => p.doc).filter((d) => (d.doc_type === 'bill' || d.doc_type === 'receipt') && counts(d));
-    if (papers.some((d) => d.doc_type === 'bill' && !selfPay(idx, d) && !x.money.charges.some((c) => sameProvider(c.provider, d.organization)))) return [];
+    if (papers.some((d) => d.doc_type === 'bill' && !x.money.charges.some((c) => sameProvider(c.provider, d.organization)))) return [];
     return x.money.charges
       .filter((c) => (c.share ?? 0) > 0)
       .filter((c) => !papers.some((d) => sameProvider(c.provider, d.organization)))
