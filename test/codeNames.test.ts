@@ -291,8 +291,10 @@ describe('names that can’t be used leave the source’s words, and say nothing
     }
   });
 
-  it('when the records, or the household’s marks, are newer than it', async () => {
+  it('when the records, the household’s marks, or what a provider directory gave, are newer than it', async () => {
     const folder = personNamed(SAMPLE.household, 'Robin Example').folder;
+    const labelled = index(await load({ [`${folder}/provider-state.json`]: '{"schema": "medrec-provider-state/v1"}' }), robin);
+    expect([labelled.codeNames, labelled.events !== undefined, labelled.privacy?.kind]).toEqual([undefined, true, 'held']);
     const marks = `${folder}/marks.json`;
     const later = index(await load({ [marks]: privateCase('marked')[marks]! }), robin);
     expect([later.codeNames, later.events !== undefined, later.privacy?.kind]).toEqual([undefined, true, 'held']);
