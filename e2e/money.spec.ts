@@ -32,6 +32,7 @@ test('bills sets each open bill beside its claim, then what is not billed yet an
   await expect(page.locator('.call.bill-picked')).toBeFocused();
   await page.goBack();
   await expect(card(page, 'No bill listed yet').locator('.card-head')).toContainText('$289.20');
+  await expect(card(page, 'No bill listed yet')).toContainText('no bill or receipt from the provider is listed here.');
   await expect(card(page, 'No bill listed yet').locator('.row-title')).toHaveText(['Example Pediatrics', 'Example Health', 'Example Lab', 'Example Orthopedic Surgeons', 'Example Health']);
   // The one receipt's amount could not be read, so no bill is known to be paid; a later statement has its bill's balance.
   await expect(card(page, /^(Paid|May be paid)$/)).toHaveCount(0);
@@ -51,6 +52,7 @@ test('worth a call gives each bill the figures and the words to say', async ({ p
   await expect(page).toHaveURL(/#\/money\/calls$/);
   await expect(page.locator('.money-hero .money-hero-number')).toHaveText('$69.30');
 
+  await expect(page.locator('.private-line')).toHaveText('Private items are never listed here. Each shows on its person’s own Worth a call.');
   const call = card(page, 'Example Billing');
   await expect(call.locator('.call-claim')).toHaveText('Asks $120.00. The visit’s claims say $50.70.');
   await expect(call.locator('.kv-row')).toHaveText([
@@ -70,6 +72,8 @@ test('worth a call gives each bill the figures and the words to say', async ({ p
   await page.locator('.card', { hasText: 'Bills and payments' }).getByRole('link', { name: 'All bills, beside their claims' }).click();
   await expect(page).toHaveURL(new RegExp(`#/money/bills\\?who=${SAM}$`));
   // On Sam's own Bills the private copay is listed, marked.
+  await expect(page.locator('.private-line')).toHaveCount(0);
+  await expect(card(page, 'Not billed yet')).toContainText('no bill or receipt from the provider is in the folder yet.');
   const counseling = card(page, 'Not billed yet').locator('.row', { hasText: 'Example Counseling' });
   await expect(counseling.locator('.chip')).toHaveText('Private');
   await page.locator('main').getByRole('link', { name: 'Money', exact: true }).click();

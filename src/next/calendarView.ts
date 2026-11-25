@@ -291,6 +291,6 @@ export function recentCard(ctx: Ctx, shownCount = 3): HTMLElement {
     { title: 'Recently' },
     events.length ? events.slice(0, shownCount).map((x) => eventRow(x, { person: true })) : empty('Nothing to show here.'),
     h('p', { class: 'small' }, link({ name: 'calendar' }, 'Calendar: every visit, test and pharmacy trip, month by month')),
-    h('p', { class: 'small' }, link({ name: 'papers' }, 'Papers: every file in the Drive folder, with its visit')),
+    h('p', { class: 'small' }, link({ name: 'papers' }, 'Papers: the files in the Drive folder, each with its visit')),
   );
 }

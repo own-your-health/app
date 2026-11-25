@@ -70,7 +70,6 @@ describe('deductibles and out-of-pocket limits', () => {
       );
     const sam = (m: Map<string, MedRecord>) => planLimits(plan, m).find((l) => l.person === id('Sam Example') && l.kind === 'deductible')!;
     expect([sam(lower('140.00')).metOn, sam(lower('233.50')).metOn]).toEqual(['2026-08-26', '2026-10-12']);
-    expect(sam(lower('140.00')).metClaim).toBe(plan.find((l) => l.person === id('Sam Example') && l.date === '2026-08-26' && l.provider === 'Example Orthopedic Surgeons')?.claim);
     // What the plan printed is more than these records' claims add up to: met, with no claim to name.
     const robin = planLimits(plan, records).find((l) => l.person === id('Robin Example') && l.kind === 'deductible')!;
     expect(robin.fromClaims).not.toBe(robin.used);

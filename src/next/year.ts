@@ -78,9 +78,8 @@ export interface Limit {
   claim: string;
   /** For a deductible: what the claims in these records put toward it. */
   fromClaims?: number;
-  /** For a deductible that is met: the claim that met it and its day of service, when these records' claims add up to what the plan printed. */
+  /** For a deductible that is met: the day of service of the claim that met it, when these records' claims add up to what the plan printed. */
   metOn?: string;
-  metClaim?: string;
 }
 
 const KINDS: [RegExp, LimitKind][] = [
@@ -105,10 +104,7 @@ export function planLimits(lines: CostLine[], records: Map<string, MedRecord>): 
         if (item.used >= item.limit && limit.fromClaims === item.used) {
           let run = 0;
           const met = mine.find((l) => (run += l.cents.deductible ?? 0) >= item.limit!);
-          if (met) {
-            limit.metOn = met.claimDate;
-            limit.metClaim = met.claim;
-          }
+          if (met) limit.metOn = met.claimDate;
         }
       }
       out.push(limit);
