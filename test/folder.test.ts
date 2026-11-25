@@ -239,6 +239,39 @@ describe('DriveFolder', () => {
   });
 });
 
+describe('readBytes', () => {
+  const bytes = async (folder: { readBytes: DriveFolder['readBytes'] }, at: string) => {
+    const b = await folder.readBytes(at);
+    return b && new TextDecoder().decode(b);
+  };
+
+  it('gives a file’s bytes from Drive each time it is asked, and keeps none', async () => {
+    const { drive, calls } = driveWith(ROOT, { 'file-robin-index': '{"ok":true}' });
+    const folder = new DriveFolder(drive, 'root', 'x');
+    for (let i = 0; i < 2; i++) expect(await bytes(folder, 'Robin Example/index.json')).toBe('{"ok":true}');
+    expect(calls.filter((c) => c.endsWith('?alt=media'))).toHaveLength(2);
+  });
+
+  it('gives nothing for a folder, a missing path or a file gone since it was listed, and fails on any other answer', async () => {
+    const { drive } = driveWith(ROOT);
+    const folder = new DriveFolder(drive, 'root', 'x');
+    for (const at of ['Robin Example', 'Nobody/a.pdf', 'Robin Example/none.pdf', 'Robin Example/index.json']) expect(await bytes(folder, at), at).toBeNull();
+    const refusing = new Drive(
+      () => 'tok',
+      (async (input: RequestInfo | URL) => (new URL(String(input)).searchParams.get('alt') ? json({ error: { code: 403, message: 'no', errors: [{ reason: 'cannotDownloadFile' }] } }, 403) : json({ files: ROOT['folder-robin'] }))) as typeof fetch,
+    );
+    await expect(bytes(new DriveFolder(refusing, 'folder-robin', 'x'), 'index.json')).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('gives a sample file’s bytes as they are, only one its list has', async () => {
+    const folder = demoFolder();
+    const { files } = JSON.parse(readFileSync(join(DEMO, 'manifest.json'), 'utf8')) as { files: string[] };
+    const picture = files.find((f) => f.endsWith('.png'))!;
+    expect(Buffer.from((await folder.readBytes(picture))!).equals(readFileSync(join(DEMO, picture)))).toBe(true);
+    expect(await folder.readBytes('Robin Example/none.pdf')).toBeNull();
+  });
+});
+
 describe('DemoFolder', () => {
   it('moves the sample’s times from its anchor to now', async () => {
     const folder = demoFolder(new Date('2026-11-23T20:00:00Z'));

@@ -380,7 +380,8 @@ installed shortcut. It has no service worker, so it needs a connection, as it
 does in the browser, and each launch loads the version on the site (GitHub
 Pages lets a browser keep the page for up to 10 minutes; the rest of the
 app's files are named by their contents, so a new version never mixes with an
-old one). An installed app that comes back from the background keeps the
+old one, and pdf.js's copied files by its version; a page open since before a new
+version says so when a paper needs a file the site no longer has). An installed app that comes back from the background keeps the
 version it opened with, so when it comes to the front it asks the site for
 its page, at most every 5 minutes, and says **A new version of the app is
 ready** with a **Reload** button when the site has another.
@@ -460,6 +461,10 @@ The privacy policy is at https://own-your-health.github.io/app/privacy.html
   but back to Drive. Error messages carry no record content. Download CSV
   on the costs screen builds the file in the page and saves it to the
   device; nothing is uploaded.
+- **A paper's file is read only when someone taps View.** Its bytes come from
+  the folder then, are held in memory while the paper is open, and are dropped
+  when it is closed or its page left. Nothing of it goes to browser storage or
+  anywhere else. Nothing in a paper runs: see [Viewing a paper](#viewing-a-paper).
 - **Links out carry the thing, never the person.** A record page links to
   where a person can read about a test, medicine, condition, allergy,
   procedure or vaccine:
@@ -476,6 +481,50 @@ The privacy policy is at https://own-your-health.github.io/app/privacy.html
   folder id. The app never fetches the page; it opens only when tapped, in a new tab with
   `rel="noopener noreferrer"` and no referrer. The page says which site it
   opens. The rules are `src/model/learn.ts`.
+
+### Viewing a paper
+
+A document's page, and each paper on a visit's page, has **View** beside Open in
+Drive. It shows the paper in the page (`src/paper/`), larger or smaller with two
+fingers or the buttons. Above 10 MB the button says the size first; above 60 MB,
+and for a type no browser shows (TIFF, Word), there is only Open in Drive. A
+paper filed under someone else that is private is not shown on this person's
+visit. What it is goes by its first bytes, as a portal's own type may be wrong.
+
+| Paper | How it is shown |
+|---|---|
+| PDF | Drawn on canvases by pdf.js, in a worker, with its words over them to select. Forms are drawn as they are filled in. Its scripts, forms, links and XFA are off: the app uses none of pdf.js's layers for them. A page is drawn when it comes near, so a long one holds few. A part of a page that does not read is left out, and said. |
+| PNG, JPEG, GIF, WebP | As a picture, from a blob URL that ends when it is closed. |
+| HTML, C-CDA XML | As headings, text, lists and tables built from text by the app. The file is never given to the browser to parse: the app reads it (`src/paper/markup.ts`), keeps a fixed set of parts and no attribute but a cell's span, and leaves out scripts, styles, frames, objects and forms' controls. A link is its words and its address, not a link. A picture outside the file is named and never loaded. |
+| RTF | Its text only, which the page says. |
+| Plain text, other XML | As text. |
+
+A sandboxed frame was the other way for HTML. It would need `frame-src` opened,
+an inherited policy strips the styles a provider's page relies on anyway, and a
+frame with no script can be neither sized to its content nor put in the app's
+colours and type.
+
+The page's policy has three lines for this and no more:
+
+- `img-src blob:` for pictures.
+- `worker-src blob:` for pdf.js. A worker started from an address is under that
+  address's own headers, and GitHub Pages sends none, so it could connect
+  anywhere. One started from a blob is under the page's policy, so it connects
+  to nothing but the app's own site and Google.
+- `trusted-types oyh-pdf-worker`, the one policy that may start a worker, which
+  passes only the address the app just made from its own file.
+
+`connect-src`, `script-src` and `style-src` are as before, and no WebAssembly or
+eval is allowed: pdf.js reads JPEG 2000 and JBIG2 pictures with its JavaScript
+readers. The privacy page keeps the policy without these lines.
+
+pdf.js (`pdfjs-dist`, pinned to one version) is the app's one dependency. Its code
+is in the app's own files, loaded with the first PDF. The build copies its two
+picture readers, also loaded then, and the fonts and character maps a page may
+need to `pdfjs/<version>/`. Where one of these does not load, the page says so and
+is not shown without it. They come with their licences: pdf.js is Apache-2.0; the maps, the Foxit fonts, OpenJPEG and PDFium's
+JBIG2 reader are BSD; the Liberation fonts are GPL-2.0 with its font exceptions
+(unchanged, their sources at https://github.com/liberationfonts).
 
 ### Google permissions, and why
 
@@ -510,7 +559,8 @@ npm run verify     # lint, typecheck, unit tests, build
 npm run e2e        # browser tests at phone and desktop sizes: the sample, and signed in through a stand-in for Google and Drive
 ```
 
-- Plain TypeScript, built by Vite, with no runtime dependencies.
+- Plain TypeScript, built by Vite. Its one dependency is pdf.js, for
+  [viewing a paper](#viewing-a-paper).
 - The browser tests serve the build on port 4317. `E2E_PORT=<port> npm run e2e`
   moves it when another project's preview holds that port.
 - The sample folder in `public/demo/` is what medrec 0.9.7 writes of the
