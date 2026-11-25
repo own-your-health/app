@@ -1,16 +1,18 @@
 // The ICD-10-CM titles of the codes a person's conditions and claim diagnoses
 // use: medrec's views/<person id>/code-names.json (`medrec-code-names/v1`,
-// medrec 0.9.4 and later), from the published table. A name only labels an
-// item that is shown anyway: it comes first, the source's own words stay
-// beside it or in Details, and search, sorting and grouping use the source's
-// words alone. Without a file that reads and matches the folder, or for a
-// code it does not name, the source's words stand.
+// medrec 0.9.4 and later), from the published table. A title only labels an
+// item that is shown anyway. The source's words lead where they are plain,
+// with the title in Details; the title leads where the source gives none, a
+// bare code or billing wording in capitals. Search, sorting and grouping use
+// the source's words alone. Without a file that reads and matches the folder,
+// or for a code it does not name, the source's words stand.
 
 import { claimDiagnoses, diagnosisText, type Diagnosis } from './claims';
 import { FolderError, isObject } from './parse';
 import { recordPrivate } from './private';
 import { recordTitle } from './titles';
 import type { MedRecord, PersonIndex } from './types';
+import { plainWords } from './words';
 
 export interface CodeNames {
   /** The codes an item that is not private uses, by key. */
@@ -45,42 +47,54 @@ export function parseCodeNames(raw: unknown, person: string): CodeNames {
   return { codes: names(raw.codes), privateCodes: names(raw.private_codes) };
 }
 
-/** A code's name on a record that uses it. A name only private items' codes have is for a private record alone. */
-function nameOn(index: PersonIndex, r: MedRecord, system: string | undefined, code: string | undefined): string | undefined {
+/** A code's title on a record that uses it. One only private items' codes have is for a private record alone. */
+function titleOn(index: PersonIndex, r: MedRecord, system: string | undefined, code: string | undefined): string | undefined {
   const key = codeKey(system, code);
   if (!key || !index.codeNames) return undefined;
   return index.codeNames.codes.get(key) ?? (recordPrivate(index, r.id) ? index.codeNames.privateCodes.get(key) : undefined);
 }
 
+/** What leads, and what Details add: at most one of the two. */
 export interface Named {
-  /** What to show first. */
   name: string;
-  /** The source's words, where they are not the name's. */
+  /** The code's title, where the source's words lead and it says something else. */
+  title?: string;
+  /** The source's words, where the title leads instead of them. */
   source?: string;
 }
 
-/** "recorded as “High blood pressure”", beside a name the source's words differ from. */
-export const recordedAs = (n: Named): string | null => (n.source ? `recorded as “${n.source}”` : null);
+const bare = (s: string | undefined) => (s ?? '').replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
+
+/** Whether the source's words can lead: not billing wording in capitals, nor a bare code. */
+const leads = (words: string, code: string | undefined) => !!plainWords(words) && /\p{L}{2,}/u.test(words) && bare(words) !== bare(code);
 
 /** A title's "unspecified" only says that nothing more is known. */
 const folded = (s: string) => s.toLowerCase().replace(/\bunspecified\b/g, ' ').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 
-/** A condition by its code's name, else by the source's words. */
-export function conditionName(index: PersonIndex, r: MedRecord): Named {
-  const source = recordTitle(r);
-  const name = r.kind === 'condition' ? nameOn(index, r, r.code?.system, r.code?.code) : undefined;
-  return !name || folded(name) === folded(source) ? { name: source } : { name, source };
+/** Which leads, the source's words or the title; `say` is how either is shown. */
+function choose(title: string, words: string | undefined, code: string | undefined, say: (text: string) => string): Named {
+  if (!words) return { name: say(title) };
+  if (!leads(words, code)) return { name: say(title), source: say(words) };
+  return { name: say(words), ...(folded(title) === folded(words) ? {} : { title: say(title) }) };
 }
 
-/** A claim's diagnosis as the claim names it, "Ear infection (H66.90)", with its code's name in place of the claim's words for it. */
+/** A condition by the source's words, or by its code's title where they are none a person can read. */
+export function conditionName(index: PersonIndex, r: MedRecord): Named {
+  const title = r.kind === 'condition' ? titleOn(index, r, r.code?.system, r.code?.code) : undefined;
+  return title ? choose(title, r.display || r.code?.display, r.code?.code, (text) => text) : { name: recordTitle(r) };
+}
+
+/** In Details: the source's words, else the title, and the title beside words it differs from. */
+export const inDetails = (n: Named): { words: string; title?: string } => ({ words: n.source ?? n.name, title: n.title ?? (n.source ? n.name : undefined) });
+
+/** A claim's diagnosis with its code, "Ear infection (H66.90)", by the same rule. */
 export function diagnosisName(index: PersonIndex, claim: MedRecord, d: Diagnosis): Named {
-  const name = nameOn(index, claim, d.system, d.code);
-  if (!name || (d.display && folded(name) === folded(d.display))) return { name: diagnosisText(d) };
-  return { name: diagnosisText({ ...d, display: name }), ...(d.display ? { source: diagnosisText(d) } : {}) };
+  const title = titleOn(index, claim, d.system, d.code);
+  return title ? choose(title, d.display, d.code, (text) => diagnosisText({ ...d, display: text })) : { name: diagnosisText(d) };
 }
 
 /** A claim's diagnoses in the payer's order. */
 export const diagnosisNames = (index: PersonIndex, claim: MedRecord): Named[] => claimDiagnoses(claim).map((d) => diagnosisName(index, claim, d));
 
-/** Names in one sentence. A code's name may hold commas. */
+/** Names in one sentence. Words for a diagnosis may hold commas. */
 export const nameList = (all: string[]): string => all.join(all.some((x) => x.includes(',')) ? '; ' : ', ');

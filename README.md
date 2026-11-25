@@ -635,14 +635,16 @@ dropped from the address.
   until Include brings them back; leaving the sheet leaves them off again.
 - **Names for codes.** medrec 0.9.4 and later give each person's conditions
   and claim diagnoses the published ICD-10-CM title of their code, in
-  `views/<person id>/code-names.json` (`src/model/codeNames.ts`). The name
-  comes first, on Health, the conditions list, a condition's own page, a
-  visit, a claim and the doctor's sheet, and the source's words stay: beside
-  it (recorded as “…”), or in the claim's words. They are not said twice where
-  the two differ only in "unspecified". Search, sorting and grouping use the
-  source's words alone. A name only private items' codes have
-  (`private_codes`) is given to a private record alone. The file is used only
-  when the MD5s in `views/views.json` are the folder's, the person's
+  `views/<person id>/code-names.json` (`src/model/codeNames.ts`). The source's
+  words lead where they are plain, and the title is second, in Details: a
+  condition's and a claim's Technical details, a visit's Details, and beside
+  the code on the doctor's sheet. The title leads only where the source gives
+  no words, a bare code, or billing wording in capitals (`isDescriptor`, as
+  for visits), and the source's words go to Details. It is not given where the
+  two differ only in case, punctuation or "unspecified". Search, sorting and
+  grouping use the source's words alone. A title only private items' codes
+  have (`private_codes`) is given to a private record alone. The file is used
+  only when the MD5s in `views/views.json` are the folder's, the person's
   `marks.json` too, as for private items. Without one, or for a code it does
   not name, the source's words show, and nothing says so. While a file
   `views/views.json` lists is not there yet, is stale or could not be read,

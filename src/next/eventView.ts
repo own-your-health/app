@@ -6,7 +6,7 @@
 
 import { billList, type Bill } from '../model/billing';
 import { claimLines } from '../model/claims';
-import { conditionName, diagnosisNames, nameList } from '../model/codeNames';
+import { conditionName, diagnosisNames, inDetails, nameList } from '../model/codeNames';
 import { sameProvider } from '../model/providers';
 import { AMOUNT_LABELS, docTypeLabel, documentTitle, formatMoney, fromCents, KIND_LABELS, portalCounts, resultPoint, resultReading, str, toCents } from '../model/records';
 import { isOutOfRange, resultFlag } from '../model/flags';
@@ -338,10 +338,9 @@ function assemblyCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
 
 function detailsCard(idx: PersonIndex, e: CareEvent): HTMLElement {
   const claimRows = e.claims.map((c) => row({ route: itemRoute(idx.person, c.record.id), title: recordTitle(c.record), meta: [c.provider, dateText(c.record.date)].filter(Boolean).join(' · ') }));
-  // A condition in the source's words, then by the name it has above.
   const recorded = e.recorded.filter((r) => r.kind !== 'result').map((r) => {
-    const n = conditionName(idx, r);
-    return row({ route: itemRoute(idx.person, r.id), title: recordTitle(r), meta: [KIND_LABELS[r.kind] ?? r.kind, n.source ? n.name : null].filter(Boolean).join(' · ') });
+    const { words, title } = inDetails(conditionName(idx, r));
+    return row({ route: itemRoute(idx.person, r.id), title: words, meta: [KIND_LABELS[r.kind] ?? r.kind, title].filter(Boolean).join(' · ') });
   });
   return h(
     'details',

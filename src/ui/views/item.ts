@@ -180,7 +180,7 @@ function technical(...cards: Child[]): HTMLElement {
 }
 
 /** The record as medrec keeps it: its code, status and every field. */
-function fieldsCard(r: MedRecord, skip: string[] = []): HTMLElement {
+function fieldsCard(r: MedRecord, skip: string[], extra: [string, Child][]): HTMLElement {
   const fields = Object.entries(r.fields).filter(([k]) => k !== 'when' && !skip.includes(k));
   return card(
     { title: 'The record' },
@@ -189,6 +189,7 @@ function fieldsCard(r: MedRecord, skip: string[] = []): HTMLElement {
       ['Name at the source', r.display],
       ['Code', r.code ? [r.code.display, r.code.code].filter(Boolean).join(' · ') : undefined],
       ['Code system', r.code?.system],
+      ...extra,
       ['Status', r.status],
       ['Date', r.date],
       ...fields.map(([k, v]): [string, Child] => [fieldLabel(k), fieldValue(v)]),
@@ -196,9 +197,10 @@ function fieldsCard(r: MedRecord, skip: string[] = []): HTMLElement {
   );
 }
 
-function recordTechnical(ctx: Ctx, idx: PersonIndex, r: MedRecord, skip: string[] = []): HTMLElement {
+/** A record whole, folded: without the fields to skip, and with what its page adds after its code. */
+function recordTechnical(ctx: Ctx, idx: PersonIndex, r: MedRecord, skip: string[] = [], extra: [string, Child][] = []): HTMLElement {
   return technical(
-    fieldsCard(r, skip),
+    fieldsCard(r, skip, extra),
     ...r.provenance.map((p, i) => provenanceCard(ctx, idx, p, i, r.provenance.length)),
     card({ title: 'Identifiers' }, kv([['Record', h('code', null, r.id)], ['Merge key', h('code', null, r.key)]])),
   );
@@ -381,15 +383,14 @@ function conditionView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   const { active, ended, other } = conditionList(idx);
   const i = [...active, ...ended, ...other].find((x) => x.records.includes(r));
   const name = recordTitle(r);
-  const shown = conditionName(idx, r);
+  const named = conditionName(idx, r);
   const status = statusText(r.status);
   return [
     head(
-      shown.name,
+      named.name,
       i?.refuted ? chip('Ruled out', 'muted') : i?.unconfirmed ? chip('Unconfirmed', 'muted') : null,
       ['Condition', status, fromText(ctx, idx, r)],
       kv([
-        ['Recorded as', shown.source],
         ['Since', i?.first ? dateText(i.first) : r.date ? dateText(r.date) : undefined],
         ['Ended', i?.ended ? dateText(i.ended) : str(r.fields.abatement) ? fieldValue(r.fields.abatement!) : undefined],
         ['Kind', str(r.fields.category)],
@@ -397,7 +398,7 @@ function conditionView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
       ]),
       learnLink(r, name),
     ),
-    recordTechnical(ctx, idx, r),
+    recordTechnical(ctx, idx, r, [], [['The code’s published title', named.title]]),
   ];
 }
 
@@ -473,7 +474,8 @@ function claimView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   const a = claimAmounts(r);
   const c = claimContext(idx, ctx.store.household, idx.person, localDay(ctx.now()), r);
   const diagnoses = diagnosisNames(idx, r);
-  const claimWords = diagnoses.flatMap((d) => d.source ?? []);
+  const titles = diagnoses.flatMap((d) => d.title ?? []);
+  const words = diagnoses.flatMap((d) => d.source ?? []);
   const docs = r.documents.map((id) => idx.documents.find((d) => d.id === id)).filter((d): d is MedDocument => !!d);
   const start = isObject(r.fields.billable_period) ? str(r.fields.billable_period.start) : undefined;
   return [
@@ -490,7 +492,6 @@ function claimView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
         ['Plan paid', formatMoney(a.planPaid)],
         ['Your share comes from', a.parts.length ? sentence(a.parts.map((p) => `${p.label.toLowerCase()} ${formatMoney(p.amount)}`).join(', ')) : undefined],
         [diagnoses.length > 1 ? 'Diagnoses' : 'Diagnosis', diagnoses.length ? nameList(diagnoses.map((d) => d.name)) : undefined],
-        ['In the claim’s words', claimWords.length ? nameList(claimWords) : undefined],
         ['Outcome', str(r.fields.outcome) && r.fields.outcome !== 'complete' ? str(r.fields.outcome) : undefined],
         ['The plan’s notes', claimNotes(r).join(' · ') || undefined],
       ]),
@@ -507,7 +508,10 @@ function claimView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
       : null,
     lines.length ? linesCard(idx.person, lines, c.lineRecords) : null,
     docs.length ? card({ title: 'Documents' }, docs.map((d) => row({ route: itemRoute(idx.person, d.id), title: documentTitle(d), meta: [docTypeLabel(d.doc_type), dateText(d.date)].filter(Boolean).join(' · ') }))) : null,
-    recordTechnical(ctx, idx, r, lines.length ? ['items'] : []),
+    recordTechnical(ctx, idx, r, lines.length ? ['items'] : [], [
+      [titles.length > 1 ? 'Diagnoses, by published title' : 'Diagnosis, by published title', titles.length ? nameList(titles) : undefined],
+      [words.length > 1 ? 'Diagnoses, in the claim’s words' : 'Diagnosis, in the claim’s words', words.length ? nameList(words) : undefined],
+    ]),
   ];
 }
 
