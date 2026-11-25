@@ -338,10 +338,10 @@ function assemblyCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
 
 function detailsCard(idx: PersonIndex, e: CareEvent): HTMLElement {
   const claimRows = e.claims.map((c) => row({ route: itemRoute(idx.person, c.record.id), title: recordTitle(c.record), meta: [c.provider, dateText(c.record.date)].filter(Boolean).join(' · ') }));
-  // A condition in the source's words, then by the name it has above.
+  // A condition in the source's words, then by its code's title where they differ.
   const recorded = e.recorded.filter((r) => r.kind !== 'result').map((r) => {
     const n = conditionName(idx, r);
-    return row({ route: itemRoute(idx.person, r.id), title: recordTitle(r), meta: [KIND_LABELS[r.kind] ?? r.kind, n.source ? n.name : null].filter(Boolean).join(' · ') });
+    return row({ route: itemRoute(idx.person, r.id), title: recordTitle(r), meta: [KIND_LABELS[r.kind] ?? r.kind, n.title ?? (n.source ? n.name : null)].filter(Boolean).join(' · ') });
   });
   return h(
     'details',

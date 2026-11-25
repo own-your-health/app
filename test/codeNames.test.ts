@@ -1,10 +1,10 @@
 // medrec's names for codes (code-names.json, medrec 0.9.4 and later): what is
-// read, which item a name may label, what is shown first, and what keeps the
+// read, which item a title may label, whose words lead, and what keeps the
 // source's words.
 import { describe, expect, it } from 'vitest';
 import { Store } from '../src/data/store';
 import { claimDiagnoses } from '../src/model/claims';
-import { codeKey, conditionName, diagnosisName, diagnosisNames, nameList, parseCodeNames, recordedAs } from '../src/model/codeNames';
+import { codeKey, conditionName, diagnosisName, diagnosisNames, nameList, parseCodeNames } from '../src/model/codeNames';
 import { find } from '../src/model/search';
 import type { JsonObject, MedRecord, PersonIndex } from '../src/model/types';
 import { personNamed } from './demo-data';
@@ -90,63 +90,107 @@ describe('the sample', () => {
 });
 
 describe('a condition', () => {
-  it('leads with its code’s name, and keeps the source’s words', () => {
+  const HTN = 'Essential (primary) hypertension';
+  const vitaminD = () => [index(SAMPLE, sam), condition(index(SAMPLE, sam), 'Vitamin D deficiency')] as const;
+
+  it('leads with the source’s words when they are plain, its code’s title for Details', () => {
     const idx = index(SAMPLE, robin);
-    const n = conditionName(idx, condition(idx, 'High blood pressure'));
-    expect(n).toEqual({ name: 'Essential (primary) hypertension', source: 'High blood pressure' });
-    expect(recordedAs(n)).toBe('recorded as “High blood pressure”');
+    const r = condition(idx, 'High blood pressure');
+    expect(conditionName(idx, r)).toEqual({ name: 'High blood pressure', title: HTN });
+    // The source's own words for its code are its words too.
+    expect(conditionName(idx, { ...r, display: '', code: { ...r.code, display: 'Raised blood pressure' } })).toEqual({ name: 'Raised blood pressure', title: HTN });
+    for (const display of ['HTN', 'Hypertension NOS', 'hypertension']) expect(conditionName(idx, { ...r, display })).toEqual({ name: display, title: HTN });
   });
 
-  it('is said once when the source’s words are the name’s', () => {
-    const idx = index(SAMPLE, sam);
-    const r = condition(idx, 'Vitamin D deficiency');
-    for (const display of ['Vitamin D deficiency', 'Vitamin D deficiency, unspecified', 'VITAMIN D DEFICIENCY  (UNSPECIFIED)']) expect(conditionName(idx, { ...r, display })).toEqual({ name: display });
-    expect(recordedAs(conditionName(idx, r))).toBeNull();
-    expect(conditionName(idx, { ...r, display: 'Low vitamin D' })).toEqual({ name: 'Vitamin D deficiency, unspecified', source: 'Low vitamin D' });
+  it('leads with the title for billing wording in capitals, and keeps it for Details', () => {
+    const idx = index(SAMPLE, robin);
+    const r = condition(idx, 'High blood pressure');
+    for (const display of ['HYPERTENSION NOS', 'ESSENTIAL (PRIMARY) HYPERTENSION', 'ICD-10-CM I10']) expect(conditionName(idx, { ...r, display })).toEqual({ name: HTN, source: display });
   });
 
-  it('is the source’s words when its code has no name, or it has none', () => {
-    const idx = index(SAMPLE, sam);
-    const r = condition(idx, 'Vitamin D deficiency');
+  it('leads with the title for a bare code, its own or another system’s', () => {
+    const idx = index(SAMPLE, robin);
+    const r = condition(idx, 'High blood pressure');
+    for (const display of ['I10', 'i10', 'I-10', '38341003', 'E11.9']) expect(conditionName(idx, { ...r, display })).toEqual({ name: HTN, source: display });
+    const ankle = condition(index(SAMPLE, sam), 'Right ankle sprain');
+    const named = (display: string) => conditionName(index(SAMPLE, sam), { ...ankle, display });
+    expect(named('S93401A')).toEqual({ name: 'Sprain of unspecified ligament of right ankle, initial encounter', source: 'S93401A' });
+    // A code of letters is one too when it is the record's own.
+    const lettered: PersonIndex = { ...idx, codeNames: { codes: new Map([['icd10cm|M1A.9XX0', 'Chronic gout, unspecified, without tophus (tophi)']]), privateCodes: new Map() } };
+    const gout = { ...r, code: { system: ICD10CM, code: 'M1A.9XX0' } };
+    expect(conditionName(lettered, { ...gout, display: 'M1A9XX0' }).source).toBe('M1A9XX0');
+    expect(conditionName(lettered, { ...gout, display: 'Gout' }).name).toBe('Gout');
+  });
+
+  it('leads with words in another script', () => {
+    const idx = index(SAMPLE, robin);
+    expect(conditionName(idx, { ...condition(idx, 'High blood pressure'), display: '高血圧' })).toEqual({ name: '高血圧', title: HTN });
+  });
+
+  it('leads with the title when the source gives no words', () => {
+    const idx = index(SAMPLE, robin);
+    const r = condition(idx, 'High blood pressure');
+    expect(conditionName(idx, { ...r, display: '', code: { system: ICD10CM, code: 'I10' } })).toEqual({ name: HTN });
+  });
+
+  it('is said once when the source’s words are the title’s', () => {
+    const [idx, r] = vitaminD();
+    for (const display of ['Vitamin D deficiency', 'Vitamin D deficiency, unspecified', 'Vitamin D Deficiency  (Unspecified)']) expect(conditionName(idx, { ...r, display })).toEqual({ name: display });
+    expect(conditionName(idx, { ...r, display: 'Low vitamin D' })).toEqual({ name: 'Low vitamin D', title: 'Vitamin D deficiency, unspecified' });
+  });
+
+  it('is the source’s words when its code has no title, or it has no code, whatever they are', () => {
+    const [idx, r] = vitaminD();
     for (const code of [undefined, {}, { system: ICD10CM, code: 'E55.8' }, { system: 'http://snomed.info/sct', code: 'E55.9' }]) expect(conditionName(idx, { ...r, code })).toEqual({ name: 'Vitamin D deficiency' });
-    const bare = structuredClone(idx);
-    delete bare.codeNames;
-    expect(conditionName(bare, r)).toEqual({ name: 'Vitamin D deficiency' });
+    expect(conditionName(idx, { ...r, display: 'LOW VITAMIN D', code: undefined })).toEqual({ name: 'LOW VITAMIN D' });
+    const none = structuredClone(idx);
+    delete none.codeNames;
+    expect(conditionName(none, { ...r, display: 'LOW VITAMIN D' })).toEqual({ name: 'LOW VITAMIN D' });
   });
 
   it('is the only kind of record its own code names', () => {
-    const idx = index(SAMPLE, sam);
-    const r = condition(idx, 'Vitamin D deficiency');
-    expect(conditionName(idx, { ...r, kind: 'procedure', display: 'Low vitamin D' })).toEqual({ name: 'Low vitamin D' });
+    const [idx, r] = vitaminD();
+    expect(conditionName(idx, { ...r, kind: 'procedure', display: 'LOW VITAMIN D' })).toEqual({ name: 'LOW VITAMIN D' });
   });
 });
 
 describe('a claim’s diagnosis', () => {
-  it('is its code’s name with the code, and the claim’s words beside it where they differ', () => {
+  const OTITIS = 'Otitis media, unspecified, unspecified ear (H66.90)';
+
+  it('goes by the same rule, with its code', () => {
     const idx = index(SAMPLE, alex);
     const { claim, d } = coded(idx, 'H66.90');
-    expect(diagnosisName(idx, claim, d)).toEqual({ name: 'Otitis media, unspecified, unspecified ear (H66.90)' });
-    expect(diagnosisName(idx, claim, { ...d, display: 'Ear infection' })).toEqual({ name: 'Otitis media, unspecified, unspecified ear (H66.90)', source: 'Ear infection (H66.90)' });
-    expect(diagnosisName(idx, claim, { ...d, display: undefined })).toEqual({ name: 'Otitis media, unspecified, unspecified ear (H66.90)' });
-    expect(diagnosisName(idx, claim, { system: ICD10CM, code: 'H66.99', display: 'Ear infection' })).toEqual({ name: 'Ear infection (H66.99)' });
+    expect(diagnosisName(idx, claim, d)).toEqual({ name: OTITIS });
+    expect(diagnosisName(idx, claim, { ...d, display: 'Ear infection' })).toEqual({ name: 'Ear infection (H66.90)', title: OTITIS });
+    expect(diagnosisName(idx, claim, { ...d, display: 'OTITIS MEDIA NOS' })).toEqual({ name: OTITIS, source: 'OTITIS MEDIA NOS (H66.90)' });
+    expect(diagnosisName(idx, claim, { ...d, display: 'H6690' })).toEqual({ name: OTITIS, source: 'H6690 (H66.90)' });
+    expect(diagnosisName(idx, claim, { ...d, display: undefined })).toEqual({ name: OTITIS });
+    expect(diagnosisName(idx, claim, { system: ICD10CM, code: 'H66.99', display: 'OTITIS MEDIA NOS' })).toEqual({ name: 'OTITIS MEDIA NOS (H66.99)' });
   });
 
   it('keeps the payer’s order', () => {
     const idx = index(SAMPLE, alex);
     const { claim } = coded(idx, 'H66.90');
     const two: MedRecord = { ...claim, fields: { ...claim.fields, diagnoses: [{ sequence: 2, code: { system: ICD10CM, code: 'Z23' } } as JsonObject, { sequence: 1, code: { system: ICD10CM, code: 'H6690', display: 'Ear infection' } }] } };
-    expect(diagnosisNames(idx, two).map((n) => n.name)).toEqual(['Otitis media, unspecified, unspecified ear (H6690)', 'Encounter for immunization (Z23)']);
+    expect(diagnosisNames(idx, two).map((n) => n.name)).toEqual(['Ear infection (H6690)', 'Encounter for immunization (Z23)']);
+  });
+
+  it('in the sample is in capitals on the pharmacy’s claims', () => {
+    const idx = index(SAMPLE, robin);
+    const { claim, d } = coded(idx, 'I10');
+    expect(diagnosisName(idx, claim, d)).toEqual({ name: 'Essential (primary) hypertension (I10)', source: 'HYPERTENSION NOS (I10)' });
   });
 });
 
-describe('a private item’s name', () => {
-  const anxiety = 'Generalized anxiety disorder';
+describe('a private item’s title', () => {
+  const anxiety = 'Generalized anxiety disorder (F41.1)';
 
   it('is given to a private record alone', () => {
     const idx = index(SAMPLE, sam);
     const { claim, d } = coded(idx, 'F41.1');
     expect(idx.codeNames!.codes.has('icd10cm|F41.1')).toBe(false);
-    expect(diagnosisName(idx, claim, { ...d, display: 'Anxiety' })).toEqual({ name: `${anxiety} (F41.1)`, source: 'Anxiety (F41.1)' });
+    expect(diagnosisName(idx, claim, { ...d, display: 'Anxiety' })).toEqual({ name: 'Anxiety (F41.1)', title: anxiety });
+    expect(diagnosisName(idx, claim, { ...d, display: undefined })).toEqual({ name: anxiety });
     const open = coded(idx, 'Z13.29').claim;
     expect(diagnosisName(idx, open, { ...d, display: 'Anxiety' })).toEqual({ name: 'Anxiety (F41.1)' });
     expect(diagnosisName(idx, open, { ...d, display: undefined })).toEqual({ name: 'F41.1' });
@@ -156,15 +200,15 @@ describe('a private item’s name', () => {
     const idx = index(await load(privateCase('marked')), sam);
     const { claim, d } = coded(idx, 'S83.241A');
     expect([idx.codeNames!.codes.has('icd10cm|S83.241A'), idx.codeNames!.privateCodes.has('icd10cm|S83.241A')]).toEqual([false, true]);
-    expect(diagnosisName(idx, claim, { ...d, display: 'Knee' }).source).toBe('Knee (S83.241A)');
+    expect(diagnosisName(idx, claim, { ...d, display: 'Knee' }).title).toBe('Other tear of medial meniscus, current injury, right knee, initial encounter (S83.241A)');
     const open = coded(idx, 'Z13.29').claim;
     expect(diagnosisName(idx, open, { ...d, display: 'Knee' })).toEqual({ name: 'Knee (S83.241A)' });
   });
 
-  it('is every name of a person whose marks do not read, whose items are all held back', async () => {
+  it('is every title of a person whose marks do not read, whose items are all held back', async () => {
     const idx = index(await load(privateCase('unreadable')), sam);
     expect(idx.codeNames!.codes.size).toBe(0);
-    expect(conditionName(idx, condition(idx, 'Right ankle sprain')).name).toBe('Sprain of unspecified ligament of right ankle, initial encounter');
+    expect(conditionName(idx, condition(idx, 'Right ankle sprain')).title).toBe('Sprain of unspecified ligament of right ankle, initial encounter');
   });
 });
 
@@ -214,7 +258,7 @@ it('does not find an item by its code’s name', () => {
   const scope = [{ person: robin, index: index(SAMPLE, robin), text: null }];
   const bare: MedRecord = { ...condition(index(SAMPLE, robin), 'High blood pressure'), code: { system: ICD10CM, code: 'I10' } };
   const only: PersonIndex = { ...index(SAMPLE, robin), records: [bare] };
-  expect(conditionName(only, bare).name).toBe('Essential (primary) hypertension');
+  expect(conditionName(only, bare).title).toBe('Essential (primary) hypertension');
   expect(find([{ ...scope[0]!, index: only }], 'essential').hits).toEqual([]);
   expect(find([{ ...scope[0]!, index: only }], 'high blood pressure').hits.map((x) => x.title)).toEqual(['High blood pressure']);
 });

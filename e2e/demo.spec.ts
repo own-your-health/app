@@ -367,7 +367,7 @@ test('a visit’s page shows what belongs to it, a hand-filed note among them', 
   await expect(page.locator('.card-head h1').first()).toHaveText('Sick visit');
   const at = page.locator('.card', { hasText: 'At this visit' });
   await expect(at.locator('.visit-docs li')).toHaveText(['School note Letter']);
-  await expect(at.locator('.visit-line')).toHaveText(['Diagnosis: Otitis media, unspecified, unspecified ear', 'Medicine: Amoxicillin 400 mg/5 mL suspension', 'Claim: your share $25.00 from Example Care Plan']);
+  await expect(at.locator('.visit-line')).toHaveText(['Diagnosis: Ear infection', 'Medicine: Amoxicillin 400 mg/5 mL suspension', 'Claim: your share $25.00 from Example Care Plan']);
 });
 
 test('a search starts reading the documents’ text before anything is typed, and reads it once', async ({ page }) => {

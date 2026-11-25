@@ -180,7 +180,11 @@ function technical(...cards: Child[]): HTMLElement {
 }
 
 /** The record as medrec keeps it: its code, status and every field. */
-function fieldsCard(r: MedRecord, skip: string[] = []): HTMLElement {
+function fieldsCard(idx: PersonIndex, r: MedRecord, skip: string[] = []): HTMLElement {
+  const named = r.kind === 'condition' ? [conditionName(idx, r)] : r.kind === 'claim' ? diagnosisNames(idx, r) : [];
+  const titles = named.flatMap((n) => n.title ?? []);
+  // A condition's own words are its name at the source.
+  const words = r.kind === 'claim' ? named.flatMap((n) => n.source ?? []) : [];
   const fields = Object.entries(r.fields).filter(([k]) => k !== 'when' && !skip.includes(k));
   return card(
     { title: 'The record' },
@@ -189,6 +193,9 @@ function fieldsCard(r: MedRecord, skip: string[] = []): HTMLElement {
       ['Name at the source', r.display],
       ['Code', r.code ? [r.code.display, r.code.code].filter(Boolean).join(' · ') : undefined],
       ['Code system', r.code?.system],
+      ['The code’s published title', r.kind === 'condition' ? titles[0] : undefined],
+      [titles.length > 1 ? 'Diagnoses, by published title' : 'Diagnosis, by published title', r.kind === 'claim' && titles.length ? nameList(titles) : undefined],
+      [words.length > 1 ? 'Diagnoses, in the claim’s words' : 'Diagnosis, in the claim’s words', words.length ? nameList(words) : undefined],
       ['Status', r.status],
       ['Date', r.date],
       ...fields.map(([k, v]): [string, Child] => [fieldLabel(k), fieldValue(v)]),
@@ -198,7 +205,7 @@ function fieldsCard(r: MedRecord, skip: string[] = []): HTMLElement {
 
 function recordTechnical(ctx: Ctx, idx: PersonIndex, r: MedRecord, skip: string[] = []): HTMLElement {
   return technical(
-    fieldsCard(r, skip),
+    fieldsCard(idx, r, skip),
     ...r.provenance.map((p, i) => provenanceCard(ctx, idx, p, i, r.provenance.length)),
     card({ title: 'Identifiers' }, kv([['Record', h('code', null, r.id)], ['Merge key', h('code', null, r.key)]])),
   );
@@ -381,15 +388,13 @@ function conditionView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   const { active, ended, other } = conditionList(idx);
   const i = [...active, ...ended, ...other].find((x) => x.records.includes(r));
   const name = recordTitle(r);
-  const shown = conditionName(idx, r);
   const status = statusText(r.status);
   return [
     head(
-      shown.name,
+      conditionName(idx, r).name,
       i?.refuted ? chip('Ruled out', 'muted') : i?.unconfirmed ? chip('Unconfirmed', 'muted') : null,
       ['Condition', status, fromText(ctx, idx, r)],
       kv([
-        ['Recorded as', shown.source],
         ['Since', i?.first ? dateText(i.first) : r.date ? dateText(r.date) : undefined],
         ['Ended', i?.ended ? dateText(i.ended) : str(r.fields.abatement) ? fieldValue(r.fields.abatement!) : undefined],
         ['Kind', str(r.fields.category)],
@@ -473,7 +478,6 @@ function claimView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   const a = claimAmounts(r);
   const c = claimContext(idx, ctx.store.household, idx.person, localDay(ctx.now()), r);
   const diagnoses = diagnosisNames(idx, r);
-  const claimWords = diagnoses.flatMap((d) => d.source ?? []);
   const docs = r.documents.map((id) => idx.documents.find((d) => d.id === id)).filter((d): d is MedDocument => !!d);
   const start = isObject(r.fields.billable_period) ? str(r.fields.billable_period.start) : undefined;
   return [
@@ -490,7 +494,6 @@ function claimView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
         ['Plan paid', formatMoney(a.planPaid)],
         ['Your share comes from', a.parts.length ? sentence(a.parts.map((p) => `${p.label.toLowerCase()} ${formatMoney(p.amount)}`).join(', ')) : undefined],
         [diagnoses.length > 1 ? 'Diagnoses' : 'Diagnosis', diagnoses.length ? nameList(diagnoses.map((d) => d.name)) : undefined],
-        ['In the claim’s words', claimWords.length ? nameList(claimWords) : undefined],
         ['Outcome', str(r.fields.outcome) && r.fields.outcome !== 'complete' ? str(r.fields.outcome) : undefined],
         ['The plan’s notes', claimNotes(r).join(' · ') || undefined],
       ]),
