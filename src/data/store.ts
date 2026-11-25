@@ -8,6 +8,7 @@ import { buildRequest, requestFileName, sameScope } from '../model/requests';
 import { macState, sourceViews, type MacState, type SourceView } from '../model/sources';
 import { parseMedrecEvents } from '../model/events';
 import { held, isHeld, noList, parsePrivate, type HeldWhy, type Privacy } from '../model/private';
+import { parseCodeNames } from '../model/codeNames';
 import { parseViews, viewOf, type PersonView } from '../model/views';
 import type { AttemptLine, Household, Person, PersonIndex, PersonText, RefreshRequest, RefreshStatus, RefusedRequest, RequestScope } from '../model/types';
 
@@ -93,6 +94,8 @@ export class Store {
   private runs = 0;
   /** Whether views.json was there to read. */
   private hasViews = false;
+  /** Whose names for codes views.json lists and the folder does not give yet. */
+  private lateNames = new Set<string>();
   /** Who has no index.json: nothing is imported for them yet. */
   private absent = new Set<string>();
   private texts = new Map<string, Promise<PersonText | null>>();
@@ -148,6 +151,7 @@ export class Store {
     this.household = next.household;
     this.indexes = next.indexes;
     this.absent = next.absent;
+    this.lateNames = next.lateNames;
     this.indexErrors = next.indexErrors;
     this.hasViews = next.hasViews;
     this.viewsError = next.viewsError;
@@ -170,7 +174,7 @@ export class Store {
     const household = this.folder.md5('household.json');
     // Whoever compares with it says why it could not be read; with no view to compare, nobody does.
     household.catch(() => undefined);
-    await Promise.all([this.loadEvents(views, household), this.loadPrivate(views, household)]);
+    await Promise.all([this.loadEvents(views, household), this.loadPrivate(views, household), this.loadCodeNames(views, household)]);
     this.loadedAt = Date.now();
     this.snapshot = JSON.stringify([
       this.household,
@@ -178,7 +182,7 @@ export class Store {
       this.viewsError,
       ...this.household.people.map((p) => {
         const index = this.indexes.get(p.id);
-        return [index?.rev, this.indexErrors.get(p.id), this.eventsNotes.get(p.id), index?.privacy?.kind === 'held' ? index.privacy.text : null];
+        return [index?.rev, this.indexErrors.get(p.id), this.eventsNotes.get(p.id), index?.privacy?.kind === 'held' ? index.privacy.text : null, !!index?.codeNames];
       }),
     ]);
   }
@@ -284,6 +288,31 @@ export class Store {
     }
   }
 
+  /**
+   * medrec's names for each person's codes (0.9.4 and later). Without ones
+   * that read and match the folder, the sources' words stand, and nothing
+   * says so; names that may still come are read for again.
+   */
+  private async loadCodeNames(views: Record<string, unknown> | null, household: Promise<string | null | undefined>): Promise<void> {
+    if (views === null) return;
+    await Promise.all(
+      this.household.people.map(async (p) => {
+        const index = this.indexes.get(p.id);
+        if (!index) return;
+        try {
+          const view = viewOf(views, p.id, 'code-names.json');
+          if (!view) return;
+          const raw = (await this.viewState(p, view, household)) ? null : await readJson(this.folder, `views/${p.id}/${view.name}`);
+          if (raw === null) this.lateNames.add(p.id);
+          else index.codeNames = parseCodeNames(raw, p.id);
+        } catch (e) {
+          // What is refused stays so until medrec writes it again.
+          if (!(e instanceof FolderError)) this.lateNames.add(p.id);
+        }
+      }),
+    );
+  }
+
   /** Null when the folder holds the files medrec wrote a person's view from, and the view file it names; else why not. */
   private async viewState(p: Person, view: PersonView, household: Promise<string | null | undefined>): Promise<ViewState> {
     const folderOf = (id: string) => this.household.people.find((x) => x.id === id)?.folder;
@@ -366,6 +395,11 @@ export class Store {
   /** Whether a hold may end by itself soon: medrec is writing, or the read failed. */
   holdMayEnd(): boolean {
     return [...this.indexes.values()].some((i) => isHeld(i) && (i.privacy?.kind !== 'held' || MAY_END.has(i.privacy.why)));
+  }
+
+  /** Whether another read may bring something soon: the end of a hold, or the names of someone's codes. */
+  mayBring(): boolean {
+    return this.holdMayEnd() || this.lateNames.size > 0;
   }
 
   /** Whether the Mac's answer to a request is still to come, or to be seen. */

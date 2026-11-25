@@ -22,6 +22,7 @@ import { coverageOf, doctorSheet, healthOf, icdOf, privateOf, resultPrivate, tre
 import { privateChip } from './moneyParts';
 import { refillsDue, vaccineNeeds } from './needs';
 import { anyLeftOff, heldNotes } from './shared';
+import { conditionName, recordedAs } from '../model/codeNames';
 import { isHeld, whyHeld } from '../model/private';
 import { called } from '../model/people';
 
@@ -72,10 +73,11 @@ function recorded(item: { first?: string; latest: { date?: string } }): string |
 }
 
 function conditionRow(p: Person, idx: PersonIndex, c: ConditionItem, from: From): HTMLElement {
+  const n = conditionName(idx, c.latest);
   return row({
     route: itemRoute(p.id, c.latest.id),
-    title: c.name,
-    meta: meta(recorded(c), from(c.provenance)),
+    title: n.name,
+    meta: meta(recordedAs(n), recorded(c), from(c.provenance)),
     aside: [c.unconfirmed ? chip('Not confirmed', 'muted') : null, c.statusNote ? chip(c.statusNote, 'muted') : null, privateChip(privateOf(idx, c.records))],
   });
 }
@@ -252,7 +254,7 @@ function doctorPage(ctx: Ctx, p: Person, idx: PersonIndex): HTMLElement {
       { class: 'sheet' },
       section('Allergies', list(sheet.allergies.map((a) => meta(a.name, a.reactions.join(', ') || null, a.criticality ? `criticality ${a.criticality}` : null)), none('allergies', 'No known allergies in these records.'))),
       section('Medicines', list(sheet.medicines.map((m) => meta(m.name, typeof m.latest.fields.dosage === 'string' ? m.latest.fields.dosage : null, m.prescriber ?? null, m.lastFill?.date ? `last filled ${dateText(m.lastFill.date)}` : null)), none('medicines', 'No current medicines in these records.'))),
-      section('Problems', list(sheet.problems.map((c) => meta(c.name, icdOf(c) ? `ICD-10 ${icdOf(c)}` : null, c.first ? `since ${dateText(c.first)}` : null)), none('problems', 'No active problems in these records.'))),
+      section('Problems', list(sheet.problems.map((c) => [c, conditionName(idx, c.latest)] as const).map(([c, n]) => meta(n.name, recordedAs(n), icdOf(c) ? `ICD-10 ${icdOf(c)}` : null, c.first ? `since ${dateText(c.first)}` : null)), none('problems', 'No active problems in these records.'))),
       section('Vaccines', list(sheet.vaccines.map((v) => meta(v.name, v.doses.map((d) => (d.date ? dateText(d.date) : 'undated')).join(', '))), none('vaccines', 'No vaccines in these records.'))),
       section('Labs, last two years', table(sheet.labs, none('labs', 'No lab results in the last two years.'))),
       section('Vital signs, last two years', table(sheet.vitals, none('vitals', 'No vital signs in the last two years.'))),

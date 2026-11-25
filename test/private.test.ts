@@ -83,7 +83,7 @@ describe('reading private.json', () => {
   });
 
   it('reads the studies medrec 0.9.5 lists, and knows a list from an earlier one by having none', () => {
-    const earlier = parsePrivate({ ...raw, studies: undefined }, sam);
+    const earlier = parsePrivate({ ...raw, studies: undefined, unreported_studies: undefined }, sam);
     const later = parsePrivate({ ...raw, studies: { m_a: { area: 'reproductive', from: 'report' }, m_b: {} }, unreported_studies: ['m_c'] }, sam);
     if (earlier.kind !== 'known' || later.kind !== 'known') throw new Error('not known');
     expect([earlier.studies, earlier.unreported.size]).toEqual([null, 0]);
@@ -335,6 +335,15 @@ function judged095(store: Store, person: string, lists: { documents?: Record<str
   return idx;
 }
 
+/** An index as a list from before medrec 0.9.5 has it: the sample's without its `studies`. */
+function judged091(store: Store, person: string): PersonIndex {
+  const idx = structuredClone(index(store, person));
+  if (idx.privacy?.kind !== 'known') throw new Error('not known');
+  idx.privacy.studies = null;
+  idx.privacy.unreported = new Set();
+  return idx;
+}
+
 describe('a paper a private record links', () => {
   const isPrivate = (kind: string) => record(SAMPLE, sam, (r) => r.kind === kind && recordPrivate(index(SAMPLE, sam), r.id) !== undefined).id;
   const link = (idx: PersonIndex, rec: string, doc: string) => idx.records.find((r) => r.id === rec)!.documents.push(doc);
@@ -346,7 +355,7 @@ describe('a paper a private record links', () => {
   };
 
   it('is private, whether no visit holds it or one that is not private does', () => {
-    const idx = structuredClone(index(SAMPLE, sam));
+    const idx = judged091(SAMPLE, sam);
     const eob = added(idx);
     expect(paperPrivate(idx, eob)).toBeUndefined();
     link(idx, isPrivate('claim'), eob);
@@ -358,7 +367,7 @@ describe('a paper a private record links', () => {
   });
 
   it('is private whatever else links it', () => {
-    const idx = structuredClone(index(SAMPLE, sam));
+    const idx = judged091(SAMPLE, sam);
     const eob = added(idx);
     link(idx, record(SAMPLE, sam, (r) => r.kind === 'allergy').id, eob);
     expect(paperPrivate(idx, eob)).toBeUndefined();
@@ -385,7 +394,7 @@ describe('a paper a private record links', () => {
   });
 
   it('is not when the record is one the household marked not private, though its visit is private', () => {
-    const idx = structuredClone(index(MARKED, sam));
+    const idx = judged091(MARKED, sam);
     if (idx.privacy?.kind !== 'known') throw new Error('not known');
     const claim = eventOn(MARKED, sam, '2026-08-26').claims[0]!.record.id;
     const eob = added(idx);
@@ -396,7 +405,7 @@ describe('a paper a private record links', () => {
   });
 
   it('makes its visit private in the app’s own grouping', () => {
-    const idx = structuredClone(index(SAMPLE, sam));
+    const idx = judged091(SAMPLE, sam);
     delete idx.events;
     const goingHome = paper(SAMPLE, sam, 'Going home after knee surgery').id;
     const holds = () => personEvents(idx, SAMPLE.household, TODAY).find((e) => e.papers.some((p) => p.doc.id === goingHome));
@@ -413,6 +422,10 @@ describe('an imaging study', () => {
     const study = index(SAMPLE, sam).studies[0]!;
     const note = paper(SAMPLE, sam, 'Sports medicine visit note');
     const reported = { ...study, report: note.id };
+    // The sample's own list, as medrec 0.9.5 wrote it: its one study has no report.
+    const own = index(SAMPLE, sam).privacy;
+    expect(own?.kind === 'known' && [own.studies?.size, [...own.unreported]]).toEqual([0, [study.id]]);
+    expect(studyPrivate(index(SAMPLE, sam), study)).toBe(HELD);
     expect(studyPrivate(judged095(SAMPLE, sam, { studies: { [study.id]: 'reproductive' } }), reported)).toBe('reproductive');
     expect(studyPrivate(judged095(SAMPLE, sam, { unreported: [study.id] }), study)).toBe(HELD);
     expect(studyPrivate(judged095(SAMPLE, sam), reported)).toBeUndefined();
@@ -422,7 +435,7 @@ describe('an imaging study', () => {
   });
 
   it('is, in an earlier list, as private as its report, a linked paper’s too, and held back without one', () => {
-    const idx = structuredClone(index(SAMPLE, sam));
+    const idx = judged091(SAMPLE, sam);
     const study = idx.studies[0]!;
     expect(studyPrivate(idx, study)).toBe(HELD);
     const note = paper(SAMPLE, sam, 'Sports medicine visit note');

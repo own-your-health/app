@@ -4,7 +4,8 @@
 // Technical details, whole, for the data-minded.
 
 import { readJson } from '../../folder';
-import { CATEGORY_LABELS, claimAmounts, claimDiagnoses, type ClaimLine, claimLines, claimNotes, claimProvider, diagnosisText, revenueText } from '../../model/claims';
+import { CATEGORY_LABELS, claimAmounts, type ClaimLine, claimLines, claimNotes, claimProvider, revenueText } from '../../model/claims';
+import { conditionName, diagnosisNames, nameList } from '../../model/codeNames';
 import { isOutOfRange, rangeFor, resultFlag } from '../../model/flags';
 import { labTest } from '../../model/labtests';
 import { learnMore } from '../../model/learn';
@@ -380,13 +381,15 @@ function conditionView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   const { active, ended, other } = conditionList(idx);
   const i = [...active, ...ended, ...other].find((x) => x.records.includes(r));
   const name = recordTitle(r);
+  const shown = conditionName(idx, r);
   const status = statusText(r.status);
   return [
     head(
-      name,
+      shown.name,
       i?.refuted ? chip('Ruled out', 'muted') : i?.unconfirmed ? chip('Unconfirmed', 'muted') : null,
       ['Condition', status, fromText(ctx, idx, r)],
       kv([
+        ['Recorded as', shown.source],
         ['Since', i?.first ? dateText(i.first) : r.date ? dateText(r.date) : undefined],
         ['Ended', i?.ended ? dateText(i.ended) : str(r.fields.abatement) ? fieldValue(r.fields.abatement!) : undefined],
         ['Kind', str(r.fields.category)],
@@ -440,7 +443,7 @@ function immunizationView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
 
 function encounterView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   const visit = visitOf(idx, ctx.store.household, idx.person, localDay(ctx.now()), r.id);
-  const inVisit = visit ? visitContents(idx.person, visit) : [];
+  const inVisit = visit ? visitContents(idx, visit) : [];
   const kind = visit ? visitKind(visit) : undefined;
   return [
     head(
@@ -469,7 +472,8 @@ function claimView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   const lines = claimLines(r);
   const a = claimAmounts(r);
   const c = claimContext(idx, ctx.store.household, idx.person, localDay(ctx.now()), r);
-  const diagnoses = claimDiagnoses(r).map(diagnosisText);
+  const diagnoses = diagnosisNames(idx, r);
+  const claimWords = diagnoses.flatMap((d) => d.source ?? []);
   const docs = r.documents.map((id) => idx.documents.find((d) => d.id === id)).filter((d): d is MedDocument => !!d);
   const start = isObject(r.fields.billable_period) ? str(r.fields.billable_period.start) : undefined;
   return [
@@ -485,7 +489,8 @@ function claimView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
         ['Plan allowed', formatMoney(a.allowed)],
         ['Plan paid', formatMoney(a.planPaid)],
         ['Your share comes from', a.parts.length ? sentence(a.parts.map((p) => `${p.label.toLowerCase()} ${formatMoney(p.amount)}`).join(', ')) : undefined],
-        [diagnoses.length > 1 ? 'Diagnoses' : 'Diagnosis', diagnoses.length ? diagnoses.join(', ') : undefined],
+        [diagnoses.length > 1 ? 'Diagnoses' : 'Diagnosis', diagnoses.length ? nameList(diagnoses.map((d) => d.name)) : undefined],
+        ['In the claim’s words', claimWords.length ? nameList(claimWords) : undefined],
         ['Outcome', str(r.fields.outcome) && r.fields.outcome !== 'complete' ? str(r.fields.outcome) : undefined],
         ['The plan’s notes', claimNotes(r).join(' · ') || undefined],
       ]),

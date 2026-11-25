@@ -2,6 +2,7 @@
 // conditions, allergies, immunizations and imaging. Their documents are on
 // Papers.
 
+import { conditionName, recordedAs } from '../../model/codeNames';
 import { originNames, sortByDateDesc, str, studyTitle } from '../../model/records';
 import { isOutOfRange, rangeFor, resultFlag } from '../../model/flags';
 import type { LatestResult } from '../../model/overview';
@@ -209,13 +210,15 @@ function conditionChips(i: ConditionItem): HTMLElement | null {
 
 function conditionsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElement {
   const { active, ended, other } = conditionList(idx);
-  const render = (i: ConditionItem) =>
-    row({
+  const render = (i: ConditionItem) => {
+    const n = conditionName(idx, i.latest);
+    return row({
       route: itemRoute(person.id, i.latest.id),
-      title: i.name,
-      meta: meta(i.ended ? `${i.first ? `${dateText(i.first)} to ` : 'ended '}${dateText(i.ended)}` : sinceText(i), sourcesText(ctx, person, i.provenance)),
+      title: n.name,
+      meta: meta(recordedAs(n), i.ended ? `${i.first ? `${dateText(i.first)} to ` : 'ended '}${dateText(i.ended)}` : sinceText(i), sourcesText(ctx, person, i.provenance)),
       aside: conditionChips(i),
     });
+  };
   if (!active.length && !ended.length && !other.length) return card({ title: 'Conditions' }, empty('No conditions recorded.'));
   return h(
     'div',

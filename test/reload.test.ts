@@ -1,5 +1,6 @@
 // Reading the records again in an open app: what a read takes in or refuses,
 // and when one is due (a finished refresh, or someone's items held back).
+import { createHash } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import { Rereads } from '../src/data/rereads';
 import { Store } from '../src/data/store';
@@ -311,6 +312,56 @@ describe('when a read is due', () => {
     expect([heldNames(store), reads()]).toEqual([['Sam Example'], 1]);
     await rereads.look(true);
     expect([heldNames(store), reads()]).toEqual([[], 2]);
+  });
+
+  describe('for the names of someone’s codes', () => {
+    const robin = personNamed(demoJson('household.json'), 'Robin Example').id;
+    const file = demoJson<{ files: string[] }>('manifest.json').files.find((f) => f.startsWith(`views/${robin}/code-names.`))!;
+    const named = (store: Store) => store.index(robin)!.codeNames !== undefined;
+
+    it('is until they are there, no one held back', async () => {
+      const { timer, store } = await watching({ [file]: null }, { [file]: '{}' }, {});
+      expect([named(store), heldNames(store)]).toEqual([false, []]);
+      expect([await timer(3600), named(store)]).toEqual([[0, 30], true]);
+    });
+
+    it('is again after a read that left them out, and ends after six', async () => {
+      const { rereads, timer, finish, store, said } = await watching({}, { [file]: null });
+      finish();
+      await rereads.look();
+      expect([store.owed, named(store)]).toEqual([false, false]);
+      expect(await timer(3600)).toEqual([30, 90, 210, 450, 930]);
+      expect(said).toEqual([]);
+    });
+
+    it('is after Drive fails to give them', async () => {
+      const { folder } = changing(demoFolderWith({}), demoFolderWith({}));
+      let fails = true;
+      const store = new Store(
+        new Proxy(folder, {
+          get: (t, key) => {
+            const value: unknown = Reflect.get(t, key, t);
+            if (key === 'readText') return (p: string) => (p === file && fails ? Promise.reject(new Error('Drive: Backend Error')) : folder.readText(p));
+            return value;
+          },
+        }),
+      );
+      await store.load();
+      expect([named(store), store.mayBring(), store.holdMayEnd()]).toEqual([false, true, false]);
+      fails = false;
+      await store.reload();
+      expect([named(store), store.mayBring()]).toEqual([true, false]);
+    });
+
+    it('is not when the file is in a newer layout', async () => {
+      const text = JSON.stringify({ ...demoJson<object>(file), schema: 'medrec-code-names/v2' });
+      const md5 = createHash('md5').update(text).digest('hex');
+      const views = demoJson<{ people: Record<string, { files: Record<string, string> }> }>('views/views.json');
+      views.people[robin]!.files['code-names.json'] = md5;
+      const newer = { [file]: null, [`views/${robin}/code-names.${md5.slice(0, 12)}.json`]: text, 'views/views.json': JSON.stringify(views) };
+      const { timer, store } = await watching(newer, newer);
+      expect([named(store), await timer(3600)]).toEqual([false, []]);
+    });
   });
 
   it('is again after a read that itself left someone held back', async () => {
