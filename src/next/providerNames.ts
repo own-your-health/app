@@ -188,24 +188,32 @@ export class Providers {
   }
 
   /**
-   * Puts together the names of one label: the household's, then a sure one no
-   * two NPIs go by, as a label says no NPI and two providers' can read the
-   * same. Never two that hold names the household said are apart.
+   * Puts together the names of one label: the household's, then a sure one
+   * that brings no two NPIs together, as a label says no NPI and two
+   * providers' can read the same. Never two that hold names the household said
+   * are apart.
    */
   private join(): void {
     const labelled = this.named.filter(sureLabel);
+    if (!labelled.length) return;
     const names = new Map<string, Named[]>();
-    for (const n of this.named) names.set(this.ownId(n), [...(names.get(this.ownId(n)) ?? []), n]);
+    for (const n of this.named) {
+      const id = this.ownId(n);
+      const all = names.get(id);
+      if (all) all.push(n);
+      else names.set(id, [n]);
+    }
     for (const [sure, of] of [[false, labelled.filter(theirs)], [true, labelled.filter((n) => !theirs(n))]] as const) {
       for (const ids of byKey(of, (n) => sureLabel(n)!, (n) => this.ownId(n)).values()) {
         const all = [...new Set([...ids].map((id) => this.joined(id)))];
-        const withNpi = all.filter((id) => id.startsWith('npi|'));
-        if (sure && withNpi.length > 1) continue;
-        const first = withNpi[0] ?? all[0]!;
+        const npis = all.map((id) => new Set(names.get(id)!.flatMap((n) => this.npiOf(n))));
+        const both = new Set(npis.flatMap((x) => [...x]));
+        if (sure && !npis.some((x) => x.size === both.size)) continue;
+        const first = all.find((id) => id.startsWith('npi|')) ?? all[0]!;
         for (const id of all) {
           if (id === first || this.holdApart(names.get(first)!, names.get(id)!)) continue;
           this.into.set(id, first);
-          names.set(first, [...names.get(first)!, ...names.get(id)!]);
+          names.set(first, names.get(first)!.concat(names.get(id)!));
         }
       }
     }
@@ -236,6 +244,12 @@ export class Providers {
     if (n.npi) return `npi|${n.npi}`;
     const label = this.several.has(n.inSource) ? sureLabel(n) : undefined;
     return label ? `label|${label}` : (this.up.get(name) ?? name);
+  }
+
+  /** The NPI a name goes by, where it has one. */
+  private npiOf(n: Named): string[] {
+    const id = this.byRecords(n);
+    return id.startsWith('npi|') ? [id] : [];
   }
 
   /** The same, but for names the household said are apart. */

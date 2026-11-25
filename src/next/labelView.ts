@@ -5,13 +5,12 @@
 // add shows nothing. On a page the household shares, nothing of a private
 // paper, or of what the household said of a private item, is in it.
 
-import { paperPrivate } from '../model/private';
 import { labelOn, saidOn, sharedLabel, type LabelEvidence, type LabelSaid, type ProviderLabel } from '../model/providerLabels';
 import { documentTitle } from '../model/records';
 import type { MedDocument, PersonIndex } from '../model/types';
 import { chip, link, phoneLink } from '../ui/components';
 import { h, type Child } from '../ui/dom';
-import { dateText } from '../ui/format';
+import { dateText, dayOfText } from '../ui/format';
 import { sameName } from './providerNames';
 
 /** Who or what the label says it is, without what is printed: "Jordan Sample, MD · family doctor · Sample Health Partners". */
@@ -22,7 +21,7 @@ export function labelWords(label: ProviderLabel, printed: string | undefined): s
 }
 
 const andWhere = (e: LabelEvidence): string => [e.city, e.state].filter(Boolean).join(', ');
-const bySomeone = (x: { by?: string; at?: string }): string => `${x.by ?? 'The household'} said so${x.at ? ` on ${dateText(x.at.slice(0, 10))}` : ''}.`;
+const bySomeone = (x: { by?: string; at?: string }): string => `${x.by ?? 'The household'} said so${x.at ? ` on ${dayOfText(x.at)}` : ''}.`;
 
 /** Papers by their titles, each a link to its page. */
 function papers(idx: PersonIndex, ids: string[]): Child[] {
@@ -65,11 +64,15 @@ export function phoneSource(idx: PersonIndex, label: ProviderLabel): Child {
   return null;
 }
 
+/** A label's number with where it is from. A likely one's is no link: nothing offers to call a guess. */
+const numberOf = (idx: PersonIndex, label: ProviderLabel, phone: string): HTMLElement =>
+  h('span', { class: 'label-phone' }, label.confidence === 'likely' ? phone : phoneLink(phone), ' ', h('span', { class: 'muted' }, phoneSource(idx, label)));
+
 const listed = (names: string[]): string => (names.length < 2 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`);
 
 /** What the household said of a name, where its label does not say it already. */
 export function saidText(s: LabelSaid): string | null {
-  const on = s.at ? ` on ${dateText(s.at.slice(0, 10))}` : '';
+  const on = s.at ? ` on ${dayOfText(s.at)}` : '';
   const who = s.by ?? 'The household';
   if (s.kind === 'wrong') return `${who} said${on} that the label here was wrong.`;
   if (s.kind === 'same' || s.kind === 'different') return s.printed.length > 1 ? `${who} said${on} that ${listed(s.printed)} are ${s.kind === 'same' ? 'one provider' : 'not one provider'}.` : null;
@@ -83,11 +86,12 @@ export function noteOf(idx: PersonIndex, label: ProviderLabel | undefined, said:
   const lines = said.map(saidText).filter((x): x is string => !!x);
   if (!adds && !lines.length) return null;
   const why = label && adds ? reasons(idx, label, said, printed) : [];
+  const likely = label?.confidence === 'likely' ? [chip('Likely', 'muted'), ' '] : null;
   return h(
     'div',
     { class: 'label-note small' },
-    adds && words ? h('p', null, label.confidence === 'likely' ? [chip('Likely', 'muted'), ' '] : null, words) : null,
-    adds && label.phone ? h('p', null, !words && label.confidence === 'likely' ? [chip('Likely', 'muted'), ' '] : null, phoneLink(label.phone), [' ', h('span', { class: 'muted' }, phoneSource(idx, label))]) : null,
+    adds && words ? h('p', null, likely, words) : null,
+    adds && label.phone ? h('p', null, words ? null : likely, numberOf(idx, label, label.phone)) : null,
     why.some(Boolean) ? h('p', { class: 'muted' }, why) : null,
     lines.map((x) => h('p', { class: 'muted' }, x)),
   );
@@ -99,17 +103,17 @@ export function labelNote(idx: PersonIndex, item: string, printed: unknown): HTM
   return noteOf(idx, labelOn(idx, item, printed)?.label, saidOn(idx, item, printed), printed);
 }
 
-/** The label whose number is one to call about a paper that gives none: its organization's, where it is not a guess. `shared` is for a screen the household shares. */
-export function labelToCall(idx: PersonIndex, doc: MedDocument, shared: boolean): ProviderLabel | undefined {
+/** The label whose number is one to call about a paper that gives none: its organization's, where it is not a guess. `shared` is for a screen the household shares: which papers it may name. */
+export function labelToCall(idx: PersonIndex, doc: MedDocument, shared?: (id: string) => boolean): ProviderLabel | undefined {
   const on = labelOn(idx, doc.id, doc.organization)?.label;
-  const label = on && shared ? sharedLabel(idx, on, (id) => !paperPrivate(idx, id)) : on;
+  const label = on && shared ? sharedLabel(idx, on, shared) : on;
   return label?.phone && label.confidence !== 'likely' ? label : undefined;
 }
 
 /** The same, as a number to tap, with where it came from. */
-export function labelPhone(idx: PersonIndex, doc: MedDocument, shared: boolean): Child {
+export function labelPhone(idx: PersonIndex, doc: MedDocument, shared?: (id: string) => boolean): Child {
   const label = labelToCall(idx, doc, shared);
-  return label ? [phoneLink(label.phone!), ' ', h('span', { class: 'muted' }, phoneSource(idx, label))] : null;
+  return label ? numberOf(idx, label, label.phone!) : null;
 }
 
 /** The same in a few words, for a row that is a link: "Likely Jordan Sample, MD · radiologist". */

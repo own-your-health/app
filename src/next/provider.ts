@@ -42,13 +42,18 @@ class Quiet {
   /** Why each record of a private visit is, and each private paper. */
   private readonly visits = new Map<string, string>();
   private readonly papers = new Map<string, string>();
+  /** The papers everyone's Papers lists, whoever's. */
+  private readonly open = new Set<string>();
   readonly events: PersonEvent[];
 
   constructor(private readonly of: Records) {
     this.events = householdEvents(of.household, (id) => of.indexes.get(id), of.today);
     // A record of a private visit stays off with it, whatever is said of the record alone.
     for (const x of this.events) if (x.private) for (const r of recordsOf(x.event)) this.visits.set(at(x.person.id, r.id), x.private);
-    for (const idx of of.indexes.values()) for (const p of papersOf(idx, of.household, of.today, of.indexes)) if (p.private) this.papers.set(at(p.person, p.doc.id), p.private);
+    for (const idx of of.indexes.values()) for (const p of papersOf(idx, of.household, of.today, of.indexes)) {
+      if (p.private) this.papers.set(at(p.person, p.doc.id), p.private);
+      else this.open.add(p.doc.id);
+    }
   }
 
   private index(person: string): PersonIndex {
@@ -73,6 +78,11 @@ class Quiet {
   /** Why an event is private: its own area, or that of a record of it, as it goes by what its records say. */
   event(x: PersonEvent): string | undefined {
     return x.private ?? recordsPrivate(this.index(x.person.id), recordsOf(x.event).map((r) => r.id));
+  }
+
+  /** Whether everyone's page may name a paper, whoever's. Never one that is in nobody's records. */
+  paper(id: string): boolean {
+    return this.open.has(id);
   }
 
   /** Whether everyone's page may hold an item. */
@@ -344,13 +354,13 @@ function saysOf(l: ProviderLabel, said: LabelSaid[]): string {
 }
 
 /** The labels of its names, the named item's first, then the newest, one that says the same once; each with what the household said of the names it is for. */
-function labelsOf({ of, scope, named, same }: Its): Labelled[] {
+function labelsOf({ of, quiet, scope, named, same }: Its): Labelled[] {
   const out = new Map<string, Labelled>();
   const order = [named, ...[...same].sort(newest((n) => n.date))];
   for (const n of order) {
     if (n.printed === undefined) continue;
     const idx = of.indexes.get(n.person)!;
-    const label = n.label && (scope.shared ? sharedLabel(idx, n.label.label, (id) => scope.may('document', n.person, id)) : n.label.label);
+    const label = n.label && (scope.shared ? sharedLabel(idx, n.label.label, (id) => quiet.paper(id)) : n.label.label);
     const said = saidOn(idx, n.id, n.printed);
     const key = label ? saysOf(label, said) : `${n.person}|${n.printed}`;
     const held = out.get(key) ?? { person: n.person, printed: n.printed, ...(label ? { label } : {}), said: [] };

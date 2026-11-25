@@ -76,6 +76,12 @@ export function count(n: number, one: string, many = `${one}s`): string {
   return `${n.toLocaleString()} ${n === 1 ? one : many}`;
 }
 
+/** The local day of a moment as text, "Nov 22, 2026"; a date without a time is that day, and what does not read is as it is. */
+export function dayOfText(at: string): string {
+  const t = new Date(at);
+  return /T/.test(at) && !Number.isNaN(t.getTime()) ? dateText(localDay(t)) : dateText(at);
+}
+
 /** The local calendar day of a moment, YYYY-MM-DD: for "has this visit happened". */
 export function localDay(now: Date): string {
   return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);

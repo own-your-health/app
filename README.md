@@ -930,16 +930,18 @@ dropped from the address.
   visit and of a provider's page, and in a few words on a visit's rows. What
   the printed words say already is not said again. A phone says where it is
   from: the directory and its date, the paper, or the household. One that is
-  not sure is marked Likely and says why. What the household said of a name
+  not sure is marked Likely and says why, and its number is no link to call. What the household said of a name
   is said too: that the label was wrong, or that two names are or are not one
   provider. A bill worth a call that gives no number has its organization's,
   unless it is only likely.
-  A label adds no item to a list and changes no order: nothing is searched,
-  sorted or filtered by one, and the doctor's sheet and the care team keep
-  the sources' words. A label only private items have is on those items and
+  A label is no item of its own: search, the other lists and their order do not
+  use it. On a provider's page one of the household's, or a sure one, can put
+  names together, with their items and totals on one page, and names the
+  household said are not one provider stay apart (above). The doctor's sheet
+  and the care team keep the sources' words. A label only private items have is on those items and
   their own person's pages. On a shared screen a label is without what a
-  private paper says of it, and a likely one with no other reason is not
-  there. No label holds a National Provider Identifier. The file is used, and
+  paper says of it that everyone's Papers does not list, and a likely one with
+  no other reason is not there. No label holds a National Provider Identifier. The file is used, and
   read for again, as code names are, and nothing says so when there is none.
 - **Papers** (`#/papers`, a tab, also from each
   person's Health): every paper in the Drive folder but those about another

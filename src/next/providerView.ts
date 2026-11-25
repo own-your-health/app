@@ -209,7 +209,7 @@ export function providerView(ctx: Ctx, route: ProviderRoute): HTMLElement {
     section('People seen', 'people', page.people, seenRow, 'Named by the visits here.'),
     section('Places', 'places', page.places, seenRow, 'Named by the visits here.'),
     section('May be the same', 'names', page.alike, alikeRow, 'Names like this one that nothing in these records says are the same provider. None of theirs is on this page.'),
-    h('p', { class: 'small muted' }, 'Names are taken as one provider when the records give one National Provider Identifier for them, when one source of one person’s prints the same name, or when a label that is not marked likely is the same. Names that are only alike are never put together, nor are those the household said are apart.'),
+    h('p', { class: 'small muted' }, 'Names are taken as one provider when the records give one National Provider Identifier for them, when one source of one person’s prints the same name, or when a label of the household’s, or one not marked likely, is the same; only the household’s puts together names the records give different identifiers for. Names that are only alike are never put together, nor are those the household said are apart.'),
     notes,
   );
 }

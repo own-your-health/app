@@ -111,14 +111,23 @@ export function papersOf(index: PersonIndex, household: Household, today: string
     .sort(newestFirst);
 }
 
+/** The papers of a person's that a shared screen may name. */
+const cleared = (idx: PersonIndex, household: Household, today: string, indexes: Map<string, PersonIndex>): Set<string> => new Set(papersOf(idx, household, today, indexes).filter((x) => !x.private).map((x) => x.doc.id));
+
+/** Whether a shared screen may name a paper, whoever's: one everyone's Papers lists. Never one that is in nobody's records. */
+export function sharedPaper(household: Household, indexes: Map<string, PersonIndex>, today: string): (id: string) => boolean {
+  let all: Set<string> | undefined;
+  return (id) => (all ??= new Set(household.people.flatMap((p) => [...(indexes.has(p.id) ? cleared(indexes.get(p.id)!, household, today, indexes) : [])]))).has(id);
+}
+
 /** Everyone's papers for a shared screen, newest first: none that is private, each placed as if nothing private were there. */
 export function sharedPapers(household: Household, indexes: Map<string, PersonIndex>, today: string): Paper[] {
   return household.people
     .flatMap((p) => {
       const idx = indexes.get(p.id);
       if (!idx) return [];
-      const cleared = new Set(papersOf(idx, household, today, indexes).filter((x) => !x.private).map((x) => x.doc.id));
-      return papersOf(idx, household, today, indexes, true).filter((x) => cleared.has(x.doc.id));
+      const may = cleared(idx, household, today, indexes);
+      return papersOf(idx, household, today, indexes, true).filter((x) => may.has(x.doc.id));
     })
     .sort(newestFirst);
 }

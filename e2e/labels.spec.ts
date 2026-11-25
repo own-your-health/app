@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { expect, test, type Page } from '@playwright/test';
 import { demoJson, labelCase, type Overlay } from '../test/helpers';
 import { lay } from './lay';
@@ -34,6 +35,20 @@ const card = (page: Page, title: string | RegExp) => page.locator('.card', { has
 const row = (page: Page, title: string) => page.locator('.kv-row', { has: page.locator('dt', { hasText: title }) }).first();
 const note = (page: Page) => page.locator('main .label-note');
 const lines = (page: Page, within = page.locator('main')) => within.locator('.label-note p');
+
+/** The same with every label of Sam's changed. */
+function altered(change: (label: Record<string, unknown>) => Record<string, unknown>): Overlay {
+  const base = labelCase();
+  const views = JSON.parse(base['views/views.json']!) as { people: Record<string, { files: Record<string, string> }> };
+  const files = views.people[SAM]!.files;
+  const at = (md5: string) => `views/${SAM}/providers.${md5.slice(0, 12)}.json`;
+  const labels = JSON.parse(base[at(files['providers.json']!)]!) as { labels: Record<string, Record<string, unknown>> };
+  labels.labels = Object.fromEntries(Object.entries(labels.labels).map(([id, l]) => [id, change(l)]));
+  const text = JSON.stringify(labels);
+  const md5 = createHash('md5').update(text).digest('hex');
+  files['providers.json'] = md5;
+  return { ...base, [at(md5)]: text, 'views/views.json': JSON.stringify(views) };
+}
 
 let problems: string[] = [];
 
@@ -82,6 +97,27 @@ test('a likely one is marked so, and says which paper it is by', async ({ page }
   await expect(row(page, 'With').locator('.label-note')).toContainText('from the same visit print');
   await row(page, 'With').locator('.label-note a').last().click();
   await expect(page.locator('.card-head-paper')).toBeVisible();
+});
+
+test('a likely one’s number is no link to call, wherever it is', async ({ page }) => {
+  await lay(page, altered((l) => ({ ...l, confidence: 'likely' })));
+  for (const path of [item(SAM, rec(SAM, 'encounter', 'practitioner', 'Dr. Casey Placeholder')), item(SAM, rec(SAM, 'medication', 'prescriber', 'Dr. Casey Placeholder')), item(SAM, paper(SAM, 'Example Billing')), provider(SAM, rec(SAM, 'encounter', 'practitioner', 'Dr. Casey Placeholder'), 'practitioner')]) {
+    await go(page, path);
+    await expect(note(page).first(), path).toContainText(/Likely.*555-010-01/);
+    await expect(note(page).locator('a[href^="tel:"]'), path).toHaveCount(0);
+  }
+  await go(page, '#/money/calls');
+  await expect(page.locator('.call').filter({ hasText: 'Example Billing' })).toBeVisible();
+  await expect(page.locator('main')).not.toContainText('555-010-0140');
+});
+
+test('a number from a paper everyone’s Papers does not list is on its person’s own page alone', async ({ page }) => {
+  await lay(page, altered((l) => ({ ...l, phone_from: { from: 'paper', document: 'd_aaaaaaaaaaaaaaaaaaaa' } })));
+  await go(page, `#/money/calls?who=${SAM}`);
+  await expect(page.locator('.call').filter({ hasText: 'Example Billing' })).toContainText('555-010-0140 from one that is not in these records');
+  await go(page, '#/money/calls');
+  await expect(page.locator('.call').filter({ hasText: 'Example Billing' })).toContainText('The bill’s phone number isn’t in these records; it is on the paper.');
+  await expect(page.locator('main')).not.toContainText('555-010-0140');
 });
 
 test('a visit says it once in its head, and in a few words on the rows of who was there and who charged', async ({ page }) => {
@@ -160,11 +196,16 @@ test('a folder with no labels, or with ones that do not read, says nothing of th
   problems = problems.filter((x) => !/404/.test(x));
 });
 
-for (const scheme of ['light', 'dark'] as const) {
-  test(`labels fit a 360 px phone, with numbers big enough to tap, ${scheme}`, async ({ page }) => {
+const FIT: [string, 'light' | 'dark', () => Overlay][] = [
+  ['labels', 'light', () => labelCase()],
+  ['labels', 'dark', () => labelCase()],
+  ['labels of nothing but a number', 'light', () => altered(({ phone, phone_from: from, confidence, evidence }) => ({ phone, phone_from: from, confidence, evidence }))],
+];
+for (const [what, scheme, overlay] of FIT) {
+  test(`${what} fit a 360 px phone, with numbers big enough to tap, ${scheme}`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme });
     await page.setViewportSize({ width: 360, height: 780 });
-    await lay(page, labelCase());
+    await lay(page, overlay());
     const pages = [
       item(SAM, rec(SAM, 'encounter', 'practitioner', 'Dr. Casey Placeholder')),
       item(SAM, paper(SAM, 'Example Billing')),
@@ -177,7 +218,15 @@ for (const scheme of ['light', 'dark'] as const) {
       await go(page, path);
       await expect(page.locator('main a[href^="tel:"]').first(), path).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), path).toBe(true);
-      for (const number of await page.locator('.label-note a[href^="tel:"]').all()) expect((await number.boundingBox())!.height, path).toBeGreaterThanOrEqual(44);
+      for (const number of await page.locator('main a[href^="tel:"]').all()) {
+        expect((await number.boundingBox())!.height, path).toBeGreaterThanOrEqual(44);
+        // What is drawn over another link takes its taps.
+        const over = await number.evaluate((a) => {
+          const r = a.getBoundingClientRect();
+          return [...document.querySelectorAll('main a')].filter((x) => x !== a && [...x.getClientRects()].some((b) => b.left < r.right && b.right > r.left && b.top < r.bottom - 0.5 && b.bottom > r.top + 0.5)).map((x) => x.textContent);
+        });
+        expect(over, path).toEqual([]);
+      }
     }
   });
 }

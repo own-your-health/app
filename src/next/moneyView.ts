@@ -19,6 +19,7 @@ import { callsSummary, mayBePaid, NO_CLAIM_EXPECTED, overAsked, overdueLabel, PA
 import { billErrors, billNotes, forBill, gather, head, listLine, money, num, privateChip, visitText, type Mine, type MoneyRoute } from './moneyParts';
 import { eventsPage, overviewPage } from './moneyYear';
 import { labelPhone } from './labelView';
+import { sharedPaper } from './papers';
 import { providerLink } from './providerView';
 import { heldNotes } from './shared';
 import { called } from '../model/people';
@@ -206,12 +207,14 @@ function script(b: OpenBill): string {
   return `“${opening}${visit}.${paid} My plan’s claim for that visit says I owe ${money(b.claimSays)}. Can you check the balance, or send an itemized bill?”`;
 }
 
-function callCard(ctx: Ctx, m: Mine<OpenBill>, named: boolean): HTMLElement {
+/** A bill worth a call. `shared` is for everyone's page: which papers it may name. */
+function callCard(ctx: Ctx, m: Mine<OpenBill>, shared?: (id: string) => boolean): HTMLElement {
+  const named = shared !== undefined;
   const b = m.item;
   const e = b.event;
   const over = overAsked(b);
   const s = b.bill.doc.statement;
-  const phone = s?.phone ? phoneLink(s.phone) : labelPhone(ctx.store.index(m.person.id)!, b.bill.doc, named);
+  const phone = s?.phone ? phoneLink(s.phone) : labelPhone(ctx.store.index(m.person.id)!, b.bill.doc, shared);
   const shares = (e?.money.charges ?? []).filter((c) => (c.share ?? 0) > 0);
   const el = card(
     { title: providerLink(ctx, ctx.store.index(m.person.id), b.bill.doc.id, ['organization'], b.bill.provider, named) ?? 'A provider', class: 'call', actions: privateChip(b.private) },
@@ -240,6 +243,7 @@ function callCard(ctx: Ctx, m: Mine<OpenBill>, named: boolean): HTMLElement {
 function callsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLElement {
   const g = gather(ctx, who);
   const named = !who;
+  const mayName = named ? sharedPaper(ctx.store.household, ctx.store.indexes, g.today) : undefined;
   const sum = callsSummary(g.open, (m) => m.item);
   // What this page would have shown on someone's own view: the bills that don't match, what was paid at a visit, and what the plan changed.
 
@@ -309,7 +313,7 @@ function callsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
     ...head(ctx, route, 'Worth a call', 'Bills that don’t match what the claims say you owe.', who),
     g.loading ? h('p', { class: 'small muted' }, `Still loading the records of ${count(g.loading, 'person', 'people')}.`) : null,
     hero,
-    ...sum.asksMore.map((m) => callCard(ctx, m, named)),
+    ...sum.asksMore.map((m) => callCard(ctx, m, mayName)),
     look,
     desk,
     explained,

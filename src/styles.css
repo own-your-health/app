@@ -2231,11 +2231,18 @@ a.cal-day:hover .cal-date {
   margin: 0;
 }
 
-/* A number to call is as big to tap as a button, in the line's own height. */
-.label-note a[href^='tel:'] {
-  display: inline-block;
-  padding-block: 12px;
-  margin-block: -12px;
+.label-phone {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 0.35em;
+}
+
+/* A number to call is as big to tap as a button, and covers no line beside it. */
+a[href^='tel:'] {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
 }
 
 /* ---- Home: what needs you, and where everyone stands ---- */

@@ -2,12 +2,14 @@
 // screen may say of it, and which names it puts together.
 import { describe, expect, it } from 'vitest';
 import { Store } from '../src/data/store';
+import type { MedrecRule } from '../src/model/events';
 import { withoutErrors } from '../src/model/inError';
 import { FolderError, parseIndex } from '../src/model/parse';
 import { labelOn, parseProviderLabels, saidOn, sharedLabel, type ProviderLabel } from '../src/model/providerLabels';
 import type { ProviderField } from '../src/model/providers';
 import type { PersonIndex } from '../src/model/types';
 import { labelToCall, labelWords, saidText, whyWords } from '../src/next/labelView';
+import { papersOf, sharedPaper, sharedPapers } from '../src/next/papers';
 import { providerPage } from '../src/next/provider';
 import { namedOn, Providers, providersNamed, saidApart, type Named } from '../src/next/providerNames';
 import { demoFolderWith, demoJson, fixture, labelCase, manifestWith, privateCase, type Overlay } from './helpers';
@@ -198,6 +200,23 @@ describe('why a label is given', () => {
     expect(saidText({ id: 'o_two', kind: 'wrong', printed: ['A'] })).toBe('The household said that the label here was wrong.');
     expect([saidText({ ...said, kind: 'set' }), saidText({ ...said, kind: 'same', printed: ['A'] })]).toEqual([null, null]);
   });
+
+  it('is dated by the day where this is read', () => {
+    const zone = process.env.TZ;
+    const days = (at: string, where: string) => {
+      process.env.TZ = where;
+      return [saidText({ id: 'o', kind: 'wrong', printed: ['A'], at }), whyWords({ id: 'v', confidence: 'household', evidence: [{ from: 'household', at }] }, [], 'A')];
+    };
+    try {
+      expect(days('2026-11-23T02:00:00Z', 'America/New_York')).toEqual(['The household said on Nov 22, 2026 that the label here was wrong.', 'The household said so on Nov 22, 2026.']);
+      expect(days('2026-11-22T20:00:00Z', 'Asia/Tokyo')).toEqual(['The household said on Nov 23, 2026 that the label here was wrong.', 'The household said so on Nov 23, 2026.']);
+      expect(days('2026-11-22', 'America/New_York')[0]).toContain('on Nov 22, 2026 ');
+      expect(days('Tuesday', 'America/New_York')[0]).toContain('on Tuesday ');
+    } finally {
+      if (zone === undefined) delete process.env.TZ;
+      else process.env.TZ = zone;
+    }
+  });
 });
 
 describe('a number to call about a bill that gives none', () => {
@@ -210,25 +229,43 @@ describe('a number to call about a bill that gives none', () => {
   };
 
   it('is its organization’s, the same on a shared screen while nothing private gives it', () => {
-    expect([labelToCall(sam, bill, false)?.phone, labelToCall(sam, bill, true)?.phone]).toEqual(['555-010-0140', '555-010-0140']);
+    const none = () => false;
+    expect([labelToCall(sam, bill)?.phone, labelToCall(sam, bill, none)?.phone]).toEqual(['555-010-0140', '555-010-0140']);
     const paper = withLabel((l) => ({ ...l, phoneFrom: { from: 'paper', document: 'd_one' } }));
-    expect(labelToCall(paper, bill, true)?.phone).toBe('555-010-0140');
-    if (paper.privacy?.kind !== 'known') throw new Error('not known');
-    const secret: PersonIndex = { ...paper, privacy: { ...paper.privacy, documents: new Map([...paper.privacy.documents, ['d_one', 'household']]) } };
-    expect([labelToCall(secret, bill, false)?.phone, labelToCall(secret, bill, true)]).toEqual(['555-010-0140', undefined]);
+    expect([labelToCall(paper, bill)?.phone, labelToCall(paper, bill, (id) => id === 'd_one')?.phone, labelToCall(paper, bill, none)]).toEqual(['555-010-0140', '555-010-0140', undefined]);
+  });
+
+  it('is from no paper that everyone’s Papers does not list', () => {
+    const robin = index(ROBIN);
+    if (robin.privacy?.kind !== 'known') throw new Error('not known');
+    const may = (idx: PersonIndex) => sharedPaper(SAID.household, new Map([...SAID.indexes, [ROBIN, idx]]), TODAY);
+    const listed = new Set(sharedPapers(SAID.household, SAID.indexes, TODAY).map((p) => p.doc.id));
+    for (const idx of SAID.indexes.values()) for (const d of idx.documents) expect(may(robin)(d.id), d.id).toBe(listed.has(d.id));
+    // One of its own area, one that could be part of a private visit, and one in nobody's records.
+    const doc = papersOf(robin, SAID.household, TODAY, SAID.indexes).find((p) => p.with === undefined && !p.private)!.doc;
+    const secret = { ...robin, privacy: { ...robin.privacy, documents: new Map([...robin.privacy.documents, [doc.id, 'household']]) } };
+    const visit = robin.events!.events[0]!.id;
+    const pending = { ...robin, events: { ...robin.events!, pending: [{ ...robin.events!.pending[0], document: doc.id, could_join: [visit], rule: 'D4' as MedrecRule }] }, privacy: { ...robin.privacy, events: new Map([...robin.privacy.events, [visit, 'household']]) } };
+    const gone = { ...robin, documents: robin.documents.filter((d) => d.id !== doc.id) };
+    expect([robin, secret, pending, gone].map((idx) => may(idx)(doc.id))).toEqual([true, false, false, false]);
+    expect(may(robin)('d_one')).toBe(false);
+    const theirs = index(SAM).documents.find((d) => listed.has(d.id))!.id;
+    expect(sharedPaper(SAID.household, new Map([...SAID.indexes].filter(([id]) => id !== ROBIN)), TODAY)(theirs)).toBe(true);
+    const held: PersonIndex = { ...robin, privacy: { kind: 'held', text: 'x' } as unknown as PersonIndex['privacy'] & object };
+    expect(may(held)(doc.id)).toBe(false);
   });
 
   it('is none of a likely label’s, nor of one with no number, nor of a paper that names nobody', () => {
-    expect(labelToCall(withLabel((l) => ({ ...l, confidence: 'likely' })), bill, false)).toBeUndefined();
+    expect(labelToCall(withLabel((l) => ({ ...l, confidence: 'likely' })), bill)).toBeUndefined();
     const silent = withLabel((l) => {
       const out = { ...l };
       delete out.phone;
       return out;
     });
-    expect(labelToCall(silent, bill, false)).toBeUndefined();
+    expect(labelToCall(silent, bill)).toBeUndefined();
     const nobody = { ...bill };
     delete nobody.organization;
-    expect(labelToCall(sam, nobody, false)).toBeUndefined();
+    expect(labelToCall(sam, nobody)).toBeUndefined();
   });
 });
 
@@ -323,6 +360,35 @@ describe('names a label puts together', () => {
     const all = [as(undefined, 'a', 'v_1'), as('1', 'b', 'v_1'), as('1', 'c', 'v_2'), as('2', 'd', 'v_2')];
     const p = new Providers(all);
     expect(all.map((n) => all.findIndex((m) => p.idOf(m) === p.idOf(n)))).toEqual([0, 0, 0, 3]);
+    // The household put two NPIs together: a sure label of one of them joins both, and of a third none.
+    const theirs = (n: Named): Named => ({ ...n, label: { ...n.label!, label: { ...n.label!.label, id: 'v_theirs', confidence: 'household' } } });
+    const said = [theirs(as('1', 'a', '')), theirs(as('2', 'b', '')), as('2', 'c', 'v_1'), as(undefined, 'd', 'v_1'), as('3', 'e', 'v_2'), as('1', 'f', 'v_2')];
+    const q = new Providers(said);
+    expect(said.map((n) => said.findIndex((m) => q.idOf(m) === q.idOf(n)))).toEqual([0, 0, 0, 0, 4, 0]);
+  });
+
+  it('are those of one sure label by one NPI, though the household said two others of it are apart', () => {
+    const base = find(index(SAM), 'practitioner', 'Dr. Casey Placeholder');
+    const as = (person: string, printed: string, npi: string | undefined, label: string | undefined): Named => {
+      const out: Named = { ...base, person, printed, inSource: `${person}|${printed}` };
+      if (npi) out.npi = npi;
+      else delete out.npi;
+      if (label) out.label = { ...base.label!, label: { ...base.label!.label, id: label } };
+      else delete out.label;
+      return out;
+    };
+    const all = [as(SAM, 'A', '1', 'v_1'), as(SAM, 'B', '1', 'v_1'), as(ROBIN, 'C', '1', 'v_1'), as(ROBIN, 'D', undefined, 'v_1')];
+    const apart = [{ person: SAM, printed: ['A', 'B'] }];
+    const groups = (names: Named[]) => {
+      const p = new Providers(names, apart);
+      return names.map((n) => names.findIndex((m) => p.idOf(m) === p.idOf(n)));
+    };
+    expect([groups(all), groups(all.map((n, i) => (i === 1 ? as(SAM, 'B', '1', undefined) : n)))]).toEqual([
+      [0, 1, 0, 0],
+      [0, 1, 0, 0],
+    ]);
+    // One that could go with either is the one's the records give the NPI for.
+    expect(groups([as(SAM, 'B', undefined, 'v_1'), as(SAM, 'A', '1', 'v_1'), as(ROBIN, 'C', undefined, 'v_1')])).toEqual([0, 1, 1]);
   });
 
   it('that a source gives an NPI is another’s where the household said so of an item that gives none', () => {
@@ -363,7 +429,8 @@ describe('names a label puts together', () => {
     expect(alike({ ...sam, providerLabels: { ...sam.providerLabels!, open: { ...sam.providerLabels!.open, said: [] } } })).toContain('Example Health Orthopedics');
     // Two names the records give one NPI.
     const ortho = { ...find(sam, 'location', 'Example Health Orthopedics'), npi: health.npi! };
-    const third = { ...health, id: 'r_third', printed: 'Example Health Northside' };
+    const third: Named = { ...health, id: 'r_third', printed: 'Example Health Northside' };
+    delete third.label;
     const elsewhere = { ...ortho, id: 'r_elsewhere', person: ROBIN };
     const all = [health, ortho, third, elsewhere];
     expect([one(all, health, ortho), one(all, health, ortho, [])]).toEqual([false, true]);
@@ -438,6 +505,9 @@ describe('a provider’s page', () => {
     const at = { person: SAM, id: casey.named.id, field: casey.named.field };
     const of = (everyone: boolean) => providerPage({ household: store.household, indexes: new Map([...store.indexes, [SAM, secret]]), today: TODAY, marks: [] }, at, everyone)!.labels;
     expect([of(true), of(false).map((l) => l.label?.practice)]).toEqual([[], ['Example Health']]);
+    // Nor what a paper says that is in nobody's records.
+    const nowhere = providerPage({ household: store.household, indexes: new Map([...store.indexes, [SAM, { ...idx, documents: idx.documents.filter((d) => d.id !== paper) }]]), today: TODAY, marks: [] }, at, true)!;
+    expect(nowhere.labels).toEqual([]);
   });
 
   it('is read by the text an item prints, before it is tidied', () => {
