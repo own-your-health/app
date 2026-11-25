@@ -2,7 +2,6 @@
 // conditions, allergies, immunizations and imaging. Their documents are on
 // Papers.
 
-import { aboutText } from '../../model/aboutAnother';
 import { conditionName } from '../../model/codeNames';
 import { originNames, sortByDateDesc, str, studyTitle } from '../../model/records';
 import { isOutOfRange, rangeFor, resultFlag } from '../../model/flags';
@@ -12,6 +11,7 @@ import { resultGroups } from '../../model/panels';
 import { COMING_UP_DAYS, FLU, fluSeason, SCHEDULE_SOURCE, scheduleDigest, scheduleFor, type DoseState, type FluSeason, type ScheduleRow } from '../../model/schedule';
 import type { Person, PersonIndex, Provenance } from '../../model/types';
 import { resultChart, resultSparkline } from '../chart';
+import { aboutNotes } from '../about';
 import { button, card, chip, command, empty, flagChip, link, row, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, localDay, yearOf } from '../format';
@@ -178,8 +178,8 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
       others.length ? card({ title: `Also in ${group.name}` }, others.map((x) => resultRow(person.id, x))) : null,
     );
   }
-  const about = idx.about ? h('p', { class: 'small muted' }, `${aboutText(idx.about)}.`) : null;
-  if (!groups.length) return card({ title: 'Results' }, empty('No results yet.'), about);
+  const about = aboutNotes(idx);
+  if (!groups.length) return card({ title: 'Results' }, empty('No results yet.'), ...about);
   return h(
     'div',
     { class: 'stack' },
@@ -189,7 +189,7 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
         g.tests.map((t) => resultRow(person.id, t)),
       ),
     ),
-    about,
+    ...about,
   );
 }
 

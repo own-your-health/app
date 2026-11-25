@@ -216,6 +216,8 @@ export interface PersonIndex {
   imports: ImportRun[];
   /** How many of the chart's items are about somebody else, and not here (src/model/aboutAnother.ts). */
   about?: number;
+  /** Why there may be others here: medrec's list of them could not be read, or is not known to be of these files. */
+  aboutUnsure?: 'unreadable' | 'behind';
   /** medrec's events for this index (views/<person id>/events.json), when the store found them written from it. */
   events?: MedrecEvents;
   /** Which of these items are private (src/model/private.ts), as the store read it: while it is missing, all are held back from shared screens. */

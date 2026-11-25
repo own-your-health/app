@@ -4,8 +4,8 @@
 // are the same whether or not there are any; each shows, marked, on its
 // person's own.
 
-import { aboutText } from '../model/aboutAnother';
 import { docTypeLabel, documentTitle } from '../model/records';
+import { aboutNotes } from '../ui/about';
 import { card, chip, driveLink, empty, filterChips, link, row, type Ctx } from '../ui/components';
 import { h } from '../ui/dom';
 import { count, dateText, localDay } from '../ui/format';
@@ -108,10 +108,11 @@ export function papersView(ctx: Ctx, route: Extract<Route, { name: 'papers' }>):
   };
   draw();
 
+  const own = who ? store.index(who) : undefined;
   const notes = [
     loading ? h('p', { class: 'small muted' }, `Loading ${count(loading, 'person’s', 'people’s')} papers…`) : null,
     ...unreadable.map((p) => h('p', { class: 'small muted' }, `${called(p)}’s records could not be read.`)),
-    who && store.index(who)?.about ? h('p', { class: 'small muted' }, `${aboutText(store.index(who)!.about!)}.`) : null,
+    ...(own ? aboutNotes(own) : []),
     who ? null : privateLine('Private papers are never listed here. Each shows on its person’s own Papers. This is discretion, not security: everyone the Drive folder is shared with can read every file in it.'),
     ...(who ? [] : heldNotes(ctx, 'this shared view')),
   ];

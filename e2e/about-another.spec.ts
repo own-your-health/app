@@ -64,11 +64,45 @@ test('nothing says so of another person, or where there are none', async ({ page
 
 test('no screen of everyone’s, no search and no sheet says there are any', async ({ page }) => {
   await lay(page, about([result, paper]));
-  for (const path of ['#/', '#/calendar', '#/calendar?view=list', '#/money', '#/papers', '#/health', `#/health?who=${ROBIN}`, `#/health/doctor?who=${ROBIN}`, '#/search?q=calcium', '#/settings']) {
+  // Each with a word of its own content, which is there once it is all read.
+  const screens: [string, RegExp][] = [
+    ['#/', /Robin/],
+    ['#/calendar', /Office visit/],
+    ['#/calendar?view=list', /Office visit/],
+    ['#/money', /Example Lab/],
+    ['#/papers', /Basic metabolic panel/],
+    ['#/health', /Sam/],
+    [`#/health?who=${ROBIN}`, /Potassium/],
+    [`#/health/doctor?who=${ROBIN}`, /Creatinine/],
+    ['#/search?q=calcium', /^\d+ match(es)?\.$/],
+    ['#/settings', /Appearance|Sign out|Folder/],
+  ];
+  for (const [path, own] of screens) {
     await go(page, path);
-    await expect(page.locator('main')).toBeVisible();
-    await expect(page.getByText(/Loading/)).toHaveCount(0);
+    await expect(page.locator('main').getByText(own).first(), path).toBeVisible();
+    await expect(page.getByText(/Loading|Reading the text/)).toHaveCount(0);
     await expect(line(page), path).toHaveCount(0);
     await expect(page.getByText('Calcium', { exact: true }), path).toHaveCount(0);
   }
+});
+
+test('their own lists and sheet say where medrec’s list does not read, and others do not', async ({ page }) => {
+  const unread = 'medrec’s list of what is about another person could not be read, so some of these may be.';
+  await lay(page, { 'views/views.json': '{' });
+  for (const path of [`#/p/${ROBIN}/results`, `#/papers?who=${ROBIN}`, `#/health/doctor?who=${ROBIN}`]) {
+    await go(page, path);
+    await expect(line(page), path).toHaveText(unread);
+  }
+  for (const [path, own] of [['#/papers', /papers/], ['#/health', /Robin/], [`#/p/${ROBIN}/conditions`, /Active/]] as [string, RegExp][]) {
+    await go(page, path);
+    await expect(page.locator('main').getByText(own).first(), path).toBeVisible();
+    await expect(line(page), path).toHaveCount(0);
+  }
+  const views = demoJson<{ medrec: string; people: Record<string, Record<string, unknown>> }>('views/views.json');
+  views.medrec = '0.9.9';
+  Object.assign(views.people[ROBIN]!, { about_another: [result], index: 'f'.repeat(32) });
+  await lay(page, { 'views/views.json': JSON.stringify(views) });
+  await go(page, `#/p/${ROBIN}/results`);
+  await page.reload();
+  await expect(line(page)).toHaveText(['1 item about another person, not shown.', 'Which of the newest items are about another person is not known yet.']);
 });

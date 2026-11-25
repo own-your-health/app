@@ -19,8 +19,8 @@ Google Drive. It reads the records folder that
   recent), their full lists of results against their reference range,
   medicines, conditions, allergies, immunizations and imaging, and a sheet to
   hand a doctor;
-- **Papers**: every file in the folder, each with the visit it belongs to,
-  for everyone or one person, by kind of paper;
+- **Papers**: the folder's papers, but those about another person, each with
+  the visit it belongs to, for everyone or one person, by kind of paper;
 - one search over everyone's records, documents and imaging, and the text
   medrec extracted from documents, from the search button in the bar;
 - for any record, the raw FHIR the source served, where it came from, and the
@@ -869,11 +869,18 @@ dropped from the address.
   another's. medrec 0.9.9 and later name those items by id (`about_another` in
   `views.json`, `src/model/aboutAnother.ts`). They are left out when the index
   is read, with every link to them, so no list, total, search, sheet or page
-  has one. Their person's own results and papers say how many there are, and
-  nothing else of them. No shared screen, sheet or list of everyone's says it.
+  has one; an item whose own `key` begins with `about|` is left out too,
+  whatever the list says. Their person's own results and papers say how many
+  there are, and nothing else of them. No shared screen, sheet or list of
+  everyone's says it. The list is applied even when the folder's files have
+  changed since `views.json` was written. Those lists then say that which of
+  the newest are about another person is not known yet, and, where `views.json`
+  or its list does not read, that some may be; the sheet for a doctor says that
+  too. What an earlier read of this folder named stays out meanwhile. An
+  earlier medrec's folder names none, and nothing is said.
 - **Papers** (`#/papers`, a tab, also from each
-  person's Health): every paper in the Drive
-  folder, newest first by year, each with the visit it belongs to as a
+  person's Health): every paper in the Drive folder but those about another
+  person (above), newest first by year, each with the visit it belongs to as a
   link. A paper is with a visit when the visit holds it, when a record of
   the visit links it (an explanation of benefits names its claim), or when
   it is the receipt for a bill the visit holds (or the only one it can be
