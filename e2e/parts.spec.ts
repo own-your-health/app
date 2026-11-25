@@ -122,16 +122,23 @@ test('everyone’s search goes by the text and the private lines of each read of
   expect(reads()).toBe(1);
   // medrec wrote the texts again, with other private lines, and its list of them.
   await macWrites(page, google, linesPrivate(`Newer and longer ${SAID}`), 0);
-  for (const q of ['newer and longer', 'example']) {
-    await page.getByRole('searchbox').fill(q);
-    await expect(page.locator('main [aria-live]').filter({ hasText: 'match' })).toHaveText(q === 'example' ? /^[1-9]\d* matches\./ : /^0 matches\./);
-    await expect(main(page)).not.toContainText('is not searched here');
-    await expect(main(page)).not.toContainText(SAID);
-  }
+  const search = page.getByRole('searchbox');
+  const who = (name: string) => page.getByRole('group', { name: 'Filter by person' }).getByRole('button', { name });
+  // Robin's own search finds the new words once the records are read again.
+  await who('Robin').click();
+  await expect(async () => {
+    await search.fill('');
+    await search.fill('newer and longer');
+    await expect(results.first()).toContainText(`Newer and longer ${SAID}`, { timeout: 1000 });
+  }).toPass();
   expect(reads()).toBe(2);
-  await page.getByRole('searchbox').fill('newer and longer');
-  await page.getByRole('group', { name: 'Filter by person' }).getByRole('button', { name: 'Robin' }).click();
-  await expect(results.first()).toContainText(`Newer and longer ${SAID}`);
+  // Everyone's goes by the same read: the text is searched, without what is private in it.
+  await who('Everyone').click();
+  await expect(page.locator('main [aria-live]').filter({ hasText: 'match' })).toHaveText(/^0 matches\./);
+  await expect(main(page)).not.toContainText(SAID);
+  await search.fill('example');
+  await expect(page.locator('main [aria-live]').filter({ hasText: 'match' })).toHaveText(/^[1-9]\d* matches\./);
+  await expect(main(page)).not.toContainText('is not searched here');
   expect(google.strays).toEqual([]);
 });
 

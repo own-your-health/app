@@ -20,7 +20,7 @@ export interface RecordsFolder {
   readText(path: string): Promise<string | null>;
   /** A file's text, with the MD5 of the bytes it was read as. */
   readHashed(path: string): Promise<{ text: string; md5: string } | null>;
-  /** A file's bytes, as they are, kept nowhere here; null when it is not there. Only for a paper someone asked to see. */
+  /** A file's bytes, as they are, kept nowhere here; null when it is not there. For a paper someone asked to see, and for `readHashed`. */
   readBytes(path: string, opts?: ReadOptions): Promise<Uint8Array<ArrayBuffer> | null>;
   /**
    * The file's MD5 as the folder holds it (Drive's `md5Checksum`), which
