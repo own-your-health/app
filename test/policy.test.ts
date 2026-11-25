@@ -6,12 +6,15 @@ import { ROOT } from './helpers';
 
 // The page's Content-Security-Policy is the boundary that keeps records in
 // the browser: scripts and styles only from the app's own files, and
-// connections only to Google's OAuth and Drive endpoints.
+// connections only to Google's OAuth and Drive endpoints. A paper someone asks
+// to see adds three things: its pictures from the page's memory, the PDF
+// reader's worker, which starts from there so that it is under this policy
+// too, and the one Trusted Types policy that may start it.
 const CSP = [
   "default-src 'none'",
   "script-src 'self'",
   "style-src 'self'",
-  "img-src 'self'",
+  "img-src 'self' blob:",
   "font-src 'none'",
   "connect-src 'self' https://www.googleapis.com https://oauth2.googleapis.com",
   "manifest-src 'self'",
@@ -19,11 +22,14 @@ const CSP = [
   "form-action 'none'",
   "object-src 'none'",
   "frame-src 'none'",
-  "worker-src 'none'",
+  'worker-src blob:',
   "require-trusted-types-for 'script'",
-  "trusted-types 'none'",
+  'trusted-types oyh-pdf-worker',
   'upgrade-insecure-requests',
 ].join('; ');
+
+/** The privacy page's: it runs nothing and shows no paper. */
+const STILL = CSP.replace("img-src 'self' blob:", "img-src 'self'").replace('worker-src blob:', "worker-src 'none'").replace('trusted-types oyh-pdf-worker', "trusted-types 'none'");
 
 function tracked(): string[] {
   return execSync('git ls-files --cached --others --exclude-standard', { cwd: ROOT, encoding: 'utf8' })
@@ -40,9 +46,10 @@ describe('the page', () => {
     expect(m?.[1]).toBe(CSP);
   });
 
-  it('has a privacy policy under the same policy, with no script at all', () => {
+  it('has a privacy policy under a stricter one, with no script at all', () => {
     const privacy = readFileSync(join(ROOT, 'privacy.html'), 'utf8');
-    expect(privacy.match(/http-equiv="Content-Security-Policy"\s+content="([^"]+)"/)?.[1]).toBe(CSP);
+    expect(STILL).not.toMatch(/blob:|oyh-pdf-worker/);
+    expect(privacy.match(/http-equiv="Content-Security-Policy"\s+content="([^"]+)"/)?.[1]).toBe(STILL);
     expect(privacy).toContain('<meta name="referrer" content="no-referrer" />');
     expect(privacy).not.toMatch(/<script\b/i);
     expect(html).toContain('<a href="./privacy.html">Privacy policy</a>');
@@ -110,6 +117,17 @@ describe('the repository', () => {
       for (const m of text.matchAll(/(?<![\d.])\(?\d{3}\)?[-. ]\d{3}-\d{4}(?![\d])/g)) if (!/555/.test(m[0])) bad.push(`${f}: phone ${m[0]}`);
       for (const m of text.matchAll(/(?<!\d)\d{3}-\d{2}-\d{4}(?!\d)/g)) bad.push(`${f}: ssn-shaped ${m[0]}`);
     }
+    expect(bad).toEqual([]);
+  });
+
+  it('makes one Trusted Types policy, for the PDF reader’s worker', () => {
+    const made = files.filter((f) => f.startsWith('src/') && /createPolicy\(/.test(read(f)));
+    expect(made).toEqual(['src/paper/pdf.ts']);
+    expect(read('src/paper/pdf.ts').match(/createPolicy\('([^']+)'/)?.[1]).toBe('oyh-pdf-worker');
+  });
+
+  it('never parses a paper as a page', () => {
+    const bad = files.filter((f) => /^src\/.*\.ts$/.test(f) && /innerHTML|outerHTML|insertAdjacentHTML|DOMParser|srcdoc|createContextualFragment|document\.write/.test(read(f).replace(/\/\/.*|\/\*[^]*?\*\//g, '').replace(/k === 'srcdoc'/, '')));
     expect(bad).toEqual([]);
   });
 

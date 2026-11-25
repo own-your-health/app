@@ -65,6 +65,37 @@ export function householdInQuery(folderId: string): string {
  */
 export const SHARED_FOLDERS_QUERY = `sharedWithMe = true and mimeType = ${q(FOLDER_MIME)} and trashed = false`;
 
+export interface ReadOptions {
+  signal?: AbortSignal;
+  progress?: (done: number) => void;
+}
+
+/** A response's bytes, told as they come. */
+export async function readBody(res: Response, { progress, signal }: ReadOptions = {}): Promise<Uint8Array<ArrayBuffer>> {
+  if (!res.body || !progress) return new Uint8Array(await res.arrayBuffer());
+  const reader = res.body.getReader();
+  const parts: Uint8Array[] = [];
+  let done = 0;
+  for (;;) {
+    const { value, done: ended } = await reader.read();
+    if (ended) break;
+    if (signal?.aborted) {
+      await reader.cancel().catch(() => undefined);
+      throw signal.reason;
+    }
+    parts.push(value);
+    done += value.length;
+    progress(done);
+  }
+  const all = new Uint8Array(done);
+  let at = 0;
+  for (const p of parts) {
+    all.set(p, at);
+    at += p.length;
+  }
+  return all;
+}
+
 export class Drive {
   constructor(
     private readonly token: () => string,
@@ -137,6 +168,12 @@ export class Drive {
   async text(fileId: string): Promise<string> {
     const res = await this.call(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`);
     return res.text();
+  }
+
+  /** A file's bytes, as they are; `progress` hears how many have come. */
+  async bytes(fileId: string, opts: ReadOptions = {}): Promise<Uint8Array<ArrayBuffer>> {
+    const res = await this.call(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`, { signal: opts.signal ?? null });
+    return readBody(res, opts);
   }
 
   /** An id for a file to create: a create sent again under it never makes a second file. */

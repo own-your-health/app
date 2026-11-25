@@ -20,6 +20,7 @@ import { claimContext, visitKind, visitOf } from '../../model/visits';
 import { partOfEvent } from '../../next/eventView';
 import { markedPayments, paidControl, viewOnlyNote } from '../../next/markPaid';
 import { paymentText, unreadText } from '../../next/money';
+import { paperView } from '../../paper/view';
 import { rangeBar, resultChart } from '../chart';
 import { button, card, chip, command, driveLink, empty, flagChip, jsonBlock, kv, link, outLink, phoneLink, row, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
@@ -578,13 +579,15 @@ function documentView(ctx: Ctx, idx: PersonIndex, d: MedDocument): Child[] {
   const same = d.same_statement_as ? idx.documents.find((x) => x.id === d.same_statement_as) : undefined;
   const bill = d.doc_type === 'bill' ? billList(idx).find((b) => b.doc.id === (same ?? d).id) : undefined;
   const later = bill?.medrec && bill.replacedBy ? idx.documents.find((x) => x.id === bill.replacedBy) : undefined;
+  const paper = paperView(ctx, d);
   return [
     h(
       'section',
       { class: 'card' },
-      h('div', { class: 'card-head' }, h('h1', null, documentTitle(d)), chip(docTypeLabel(d.doc_type), 'muted')),
+      h('div', { class: 'card-head card-head-paper' }, h('h1', null, documentTitle(d)), chip(docTypeLabel(d.doc_type), 'muted')),
       h('p', { class: 'muted' }, [dateText(d.date), d.organization].filter(Boolean).join(' · ')),
-      h('div', { class: 'row-actions' }, driveLink(ctx, d.path, 'Open in Drive')),
+      h('div', { class: 'row-actions' }, paper.button, driveLink(ctx, d.path, 'Open in Drive')),
+      paper.panel,
       kv([
         ['Amount due', formatMoney(d.statement?.amount_due)],
         ['Due', d.statement?.due_date ? dateText(d.statement.due_date) : undefined],

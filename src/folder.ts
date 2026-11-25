@@ -2,7 +2,7 @@
 // synthetic folder. Paths are relative to the folder, `/`-separated, as
 // medrec writes them in the index (`Robin Example/index.json`).
 
-import { Drive, DriveError, FOLDER_MIME, viewUrl, type DriveFile } from './drive';
+import { Drive, DriveError, FOLDER_MIME, readBody, viewUrl, type DriveFile, type ReadOptions } from './drive';
 
 export interface Entry {
   name: string;
@@ -17,6 +17,8 @@ export interface RecordsFolder {
   readonly id: string;
   readonly name: string;
   readText(path: string): Promise<string | null>;
+  /** A file's bytes, as they are, kept nowhere here; null when it is not there. Only for a paper someone asked to see. */
+  readBytes(path: string, opts?: ReadOptions): Promise<Uint8Array<ArrayBuffer> | null>;
   /**
    * The file's MD5 as the folder holds it (Drive's `md5Checksum`), which
    * medrec's views.json records: null when there is no such file, undefined
@@ -126,6 +128,17 @@ export class DriveFolder implements RecordsFolder {
       const text = await this.drive.text(f.id);
       this.served.add(splitPath(path).join('/'));
       return text;
+    } catch (e) {
+      if (e instanceof DriveError && e.status === 404) return null;
+      throw e;
+    }
+  }
+
+  async readBytes(path: string, opts?: ReadOptions): Promise<Uint8Array<ArrayBuffer> | null> {
+    const f = await this.resolve(path);
+    if (!f || f.mimeType === FOLDER_MIME) return null;
+    try {
+      return await this.drive.bytes(f.id, opts);
     } catch (e) {
       if (e instanceof DriveError && e.status === 404) return null;
       throw e;
@@ -327,6 +340,13 @@ export class DemoFolder implements RecordsFolder {
     if (!(await this.exists(p))) return null;
     const res = await this.fetchImpl(this.url(p));
     return res.ok ? this.shift(await res.text()) : null;
+  }
+
+  async readBytes(path: string, opts: ReadOptions = {}): Promise<Uint8Array<ArrayBuffer> | null> {
+    const p = splitPath(path).join('/');
+    if (!(await this.exists(p))) return null;
+    const res = await this.fetchImpl(this.url(p), { signal: opts.signal ?? null });
+    return res.ok ? readBody(res, opts) : null;
   }
 
   async md5(path: string): Promise<string | null | undefined> {

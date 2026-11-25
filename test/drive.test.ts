@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { childrenQuery, Drive, DriveError, folderIdFrom, folderNamedQuery, HOUSEHOLD_QUERY, q, viewUrl } from '../src/drive';
+import { childrenQuery, Drive, DriveError, folderIdFrom, folderNamedQuery, HOUSEHOLD_QUERY, q, readBody, viewUrl } from '../src/drive';
 import { fixture, json } from './helpers';
 
 interface Call {
@@ -113,9 +113,55 @@ describe('Drive', () => {
     expect(calls[0]!.url.pathname).toBe('/drive/v3/files/file-mine');
   });
 
+  it('reads a file’s bytes as they are, with the token, no cache and what may stop it', async () => {
+    const bytes = new Uint8Array([0, 255, 13, 10, 128]);
+    const { fetchImpl, calls } = fakeFetch([new Response(bytes)]);
+    const stop = new AbortController();
+    expect([...(await new Drive(() => 'tok', fetchImpl).bytes('a/b', { signal: stop.signal }))]).toEqual([...bytes]);
+    expect(calls[0]!.url.pathname + calls[0]!.url.search).toBe('/drive/v3/files/a%2Fb?alt=media&supportsAllDrives=true');
+    const { init } = calls[0]!;
+    expect([new Headers(init.headers).get('Authorization'), init.cache, init.referrerPolicy, init.signal]).toEqual(['Bearer tok', 'no-store', 'no-referrer', stop.signal]);
+  });
+
   it('reads the signed-in account', async () => {
     const { fetchImpl } = fakeFetch([json(fixture('drive/about.json'))]);
     expect(await new Drive(() => 'tok', fetchImpl).about()).toEqual({ email: 'robin@example.com', name: 'Robin Example' });
+  });
+});
+
+describe('readBody', () => {
+  const inParts = (...parts: number[][]) => {
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array<ArrayBuffer>>(
+      {
+        pull(c) {
+          const next = parts.shift();
+          if (next) c.enqueue(new Uint8Array(next));
+          else c.close();
+        },
+        cancel() {
+          cancelled = true;
+        },
+      },
+      { highWaterMark: 0 },
+    );
+    return { res: new Response(body), left: () => parts.length, cancelled: () => cancelled };
+  };
+
+  it('tells how many bytes have come, and gives them in order', async () => {
+    const said: number[] = [];
+    const all = await readBody(inParts([1, 2], [3], [4, 5, 6]).res, { progress: (n) => said.push(n) });
+    expect([[...all], said]).toEqual([[1, 2, 3, 4, 5, 6], [2, 3, 6]]);
+    expect([...(await readBody(inParts([1, 2], [3]).res))]).toEqual([1, 2, 3]);
+    expect([...(await readBody(new Response(null), { progress: (n) => said.push(n) }))]).toEqual([]);
+  });
+
+  it('reads no more once it is stopped', async () => {
+    const stop = new AbortController();
+    const { res, left, cancelled } = inParts([1], [2], [3], [4]);
+    const read = readBody(res, { signal: stop.signal, progress: (n) => n === 2 && stop.abort(new Error('closed')) });
+    await expect(read).rejects.toThrow('closed');
+    expect([left(), cancelled()]).toEqual([1, true]);
   });
 });
 

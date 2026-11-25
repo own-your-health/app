@@ -22,6 +22,8 @@ export interface Ctx {
   now(): Date;
   go(route: Route): void;
   render(): void;
+  /** Aborted when this drawing of the page is replaced: a paper open on it is closed. */
+  leaving: AbortSignal;
   toast(text: string, kind?: 'info' | 'error'): void;
   refresh(scope: RequestScope, what: string): Promise<void>;
   /** Removes one of the app's own requests while it waits. */
