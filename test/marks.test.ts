@@ -76,6 +76,57 @@ describe('a payment marked', () => {
     expect(store.marks.map((m) => m.file)).toEqual([second.file]);
   });
 
+  it('asked for after the folder was listed is kept', async () => {
+    const { folder, store } = await loaded();
+    const doc = owing(store.index(ROBIN)!, '53.68').id;
+    const list = folder.list.bind(folder);
+    let asked: PendingMark | undefined;
+    folder.list = async (path) => {
+      const entries = await list(path);
+      if (path === '_requests') asked = await store.requestMark(paid(ROBIN, doc, '53.68'), {}, '0.1.0');
+      return entries;
+    };
+    await store.loadRefreshState();
+    expect(store.marks).toEqual([asked]);
+  });
+
+  it('marked on another device waits here too, and its answer is read for', async () => {
+    const { folder, store } = await loaded();
+    const m = await store.requestMark(paid(ROBIN, owing(store.index(ROBIN)!, '53.68').id, '53.68'), {}, '0.1.0');
+    const here = new Store(folder);
+    await here.load();
+    expect([here.marks.map((x) => x.file), here.waiting, here.owed]).toEqual([[m.file], true, false]);
+    answer(folder, m, 'ok');
+    await here.loadRefreshState();
+    expect([here.marks.map((x) => x.taken), here.waiting, here.owed]).toEqual([[true], false, true]);
+  });
+
+  it('recorded while the records are being read is shown until they are read once more', async () => {
+    const { folder, store } = await loaded();
+    const m = await store.requestMark(paid(ROBIN, owing(store.index(ROBIN)!, '53.68').id, '53.68'), {}, '0.1.0');
+    const reading = store.reload();
+    answer(folder, m, 'ok');
+    await store.loadRefreshState();
+    await reading;
+    expect([store.marks.map((x) => x.file), store.owed]).toEqual([[m.file], true]);
+    await store.reload();
+    expect([store.marks, store.owed]).toEqual([[], false]);
+  });
+
+  it('recorded is not shown as waiting by a look the records were read during', async () => {
+    const { folder, store } = await loaded();
+    const m = await store.requestMark(paid(ROBIN, owing(store.index(ROBIN)!, '53.68').id, '53.68'), {}, '0.1.0');
+    answer(folder, m, 'ok');
+    const read = folder.readText.bind(folder);
+    folder.readText = async (path) => {
+      // The answer is read after the listing that shows it, and the records in between.
+      if (path === `_requests/done/${m.file}`) await store.reload();
+      return read(path);
+    };
+    await store.loadRefreshState();
+    expect([store.marks, store.owed, store.answeredMarks.map((r) => r.id)]).toEqual([[], false, [m.request.id]]);
+  });
+
   it('that did not read this time still waits', async () => {
     const { folder, store } = await loaded();
     const m = await store.requestMark(paid(ROBIN, owing(store.index(ROBIN)!, '53.68').id, '53.68'), {}, '0.1.0');
@@ -145,8 +196,9 @@ describe('a payment marked', () => {
     expect(none.store.medrec).toBeUndefined();
     const later = await loaded(demoFolderWith({ 'views/views.json': JSON.stringify({ ...demoJson<object>('views/views.json'), medrec: '0.9.7' }) }));
     expect(later.store.medrec).toBe('0.9.7');
+    later.folder.writeAsMac('views/views.json', JSON.stringify({ ...demoJson<object>('views/views.json'), medrec: '0.9.8' }));
     await later.store.reload();
-    expect(later.store.medrec).toBe('0.9.7');
+    expect(later.store.medrec).toBe('0.9.8');
   });
 });
 

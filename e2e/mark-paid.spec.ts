@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { demoJson, privateCase, type Overlay } from '../test/helpers';
+import { demoJson, paidCase, privateCase, type Overlay } from '../test/helpers';
 import { rewritten } from './alter';
 import { CLIENT, FakeGoogle, FOLDER_NAME } from './fake-google';
 import { lay } from './lay';
@@ -207,6 +207,89 @@ test('every page a bill is on has Mark paid: Worth a call, the bill, its visit, 
   await expect(page.locator('.mark-paid')).toHaveCount(0);
 });
 
+test('a visit with two copies of one statement has one Mark paid, and so has one with a copy alone', async ({ page }) => {
+  const bill = doc('Sam Example', '175.00');
+  const copied = (original: boolean) =>
+    rewritten({}, (files) => {
+      const first = files.index.documents.find((d) => d.id === bill);
+      if (!first) return;
+      files.index.documents.push({ ...first, id: 'd_copyaaaaaaaaaaaaaaaa', same_statement_as: bill });
+      for (const e of files.events.events) {
+        const at = e.members?.findIndex((m) => m.document === bill) ?? -1;
+        if (at >= 0) e.members!.splice(at, original ? 0 : 1, { ...e.members![at]!, document: 'd_copyaaaaaaaaaaaaaaaa' });
+      }
+    });
+  for (const original of [true, false]) {
+    await lay(page, copied(original));
+    await go(page, `#/p/${SAM}/e/${eventOf(SAM, bill)}`);
+    const rows = card(page, /^Bills and payments$/).locator('.row', { hasText: `Bill from ${SURGERY}` });
+    await expect(rows).toHaveCount(original ? 2 : 1);
+    await expect(markButton(page, SURGERY)).toHaveCount(1);
+    await page.unrouteAll();
+    await page.goto('about:blank');
+  }
+});
+
+test('a bill that asks less than its claims say has Mark paid under Worth a look', async ({ page }) => {
+  const bill = doc('Sam Example', '175.00');
+  const overlay = rewritten({}, (files) => {
+    for (const d of files.index.documents) if (d.id === bill) d.statement = { ...(d.statement as object), amount_due: { amount: '150.00', currency: 'USD' } };
+  });
+  // medrec's own list never asks about a bill for less; the app's comparison does, where there is no list.
+  const views = JSON.parse(overlay['views/views.json']!) as { people: Record<string, { files: Record<string, string> }> };
+  delete views.people[SAM]!.files['bills.json'];
+  await lay(page, { ...overlay, 'views/views.json': JSON.stringify(views) });
+  await go(page, `#/money/calls`);
+  await markButton(page, SURGERY).click();
+  await expect(page.getByLabel('Amount')).toHaveValue('150.00');
+  await page.getByLabel('Amount').fill('50');
+  await send(page).click();
+  await expect(card(page, /^Worth a look$/).locator('.mark-line')).toContainText('$50.00 marked paid, Nov 22, 2026.');
+});
+
+test('on Home, of two bills for one visit only the one marked is, and one not yet due says what is marked of it', async ({ page }) => {
+  const [first, second] = [doc('Robin Example', '53.68'), doc('Robin Example', '19.28')];
+  await lay(
+    page,
+    rewritten({}, (files) => {
+      const [to, from] = [first, second].map((id) => files.events.events.find((e) => e.members?.some((m) => m.document === id)));
+      if (!to || !from) return;
+      to.members!.push(...from.members!.filter((m) => m.document === second));
+      from.members = from.members!.filter((m) => m.document !== second);
+    }),
+  );
+  await go(page, '#/money/bills');
+  await markButton(page, 'Example Lab').click();
+  await page.getByLabel('Amount').fill('5');
+  await send(page).click();
+  await markButton(page, 'Example Health').click();
+  await send(page).click();
+  await expect(card(page, /^Marked paid$/).locator('.mark-line')).toHaveCount(1);
+  await page.evaluate(() => (location.hash = '#/'));
+  const rows = card(page, /^Needs you$/).locator('.row', { hasText: 'Robin' }).filter({ hasText: 'Example' });
+  await expect(rows.locator('.mark-line')).toHaveText([/^\$5\.00 marked paid/, /^\$53\.68 marked paid/]);
+  await expect(rows.filter({ hasText: '$53.68 marked paid' }).locator('.need-kind')).toHaveText('Marked paid');
+  await expect(rows.filter({ hasText: '$5.00 marked paid' }).locator('.need-kind')).toHaveText('Bill to pay');
+});
+
+test('on Home, a bill that shares its row with another has its provider on its button', async ({ page }) => {
+  const [first, second] = [doc('Robin Example', '53.68'), doc('Robin Example', '19.28')];
+  await lay(
+    page,
+    rewritten({}, (files) => {
+      const [to, from] = [first, second].map((id) => files.events.events.find((e) => e.members?.some((m) => m.document === id)));
+      if (!to || !from) return;
+      to.members!.push(...from.members!.filter((m) => m.document === second));
+      from.members = from.members!.filter((m) => m.document !== second);
+      for (const d of files.index.documents) if (d.id === second) d.statement = { ...(d.statement as object), due_date: '2026-11-18' };
+      const listed = files.bills.bills[second];
+      if (listed) listed.due_date = '2026-11-18';
+    }),
+  );
+  await go(page, '#/');
+  await expect(page.locator('.mark-paid').getByRole('button', { name: /Example (Health|Lab)/ })).toHaveText(['Mark paid: Example Lab', 'Mark paid: Example Health']);
+});
+
 test('a filed payment is undone on the Mac, or from medrec 0.9.7 here', async ({ page }) => {
   const bill = doc('Sam Example', '175.00');
   await go(page, `#/p/${SAM}/r/${bill}`);
@@ -240,6 +323,96 @@ test('an older medrec, or none, has no Mark paid', async ({ page }) => {
     await go(page, `#/money/bills?who=${SAM}`);
     await expect(billRow(page, SURGERY).first()).toBeVisible();
     await expect(page.locator('.mark-paid')).toHaveCount(0);
+    await page.unrouteAll();
+    await page.goto('about:blank');
+  }
+});
+
+test('a folder with no place for requests has no Mark paid', async ({ page }) => {
+  const requests = demoJson<{ files: string[] }>('manifest.json').files.filter((f) => f.startsWith('_requests/'));
+  await lay(page, Object.fromEntries(requests.map((f) => [f, null])));
+  await go(page, '#/money/bills');
+  await expect(billRow(page, SURGERY)).toHaveCount(1);
+  await expect(page.locator('.mark-paid')).toHaveCount(0);
+});
+
+test('a payment that could not be recorded is not said of a bill that is paid since', async ({ page }) => {
+  const bill = doc('Sam Example', '120.00');
+  const failed = { [`_requests/done/20261121T120000Z_x_abcdefghijklmnopqrst.json`]: request('x_abcdefghijklmnopqrst', bill, '120.00', '2026-11-21T12:00:00Z', 'The folder could not be written.') };
+  for (const [base, said] of [[{}, 1], [paidCase(), 0]] as const) {
+    await lay(page, { ...base, ...failed });
+    await go(page, `#/p/${SAM}/r/${bill}`);
+    await expect(markButton(page, 'Example Billing')).toHaveCount(said);
+    await expect(page.locator('.kv').first()).toContainText('Amount due$120.00');
+    await expect(page.getByText('was not recorded')).toHaveCount(said);
+    await page.unrouteAll();
+    await page.goto('about:blank');
+  }
+});
+
+test('of the payments that could not be recorded the last is said, for two weeks', async ({ page }) => {
+  const bill = doc('Sam Example', '120.00');
+  const failed = (n: string, at: string) => ({ [`_requests/done/${at.replace(/[-:]/g, '')}_x_${n.repeat(20)}.json`]: request(`x_${n.repeat(20)}`, bill, '120.00', at, `Reason ${n}.`) });
+  const said = page.locator('.mark-paid p');
+  for (const [overlay, text] of [
+    [{ ...failed('a', '2026-11-20T12:00:00Z'), ...failed('b', '2026-11-21T12:00:00Z') }, ['The payment marked for Nov 1, 2026 was not recorded. Reason b.']],
+    [failed('c', '2026-11-08T20:00:01Z'), ['The payment marked for Nov 1, 2026 was not recorded. Reason c.']],
+    [failed('d', '2026-11-08T20:00:00Z'), []],
+  ] as [Overlay, string[]][]) {
+    await lay(page, overlay);
+    await go(page, `#/p/${SAM}/r/${bill}`);
+    await expect(markButton(page, 'Example Billing')).toHaveCount(1);
+    await expect(said).toHaveText(text);
+    await page.unrouteAll();
+    await page.goto('about:blank');
+  }
+});
+
+test('an undo asked on another device waits here, and one naming another person changes nothing', async ({ page }) => {
+  const bill = doc('Sam Example', '120.00');
+  const base = paidCase();
+  const [, list] = Object.entries(base).find(([f]) => f.startsWith(`views/${SAM}/bills.`))!;
+  const payment = (JSON.parse(list!) as { bills: Record<string, { paid: { id: string }[] }> }).bills[bill]!.paid[0]!.id;
+  const views = JSON.stringify({ ...(JSON.parse(base['views/views.json']!) as object), medrec: '0.9.7' });
+  const undo = (person: string) => {
+    const asked = JSON.parse(request('x_abcdefghijklmnopqrst', bill, '120.00', '2026-11-22T19:59:00Z')) as Record<string, unknown>;
+    delete asked.paid;
+    return JSON.stringify({ ...asked, unpaid: { person, payment } });
+  };
+  for (const [person, waits] of [[SAM, true], [ROBIN, false]] as const) {
+    await lay(page, { ...base, 'views/views.json': views, '_requests/20261122T195900Z_x_abcdefghijklmnopqrst.json': undo(person) });
+    await go(page, `#/p/${SAM}/r/${bill}`);
+    const line = page.locator('.mark-line');
+    await expect(line).toContainText(waits ? 'Undo asked; waiting for the Mac.' : '$120.00 marked paid, Nov 20, 2026');
+    await expect(line.getByRole('button')).toHaveText(waits ? [] : ['Undo']);
+    await page.unrouteAll();
+    await page.goto('about:blank');
+  }
+});
+
+test('an undo the Mac has done says so until the records can be read again', async ({ page }) => {
+  const base = paidCase();
+  await lay(page, { ...base, 'views/views.json': JSON.stringify({ ...(JSON.parse(base['views/views.json']!) as object), medrec: '0.9.7' }) });
+  await go(page, `#/p/${SAM}/r/${doc('Sam Example', '120.00')}`);
+  const line = page.locator('.mark-line');
+  await line.getByRole('button', { name: /^Undo/ }).click();
+  await expect(line).toContainText('Undo asked; waiting for the Mac.');
+  await page.route(/\/demo\/Alex%20Example\/index\.json/, (route) => route.fulfill({ status: 503, body: '' }));
+  await expect(line).toContainText('$120.00 marked paid, Nov 20, 2026. The Mac has undone it.', { timeout: 20_000 });
+  await expect(line.getByRole('button')).toHaveCount(0);
+  expect(problems.filter((x) => !x.includes('503'))).toEqual([]);
+  problems = [];
+});
+
+test('a filed payment has no undo where this account can ask for nothing', async ({ page }) => {
+  const requests = demoJson<{ files: string[] }>('manifest.json').files.filter((f) => f.startsWith('_requests/'));
+  const base = paidCase();
+  const bill = doc('Sam Example', '120.00');
+  for (const [overlay, count] of [[base, 1], [{ ...base, ...Object.fromEntries(requests.map((f) => [f, null])) }, 0]] as [Overlay, number][]) {
+    await lay(page, overlay);
+    await go(page, `#/p/${SAM}/r/${bill}`);
+    await expect(page.locator('.main')).toContainText('$120.00 marked paid, Nov 20, 2026');
+    await expect(page.locator('.mark-undo')).toHaveCount(count);
     await page.unrouteAll();
     await page.goto('about:blank');
   }
@@ -312,6 +485,19 @@ for (const colorScheme of ['light', 'dark'] as const) {
   });
 }
 
+/** A request from another device that marks one of Sam's bills paid; with `handled`, one the Mac could not record, and why. */
+function request(id: string, document: string, amount: string, at: string, handled?: string): string {
+  return JSON.stringify({
+    schema: 'medrec-request/v1',
+    id,
+    requested_at: at,
+    requested_by: { name: 'Another device' },
+    app: { name: 'own-your-health-app', version: '0.1.0' },
+    paid: { person: SAM, document, on: '2026-11-01', amount },
+    ...(handled ? { handled: { picked_up_at: at, finished_at: at, outcome: 'failed', sources: [], message: handled, by: 'medrec 0.9.6' } } : {}),
+  });
+}
+
 /** A receipt for the surgery center's bill on a day, with no amount that reads. */
 function withReceipt(on: string): Overlay {
   return rewritten({}, (files) => {
@@ -376,19 +562,131 @@ test.describe('signed in', () => {
     await expect(page.locator('.mark-paid')).toHaveCount(0);
   });
 
-  test('what the Mac could not record says so beside the bill', async ({ page }) => {
+  for (const outcome of ['failed', 'invalid']) test(`what the Mac could not record says so beside the bill: ${outcome}`, async ({ page }) => {
     await page.clock.setFixedTime(new Date());
     await open(page);
     await markButton(page, SURGERY).click();
     await send(page).click();
     await expect(card(page, /^Marked paid$/)).toBeVisible();
     const path = google.changes[0]!.path;
-    const at = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
-    google.writeAsMac(path.replace('_requests/', '_requests/done/'), JSON.stringify({ ...(JSON.parse(google.read(path)!) as object), handled: { picked_up_at: at, finished_at: at, outcome: 'failed', sources: [], message: 'The folder could not be written.', by: 'medrec 0.9.6' } }));
+    const at = now();
+    google.writeAsMac(path.replace('_requests/', '_requests/done/'), JSON.stringify({ ...(JSON.parse(google.read(path)!) as object), handled: { picked_up_at: at, finished_at: at, outcome, sources: [], message: 'The folder could not be written.', by: 'medrec 0.9.6' } }));
     google.removeAsMac(path);
-    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await look(page);
     await expect(card(page, 'Due now').locator('.row', { hasText: SURGERY }).locator('.mark-paid')).toContainText(/^The payment marked for .* was not recorded\. The folder could not be written\./);
     await expect(markButton(page, SURGERY)).toBeVisible();
+  });
+
+  const now = (msAgo = 0) => new Date(Date.now() - msAgo).toISOString().replace(/\.\d{3}Z$/, 'Z');
+  const look = (page: Page) => page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  const asked = (id: string, handled?: string, at = now()) => request(id, doc('Sam Example', '175.00'), '175.00', at, handled);
+
+  test('what is marked on another device, and what the Mac says of it, shows here', async ({ page }) => {
+    await page.clock.setFixedTime(new Date());
+    await open(page);
+    const due = card(page, 'Due now').locator('.row', { hasText: SURGERY });
+    await expect(due).toHaveCount(1);
+    google.writeAsMac('_requests/20261122T200312Z_x_abcdefghijklmnopqrst.json', asked('x_abcdefghijklmnopqrst'));
+    await look(page);
+    await expect(card(page, /^Marked paid$/).locator('.mark-line')).toContainText('$175.00 marked paid, Nov 1, 2026. Waiting for the Mac.');
+    await expect(due).toHaveCount(0);
+    // Only the device that asked can take it back.
+    await expect(page.getByRole('button', { name: /^Undo/ })).toHaveCount(0);
+    google.removeAsMac('_requests/20261122T200312Z_x_abcdefghijklmnopqrst.json');
+    await look(page);
+    await expect(due).toHaveCount(1);
+    // Asked and answered between two looks.
+    google.writeAsMac('_requests/done/20261122T200412Z_x_bcdefghijklmnopqrstu.json', asked('x_bcdefghijklmnopqrstu', 'The folder could not be written.'));
+    await look(page);
+    await expect(due.locator('.mark-paid')).toContainText('was not recorded. The folder could not be written.');
+    // Marked again, the earlier failure is not said.
+    google.writeAsMac('_requests/20261122T200512Z_x_cdefghijklmnopqrstuv.json', asked('x_cdefghijklmnopqrstuv'));
+    await look(page);
+    await expect(card(page, /^Marked paid$/).locator('.mark-line')).toHaveCount(1);
+    await expect(page.locator('.main')).not.toContainText('was not recorded');
+    // Asked yesterday and not taken by a Mac that is on.
+    google.writeAsMac('_requests/20261122T200512Z_x_cdefghijklmnopqrstuv.json', asked('x_cdefghijklmnopqrstuv', undefined, now(86_400_000)));
+    await page.reload();
+    await expect(card(page, /^Marked paid$/).locator('.mark-line')).toContainText('$175.00 marked paid, Nov 1, 2026. The Mac has not taken it yet.');
+  });
+
+  test('what the Mac has recorded says so until the records can be read again', async ({ page }) => {
+    await page.clock.setFixedTime(new Date());
+    await open(page);
+    await markButton(page, SURGERY).click();
+    await send(page).click();
+    const line = card(page, /^Marked paid$/).locator('.mark-line');
+    await expect(line).toContainText('Waiting for the Mac.');
+    const path = google.changes[0]!.path;
+    google.failing = 'household.json';
+    google.writeAsMac(path.replace('_requests/', '_requests/done/'), JSON.stringify({ ...(JSON.parse(google.read(path)!) as object), handled: { picked_up_at: now(), finished_at: now(), outcome: 'ok', sources: [], message: '', by: 'medrec 0.9.6' } }));
+    google.removeAsMac(path);
+    await look(page);
+    await expect(line).toContainText('The Mac has recorded it.');
+    await expect(page.getByRole('button', { name: /^Undo/ })).toHaveCount(0);
+    // The read that failed is the stand-in's.
+    expect(problems.filter((x) => !x.includes('503'))).toEqual([]);
+    problems = [];
+  });
+
+  test('an account that may only view from now on has no Mark paid once the folder is read again', async ({ page }) => {
+    await page.clock.setFixedTime(new Date());
+    await open(page);
+    const buttons = page.getByRole('button', { name: /^Mark paid/ });
+    await expect(buttons).not.toHaveCount(0);
+    google.writeAsMac('_requests/20261122T200312Z_x_abcdefghijklmnopqrst.json', asked('x_abcdefghijklmnopqrst'));
+    await look(page);
+    await expect(card(page, /^Marked paid$/)).toBeVisible();
+    google.viewer = true;
+    google.writeAsMac('_requests/done/20261122T200312Z_x_abcdefghijklmnopqrst.json', asked('x_abcdefghijklmnopqrst', 'The folder could not be written.'));
+    google.removeAsMac('_requests/20261122T200312Z_x_abcdefghijklmnopqrst.json');
+    await look(page);
+    await expect(card(page, /^Marked paid$/)).toHaveCount(0);
+    await expect(async () => {
+      await look(page);
+      await expect(buttons).toHaveCount(0, { timeout: 300 });
+    }).toPass();
+    await expect(billRow(page, SURGERY)).toHaveCount(1);
+  });
+
+  test('a payment Drive did not take stays in the form', async ({ page }) => {
+    await page.clock.setFixedTime(new Date());
+    await open(page);
+    await markButton(page, SURGERY).click();
+    await page.getByLabel('Amount').fill('75');
+    google.failing = '*';
+    await send(page).click();
+    await expect(page.locator('.toast')).toBeVisible();
+    await expect(page.getByLabel('Amount')).toHaveValue('75');
+    google.failing = null;
+    await send(page).click();
+    await expect(form(page)).toHaveCount(0);
+    await expect(card(page, 'Due now').locator('.row', { hasText: SURGERY }).locator('.mark-line')).toContainText('$75.00 marked paid');
+    expect(problems.filter((x) => !x.includes('503'))).toEqual([]);
+    problems = [];
+  });
+
+  test('an undo the Mac came before says so', async ({ page }) => {
+    await page.clock.setFixedTime(new Date());
+    await open(page);
+    await markButton(page, SURGERY).click();
+    await send(page).click();
+    await expect(card(page, /^Marked paid$/)).toBeVisible();
+    google.removeAsMac(google.changes[0]!.path);
+    await page.getByRole('button', { name: /^Undo/ }).click();
+    await expect(page.locator('.toast')).toHaveText('The Mac had already taken it');
+  });
+
+  test('an undo after the hour renews the sign-in and says it was not done', async ({ page }) => {
+    await page.clock.setFixedTime(new Date());
+    await open(page);
+    await markButton(page, SURGERY).click();
+    await send(page).click();
+    await expect(card(page, /^Marked paid$/)).toBeVisible();
+    await page.clock.setFixedTime(new Date(Date.now() + 61 * 60_000));
+    await page.getByRole('button', { name: /^Undo/ }).click();
+    await expect(page.locator('.toast')).toContainText('The payment was not undone: tap Undo again.');
+    expect(google.changes).toHaveLength(1);
   });
 
   test('a payment marked after the hour renews the sign-in and says it was not sent', async ({ page }) => {

@@ -478,7 +478,7 @@ export class Store {
 
   /** Whether the Mac's answer to a request is still to come, or to be seen. */
   get waiting(): boolean {
-    return this.pending.length + this.waitingMarks.length > 0 || this.watched.size > 0;
+    return this.watched.size > 0;
   }
 
   /** The payments marked, or undone, that the records do not show yet. */
