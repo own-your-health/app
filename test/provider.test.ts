@@ -553,6 +553,35 @@ describe('everyone’s page', () => {
     }
   });
 
+  it('lists no alike name that only private items print, and counts no private item of one it lists', () => {
+    const health = anchor(ROBIN, 'provider', 'Example Health');
+    const page = (everyone: boolean, ids: string[]) =>
+      pageOf(
+        health,
+        everyone,
+        SAMPLE,
+        withIndex(ROBIN, (idx) => {
+          if (idx.privacy?.kind !== 'known') throw new Error('not known');
+          return { ...idx, privacy: { ...idx.privacy, documents: new Map([...idx.privacy.documents, ...ids.map((id) => [id, 'household'] as const)]) } };
+        }),
+      )!;
+    const [plain, own] = [names(page(true, [])), names(page(false, []))];
+    const papers = page(true, []).alike.filter((a) => a.people.join() === ROBIN && a.items.every((i) => i.kind === 'document'));
+    expect(papers.map((a) => a.items[0]!.n)).toEqual([4, 3, 1]);
+    for (const a of papers) {
+      const ids = providersNamed(index(ROBIN), SAMPLE.household).filter((n) => n.inSource === a.named.inSource).map((n) => n.id);
+      const row = [a.names.join(', '), `${ids.length} document`];
+      expect(plain.filter((x) => x.join() === row.join())).toHaveLength(1);
+      // All of them private: the list, and so the number its button says, is without the name.
+      expect(names(page(true, ids))).toEqual(plain.filter((x) => x.join() !== row.join()));
+      // One of several: counted no more. The order goes by the counts.
+      const fewer = plain.map((x) => (x.join() === row.join() ? [row[0], `${ids.length - 1} document`] : x));
+      if (ids.length > 1) expect(names(page(true, ids.slice(0, 1))).sort()).toEqual(fewer.sort());
+      // Their own person's page still has them.
+      expect(names(page(false, ids))).toEqual(own);
+    }
+  });
+
   it('holds no private record, nor a record of a private visit, of a provider it shows', () => {
     const lab = anchor(SAM, 'provider', 'Example Lab');
     const whole = pageOf(lab, true)!;
