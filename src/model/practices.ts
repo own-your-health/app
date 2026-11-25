@@ -5,7 +5,7 @@
 
 import { nameKey } from './providers';
 import type { Household, Provenance } from './types';
-import { placeName } from './words';
+import { everyPractice } from './words';
 
 /** What a record says of the sign-in it came through. */
 export type SignIn = Pick<Provenance['source'], 'organization_id' | 'cli' | 'fhir_base'>;
@@ -51,7 +51,7 @@ export function practiceName(household: Household, person: string, from: SignIn)
 /** A sign-in a record came through. */
 export interface Through extends SignIn {
   organization_id: string;
-  /** Several practices go by it, so it alone says which of them to none: several of this person's, or a records connection's. */
+  /** Several practices go by it, so it alone says which of them to none: several of this person's, or every one a records connection serves. */
   shared: boolean;
 }
 
@@ -60,7 +60,7 @@ export function through(household: Household, person: string, provenance: Proven
   return provenance.flatMap(({ source: { organization_id, cli, fhir_base } }) => {
     if (!organization_id) return [];
     const p = practiceOf(household, person, { organization_id, cli, fhir_base });
-    return [{ organization_id, cli, fhir_base, shared: p.kind === 'shared' || (p.kind === 'named' && !placeName(p.name)) }];
+    return [{ organization_id, cli, fhir_base, shared: p.kind === 'shared' || (p.kind === 'named' && everyPractice(p.name)) }];
   });
 }
 

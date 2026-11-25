@@ -47,9 +47,14 @@ const PLATFORMS = new Set([
   'veradigm',
 ]);
 
+/** Whether a name is for every practice a records connection serves: "athenahealth (all practices)". */
+export function everyPractice(name: string): boolean {
+  return /\(all (practices|locations|sites|clinics)\)$/i.test(name);
+}
+
 /** Whether a name is a records connection's, not a place's: a platform's own ("MyChart", "MyChart (Example Health)"), or one for every practice it serves. */
 function isConnection(name: string): boolean {
-  return /\(all (practices|locations|sites|clinics)\)$/i.test(name) || PLATFORMS.has(name.split('(')[0]!.trim().toLowerCase());
+  return everyPractice(name) || PLATFORMS.has(name.split('(')[0]!.trim().toLowerCase());
 }
 
 /** A provider's name with a store's number said once: "Example Pharmacy #1234 1234" is "Example Pharmacy #1234". */

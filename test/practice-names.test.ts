@@ -168,6 +168,9 @@ describe('a sign-in several practices share', () => {
     expect(beside(record('r_count'), level)).toEqual([]);
     expect(beside(record('r_count'), level, record('r_morning'), record('r_afternoon'))).toEqual([]);
     expect(beside(record('r_rate'), on(record('r_rate', { id: 'r_rate_two' }), '2026-06-22'))).toEqual(['r_rate_two']);
+    const named = (name: string) => ({ ...home, sources: home.sources.map((s) => (s.id === 's_lake' ? { ...s, organization_name: name } : s)) });
+    const two = person(record('r_rate'), on(record('r_rate', { id: 'r_rate_two' }), '2026-06-22'));
+    expect(['MyChart (Example Health)', 'athenahealth (all practices)'].map((name) => resultContext(two, named(name), 'p_one', '2026-12-01', two.records[0]!).sameDraw.length)).toEqual([1, 0]);
     const north = on(record('r_rate', { id: 'r_rate_north' }), '2026-06-22');
     north.provenance[0]!.source.organization_id = 'example-north';
     expect(beside(record('r_rate'), north)).toEqual([]);
@@ -222,8 +225,10 @@ describe('a sign-in several practices share', () => {
     // A sign-in of one practice still makes one visit of a day's two, whatever script its name is in.
     const lake = (name: string) => careEvents(person(record('r_lake'), record('r_lake_two')), { ...home, sources: home.sources.map((s) => (s.id === 's_lake' ? { ...s, organization_name: name } : s)) }, '2026-12-01').length;
     expect([lake('Example Lake Clinic'), lake('Клиника Озеро')]).toEqual([1, 1]);
-    // A records connection's does not: many practices go by it.
-    expect(lake('athenahealth (all practices)')).toBe(2);
+    // A platform's name for one health system is no place, and still one sign-in's.
+    expect([lake('MyChart (Example Health)'), lake('MyChart')]).toEqual([1, 1]);
+    // A records connection's for every practice is not one's.
+    expect([lake('athenahealth (all practices)'), lake('Example Records (All Locations) ')]).toEqual([2, 2]);
   });
 
   it('gives a visit what came that way on its day only when no other visit there could have', () => {
