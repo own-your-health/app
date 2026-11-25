@@ -1,7 +1,7 @@
 // The records' words as the screens show them: billing descriptors kept out
 // of headlines, a store's number said once, and no portal platform as a place.
 import { describe, expect, it } from 'vitest';
-import { isDescriptor, placeName, plainWords, tidyName } from '../src/model/words';
+import { capitalWord, isDescriptor, placeName, plainWords, sentenceCase, tidyName } from '../src/model/words';
 
 describe('billing descriptors', () => {
   it('are two or more words in capitals, which a household never writes', () => {
@@ -11,6 +11,21 @@ describe('billing descriptors', () => {
 
   it('give way to plain words', () => {
     expect([plainWords('FIRST APPOINTMENT TIER THREE'), plainWords('Sick visit'), plainWords(undefined)]).toEqual([undefined, 'Sick visit', undefined]);
+  });
+});
+
+describe('one word in capitals', () => {
+  it('is an abbreviation when it has 5 letters or fewer, and a word when it has more', () => {
+    for (const text of ['HTN', 'GERD', 'COVID-19', 'T2DM', 'ANGST']) expect(capitalWord(text), text).toBe('abbreviation');
+    for (const text of ['ASTHMA', 'HEPATITIS-B', 'ÉCZÉMA', ' ASTHMA ']) expect(capitalWord(text), text).toBe('word');
+  });
+
+  it('is neither with a small letter, a space or a second word, nor with no capitals', () => {
+    for (const text of ['Asthma', 'HbA1c', 'PVCs', 'McARDLE', 'HTN 2', 'PRE-ECLAMPSIA', 'SEASONAL ASTHMA', 'I10', 'J', '高血圧', '']) expect(capitalWord(text), text).toBeUndefined();
+  });
+
+  it('reads in sentence case, a letter that stands alone as it was', () => {
+    expect(['ASTHMA', 'HEPATITIS-B', 'ÉCZÉMA', 'ASTHMA-COPD'].map(sentenceCase)).toEqual(['Asthma', 'Hepatitis-B', 'Éczéma', 'Asthma-copd']);
   });
 });
 

@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { Store } from '../src/data/store';
 import { claimDiagnoses } from '../src/model/claims';
-import { codeKey, conditionName, diagnosisName, diagnosisNames, inDetails, nameList, parseCodeNames } from '../src/model/codeNames';
+import { codeKey, conditionName, diagnosisName, diagnosisNames, inDetails, nameList, parseCodeNames, secondTitle } from '../src/model/codeNames';
 import { find } from '../src/model/search';
 import type { JsonObject, MedRecord, PersonIndex } from '../src/model/types';
 import { personNamed } from './demo-data';
@@ -99,27 +99,56 @@ describe('a condition', () => {
     expect(conditionName(idx, r)).toEqual({ name: 'High blood pressure', title: HTN });
     // The source's own words for its code are its words too.
     expect(conditionName(idx, { ...r, display: '', code: { ...r.code, display: 'Raised blood pressure' } })).toEqual({ name: 'Raised blood pressure', title: HTN });
-    for (const display of ['HTN', 'Hypertension NOS', 'hypertension']) expect(conditionName(idx, { ...r, display })).toEqual({ name: display, title: HTN });
+    for (const display of ['Htn', 'Hypertension NOS', 'hypertension', 'HTN 2']) expect(conditionName(idx, { ...r, display })).toEqual({ name: display, title: HTN });
   });
 
   it('leads with the title for billing wording in capitals, and keeps it for Details', () => {
     const idx = index(SAMPLE, robin);
     const r = condition(idx, 'High blood pressure');
-    for (const display of ['HYPERTENSION NOS', 'ESSENTIAL (PRIMARY) HYPERTENSION', 'ICD-10-CM I10']) expect(conditionName(idx, { ...r, display })).toEqual({ name: HTN, source: display });
+    for (const display of ['HYPERTENSION NOS', 'ICD-10-CM I10']) expect(conditionName(idx, { ...r, display })).toEqual({ name: HTN, source: display, title: HTN, titleLeads: true });
+    expect(conditionName(idx, { ...r, display: 'ESSENTIAL (PRIMARY) HYPERTENSION' })).toEqual({ name: HTN, source: 'ESSENTIAL (PRIMARY) HYPERTENSION', titleLeads: true });
   });
 
   it('leads with the title for a bare code, its own or another system’s', () => {
     const idx = index(SAMPLE, robin);
     const r = condition(idx, 'High blood pressure');
-    for (const display of ['I10', 'i10', 'I-10', '38341003', 'E11.9']) expect(conditionName(idx, { ...r, display })).toEqual({ name: HTN, source: display });
+    for (const display of ['I10', 'i10', 'I-10', '38341003', 'E11.9']) expect(conditionName(idx, { ...r, display })).toEqual({ name: HTN, source: display, title: HTN, titleLeads: true });
     const ankle = condition(index(SAMPLE, sam), 'Right ankle sprain');
     const named = (display: string) => conditionName(index(SAMPLE, sam), { ...ankle, display });
-    expect(named('S93401A')).toEqual({ name: 'Sprain of unspecified ligament of right ankle, initial encounter', source: 'S93401A' });
+    expect(named('S93401A')).toMatchObject({ name: 'Sprain of unspecified ligament of right ankle, initial encounter', source: 'S93401A', titleLeads: true });
     // A code of letters is one too when it is the record's own.
     const lettered: PersonIndex = { ...idx, codeNames: { codes: new Map([['icd10cm|M1A.9XX0', 'Chronic gout, unspecified, without tophus (tophi)']]), privateCodes: new Map() } };
     const gout = { ...r, code: { system: ICD10CM, code: 'M1A.9XX0' } };
     expect(conditionName(lettered, { ...gout, display: 'M1A9XX0' }).source).toBe('M1A9XX0');
     expect(conditionName(lettered, { ...gout, display: 'Gout' }).name).toBe('Gout');
+  });
+
+  it('leads with the title for an abbreviation, which is beside it', () => {
+    const idx = index(SAMPLE, robin);
+    const r = condition(idx, 'High blood pressure');
+    for (const display of ['HTN', 'E-HTN', 'HTNX1']) expect(conditionName(idx, { ...r, display })).toEqual({ name: `${HTN} (${display})`, source: display, title: HTN, titleLeads: true });
+    const short = conditionName(idx, { ...r, display: 'HTN' });
+    expect([inDetails(short), secondTitle(short)]).toEqual([{ words: 'HTN', title: HTN }, undefined]);
+    // With no title, or one that says the same, it stands.
+    expect(conditionName(idx, { ...r, display: 'HTN', code: undefined })).toEqual({ name: 'HTN' });
+    const covid: PersonIndex = { ...idx, codeNames: { codes: new Map([['icd10cm|U07.1', 'COVID-19']]), privateCodes: new Map() } };
+    expect(conditionName(covid, { ...r, display: 'COVID-19', code: { system: ICD10CM, code: 'U07.1' } })).toEqual({ name: 'COVID-19' });
+  });
+
+  it('leads with a longer word in capitals, in sentence case, its exact text for Details', () => {
+    const idx = index(SAMPLE, robin);
+    const r = condition(idx, 'High blood pressure');
+    const named = conditionName(idx, { ...r, display: 'HYPERTENSION' });
+    expect(named).toEqual({ name: 'Hypertension', title: HTN, source: 'HYPERTENSION' });
+    expect([inDetails(named), secondTitle(named)]).toEqual([{ words: 'HYPERTENSION', title: HTN }, HTN]);
+    const alone = conditionName(idx, { ...r, display: 'ASTHMA', code: undefined });
+    expect([alone, inDetails(alone)]).toEqual([{ name: 'Asthma', source: 'ASTHMA' }, { words: 'ASTHMA', title: undefined }]);
+    const same: PersonIndex = { ...idx, codeNames: { codes: new Map([['icd10cm|H53.60', 'Unspecified, asthma']]), privateCodes: new Map() } };
+    expect(conditionName(same, { ...r, display: 'ASTHMA', code: { system: ICD10CM, code: 'H53.60' } })).toEqual({ name: 'Asthma', source: 'ASTHMA' });
+    // A code in letters is no word.
+    expect(conditionName(idx, { ...r, display: 'WHEEZING', code: { code: 'WHEEZING' } })).toEqual({ name: 'WHEEZING' });
+    // Another kind of record is not changed.
+    expect(conditionName(idx, { ...r, kind: 'procedure', display: 'ARTHROSCOPY' })).toEqual({ name: 'ARTHROSCOPY' });
   });
 
   it('leads with words in another script', () => {
@@ -173,9 +202,14 @@ describe('a claim’s diagnosis', () => {
     const { claim, d } = coded(idx, 'H66.90');
     expect(diagnosisName(idx, claim, d)).toEqual({ name: OTITIS });
     expect(diagnosisName(idx, claim, { ...d, display: 'Ear infection' })).toEqual({ name: 'Ear infection (H66.90)', title: OTITIS });
-    expect(diagnosisName(idx, claim, { ...d, display: 'OTITIS MEDIA NOS' })).toEqual({ name: OTITIS, source: 'OTITIS MEDIA NOS (H66.90)' });
-    expect(diagnosisName(idx, claim, { ...d, display: 'H6690' })).toEqual({ name: OTITIS, source: 'H6690 (H66.90)' });
+    expect(diagnosisName(idx, claim, { ...d, display: 'OTITIS MEDIA NOS' })).toEqual({ name: OTITIS, source: 'OTITIS MEDIA NOS (H66.90)', title: OTITIS, titleLeads: true });
+    expect(diagnosisName(idx, claim, { ...d, display: 'H6690' })).toEqual({ name: OTITIS, source: 'H6690 (H66.90)', title: OTITIS, titleLeads: true });
     expect(diagnosisName(idx, claim, { ...d, display: undefined })).toEqual({ name: OTITIS });
+    expect(diagnosisName(idx, claim, { ...d, display: 'AOM' })).toEqual({ name: 'Otitis media, unspecified, unspecified ear (AOM, H66.90)', source: 'AOM (H66.90)', title: OTITIS, titleLeads: true });
+    expect(diagnosisName(idx, claim, { ...d, display: 'EARACHE' })).toEqual({ name: 'Earache (H66.90)', title: OTITIS, source: 'EARACHE (H66.90)' });
+    expect(diagnosisName(idx, claim, { code: 'X1', display: 'EARACHE' })).toEqual({ name: 'Earache (X1)', source: 'EARACHE (X1)' });
+    expect(diagnosisName(idx, claim, { code: 'X1', display: 'AOM' })).toEqual({ name: 'AOM (X1)' });
+    expect(diagnosisName(idx, claim, { display: 'EARACHE' })).toEqual({ name: 'Earache', source: 'EARACHE' });
     expect(diagnosisName(idx, claim, { system: ICD10CM, code: 'H66.99', display: 'OTITIS MEDIA NOS' })).toEqual({ name: 'OTITIS MEDIA NOS (H66.99)' });
   });
 
@@ -186,10 +220,13 @@ describe('a claim’s diagnosis', () => {
     expect(diagnosisNames(idx, two).map((n) => n.name)).toEqual(['Ear infection (H6690)', 'Encounter for immunization (Z23)']);
   });
 
-  it('in the sample is in capitals on the pharmacy’s claims', () => {
+  it('in the sample is in capitals on the pharmacy’s claims, and an abbreviation on the older', () => {
     const idx = index(SAMPLE, robin);
-    const { claim, d } = coded(idx, 'I10');
-    expect(diagnosisName(idx, claim, d)).toEqual({ name: 'Essential (primary) hypertension (I10)', source: 'HYPERTENSION NOS (I10)' });
+    const named = idx.records.filter((r) => r.kind === 'claim').flatMap((r) => diagnosisNames(idx, r).map((n) => [r.date, n.name, n.source]));
+    expect(named.filter(([, name]) => name!.includes('I10')).sort()).toEqual([
+      ['2026-08-14', 'Essential (primary) hypertension (HTN, I10)', 'HTN (I10)'],
+      ['2026-11-12', 'Essential (primary) hypertension (I10)', 'HYPERTENSION NOS (I10)'],
+    ]);
   });
 });
 

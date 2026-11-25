@@ -22,7 +22,7 @@ import { coverageOf, doctorSheet, healthOf, icdOf, privateOf, resultPrivate, tre
 import { privateChip } from './moneyParts';
 import { refillsDue, vaccineNeeds } from './needs';
 import { anyLeftOff, heldNotes } from './shared';
-import { conditionName } from '../model/codeNames';
+import { conditionName, secondTitle } from '../model/codeNames';
 import { isHeld, whyHeld } from '../model/private';
 import { called } from '../model/people';
 
@@ -253,7 +253,7 @@ function doctorPage(ctx: Ctx, p: Person, idx: PersonIndex): HTMLElement {
       { class: 'sheet' },
       section('Allergies', list(sheet.allergies.map((a) => meta(a.name, a.reactions.join(', ') || null, a.criticality ? `criticality ${a.criticality}` : null)), none('allergies', 'No known allergies in these records.'))),
       section('Medicines', list(sheet.medicines.map((m) => meta(m.name, typeof m.latest.fields.dosage === 'string' ? m.latest.fields.dosage : null, m.prescriber ?? null, m.lastFill?.date ? `last filled ${dateText(m.lastFill.date)}` : null)), none('medicines', 'No current medicines in these records.'))),
-      section('Problems', list(sheet.problems.map((c) => [c, conditionName(idx, c.latest)] as const).map(([c, n]) => meta(n.name, icdOf(c) ? `ICD-10 ${icdOf(c)}${n.title ? `, ${n.title}` : ''}` : null, c.first ? `since ${dateText(c.first)}` : null)), none('problems', 'No active problems in these records.'))),
+      section('Problems', list(sheet.problems.map((c) => [c, conditionName(idx, c.latest)] as const).map(([c, n]) => meta(n.name, icdOf(c) ? `ICD-10 ${icdOf(c)}${secondTitle(n) ? `, ${secondTitle(n)}` : ''}` : null, c.first ? `since ${dateText(c.first)}` : null)), none('problems', 'No active problems in these records.'))),
       section('Vaccines', list(sheet.vaccines.map((v) => meta(v.name, v.doses.map((d) => (d.date ? dateText(d.date) : 'undated')).join(', '))), none('vaccines', 'No vaccines in these records.'))),
       section('Labs, last two years', table(sheet.labs, none('labs', 'No lab results in the last two years.'))),
       section('Vital signs, last two years', table(sheet.vitals, none('vitals', 'No vital signs in the last two years.'))),

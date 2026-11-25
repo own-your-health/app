@@ -56,6 +56,15 @@ test('a claim’s diagnosis in capitals gives way to its code’s title, and Det
   await expect(field(page, 'Diagnosis, by published title')).toHaveCount(0);
 });
 
+test('a claim’s abbreviation is beside its code’s title, and Details keep it as it was', async ({ page }) => {
+  await open(page, `#/costs?period=all&only=person:${ROBIN}`);
+  await card(page, /^\d+ claims$/).locator('.row', { hasText: 'Lisinopril 10 mg tablet, 90 days' }).last().locator('a.row-main').click();
+  await expect(field(page, 'Diagnosis')).toHaveText('Essential (primary) hypertension (HTN, I10)');
+  await details(page);
+  await expect(field(page, 'Diagnosis, in the claim’s words')).toHaveText('HTN (I10)');
+  await expect(field(page, 'Diagnosis, by published title')).toHaveCount(0);
+});
+
 test('a visit gives its diagnosis in the portal’s words, with the title in Details', async ({ page }) => {
   await open(page, `#/calendar?view=list&who=${ALEX}`);
   await page.locator('main a', { hasText: 'Ear pain' }).first().click();
