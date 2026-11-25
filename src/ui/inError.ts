@@ -32,7 +32,12 @@ export function saysLines(ctx: Ctx, idx: PersonIndex, says: Says[]): string[] {
 export function keptText(idx: PersonIndex, id: string): string | undefined {
   const decisions = idx.events?.notApplied.get(id) ?? 0;
   const paid = idx.bills?.errors.find((b) => b.document === id)?.marked ?? 0;
-  const parts = [decisions ? `${count(decisions, 'decision')} about its visit` : null, paid ? `${count(paid, 'payment')} on it` : null].filter(Boolean);
+  const labels = [...(idx.providerLabels?.open.said ?? []), ...(idx.providerLabels?.closed.said ?? [])].filter((s) => s.item === id && s.applied === false).length;
+  const parts = [
+    decisions ? `${count(decisions, 'decision')} about its visit` : null,
+    paid ? `${count(paid, 'payment')} on it` : null,
+    labels ? `${count(labels, 'correction')} of a provider it names` : null,
+  ].filter(Boolean);
   return parts.length ? `Kept and not applied: ${parts.join(', ')}.` : undefined;
 }
 

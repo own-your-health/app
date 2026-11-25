@@ -19,7 +19,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const DEMO = join(ROOT, 'public', 'demo');
 const FIXTURES = join(ROOT, 'test', 'fixtures');
 /** The cases' own folders under test/fixtures/: nothing is written anywhere else. */
-const CASES = ['bills/paid', 'private/marked', 'private/unreadable'];
+const CASES = ['bills/paid', 'labels/said', 'private/marked', 'private/unreadable'];
 
 /** Every file under a folder, by its path in it. */
 function filesIn(dir, at = '') {
@@ -33,8 +33,8 @@ export function only(folder, list, fits, what) {
   return found[0].id;
 }
 
-/** Whether a file of the folder belongs in a case: the marks, and the views the app reads. */
-const inCase = (f) => f.endsWith('marks.json') || f === join('views', 'views.json') || (f.startsWith(`views${sep}`) && APP_VIEW.test(f.split(sep).at(-1)));
+/** Whether a file of the folder belongs in a case: the marks, what medrec keeps of labels, and the views the app reads. */
+const inCase = (f) => f.endsWith('marks.json') || f.endsWith('provider-state.json') || f === join('views', 'views.json') || (f.startsWith(`views${sep}`) && APP_VIEW.test(f.split(sep).at(-1)));
 
 /** Stops the run when test/fixtures/<dir>/ holds a file that is not one of these. */
 export function holdsOnly(dir, files) {
@@ -42,13 +42,13 @@ export function holdsOnly(dir, files) {
   if (extra.length) throw new Error(`no longer part of test/fixtures/${dir}/, so remove by hand:\n${extra.map((f) => `  ${f}`).join('\n')}`);
 }
 
-/** Writes test/fixtures/<dir>/: what differs from the sample once `before` has changed its folder and medrec has run `steps` on it, at the sample's moment. */
+/** Writes test/fixtures/<dir>/: what differs from the sample once `before` has changed its folder, or its machine's home, and medrec has run `steps` on it, at the sample's moment. */
 export function writeCase(dir, steps, before = () => {}) {
   if (!CASES.includes(dir)) throw new Error(`${dir} is not one of the cases' folders`);
   const out = join(FIXTURES, dir);
-  const { root, medrec } = scratchMachine();
+  const { root, home, medrec } = scratchMachine();
   cpSync(DEMO, root, { recursive: true, filter: (f) => relative(DEMO, f) !== 'manifest.json' });
-  before(root);
+  before(root, home);
   for (const args of [['profiles', 'add', 'demo'], ['init', root], ...steps, ['views', 'write', '--all']]) medrec(0, ...args);
   const same = (f) => existsSync(join(DEMO, f)) && md5Of(readFileSync(join(DEMO, f))) === md5Of(readFileSync(join(root, f)));
   const keep = filesIn(root).filter((f) => inCase(f) && !same(f));

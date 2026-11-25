@@ -2221,6 +2221,30 @@ a.cal-day:hover .cal-date {
   color: var(--ink-soft);
 }
 
+/* What medrec's label says of a provider, under the source's own words. */
+.label-note {
+  margin: 4px 0 0;
+}
+
+.label-note p,
+.label-line {
+  margin: 0;
+}
+
+.label-phone {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 0.35em;
+}
+
+/* A number to call is as big to tap as a button, and covers no line beside it. */
+a[href^='tel:'] {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
 /* ---- Home: what needs you, and where everyone stands ---- */
 
 .need-kind {

@@ -1,0 +1,24 @@
+{
+  "schema": "medrec-marks/v1",
+  "person": "p_wu3emtceodvtbhsakubm",
+  "payments": [],
+  "providers": [
+    {
+      "id": "o_5o7cxt57dlsuacehdvqb",
+      "printed": [
+        "Example Health",
+        "Example Health Main Clinic"
+      ],
+      "same": true,
+      "at": "2026-11-22T20:00:00Z"
+    },
+    {
+      "id": "o_5325jnsffsniurhtnnuw",
+      "printed": [
+        "Example Lab"
+      ],
+      "wrong": true,
+      "at": "2026-11-22T20:00:00Z"
+    }
+  ]
+}

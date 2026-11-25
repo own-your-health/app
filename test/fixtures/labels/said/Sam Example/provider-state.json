@@ -1,0 +1,87 @@
+{
+  "schema": "medrec-provider-state/v1",
+  "person": "p_74kjconqhpreh6ybsgna",
+  "directory": {
+    "id": "nppes",
+    "version": "2026-11",
+    "date": "2026-11-08"
+  },
+  "by_npi": {
+    "0000000014": {
+      "name": "Casey Placeholder, MD",
+      "role": "orthopedic surgeon",
+      "phone": "555-010-0123",
+      "phone_from": {
+        "from": "directory",
+        "date": "2026-11-08"
+      },
+      "confidence": "sure",
+      "evidence": [
+        {
+          "from": "npi"
+        }
+      ]
+    },
+    "0000000063": {
+      "name": "Example Health Partners",
+      "role": "primary care clinic",
+      "phone": "555-010-0125",
+      "phone_from": {
+        "from": "directory",
+        "date": "2026-11-08"
+      },
+      "confidence": "sure",
+      "evidence": [
+        {
+          "from": "npi"
+        }
+      ]
+    },
+    "0000000071": {
+      "name": "Example Lab",
+      "role": "laboratory",
+      "phone": "555-010-0127",
+      "phone_from": {
+        "from": "directory",
+        "date": "2026-11-08"
+      },
+      "confidence": "sure",
+      "evidence": [
+        {
+          "from": "npi"
+        }
+      ]
+    },
+    "0000000097": {
+      "name": "Example Sexual Health Clinic",
+      "role": "clinic",
+      "phone": "555-010-0130",
+      "phone_from": {
+        "from": "directory",
+        "date": "2026-11-08"
+      },
+      "confidence": "sure",
+      "evidence": [
+        {
+          "from": "npi"
+        }
+      ]
+    },
+    "0000000105": {
+      "name": "Avery Sample, MD",
+      "role": "infectious disease doctor",
+      "phone": "555-010-0124",
+      "phone_from": {
+        "from": "directory",
+        "date": "2026-11-08"
+      },
+      "confidence": "sure",
+      "evidence": [
+        {
+          "from": "npi"
+        }
+      ]
+    }
+  },
+  "matched": {}
+}

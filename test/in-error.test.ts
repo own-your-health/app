@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Store } from '../src/data/store';
+import { parseProviderLabels } from '../src/model/providerLabels';
 import { billsInError, documentSays, errorsIndex, errorsOf, inErrorIds, isInError, recordSays, saysError, withoutErrors } from '../src/model/inError';
 import { billList } from '../src/model/billing';
 import { costLines, errorLines } from '../src/model/costs';
@@ -274,10 +275,13 @@ describe('medrec’s views of what is entered in error', () => {
     const idx = (more: Partial<PersonIndex>): PersonIndex => ({ ...left, ...more });
     const kept = events({ in_error: { r_2: { not_applied: [{}] }, r_3: { not_applied: [{}, {}] } } });
     const paid = { errors: [{ document: 'd_1', marked: 2 }] } as PersonIndex['bills'];
-    expect([keptText(idx({ events: kept }), 'r_2'), keptText(idx({ events: kept }), 'r_3'), keptText(idx({ events: kept, bills: paid }), 'd_1'), keptText(idx({ bills: paid }), 'd_2'), keptText(idx({}), 'r_2')]).toEqual([
+    const one = { kind: 'wrong', printed: ['A'], item: 'd_1' };
+    const labels = parseProviderLabels({ schema: 'medrec-providers/v1', person: 'p_a', overrides: [{ ...one, id: 'o_1', applied: false }, { ...one, id: 'o_2' }, { ...one, id: 'o_3', item: 'd_2', applied: false }], private: { overrides: [{ ...one, id: 'o_4', applied: false }] } }, 'p_a');
+    expect([keptText(idx({ events: kept }), 'r_2'), keptText(idx({ events: kept }), 'r_3'), keptText(idx({ events: kept, bills: paid, providerLabels: labels }), 'd_1'), keptText(idx({ providerLabels: labels }), 'd_2'), keptText(idx({ bills: paid }), 'd_2'), keptText(idx({}), 'r_2')]).toEqual([
       'Kept and not applied: 1 decision about its visit.',
       'Kept and not applied: 2 decisions about its visit.',
-      'Kept and not applied: 2 payments on it.',
+      'Kept and not applied: 2 payments on it, 2 corrections of a provider it names.',
+      'Kept and not applied: 1 correction of a provider it names.',
       undefined,
       undefined,
     ]);
@@ -353,7 +357,7 @@ describe('medrec’s own views of the fixture', () => {
         { document: id('d_skinbill'), marked: 1 },
       ],
     ]);
-    expect([keptText(idx, id('d_letter')), keptText(idx, id('d_skinbill'))]).toEqual(['Kept and not applied: 1 decision about its visit.', 'Kept and not applied: 1 payment on it.']);
+    expect([keptText(idx, id('d_letter')), keptText(idx, id('d_skinbill'))]).toEqual(['Kept and not applied: 1 decision about its visit, 1 correction of a provider it names.', 'Kept and not applied: 1 payment on it.']);
     const its = personEvents(idx, (await opened()).store.household, '2026-11-22');
     expect(its.map((e) => [e.start, e.inError])).toEqual([
       ['2024-03-09', undefined],

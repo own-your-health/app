@@ -1,11 +1,17 @@
 // The names the items print, and which of them are one provider: those with
 // one National Provider Identifier, and one name in one source (one person's
-// sign-in, or their papers). So the same name in two people's records is one
-// provider only by its identifier. Names that are only alike are said to be
-// maybe the same, and never put together. A name nothing but a sign-in
-// several practices share gives is none's (practiceOf).
+// sign-in, or their papers), and those with one label of the household's, or
+// one medrec is sure of where the records give them no two identifiers
+// (model/providerLabels.ts). So the same name in two people's records is one
+// provider only by its identifier or such a label. Names the household said
+// are not one provider are apart, whatever else they share. Names that are
+// only alike, or share a likely label, are never put together; alike ones are
+// said to be maybe the same. A name nothing but a sign-in several practices
+// share gives is none's (practiceOf).
 
 import { practiceOf } from '../model/practices';
+import { labelOn, type OnItem, type ProviderLabels } from '../model/providerLabels';
+import type { Privacy } from '../model/private';
 import type { ProviderField } from '../model/providers';
 import { isWithdrawn, str } from '../model/records';
 import type { Household, MedRecord, PersonIndex, Provenance } from '../model/types';
@@ -31,6 +37,10 @@ export interface Named {
   kind: string;
   field: ProviderField;
   name: string;
+  /** The exact text, where the item itself prints it. */
+  printed?: string;
+  /** Its label there. */
+  label?: OnItem;
   date?: string;
   npi?: string;
   /** This name in this source of this person's. */
@@ -65,14 +75,20 @@ function npiOf(r: MedRecord, field: string): string | undefined {
   return found.length === 1 ? found[0] : undefined;
 }
 
-const namedCache = new WeakMap<PersonIndex, { household: Household; named: Named[] }>();
+const namedCache = new WeakMap<PersonIndex, { household: Household; labels: ProviderLabels | undefined; privacy: Privacy | undefined; named: Named[] }>();
 
 /** Every provider a person's records and papers print. */
 export function providersNamed(idx: PersonIndex, household: Household): Named[] {
   const hit = namedCache.get(idx);
-  if (hit && hit.household === household) return hit.named;
+  if (hit && hit.household === household && hit.labels === idx.providerLabels && hit.privacy === idx.privacy) return hit.named;
   const named: Named[] = [];
   const inSource = (source: string, name: string) => `${idx.person}|${source}|${keyOf(name)}`;
+  /** The text as the item prints it, and its label. */
+  const print = (item: string, printed: unknown): Pick<Named, 'printed' | 'label'> => {
+    if (typeof printed !== 'string') return {};
+    const label = labelOn(idx, item, printed);
+    return { printed, ...(label ? { label } : {}) };
+  };
   for (const r of idx.records) {
     if (isWithdrawn(r)) continue;
     const source = sourceOf(r);
@@ -80,7 +96,7 @@ export function providersNamed(idx: PersonIndex, household: Household): Named[] 
       const name = PEOPLE.has(field) ? tidyName(text) : placeName(text);
       if (!name) return;
       const npi = npiOf(r, field);
-      named.push({ person: idx.person, id: r.id, kind: r.kind, field, name, inSource: inSource(source, name), provenance: r.provenance, ...(r.date ? { date: r.date } : {}), ...(npi ? { npi } : {}) });
+      named.push({ person: idx.person, id: r.id, kind: r.kind, field, name, ...print(r.id, r.fields[field]), inSource: inSource(source, name), provenance: r.provenance, ...(r.date ? { date: r.date } : {}), ...(npi ? { npi } : {}) });
     };
     for (const f of FIELDS[r.kind] ?? []) put(f, str(r.fields[f]));
     if (r.kind === 'encounter' && !str(r.fields.location) && !str(r.fields.service_provider)) {
@@ -98,9 +114,9 @@ export function providersNamed(idx: PersonIndex, household: Household): Named[] 
     if (!name) continue;
     // Papers filed by hand are one source: whoever files them reads the name off the page.
     const source = d.provenance.source.cli ? signIn(d.provenance) : 'papers';
-    named.push({ person: idx.person, id: d.id, kind: 'document', field: 'organization', name, inSource: inSource(source, name), provenance: [d.provenance], ...(d.date ? { date: d.date } : {}) });
+    named.push({ person: idx.person, id: d.id, kind: 'document', field: 'organization', name, ...print(d.id, d.organization), inSource: inSource(source, name), provenance: [d.provenance], ...(d.date ? { date: d.date } : {}) });
   }
-  namedCache.set(idx, { household, named });
+  namedCache.set(idx, { household, labels: idx.providerLabels, privacy: idx.privacy, named });
   return named;
 }
 
@@ -110,17 +126,58 @@ function practiceNamed(household: Household, person: string, p: Provenance): str
   return of?.kind === 'named' ? [of.name] : [];
 }
 
+/** Names one person's records print that the household said are not one provider. */
+export interface Apart {
+  person: string;
+  printed: readonly string[];
+}
+
+/** What the household said of a person's names that keeps them apart; with `closed`, what is private of it too. */
+export function saidApart(idx: PersonIndex, closed: boolean): Apart[] {
+  const of = idx.providerLabels;
+  return [...(of?.open.said ?? []), ...(closed ? (of?.closed.said ?? []) : [])].filter((s) => s.kind === 'different').map((s) => ({ person: idx.person, printed: s.printed }));
+}
+
+/** The label that says which provider a name is: the household's, or one medrec is sure of. */
+const sureLabel = (n: Named): string | undefined => (n.label && n.label.label.confidence !== 'likely' ? n.label.label.id : undefined);
+/** Whether it is the household's. */
+const theirs = (n: Named): boolean => n.label?.label.confidence === 'household';
+
+/** The values of each key. */
+function byKey<T>(all: readonly T[], key: (x: T) => string, value: (x: T) => string | undefined): Map<string, Set<string>> {
+  const out = new Map<string, Set<string>>();
+  for (const x of all) {
+    const v = value(x);
+    if (v !== undefined) out.set(key(x), (out.get(key(x)) ?? new Set()).add(v));
+  }
+  return out;
+}
+
 /** Which names are one provider. */
 export class Providers {
+  /** What each name in a source is of, by the one NPI its records give. */
   private readonly up = new Map<string, string>();
+  /** The names in a source that several labels go by. */
+  private readonly several = new Set<string>();
+  /** The names of a provider the household said are apart. */
+  private readonly split = new Set<string>();
+  /** A provider put with another by a label. */
+  private readonly into = new Map<string, string>();
   private readonly members = new Map<string, Named[]>();
   private readonly people = new Set<string>();
 
-  constructor(readonly named: Named[]) {
-    // A name that several NPIs go by in its source is none of theirs where no NPI is given.
-    const npis = new Map<string, Set<string>>();
-    for (const n of named) if (n.npi) npis.set(n.inSource, (npis.get(n.inSource) ?? new Set()).add(n.npi));
-    for (const [name, of] of npis) if (of.size === 1) this.up.set(`name|${name}`, `npi|${[...of][0]}`);
+  constructor(
+    readonly named: Named[],
+    private readonly apart: readonly Apart[] = [],
+  ) {
+    // A name that several NPIs, or labels, go by in its source is none of theirs where none is given.
+    for (const [name, of] of byKey(named, (n) => n.inSource, (n) => n.npi)) if (of.size === 1) this.up.set(`name|${name}`, `npi|${[...of][0]}`);
+    for (const [name, of] of byKey(named, (n) => n.inSource, sureLabel)) if (of.size > 1) this.several.add(name);
+    for (const a of apart) {
+      const mine = named.filter((n) => this.isApart(a, n));
+      for (const [id, of] of byKey(mine, (n) => this.byRecords(n), (n) => n.printed)) if (of.size > 1) for (const printed of of) this.split.add(this.splitKey(id, a.person, printed));
+    }
+    this.join();
     for (const n of named) {
       const id = this.idOf(n);
       const all = this.members.get(id);
@@ -130,10 +187,86 @@ export class Providers {
     }
   }
 
+  /**
+   * Puts together the names of one label: the household's, then a sure one
+   * that brings no two NPIs together, as a label says no NPI and two
+   * providers' can read the same. Never two that hold names the household said
+   * are apart.
+   */
+  private join(): void {
+    const labelled = this.named.filter(sureLabel);
+    if (!labelled.length) return;
+    const names = new Map<string, Named[]>();
+    for (const n of this.named) {
+      const id = this.ownId(n);
+      const all = names.get(id);
+      if (all) all.push(n);
+      else names.set(id, [n]);
+    }
+    for (const [sure, of] of [[false, labelled.filter(theirs)], [true, labelled.filter((n) => !theirs(n))]] as const) {
+      for (const ids of byKey(of, (n) => sureLabel(n)!, (n) => this.ownId(n)).values()) {
+        const all = [...new Set([...ids].map((id) => this.joined(id)))];
+        const npis = all.map((id) => new Set(names.get(id)!.flatMap((n) => this.npiOf(n))));
+        const both = new Set(npis.flatMap((x) => [...x]));
+        if (sure && !npis.some((x) => x.size === both.size)) continue;
+        const first = all.find((id) => id.startsWith('npi|')) ?? all[0]!;
+        for (const id of all) {
+          if (id === first || this.holdApart(names.get(first)!, names.get(id)!)) continue;
+          this.into.set(id, first);
+          names.set(first, names.get(first)!.concat(names.get(id)!));
+        }
+      }
+    }
+  }
+
+  /** Whether two providers, put together, would hold names the household said are apart. */
+  private holdApart(a: Named[], b: Named[]): boolean {
+    return this.apart.some((x) => new Set([...a, ...b].filter((n) => this.isApart(x, n)).map((n) => n.printed)).size > 1);
+  }
+
+  private joined(id: string): string {
+    let at = id;
+    while (this.into.has(at)) at = this.into.get(at)!;
+    return at;
+  }
+
+  private isApart(a: Apart, n: Named): boolean {
+    return n.person === a.person && n.printed !== undefined && a.printed.includes(n.printed);
+  }
+
+  private splitKey(id: string, person: string, printed: string): string {
+    return `${id}|${person}|${printed}`;
+  }
+
+  /** The provider a name is of by the records alone: its NPI, else its source's. */
+  private byRecords(n: Named): string {
+    const name = `name|${n.inSource}`;
+    if (n.npi) return `npi|${n.npi}`;
+    const label = this.several.has(n.inSource) ? sureLabel(n) : undefined;
+    return label ? `label|${label}` : (this.up.get(name) ?? name);
+  }
+
+  /** The NPI a name goes by, where it has one. */
+  private npiOf(n: Named): string[] {
+    const id = this.byRecords(n);
+    return id.startsWith('npi|') ? [id] : [];
+  }
+
+  /** The same, but for names the household said are apart. */
+  private ownId(n: Named): string {
+    const id = this.byRecords(n);
+    const key = n.printed === undefined ? undefined : this.splitKey(id, n.person, n.printed);
+    return key !== undefined && this.split.has(key) ? key : id;
+  }
+
   /** The provider a name is of. */
   idOf(n: Named): string {
-    const name = `name|${n.inSource}`;
-    return n.npi ? `npi|${n.npi}` : (this.up.get(name) ?? name);
+    return this.joined(this.ownId(n));
+  }
+
+  /** Whether the household said that two names are not one provider. */
+  saidApart(a: Named, b: Named): boolean {
+    return this.apart.some((x) => this.isApart(x, a) && this.isApart(x, b) && a.printed !== b.printed);
   }
 
   /** Whether a name's provider is a person: any item names it as one. A claim may name a person too, as it may a place. */

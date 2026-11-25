@@ -18,6 +18,8 @@ import { eventRoute, eventWhen } from './eventView';
 import { callsSummary, mayBePaid, NO_CLAIM_EXPECTED, overAsked, overdueLabel, PAID_ELSEWHERE, paymentText, partText, toPay, unreadText, worthACall, type OpenBill, type PaidBill } from './money';
 import { billErrors, billNotes, forBill, gather, head, listLine, money, num, privateChip, visitText, type Mine, type MoneyRoute } from './moneyParts';
 import { eventsPage, overviewPage } from './moneyYear';
+import { labelPhone } from './labelView';
+import { sharedPaper } from './papers';
 import { providerLink } from './providerView';
 import { heldNotes } from './shared';
 import { called } from '../model/people';
@@ -205,11 +207,14 @@ function script(b: OpenBill): string {
   return `“${opening}${visit}.${paid} My plan’s claim for that visit says I owe ${money(b.claimSays)}. Can you check the balance, or send an itemized bill?”`;
 }
 
-function callCard(ctx: Ctx, m: Mine<OpenBill>, named: boolean): HTMLElement {
+/** A bill worth a call. `shared` is for everyone's page: which papers it may name. */
+function callCard(ctx: Ctx, m: Mine<OpenBill>, shared?: (id: string) => boolean): HTMLElement {
+  const named = shared !== undefined;
   const b = m.item;
   const e = b.event;
   const over = overAsked(b);
   const s = b.bill.doc.statement;
+  const phone = s?.phone ? phoneLink(s.phone) : labelPhone(ctx.store.index(m.person.id)!, b.bill.doc, shared);
   const shares = (e?.money.charges ?? []).filter((c) => (c.share ?? 0) > 0);
   const el = card(
     { title: providerLink(ctx, ctx.store.index(m.person.id), b.bill.doc.id, ['organization'], b.bill.provider, named) ?? 'A provider', class: 'call', actions: privateChip(b.private) },
@@ -217,7 +222,7 @@ function callCard(ctx: Ctx, m: Mine<OpenBill>, named: boolean): HTMLElement {
     over > 0 ? h('p', { class: 'call-number' }, num(over), h('span', null, ' may not be owed')) : null,
     b.claimSays === undefined ? h('p', { class: 'small' }, 'If it went through insurance, its claim may not be in these records yet. If it didn’t, it may not be an insurance bill.') : null,
     kv([
-      ['Call', s?.phone ? phoneLink(s.phone) : null],
+      ['Call', phone],
       ['Whose', named ? called(m.person) : null],
       ['Visit', e ? link(eventRoute(m.person.id, e.event.id), visitText(e)) : 'None in these records'],
       ['Statement', [dateText(s?.statement_date ?? b.bill.date), s?.account ? `account ${s.account}` : null, b.bill.due ? `${b.overdue ? 'was due' : 'due'} ${dateText(b.bill.due)}` : null].filter(Boolean).join(' · ')],
@@ -227,7 +232,7 @@ function callCard(ctx: Ctx, m: Mine<OpenBill>, named: boolean): HTMLElement {
       ['Left to pay', b.cents < b.asked ? money(b.cents) : null],
     ]),
     h('div', { class: 'call-script' }, h('p', { class: 'call-script-label' }, 'What to say'), h('p', null, script(b))),
-    s?.phone ? null : h('p', { class: 'small muted' }, 'The bill’s phone number isn’t in these records; it is on the paper.'),
+    s?.phone ? null : h('p', { class: 'small muted' }, phone ? 'The bill’s own phone number isn’t in these records; it is on the paper.' : 'The bill’s phone number isn’t in these records; it is on the paper.'),
     h('div', { class: 'bill-links' }, link({ name: 'item', person: m.person.id, id: b.bill.doc.id }, 'The bill'), driveLink(ctx, b.bill.doc.path, 'Open the bill in Drive')),
     markOf(ctx, m),
   );
@@ -238,6 +243,7 @@ function callCard(ctx: Ctx, m: Mine<OpenBill>, named: boolean): HTMLElement {
 function callsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLElement {
   const g = gather(ctx, who);
   const named = !who;
+  const mayName = named ? sharedPaper(ctx.store.household, ctx.store.indexes, g.today) : undefined;
   const sum = callsSummary(g.open, (m) => m.item);
   // What this page would have shown on someone's own view: the bills that don't match, what was paid at a visit, and what the plan changed.
 
@@ -307,7 +313,7 @@ function callsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
     ...head(ctx, route, 'Worth a call', 'Bills that don’t match what the claims say you owe.', who),
     g.loading ? h('p', { class: 'small muted' }, `Still loading the records of ${count(g.loading, 'person', 'people')}.`) : null,
     hero,
-    ...sum.asksMore.map((m) => callCard(ctx, m, named)),
+    ...sum.asksMore.map((m) => callCard(ctx, m, mayName)),
     look,
     desk,
     explained,
