@@ -8,8 +8,8 @@
 // them (LOAD_TIMES in src/folder.ts), so the sample's loads always look
 // recent; times of care stay as written.
 
-import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { APP_VIEW, md5Of, withMedrec } from './medrec.mjs';
 
@@ -1070,7 +1070,7 @@ A.write();
 
 // Robin's lisinopril fills, as the pharmacy benefit's claims.
 for (const date of ['2026-08-14', '2026-11-12']) {
-  claimOf(R, src.robinRx, { date, provider: 'Example Pharmacy', insurer: 'Example Pharmacy Benefits', type: 'Pharmacy', system: NDC, diagnoses: [['I10', 'Essential (primary) hypertension']], lines: [['00000-1111-90', 'Lisinopril 10 mg tablet, 90 days', '32.50', '12.40', '0.00', '10.00', '0.00', '2.40']] });
+  claimOf(R, src.robinRx, { date, provider: 'Example Pharmacy', insurer: 'Example Pharmacy Benefits', type: 'Pharmacy', system: NDC, diagnoses: [['I10', 'Hypertension NOS']], lines: [['00000-1111-90', 'Lisinopril 10 mg tablet, 90 days', '32.50', '12.40', '0.00', '10.00', '0.00', '2.40']] });
 }
 R.importRun(src.robinRx, { importedAt: PLANS_LOAD, added: 2, updated: 0, unchanged: 0, cliVersion: '1.2.0' });
 // Robin's professional claims as medrec 0.5.0 and later files them (`medrec
@@ -1309,6 +1309,12 @@ S.write();
 
 // ---- Write ----
 
+// The names medrec gave the sample's codes, by the files that hold them.
+const named = existsSync(join(ROOT, 'views', 'views.json'))
+  ? readdirSync(join(ROOT, 'views'), { recursive: true })
+      .filter((f) => f === 'views.json' || basename(f).startsWith('code-names.'))
+      .map((f) => [join('views', f), readFileSync(join(ROOT, 'views', f))])
+  : [];
 rmSync(ROOT, { recursive: true, force: true });
 const list = [...files.keys()].sort();
 for (const path of list) {
@@ -1318,11 +1324,30 @@ for (const path of list) {
 }
 
 // ---- medrec's views ----
-// The app reads each person's events and private items from medrec's views:
-// views/views.json and, under views/<person id>/, events.<md5>.json (medrec
-// 0.9.0 and later) and private.<md5>.json (0.9.1 and later). medrec writes
-// them here itself (scripts/medrec.mjs): nothing in them is set by hand. The
-// app reads no other view, so the rest are not kept.
+// The app reads each person's events, private items and code names from
+// medrec's views: views/views.json and, under views/<person id>/,
+// events.<md5>.json (medrec 0.9.0 and later), private.<md5>.json (0.9.1) and
+// code-names.<md5>.json (0.9.4). medrec writes them here itself
+// (scripts/medrec.mjs): nothing in them is set by hand. The app reads no
+// other view, so the rest are not kept.
+//
+// The names come from CMS's table of ICD-10-CM titles, which medrec reads
+// from a machine that has it and otherwise keeps from the last views. So the
+// table is needed only when the sample gains a code: ICD10CM_ZIP is then the
+// zip `medrec tables list` gives the address of, which medrec checks against
+// its recorded hash. The last pass never has it, so every machine writes the
+// same views.
+if (process.env.ICD10CM_ZIP) {
+  withMedrec(ROOT, (medrec) => {
+    medrec('tables', 'fetch', 'icd10cm', '--file', resolve(process.env.ICD10CM_ZIP));
+    medrec('views', 'write', '--all');
+  });
+} else {
+  for (const [f, bytes] of named) {
+    mkdirSync(dirname(join(ROOT, f)), { recursive: true });
+    writeFileSync(join(ROOT, f), bytes);
+  }
+}
 withMedrec(ROOT, (medrec) => medrec('views', 'write', '--all'));
 list.push('views/views.json');
 for (const person of readdirSync(join(ROOT, 'views'), { withFileTypes: true }).filter((e) => e.isDirectory())) {

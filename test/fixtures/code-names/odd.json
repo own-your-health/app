@@ -1,0 +1,17 @@
+{
+  "schema": "medrec-code-names/v1",
+  "person": "p_codenamessamplexxxxxx",
+  "table": { "id": "icd10cm", "version": "FY2030", "date": "2029-06-01" },
+  "a_later_field": { "anything": true },
+  "codes": {
+    "icd10cm|J30.9": { "name": " Allergic rhinitis, unspecified ", "a_later_field": "ignored" },
+    "icd10cm|L50.9": { "name": "Urticaria, unspecified" },
+    "icd10cm|M25.50": { "name": "" },
+    "icd10cm|M25.51": { "name": 7 },
+    "icd10cm|M25.52": null,
+    "icd10cm|M25.53": "Pain in wrist"
+  },
+  "private_codes": {
+    "icd10cm|F10.10": { "name": "Alcohol abuse, uncomplicated" }
+  }
+}

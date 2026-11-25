@@ -3,7 +3,8 @@
 import { docTypeLabel, documentTitle, formatMoney, KIND_LABELS, str, studyTitle, toCents } from '../model/records';
 import type { Visit } from '../model/visits';
 import { claimAmounts, claimTitle } from '../model/claims';
-import { recordTitle } from '../model/titles';
+import { conditionName } from '../model/codeNames';
+import type { PersonIndex } from '../model/types';
 import { link } from './components';
 import { h, icon, type Child } from './dom';
 import { dateText } from './format';
@@ -28,7 +29,8 @@ const RECORDED_LABEL: Record<string, [string, string]> = {
 };
 
 /** What belongs to a visit: its documents, then what was recorded, its claim and imaging. */
-export function visitContents(person: string, v: Visit): HTMLElement[] {
+export function visitContents(idx: PersonIndex, v: Visit): HTMLElement[] {
+  const person = idx.person;
   const line = (label: string, body: Child) => h('p', { class: 'small visit-line' }, h('span', { class: 'muted' }, `${label}: `), body);
   const out: HTMLElement[] = [];
   if (v.documents.length) {
@@ -42,7 +44,7 @@ export function visitContents(person: string, v: Visit): HTMLElement[] {
   }
   for (const g of v.recorded) {
     const [one, many] = RECORDED_LABEL[g.kind] ?? [KIND_LABELS[g.kind] ?? g.kind, KIND_LABELS[g.kind] ?? g.kind];
-    out.push(line(g.records.length === 1 ? one : many, linkList(person, g.records.map((r) => ({ id: r.id, title: recordTitle(r) })))));
+    out.push(line(g.records.length === 1 ? one : many, linkList(person, g.records.map((r) => ({ id: r.id, title: conditionName(idx, r).name })))));
   }
   for (const c of v.claims) {
     const share = claimAmounts(c).yourShare;

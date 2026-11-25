@@ -9,7 +9,7 @@ import { FolderError, isObject } from './parse';
 export type Md5 = string | null;
 
 /** A view the app reads. */
-export type ViewFile = 'events.json' | 'private.json';
+export type ViewFile = 'events.json' | 'private.json' | 'code-names.json';
 
 export interface PersonView {
   /** `events.<first 12 hex of its MD5>.json`, under views/<person id>/. */
@@ -19,7 +19,7 @@ export interface PersonView {
   index: Md5;
   text: Md5;
   overrides: Md5;
-  /** marks.json's MD5, for private.json, which is made from it as well. */
+  /** marks.json's MD5, for private.json and code-names.json, which are made from it as well. */
   marks?: Md5;
   linked: Map<string, { index: Md5; text: Md5 }>;
 }
@@ -55,7 +55,8 @@ export function viewOf(views: Record<string, unknown> | null, person: string, fi
   const [household, index, txt, overrides] = [md5Of(views!.household), md5Of(p.index), md5Of(p.text), md5Of(p.overrides)];
   if (!md5 || household === undefined || index === undefined || txt === undefined || overrides === undefined || !isObject(p.linked)) throw bad();
   const marks = md5Of(p.marks);
-  if (file === 'private.json' && marks === undefined) throw bad();
+  const fromMarks = file !== 'events.json';
+  if (fromMarks && marks === undefined) throw bad();
   const linked = new Map<string, { index: Md5; text: Md5 }>();
   for (const [id, l] of Object.entries(p.linked)) {
     const [li, lt] = isObject(l) ? [md5Of(l.index), md5Of(l.text)] : [undefined, undefined];
@@ -63,5 +64,5 @@ export function viewOf(views: Record<string, unknown> | null, person: string, fi
     linked.set(id, { index: li, text: lt });
   }
   const name = `${file.slice(0, -'.json'.length)}.${md5.slice(0, 12)}.json`;
-  return { name, md5, household, index, text: txt, overrides, ...(file === 'private.json' ? { marks: marks! } : {}), linked };
+  return { name, md5, household, index, text: txt, overrides, ...(fromMarks ? { marks: marks! } : {}), linked };
 }

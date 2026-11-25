@@ -17,11 +17,13 @@ const MEDREC = process.env.MEDREC ?? 'medrec';
 
 // 0.9.1 dates a portal stay across its days and makes a day's doses one
 // event. 0.9.3 names a visit plainly for its code and makes a day billed only
-// for vaccines a vaccine. The sample's checks expect all of it.
+// for vaccines a vaccine. 0.9.4 names conditions and claim diagnoses, and
+// 0.9.5 makes a private record's papers and a private report's study private.
+// The sample's checks expect all of it.
 function checkVersion() {
   const version = execFileSync(MEDREC, ['--version'], { encoding: 'utf8' }).trim().split(/\s+/).at(-1);
   const [major, minor, patch] = version.split('.').map(Number);
-  if (major === 0 && (minor < 9 || (minor === 9 && patch < 3))) throw new Error(`medrec ${version} writes the sample's views differently: set MEDREC to medrec 0.9.3 or later`);
+  if (major === 0 && (minor < 9 || (minor === 9 && patch < 5))) throw new Error(`medrec ${version} writes the sample's views differently: set MEDREC to medrec 0.9.5 or later`);
 }
 
 /** Runs `steps` with a function that runs medrec on the records in `root`. */
@@ -52,7 +54,7 @@ export function withMedrec(root, steps) {
   }
 }
 
-/** The views the app reads: each person's events and private items, by the name medrec stores them under. */
-export const APP_VIEW = /^(events|private)\.[0-9a-f]{12}\.json$/;
+/** The views the app reads: each person's events, private items and code names, by the name medrec stores them under. */
+export const APP_VIEW = /^(events|private|code-names)\.[0-9a-f]{12}\.json$/;
 
 export const md5Of = (bytes) => createHash('md5').update(bytes).digest('hex');

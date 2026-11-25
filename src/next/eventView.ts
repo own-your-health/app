@@ -5,7 +5,8 @@
 // bills and payments, papers, how the event was put together, and details.
 
 import { billList, type Bill } from '../model/billing';
-import { claimDiagnoses, claimLines, diagnosisText } from '../model/claims';
+import { claimLines } from '../model/claims';
+import { conditionName, diagnosisNames, nameList } from '../model/codeNames';
 import { sameProvider } from '../model/providers';
 import { AMOUNT_LABELS, docTypeLabel, documentTitle, formatMoney, fromCents, KIND_LABELS, portalCounts, resultPoint, resultReading, str, toCents } from '../model/records';
 import { isOutOfRange, resultFlag } from '../model/flags';
@@ -131,7 +132,7 @@ function settledLine(idx: PersonIndex, e: CareEvent, m: EventMoney): HTMLElement
 /** What happened: the portal's visits when there are any, else its doses, medicines and procedures with what the claims billed, else the papers'. */
 function happenedCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
   if (e.visits.length) {
-    const conditions = e.recorded.filter((r) => r.kind === 'condition').map(recordTitle);
+    const conditions = e.recorded.filter((r) => r.kind === 'condition').map((r) => conditionName(idx, r).name);
     const done = e.recorded.filter((r) => (r.kind === 'procedure' || r.kind === 'immunization' || r.kind === 'medication') && plainWords(recordTitle(r)));
     return card(
       { title: 'What happened' },
@@ -143,7 +144,7 @@ function happenedCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
           meta: [plainWords(str(v.fields.reason)) === visitTitle(v) ? null : plainWords(str(v.fields.reason)), str(v.fields.practitioner) ? `with ${str(v.fields.practitioner)}` : null, str(v.fields.location)].filter(Boolean).join(' · '),
         }),
       ),
-      conditions.length ? h('p', null, h('span', { class: 'muted' }, conditions.length === 1 ? 'Diagnosis: ' : 'Diagnoses: '), conditions.join(', ')) : null,
+      conditions.length ? h('p', null, h('span', { class: 'muted' }, conditions.length === 1 ? 'Diagnosis: ' : 'Diagnoses: '), nameList(conditions)) : null,
       done.length ? h('p', null, h('span', { class: 'muted' }, 'Also recorded: '), done.map((r) => `${recordTitle(r)} (${(KIND_LABELS[r.kind] ?? r.kind).toLowerCase()})`).join(', ')) : null,
       h('p', { class: 'small muted' }, 'From the provider’s own records.'),
     );
@@ -152,7 +153,7 @@ function happenedCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
   const recorded = e.recorded.filter((r) => r.kind === 'procedure' || r.kind === 'immunization' || r.kind === 'medication');
   const summaries = e.papers.filter((p) => p.doc.doc_type === 'discharge_summary' || p.doc.doc_type === 'visit_summary');
   const services = [...new Set(e.claims.flatMap((c) => claimLines(c.record).filter((l) => l.counted && plainWords(l.label)).map((l) => l.label)))];
-  const diagnoses = [...new Set(e.claims.flatMap((c) => claimDiagnoses(c.record).map(diagnosisText)))];
+  const diagnoses = [...new Set(e.claims.flatMap((c) => diagnosisNames(idx, c.record).map((d) => d.name)))];
   const from = recorded.length
     ? e.claims.length
       ? 'From the provider’s own records and the claims.'
@@ -164,7 +165,7 @@ function happenedCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
     { title: 'What happened' },
     recorded.map((r) => row({ route: itemRoute(idx.person, r.id), title: plainWords(recordTitle(r)) ?? (KIND_LABELS[r.kind] ?? r.kind), meta: [KIND_LABELS[r.kind] ?? r.kind, str(r.fields.dosage)].filter(Boolean).join(' · ') })),
     services.length ? h('p', null, h('span', { class: 'muted' }, 'Billed for: '), services.join(', ')) : null,
-    diagnoses.length ? h('p', null, h('span', { class: 'muted' }, diagnoses.length === 1 ? 'Diagnosis: ' : 'Diagnoses: '), diagnoses.join(', ')) : null,
+    diagnoses.length ? h('p', null, h('span', { class: 'muted' }, diagnoses.length === 1 ? 'Diagnosis: ' : 'Diagnoses: '), nameList(diagnoses)) : null,
     summaries.length ? h('p', null, h('span', { class: 'muted' }, 'Read more in: '), ...summaries.flatMap((p, i) => [i ? ', ' : null, link(itemRoute(p.person ?? idx.person, p.doc.id), documentTitle(p.doc))])) : null,
     h('p', { class: 'small muted' }, from),
   );
@@ -337,7 +338,11 @@ function assemblyCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
 
 function detailsCard(idx: PersonIndex, e: CareEvent): HTMLElement {
   const claimRows = e.claims.map((c) => row({ route: itemRoute(idx.person, c.record.id), title: recordTitle(c.record), meta: [c.provider, dateText(c.record.date)].filter(Boolean).join(' · ') }));
-  const recorded = e.recorded.filter((r) => r.kind !== 'result').map((r) => row({ route: itemRoute(idx.person, r.id), title: recordTitle(r), meta: KIND_LABELS[r.kind] ?? r.kind }));
+  // A condition in the source's words, then by the name it has above.
+  const recorded = e.recorded.filter((r) => r.kind !== 'result').map((r) => {
+    const n = conditionName(idx, r);
+    return row({ route: itemRoute(idx.person, r.id), title: recordTitle(r), meta: [KIND_LABELS[r.kind] ?? r.kind, n.source ? n.name : null].filter(Boolean).join(' · ') });
+  });
   return h(
     'details',
     { class: 'tech' },

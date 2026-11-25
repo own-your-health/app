@@ -2,6 +2,7 @@
 // docs/data-contract.md). Only the fields the app reads are typed; every
 // object keeps the rest, which the Inspect view shows as it is.
 
+import type { CodeNames } from './codeNames';
 import type { MedrecEvents } from './events';
 import type { Privacy } from './private';
 
@@ -208,6 +209,8 @@ export interface PersonIndex {
   events?: MedrecEvents;
   /** Which of these items are private (src/model/private.ts), as the store read it: while it is missing, all are held back from shared screens. */
   privacy?: Privacy;
+  /** The names of these conditions' and claim diagnoses' codes (src/model/codeNames.ts), when the store found them written from this index. */
+  codeNames?: CodeNames;
 }
 
 export interface PersonText {

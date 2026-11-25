@@ -8,6 +8,7 @@ import { buildRequest, requestFileName, sameScope } from '../model/requests';
 import { macState, sourceViews, type MacState, type SourceView } from '../model/sources';
 import { parseMedrecEvents } from '../model/events';
 import { held, isHeld, noList, parsePrivate, type HeldWhy, type Privacy } from '../model/private';
+import { parseCodeNames } from '../model/codeNames';
 import { parseViews, viewOf, type PersonView } from '../model/views';
 import type { AttemptLine, Household, Person, PersonIndex, PersonText, RefreshRequest, RefreshStatus, RefusedRequest, RequestScope } from '../model/types';
 
@@ -170,7 +171,7 @@ export class Store {
     const household = this.folder.md5('household.json');
     // Whoever compares with it says why it could not be read; with no view to compare, nobody does.
     household.catch(() => undefined);
-    await Promise.all([this.loadEvents(views, household), this.loadPrivate(views, household)]);
+    await Promise.all([this.loadEvents(views, household), this.loadPrivate(views, household), this.loadCodeNames(views, household)]);
     this.loadedAt = Date.now();
     this.snapshot = JSON.stringify([
       this.household,
@@ -178,7 +179,7 @@ export class Store {
       this.viewsError,
       ...this.household.people.map((p) => {
         const index = this.indexes.get(p.id);
-        return [index?.rev, this.indexErrors.get(p.id), this.eventsNotes.get(p.id), index?.privacy?.kind === 'held' ? index.privacy.text : null];
+        return [index?.rev, this.indexErrors.get(p.id), this.eventsNotes.get(p.id), index?.privacy?.kind === 'held' ? index.privacy.text : null, !!index?.codeNames];
       }),
     ]);
   }
@@ -282,6 +283,25 @@ export class Store {
       const why: HeldWhy = e instanceof FolderError && e.kind === 'newer_format' ? 'newer_format' : 'unreadable';
       return held(why, `medrec’s list of which items are private could not be read: ${e instanceof Error ? e.message : 'unknown error'}`);
     }
+  }
+
+  /** medrec's names for each person's codes (0.9.4 and later). Without ones that read and match the folder, the sources' words stand, and nothing says so. */
+  private async loadCodeNames(views: Record<string, unknown> | null, household: Promise<string | null | undefined>): Promise<void> {
+    if (views === null) return;
+    await Promise.all(
+      this.household.people.map(async (p) => {
+        const index = this.indexes.get(p.id);
+        if (!index) return;
+        try {
+          const view = viewOf(views, p.id, 'code-names.json');
+          if (!view || (await this.viewState(p, view, household))) return;
+          const raw = await readJson(this.folder, `views/${p.id}/${view.name}`);
+          if (raw !== null) index.codeNames = parseCodeNames(raw, p.id);
+        } catch {
+          // The sources' words stand.
+        }
+      }),
+    );
   }
 
   /** Null when the folder holds the files medrec wrote a person's view from, and the view file it names; else why not. */

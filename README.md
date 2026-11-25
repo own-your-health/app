@@ -486,13 +486,17 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   moves it when another project's preview holds that port.
 - The sample folder in `public/demo/` comes from `scripts/demo-folder.mjs`.
   Run `node scripts/demo-folder.mjs` after changing it, and commit both. It
-  ends by running medrec 0.9.3 or later over the folder to write its views
+  ends by running medrec 0.9.5 or later over the folder to write its views
   (`MEDREC=<path to medrec>`, else `medrec` on the PATH), under a scratch
   home and profile with only the variables it needs and the time zone set
   to `America/New_York`, so the machine's own medrec setup is never touched and every
-  machine writes the same views. CI runs medrec 0.9.3's Linux build,
+  machine writes the same views. CI runs medrec 0.9.5's Linux build,
   checked against its SHA-256. Only `views/views.json` and each person's
-  `events.json` and `private.json` are kept: the app reads no other view.
+  `events.json`, `private.json` and `code-names.json` are kept: the app
+  reads no other view. medrec keeps the code names from the committed files,
+  so they need the published table only when the sample gains a code: set
+  `ICD10CM_ZIP` to the zip `medrec tables list` names, downloaded, for that
+  run.
   `manifest.json` gives each file's MD5, as Drive would, for the store's
   freshness check. No private list is written by hand: the cases the tests
   lay over the sample (`test/fixtures/private/`) are medrec's too, made by
@@ -629,6 +633,18 @@ dropped from the address.
   medicines). It prints on its own. Private items stay off everyone's view,
   counted. The sheet leaves them off, and any doctor known only from them,
   until Include brings them back; leaving the sheet leaves them off again.
+- **Names for codes.** medrec 0.9.4 and later give each person's conditions
+  and claim diagnoses the published ICD-10-CM title of their code, in
+  `views/<person id>/code-names.json` (`src/model/codeNames.ts`). The name
+  comes first, on Health, the conditions list, a condition's own page, a
+  visit, a claim and the doctor's sheet, and the source's words stay: beside
+  it (recorded as “…”), or in the claim's words. They are not said twice where
+  the two differ only in "unspecified". Search, sorting and grouping use the
+  source's words alone. A name only private items' codes have
+  (`private_codes`) is given to a private record alone. The file is used only
+  when the MD5s in `views/views.json` are the folder's, the person's
+  `marks.json` too, as for private items. Without one, or for a code it does
+  not name, the source's words show, and nothing says so.
 - **Papers** (`#/papers`, a tab, also from Recently on Home and each
   person's Health): every paper in the Drive
   folder, newest first by year, each with the visit it belongs to as a
