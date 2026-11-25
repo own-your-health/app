@@ -1,6 +1,10 @@
 // Whether two names are the same provider: bills and claims pair by it, and
 // a visit takes a document filed by hand, or a claim, by it.
 
+/** Where an item names a provider: a record's field, a study's facility, a paper's organization, or the practice of the sign-in a visit came through. */
+export const PROVIDER_FIELDS = ['provider', 'facility', 'location', 'service_provider', 'practitioner', 'pharmacy', 'prescriber', 'performer', 'organization', 'practice'] as const;
+export type ProviderField = (typeof PROVIDER_FIELDS)[number];
+
 const SUFFIXES = new Set(['the', 'inc', 'llc', 'pllc', 'pa', 'pc', 'md', 'corp', 'co']);
 const words = (name: string, between: RegExp) => name.toLowerCase().split(between).filter(Boolean);
 const plain = (xs: string[]) => xs.filter((x) => !SUFFIXES.has(x)).join(' ');

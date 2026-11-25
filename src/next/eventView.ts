@@ -14,7 +14,7 @@ import { unitText } from '../model/result';
 import { recordTitle, visitTitle } from '../model/titles';
 import { areaText, knownArea } from '../model/private';
 import type { MedDocument, PersonIndex } from '../model/types';
-import { card, chip, driveLink, empty, flagChip, link, row, type Ctx } from '../ui/components';
+import { card, chip, dotted, driveLink, empty, flagChip, link, row, type Ctx } from '../ui/components';
 import { h, icon, type Child } from '../ui/dom';
 import { count, dateText, localDay } from '../ui/format';
 import { href, type Route } from '../ui/router';
@@ -22,6 +22,8 @@ import { eventConfidence, eventMoney, eventOf, kindText, paidAtCounter, eventPri
 import { groupedByMedrec, personEvents } from './load';
 import { paidControl } from './markPaid';
 import { paidText, unreadText } from './money';
+import { namedOn } from './provider';
+import { placeLink, providerRoute } from './providerView';
 import { called } from '../model/people';
 import { plainWords } from '../model/words';
 
@@ -78,7 +80,7 @@ function headCard(ctx: Ctx, idx: PersonIndex, e: CareEvent, m: EventMoney): HTML
     kind ? h('p', { class: 'event-kind small muted' }, kind) : null,
     h('div', { class: 'card-head' }, h('h1', null, title), confidence !== 'sure' ? chip(confidence === 'likely' ? 'Likely' : 'Unsure', 'muted') : null),
     e.what ? h('p', { class: 'event-what' }, e.what) : null,
-    h('p', { class: 'muted' }, [eventWhen(e), e.place, person ? called(person) : null].filter(Boolean).join(' · ')),
+    h('p', { class: 'muted' }, dotted([eventWhen(e), placeLink(ctx, idx, e), person ? called(person) : null])),
     sourcesStrip(ctx, idx, e),
     number ? h('p', { class: 'result-value' }, m.share === 0 ? 'Nothing for you to pay' : `${m.shareAdded ? 'Your share' : 'You owe'} ${number}`) : null,
     settledLine(idx, e, m),
@@ -258,20 +260,22 @@ function changedCard(e: CareEvent): HTMLElement | null {
   );
 }
 
-function chargesCard(e: CareEvent, m: EventMoney): HTMLElement | null {
+function chargesCard(ctx: Ctx, idx: PersonIndex, e: CareEvent, m: EventMoney): HTMLElement | null {
   if (!m.charges.length) return null;
   // The hospital first, then who asks most of you.
   const order = [...m.charges].sort((a, b) => Number(b.role === 'The hospital') - Number(a.role === 'The hospital') || (b.share ?? 0) - (a.share ?? 0) || (b.billed ?? 0) - (a.billed ?? 0));
   return card(
     { title: 'Who charged what' },
-    order.map((ch) =>
-      row({
+    order.map((ch) => {
+      const named = namedOn(idx, ctx.store.household, ch.claims[0]!.id, 'provider');
+      return row({
+        ...(named ? { route: providerRoute(named) } : {}),
         title: ch.provider,
         meta: [ch.role, ch.claims.length > 1 ? count(ch.claims.length, 'claim') : null].filter(Boolean).join(' · '),
         aside: ch.share !== undefined ? h('span', { class: 'num' }, ch.share === 0 ? 'Nothing to pay' : money(ch.share)) : null,
         extra: h('p', { class: 'small muted' }, [ch.billed !== undefined ? `Charged ${money(ch.billed)}` : null, ch.price !== undefined ? `plan’s price ${money(ch.price)}` : null, ch.planPaid !== undefined ? `plan paid ${money(ch.planPaid)}` : null].filter(Boolean).join(' · ')),
-      }),
-    ),
+      });
+    }),
   );
 }
 
@@ -396,7 +400,7 @@ export function eventView(ctx: Ctx, personId: string, id: string): HTMLElement {
     resultsCard(idx, e),
     costCard(e, m),
     changedCard(e),
-    chargesCard(e, m),
+    chargesCard(ctx, idx, e, m),
     billsCard(ctx, idx, e, m),
     papersCard(ctx, idx, e),
     assemblyCard(ctx, idx, e),
