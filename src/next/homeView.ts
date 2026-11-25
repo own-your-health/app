@@ -17,6 +17,7 @@ import type { Route } from '../ui/router';
 import { householdEvents, type PersonEvent } from './calendar';
 import { recentCard } from './calendarView';
 import { eventRoute, eventWhen } from './eventView';
+import { paidControl } from './markPaid';
 import { forShared, mayBePaid, openBills, partText, unreadText, worthACall, type OpenBill } from './money';
 import { billNotes } from './moneyParts';
 import { heldNotes, privateLine } from './shared';
@@ -28,7 +29,7 @@ const money = (cents: number) => formatMoney(fromCents(cents)) ?? '';
 type Tone = 'attention' | 'soon';
 
 /** A row of Needs you: what kind of thing it is above its title, and Private on a person's own page. */
-function needRow(kind: string, tone: Tone, opts: { route: Route; title: string; meta: Child; aside?: Child; private?: string }): HTMLElement {
+function needRow(kind: string, tone: Tone, opts: { route: Route; title: string; meta: Child; aside?: Child; extra?: Child; private?: string }): HTMLElement {
   return row({
     route: opts.route,
     // On a person's own page a row starts after the name: "Runs out about…".
@@ -36,6 +37,7 @@ function needRow(kind: string, tone: Tone, opts: { route: Route; title: string; 
     class: 'need',
     title: [h('span', { class: ['need-kind', `need-${tone}`] }, kind), h('span', { class: 'need-title' }, opts.title)],
     aside: [knownArea(opts.private) ? chip('Private', 'muted') : null, opts.aside ?? null],
+    extra: opts.extra,
   });
 }
 
@@ -64,33 +66,34 @@ function callRow(p: Person, b: OpenBill, own: boolean): HTMLElement {
   });
 }
 
-/** One row per visit: its bills that ask what the claims say. */
-function payRows(p: Person, bills: OpenBill[], own: boolean): Dated[] {
+/** One row per visit: its bills that ask what the claims say. One past due, that may be paid or is marked paid has its Mark paid. */
+function payRows(ctx: Ctx, p: Person, idx: PersonIndex, bills: OpenBill[], own: boolean): Dated[] {
   const groups = new Map<string, OpenBill[]>();
   for (const b of bills) {
-    const k = `${b.event?.event.id ?? b.bill.doc.id}|${b.private ?? ''}|${mayBePaid(b)}`;
+    const k = `${b.event?.event.id ?? b.bill.doc.id}|${b.private ?? ''}|${b.marked}|${mayBePaid(b)}`;
     groups.set(k, [...(groups.get(k) ?? []), b]);
   }
   return [...groups.values()].map((bs) => {
     const first = bs[0]!;
-    // One that may be paid is not chased: it says what is known, without its due date.
-    const maybe = mayBePaid(first);
-    const overdue = !maybe && bs.some((b) => b.overdue);
-    const dues = maybe ? [] : bs.map((b) => b.bill.due).filter((d): d is string => !!d).sort();
+    // One that is marked paid, or may be paid, is not chased: it says what is known, without its due date.
+    const quiet = first.marked || mayBePaid(first);
+    const overdue = !quiet && bs.some((b) => b.overdue);
+    const dues = quiet ? [] : bs.map((b) => b.bill.due).filter((d): d is string => !!d).sort();
     const unpaid = bs.every((b) => !b.bill.payments.length);
-    const el = needRow(maybe ? 'May be paid' : overdue ? (unpaid ? 'No payment on file, unless it was paid elsewhere' : 'Not all paid') : bs.length > 1 ? 'Bills to pay' : 'Bill to pay', overdue ? 'attention' : 'soon', {
+    const el = needRow(first.marked ? 'Marked paid' : quiet ? 'May be paid' : overdue ? (unpaid ? 'No payment on file, unless it was paid elsewhere' : 'Not all paid') : bs.length > 1 ? 'Bills to pay' : 'Bill to pay', overdue ? 'attention' : 'soon', {
       route: first.event ? eventRoute(p.id, first.event.event.id) : { name: 'item', person: p.id, id: first.bill.doc.id },
       title: first.event ? visitText(first.event) : `Bill from ${biller(first)}`,
       meta: [
         own ? null : called(p),
         ...bs.map((b) => [`${biller(b)} ${money(b.cents)}`, partText(b)].filter(Boolean).join(', ')),
-        ...new Set(bs.map((b) => unreadText(b.bill.unread))),
+        ...new Set(bs.map((b) => (b.marked ? undefined : unreadText(b.bill.unread)))),
         bs.length === 1 && first.verdict === 'matches' ? 'matches the claim' : null,
         dues[0] ? `${overdue ? 'was due' : 'due'} ${dateText(dues[0])}` : null,
       ]
         .filter(Boolean)
         .join(' · '),
       aside: h('span', { class: 'num' }, money(bs.reduce((t, b) => t + b.cents, 0))),
+      extra: bs.filter((b) => quiet || b.overdue || b.marks.length).map((b) => paidControl(ctx, idx, b.bill, bs.length > 1)),
       ...(first.private ? { private: first.private } : {}),
     });
     return { day: dues[0] ?? '9999', el };
@@ -161,7 +164,8 @@ function standing(s: Standing, today: string, error?: string): HTMLElement {
   if (s.held) return h('div', { class: 'stand' }, head, h('p', { class: 'small muted' }, p.birth_date ? ageWords(p.birth_date, today) : null), h('p', null, 'Left off Home'));
   const calls = s.bills.filter(worthACall).length;
   const maybe = s.bills.filter(mayBePaid).length;
-  const owed = s.bills.reduce((t, b) => t + (mayBePaid(b) ? 0 : b.cents), 0);
+  const due = s.bills.filter((b) => !b.marked && !mayBePaid(b));
+  const owed = due.reduce((t, b) => t + b.cents, 0);
   const v = s.vaccines;
   const dueNow = v ? v.due.length + (v.flu ? 1 : 0) : 0;
   const dueNames = v ? [...v.due.map((d) => `${d.name}, dose ${d.next.dose}`), ...(v.flu ? [`Flu, ${v.flu.season} season`] : [])] : [];
@@ -186,7 +190,7 @@ function standing(s: Standing, today: string, error?: string): HTMLElement {
     ),
     owed || maybe || nexts.length
       ? kv([
-          ['To pay', [owed ? `${money(owed)} in ${count(s.bills.length - maybe, 'bill')}${calls ? `, ${calls} worth a call` : ''}` : null, maybe ? `${count(maybe, owed ? 'more' : 'bill', owed ? 'more' : undefined)} may be paid` : null].filter(Boolean).join('; ') || null],
+          ['To pay', [owed ? `${money(owed)} in ${count(due.length, 'bill')}${calls ? `, ${calls} worth a call` : ''}` : null, maybe ? `${count(maybe, owed ? 'more' : 'bill', owed ? 'more' : undefined)} may be paid` : null].filter(Boolean).join('; ') || null],
           ['Next', nexts[0]?.text ?? null],
         ])
       : h('p', null, 'Nothing due listed here'),
@@ -203,10 +207,10 @@ interface PersonNeeds {
 }
 
 /** One person's needs as rows. On their own page (`own`) private ones are in and marked, and rows leave out the name; elsewhere private ones are left out, and a person whose items are held back has none. */
-function personNeeds(p: Person, idx: PersonIndex, mine: PersonEvent[], today: string, own: boolean): PersonNeeds {
+function personNeeds(ctx: Ctx, p: Person, idx: PersonIndex, mine: PersonEvent[], today: string, own: boolean): PersonNeeds {
   const held = own ? undefined : whyHeld(idx);
   if (held) return { calls: [], pay: [], vaccines: [], refills: [], soon: [], standing: { person: p, idx, bills: [], refills: [], held } };
-  const allBills = openBills(idx, mine, today);
+  const allBills = openBills(idx, mine, today, ctx.store.marks);
   const allRefills = refillsDue(idx, today);
   const bills = own ? allBills : forShared(idx, allBills);
   const refills = own ? allRefills : allRefills.filter((r) => !r.private);
@@ -214,7 +218,7 @@ function personNeeds(p: Person, idx: PersonIndex, mine: PersonEvent[], today: st
   const vRow = vaccines ? vaccinesDueRow(p, vaccines, own) : null;
   return {
     calls: bills.filter(worthACall).map((b) => ({ day: b.bill.due ?? '9999', el: callRow(p, b, own) })),
-    pay: payRows(p, bills.filter((b) => !worthACall(b)), own),
+    pay: payRows(ctx, p, idx, bills.filter((b) => !worthACall(b)), own),
     vaccines: vRow ? [vRow] : [],
     refills: refills.map((r) => refillRow(p, r, own)),
     soon: (vaccines?.visits ?? []).map((v) => visitRow(p, v, own)),
@@ -263,7 +267,7 @@ export function nextHome(ctx: Ctx, signIn: HTMLElement | null): HTMLElement[] {
       stands.push(standing({ person: p, bills: [], refills: [] }, today, store.indexErrors.get(p.id)));
       continue;
     }
-    const n = personNeeds(p, idx, all.filter((x) => x.person.id === p.id), today, false);
+    const n = personNeeds(ctx, p, idx, all.filter((x) => x.person.id === p.id), today, false);
     needs.push(n);
     stands.push(standing(n.standing, today));
   }

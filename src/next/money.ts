@@ -1,9 +1,10 @@
 // Bills against what the claims say, for Home and Money.
 // A bill with something left to pay is open: to pay, or worth a call when it
 // asks something else than its claim says or no claim in these records backs
-// it. One with a receipt whose amount did not read may be paid, which is
-// neither. medrec's list says what is left and what is worth a call, when it
-// is here. Without it, a provider's newest statement that no receipt's amount
+// it. One with a receipt whose amount did not read may be paid, and one whose
+// payment is marked and waits for the Mac is marked; neither is asked for.
+// medrec's list says what is left and what is worth a call, when it is here.
+// Without it, a provider's newest statement that no receipt's amount
 // covers is open, and is put beside what the claims say that provider is owed
 // for the visit.
 
@@ -13,7 +14,8 @@ import { sameProvider } from '../model/providers';
 import { claimLines, type ClaimLine } from '../model/claims';
 import { inVisit, paperPrivate, recordPrivate, recordsPrivate, takenOut } from '../model/private';
 import { formatMoney, fromCents, str, toCents } from '../model/records';
-import type { MedDocument, MedRecord, PersonIndex } from '../model/types';
+import { marksOn, marksTotal } from '../model/requests';
+import type { MedDocument, MedRecord, PendingMark, PersonIndex } from '../model/types';
 import { count, dateText } from '../ui/format';
 import type { PersonEvent } from './calendar';
 import { eventOf, paidAtCounter } from './event';
@@ -43,6 +45,10 @@ export interface OpenBill {
   verdict: BillVerdict;
   /** Past its due date, with something left to pay. */
   overdue: boolean;
+  /** The payments marked on it that wait for the Mac. */
+  marks: PendingMark[];
+  /** Those come to all that is left. */
+  marked: boolean;
   /** Why it is private, from the bill or its visit; undefined when it is not. */
   private?: string;
 }
@@ -78,11 +84,20 @@ export function byDue(a: OpenBill, b: OpenBill): number {
   return Number(b.overdue) - Number(a.overdue) || (a.bill.due ?? '9999').localeCompare(b.bill.due ?? '9999');
 }
 
-/** The person's open bills, overdue first, then by due date. `events` are all of the person's, private ones too. */
-export function openBills(idx: PersonIndex, events: PersonEvent[], today: string): OpenBill[] {
+/** The payments marked on a bill, or a copy of it, that wait for the Mac. */
+export function billMarks(idx: PersonIndex, bill: Bill, marks: readonly PendingMark[]): PendingMark[] {
+  return marksOn(marks, idx.person, new Set([bill.doc.id, ...idx.documents.filter((d) => d.same_statement_as === bill.doc.id).map((d) => d.id)]));
+}
+
+/** What of a bill no payment is known or marked for. */
+export const unmarkedCents = (bill: Bill, marks: readonly PendingMark[]): number => Math.max(0, (toCents(bill.left) ?? 0) - marksTotal(marks, bill.left?.currency ?? 'USD'));
+
+/** The person's open bills, overdue first, then by due date. `events` are all of the person's, private ones too; `marks`, every payment that waits for the Mac. */
+export function openBills(idx: PersonIndex, events: PersonEvent[], today: string, waiting: readonly PendingMark[] = []): OpenBill[] {
   return openList(idx)
     .map((bill): OpenBill => {
       const asked = toCents(bill.amount) ?? 0;
+      const marks = billMarks(idx, bill, waiting);
       const event = events.find((x) => eventOf([x.event], bill.doc.id));
       const area = billPrivate(idx, bill.doc, event);
       const against = bill.medrec ? medrecSays(idx, bill, bill.medrec, event, asked) : claimsSay(bill, event, asked);
@@ -93,6 +108,8 @@ export function openBills(idx: PersonIndex, events: PersonEvent[], today: string
         ...(event ? { event } : {}),
         ...against,
         overdue: !!bill.due && bill.due < today,
+        marks,
+        marked: marks.length > 0 && unmarkedCents(bill, marks) === 0,
         ...(area ? { private: area } : {}),
       };
     })
@@ -120,16 +137,16 @@ function medrecSays(idx: PersonIndex, bill: Bill, state: BillState, event: Perso
   return said.verdict === 'matches' ? said : { claimSaysVisit: false, verdict: 'unmatched' };
 }
 
-type Judged = Pick<OpenBill, 'verdict'> & { bill: Pick<Bill, 'unread'> };
+type Judged = Pick<OpenBill, 'verdict' | 'marked'> & { bill: Pick<Bill, 'unread'> };
 
-/** Whether a bill may be paid: a receipt that can be for it is here, its amount could not be read, and no payment is known. */
-export const mayBePaid = (b: Pick<Judged, 'bill'>): boolean => b.bill.unread.length > 0;
+/** Whether a bill may be paid: a receipt that can be for it is here, its amount could not be read, and no payment is known or marked. */
+export const mayBePaid = (b: Pick<Judged, 'bill' | 'marked'>): boolean => !b.marked && b.bill.unread.length > 0;
 
 /** Whether a bill is worth a call before it is paid: it asks something other than its claim says, or no claim backs it. */
-export const worthACall = (b: Judged): boolean => !mayBePaid(b) && (b.verdict === 'differs' || b.verdict === 'no_claim');
+export const worthACall = (b: Judged): boolean => !b.marked && !mayBePaid(b) && (b.verdict === 'differs' || b.verdict === 'no_claim');
 
 /** Whether a bill is one to pay, with nothing to ask about first. */
-export const toPay = (b: Judged): boolean => !mayBePaid(b) && !worthACall(b);
+export const toPay = (b: Judged): boolean => !b.marked && !mayBePaid(b) && !worthACall(b);
 
 /** "Receipt filed Nov 1, 2026; its amount could not be read". */
 export function unreadText(receipts: MedDocument[]): string | undefined {

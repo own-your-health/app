@@ -53,7 +53,7 @@ describe('state', () => {
   });
 
   it('carries what a renewal interrupted as one word, and drops anything else', () => {
-    expect(decodeState(encodeState({ n: 'abc', r: '#/', s: 2, w: 'refresh' }))).toEqual({ n: 'abc', r: '#/', s: 2, w: 'refresh' });
+    for (const w of ['refresh', 'cancel', 'paid', 'undo'] as const) expect(decodeState(encodeState({ n: 'abc', r: '#/', s: 2, w }))).toEqual({ n: 'abc', r: '#/', s: 2, w });
     const forged = btoa(JSON.stringify({ n: 'abc', r: '#/', w: 's_aaaaaaaaaaaaaaaaaaaa' })).replace(/=+$/, '');
     expect(decodeState(forged)).toEqual({ n: 'abc', r: '#/' });
   });

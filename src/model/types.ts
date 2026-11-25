@@ -101,6 +101,8 @@ export interface Statement {
   amount_due?: Amount;
   due_date?: string;
   account?: string;
+  /** The number the paper gives to call. */
+  phone?: string;
   /** A receipt's. */
   amount_paid?: Amount;
   paid_on?: string;
@@ -343,14 +345,49 @@ export interface AttemptLine extends Attempt {
 
 export type RequestScope = { all: true } | { person: string } | { source: string };
 
-export interface RefreshRequest {
+/** What every request carries. */
+export interface RequestHead {
   schema: string;
   id: string;
   requested_at: string;
   requested_by: { email?: string; name?: string };
-  scope: RequestScope;
   app: { name: string; version: string };
   handled?: Handled;
+}
+
+export interface RefreshRequest extends RequestHead {
+  scope: RequestScope;
+}
+
+/** "Mark paid": the household paid a bill some amount on a day (medrec 0.9.1 and later). */
+export interface PaidMark {
+  person: string;
+  document: string;
+  /** `YYYY-MM-DD`. */
+  on: string;
+  /** In US dollars when it is a string. */
+  amount: string | Amount;
+}
+
+/** Drops one of the household's payments, by its id in bills.json (medrec 0.9.7 and later). */
+export interface UnpaidMark {
+  person: string;
+  payment: string;
+}
+
+/** A request about a payment: `paid` or `unpaid`, never both. */
+export interface MarkRequest extends RequestHead {
+  paid?: PaidMark;
+  unpaid?: UnpaidMark;
+}
+
+export interface PendingMark {
+  file: string;
+  request: MarkRequest;
+  /** Whether the app may remove it: it made it, and the Mac has not answered. */
+  cancellable: boolean;
+  /** The Mac has recorded it, and the records have not been read again since. */
+  taken?: boolean;
 }
 
 /** A request medrec refused: it keeps only what it can show safely. */

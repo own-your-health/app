@@ -70,7 +70,7 @@ export function settingsView(
           kv([
             ['Signed in as', [ctx.user.name, ctx.user.email].filter(Boolean).join(' · ') || 'Unknown'],
             ['Read the records', opts.scopes.includes(SCOPE_READ) ? 'Allowed' : 'Not allowed'],
-            ['Ask the Mac to refresh', opts.scopes.includes(SCOPE_WRITE) ? 'Allowed' : 'Not allowed: sign in again and tick the box for files this app creates'],
+            ['Ask the Mac', opts.scopes.includes(SCOPE_WRITE) ? 'Allowed' : 'Not allowed: sign in again and tick the box for files this app creates'],
             ['Client id', opts.clientId ? h('code', { class: 'wrap' }, opts.clientId) : undefined],
           ]),
           h('div', { class: 'actions' }, button('Sign out', () => ctx.signOut()), button('Use another Google client', opts.onChangeClient, { ghost: true })),
@@ -86,7 +86,7 @@ export function settingsView(
         h('li', null, 'Browser storage holds only your Google client id, which folder to open, the email of the Google account that signed in (so the next sign-in needs no account chooser), the theme you chose, and the month your plan year starts, if you set it.'),
         h('li', null, 'The Google sign-in lives in memory and ends within an hour.'),
         h('li', null, 'The page talks only to Google: the sign-in and the Drive API. It loads no other scripts, fonts or trackers.'),
-        h('li', null, 'The only files it writes are refresh requests in the folder’s _requests/ folder.'),
+        h('li', null, 'The only files it writes are requests in the folder’s _requests/ folder: to refresh a source, and to mark a bill paid.'),
       ),
       h(
         'p',

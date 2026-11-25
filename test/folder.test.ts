@@ -126,8 +126,26 @@ describe('DriveFolder', () => {
 
   it('deletes a pending request by name', async () => {
     const { drive, calls } = driveWith(ROOT);
-    await new DriveFolder(drive, 'root', 'x').deleteRequest('20261122T200312Z_x_abcdefghijklmnopqrst.json');
+    expect(await new DriveFolder(drive, 'root', 'x').deleteRequest('20261122T200312Z_x_abcdefghijklmnopqrst.json')).toBe(true);
     expect(calls).toContain('DELETE /drive/v3/files/file-mine');
+  });
+
+  it('says when a request to delete is already gone, and fails when Drive refuses', async () => {
+    const name = '20261122T200312Z_x_abcdefghijklmnopqrst.json';
+    expect(await new DriveFolder(driveWith(ROOT).drive, 'root', 'x').deleteRequest('20261122T200312Z_x_zzzzzzzzzzzzzzzzzzzz.json')).toBe(false);
+    const answering = (status: number) =>
+      new Drive(() => 'tok', (async (input: RequestInfo | URL, init: RequestInit = {}) => {
+        const parent = new URL(String(input)).searchParams.get('q')?.match(/^'([^']+)' in parents/)?.[1];
+        return init.method === 'DELETE' ? json({ error: { code: status, message: 'no', errors: [{ reason: 'no' }] } }, status) : json({ files: ROOT[parent!] ?? [] });
+      }) as typeof fetch);
+    expect(await new DriveFolder(answering(404), 'root', 'x').deleteRequest(name)).toBe(false);
+    await expect(new DriveFolder(answering(403), 'root', 'x').deleteRequest(name)).rejects.toThrow('no');
+  });
+
+  it('says whether the account may add a request, as Drive’s listing has it', async () => {
+    const may = async (capabilities?: DriveFile['capabilities']) => new DriveFolder(driveWith({ ...ROOT, root: ROOT.root!.map((f) => (f.name === '_requests' ? { ...f, capabilities } : f)) }).drive, 'root', 'x').mayRequest();
+    expect([await may({ canAddChildren: true }), await may({ canAddChildren: false }), await may()]).toEqual([true, false, undefined]);
+    expect(await new DriveFolder(driveWith({ root: [] }).drive, 'root', 'x').mayRequest()).toBeUndefined();
   });
 
   it('links to Drive’s viewer', async () => {
@@ -187,7 +205,7 @@ describe('DemoFolder', () => {
     const folder = demoFolder();
     await folder.createRequest('a.json', { x: 1 });
     expect((await folder.list('_requests'))?.find((e) => e.name === 'a.json')?.deletable).toBe(true);
-    await folder.deleteRequest('a.json');
+    expect([await folder.deleteRequest('a.json'), await folder.deleteRequest('a.json'), await folder.mayRequest()]).toEqual([true, false, true]);
     expect(await folder.readText('_requests/a.json')).toBeNull();
     const done = (await folder.list('_requests/done'))!;
     expect(done.length).toBeGreaterThan(0);

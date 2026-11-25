@@ -1,0 +1,8 @@
+{
+  "schema": "medrec-request/v1",
+  "id": "x_cccccccccccccccccccc",
+  "requested_at": "2026-11-23T08:00:00Z",
+  "requested_by": { "email": "robin@example.com" },
+  "unpaid": { "person": "p_aaaaaaaaaaaaaaaaaaaa", "payment": "o_aaaaaaaaaaaaaaaaaaaa" },
+  "app": { "name": "own-your-health-app", "version": "0.1.0" }
+}

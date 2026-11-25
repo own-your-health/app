@@ -1,0 +1,9 @@
+{
+  "schema": "medrec-request/v1",
+  "id": "x_abcdefghijklmnopqrst",
+  "requested_at": "2026-11-22T20:03:12Z",
+  "requested_by": { "email": "robin@example.com" },
+  "paid": { "person": "p_aaaaaaaaaaaaaaaaaaaa", "document": "d_aaaaaaaaaaaaaaaaaaaa", "on": "2026-11-20", "amount": { "amount": "120.00", "currency": "EUR" } },
+  "app": { "name": "own-your-health-app", "version": "0.1.0" },
+  "handled": { "picked_up_at": "2026-11-22T20:04:01Z", "finished_at": "2026-11-22T20:04:02Z", "outcome": "ok", "sources": [], "message": "Marked paid.", "by": "medrec 0.9.6" }
+}

@@ -26,10 +26,15 @@ export interface RecordsFolder {
   list(path: string): Promise<Entry[] | null>;
   /** A link that opens the file or folder in Drive's own viewer. */
   link(path: string): Promise<string | null>;
+  /**
+   * Whether this account may add a file to `_requests/`: false for one the
+   * folder is shared with to view only, undefined when the folder does not say.
+   */
+  mayRequest(): Promise<boolean | undefined>;
   /** Writes `_requests/<name>`; the only write the app makes. */
   createRequest(name: string, body: unknown): Promise<void>;
-  /** Deletes one of the app's own pending requests (a cancel). */
-  deleteRequest(name: string): Promise<void>;
+  /** Deletes one of the app's own pending requests (a cancel); false when it is already gone. */
+  deleteRequest(name: string): Promise<boolean>;
   /** Forgets what was read under a path, so the next read goes to Drive. */
   forget(prefix: string): void;
   /** The same folder with nothing read of it yet, sharing nothing with what is being read of this one. */
@@ -150,6 +155,11 @@ export class DriveFolder implements RecordsFolder {
     return f ? viewUrl(f) : null;
   }
 
+  async mayRequest(): Promise<boolean | undefined> {
+    const dir = await this.resolve(REQUESTS_DIR);
+    return dir?.capabilities?.canAddChildren;
+  }
+
   async createRequest(name: string, body: unknown): Promise<void> {
     const dir = await this.resolve(REQUESTS_DIR);
     if (!dir || dir.mimeType !== FOLDER_MIME) throw new Error('The records folder has no _requests folder.');
@@ -157,11 +167,18 @@ export class DriveFolder implements RecordsFolder {
     this.forget(REQUESTS_DIR);
   }
 
-  async deleteRequest(name: string): Promise<void> {
+  async deleteRequest(name: string): Promise<boolean> {
     const f = await this.resolve(`${REQUESTS_DIR}/${name}`);
-    if (!f) return;
-    await this.drive.remove(f.id);
-    this.forget(REQUESTS_DIR);
+    if (!f) return false;
+    try {
+      await this.drive.remove(f.id);
+    } catch (e) {
+      if (e instanceof DriveError && e.status === 404) return false;
+      throw e;
+    } finally {
+      this.forget(REQUESTS_DIR);
+    }
+    return true;
   }
 
   forget(prefix: string): void {
@@ -221,6 +238,8 @@ export class DemoFolder implements RecordsFolder {
   private files: Promise<Set<string>>;
   private md5s: Promise<Map<string, string>>;
   private written = new Map<string, string>();
+  /** The MD5s the simulated Mac gave the files it wrote. */
+  private writtenMd5s = new Map<string, string>();
   private deleted = new Set<string>();
   private mine = new Set<string>();
 
@@ -272,7 +291,7 @@ export class DemoFolder implements RecordsFolder {
   async md5(path: string): Promise<string | null | undefined> {
     const p = splitPath(path).join('/');
     if (!(await this.exists(p))) return null;
-    return this.written.has(p) ? undefined : (await this.md5s).get(p);
+    return this.written.has(p) ? this.writtenMd5s.get(p) : (await this.md5s).get(p);
   }
 
   async list(path: string): Promise<Entry[] | null> {
@@ -301,6 +320,10 @@ export class DemoFolder implements RecordsFolder {
     return null;
   }
 
+  async mayRequest(): Promise<boolean | undefined> {
+    return true;
+  }
+
   async createRequest(name: string, body: unknown): Promise<void> {
     const p = `${REQUESTS_DIR}/${name}`;
     this.deleted.delete(p);
@@ -308,19 +331,22 @@ export class DemoFolder implements RecordsFolder {
     this.mine.add(p);
   }
 
-  async deleteRequest(name: string): Promise<void> {
+  async deleteRequest(name: string): Promise<boolean> {
     const p = `${REQUESTS_DIR}/${name}`;
+    if (!(await this.exists(p))) return false;
     if (!this.mine.has(p)) throw new Error('Only a request this app made can be cancelled.');
     this.written.delete(p);
     this.mine.delete(p);
     this.deleted.add(p);
+    return true;
   }
 
-  /** The simulated Mac's own write: it is medrec's, not the app's. */
-  writeAsMac(path: string, text: string): void {
+  /** The simulated Mac's own write: it is medrec's, not the app's. `md5` is what the folder says of it from then on. */
+  writeAsMac(path: string, text: string, md5?: string): void {
     const p = splitPath(path).join('/');
     this.deleted.delete(p);
     this.written.set(p, text);
+    if (md5) this.writtenMd5s.set(p, md5);
   }
 
   removeAsMac(path: string): void {

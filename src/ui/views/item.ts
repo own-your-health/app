@@ -18,9 +18,10 @@ import { recordTitle, visitTitle } from '../../model/titles';
 import type { ImagingStudy, Json, MedDocument, MedRecord, PersonIndex, Provenance } from '../../model/types';
 import { claimContext, visitKind, visitOf } from '../../model/visits';
 import { partOfEvent } from '../../next/eventView';
+import { markedPayments, paidControl } from '../../next/markPaid';
 import { paymentText, unreadText } from '../../next/money';
 import { rangeBar, resultChart } from '../chart';
-import { button, card, chip, command, driveLink, empty, flagChip, jsonBlock, kv, link, outLink, row, type Ctx } from '../components';
+import { button, card, chip, command, driveLink, empty, flagChip, jsonBlock, kv, link, outLink, phoneLink, row, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, dateTime, localDay } from '../format';
 import type { Route } from '../router';
@@ -587,6 +588,7 @@ function documentView(ctx: Ctx, idx: PersonIndex, d: MedDocument): Child[] {
       kv([
         ['Amount due', formatMoney(d.statement?.amount_due)],
         ['Due', d.statement?.due_date ? dateText(d.statement.due_date) : undefined],
+        ['Call', d.statement?.phone ? phoneLink(d.statement.phone) : undefined],
         ['Statement date', d.statement?.statement_date ? dateText(d.statement.statement_date) : undefined],
         ['Paid', d.doc_type === 'receipt' ? (formatMoney(d.statement?.amount_paid) ?? 'The amount could not be read') : bill?.payments.length ? bill.payments.map((p) => paymentText(p, true)).join(', ') : bill ? unreadText(bill.unread) : undefined],
         ['Paid on', d.doc_type === 'receipt' && d.statement?.paid_on ? dateText(d.statement.paid_on) : undefined],
@@ -595,6 +597,7 @@ function documentView(ctx: Ctx, idx: PersonIndex, d: MedDocument): Child[] {
         ['Same statement as', same ? link({ name: 'item', person: idx.person, id: same.id }, documentTitle(same)) : undefined],
         ['Pages', d.pages !== undefined ? String(d.pages) : undefined],
       ]),
+      bill ? [markedPayments(ctx, idx, bill), paidControl(ctx, idx, bill)] : null,
       d.text?.chars ? h('div', null, showText, textBox) : null,
     ),
     technical(

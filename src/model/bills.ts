@@ -10,6 +10,8 @@ import { toCents, type Money } from './records';
 export interface Payment {
   /** A receipt in the folder, or a mark the household made. */
   from: 'receipt' | 'household';
+  /** The household's mark, by which it can be undone. */
+  id?: string;
   /** The receipt. */
   document?: string;
   on?: string;
@@ -58,8 +60,8 @@ function moneyOf(amount: unknown, currency: unknown): Money | undefined {
 
 function payment(v: unknown): Payment {
   if (!isObject(v) || (v.from !== 'receipt' && v.from !== 'household')) throw new FolderError('malformed', 'a payment in it does not read.');
-  const [document, on, amount] = [text(v.document), text(v.on), moneyOf(v.amount, v.currency)];
-  return { from: v.from, ...(document ? { document } : {}), ...(on ? { on } : {}), ...(amount ? { amount } : {}), ...(v.counted === false ? { apart: true } : {}) };
+  const [id, document, on, amount] = [text(v.id), text(v.document), text(v.on), moneyOf(v.amount, v.currency)];
+  return { from: v.from, ...(id ? { id } : {}), ...(document ? { document } : {}), ...(on ? { on } : {}), ...(amount ? { amount } : {}), ...(v.counted === false ? { apart: true } : {}) };
 }
 
 function state(v: unknown): BillState {

@@ -105,7 +105,7 @@ export function signInView(onSignIn: () => void, opts: { error?: string; account
     intro(),
     card(
       { title: 'Sign in' },
-      h('p', null, 'Sign in with the Google account that holds the records folder, or one it is shared with. The app asks Google for two things: to read your Drive, and to create files of its own, which it uses only to ask your Mac to refresh.'),
+      h('p', null, 'Sign in with the Google account that holds the records folder, or one it is shared with. The app asks Google for two things: to read your Drive, and to create files of its own, which it uses only to ask your Mac to refresh or to mark a bill paid.'),
       opts.error ? h('p', { class: 'error-text' }, opts.error) : null,
       opts.account ? h('p', { class: 'muted small' }, `As ${opts.account}, the account that signed in last.`) : null,
       h(

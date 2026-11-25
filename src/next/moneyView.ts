@@ -7,10 +7,11 @@
 
 import { receiptDay } from '../model/billing';
 import { formatMoney } from '../model/records';
-import { card, chip, driveLink, kv, link, row, type Ctx } from '../ui/components';
+import { card, chip, driveLink, kv, link, phoneLink, row, type Ctx } from '../ui/components';
 import { h } from '../ui/dom';
 import { count, dateText } from '../ui/format';
 import type { Route } from '../ui/router';
+import { paidControl } from './markPaid';
 import { daysBetween } from './needs';
 import { eventRoute, eventWhen } from './eventView';
 import { callsSummary, mayBePaid, overAsked, paymentText, partText, toPay, unreadText, worthACall, type OpenBill, type PaidBill } from './money';
@@ -32,6 +33,9 @@ function dueChip(b: OpenBill, today: string): HTMLElement | null {
   return chip(late === 1 ? `Was due yesterday, ${dateText(due)}` : `Was due ${dateText(due)}`, 'attention');
 }
 
+/** What marks an open bill paid. */
+const markOf = (ctx: Ctx, m: Mine<OpenBill>): HTMLElement | null => paidControl(ctx, ctx.store.index(m.person.id)!, m.item.bill);
+
 function openRow(ctx: Ctx, m: Mine<OpenBill>, today: string, named: boolean): HTMLElement {
   const b = m.item;
   const e = b.event;
@@ -40,18 +44,21 @@ function openRow(ctx: Ctx, m: Mine<OpenBill>, today: string, named: boolean): HT
     title: b.bill.provider ?? 'A provider',
     meta: [named ? called(m.person) : null, e ? visitText(e) : null, billWhen(b), partText(b), unreadText(b.bill.unread)].filter(Boolean).join(' · '),
     aside: num(b.cents),
-    extra: h(
-      'div',
-      { class: 'bill-line' },
-      h('div', { class: 'chips' }, mayBePaid(b) ? null : dueChip(b, today), b.verdict === 'matches' ? chip('Matches the claim', 'ok') : null, privateChip(b.private)),
+    extra: [
       h(
         'div',
-        { class: 'bill-links' },
-        link({ name: 'item', person: m.person.id, id: b.bill.doc.id }, 'The bill'),
-        driveLink(ctx, b.bill.doc.path, 'Open the bill in Drive'),
-        b.bill.unread.map((r) => link({ name: 'item', person: m.person.id, id: r.id }, 'The receipt')),
+        { class: 'bill-line' },
+        h('div', { class: 'chips' }, b.marked || mayBePaid(b) ? null : dueChip(b, today), b.verdict === 'matches' ? chip('Matches the claim', 'ok') : null, privateChip(b.private)),
+        h(
+          'div',
+          { class: 'bill-links' },
+          link({ name: 'item', person: m.person.id, id: b.bill.doc.id }, 'The bill'),
+          driveLink(ctx, b.bill.doc.path, 'Open the bill in Drive'),
+          b.bill.unread.map((r) => link({ name: 'item', person: m.person.id, id: r.id }, 'The receipt')),
+        ),
       ),
-    ),
+      markOf(ctx, m),
+    ],
   });
 }
 
@@ -67,6 +74,7 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
   const named = !who;
   const ready = g.open.filter((m) => toPay(m.item));
   const maybe = g.open.filter((m) => mayBePaid(m.item));
+  const marked = g.open.filter((m) => m.item.marked);
   const check = g.open.filter((m) => worthACall(m.item));
   const matched = ready.filter((m) => m.item.verdict === 'matches').length;
   const readyCents = ready.reduce((t, m) => t + m.item.cents, 0);
@@ -97,8 +105,17 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
             title: m.item.bill.provider ?? 'A provider',
             meta: [named ? called(m.person) : null, m.item.event ? visitText(m.item.event) : null, `asks ${money(m.item.asked)}; ${saysText(m.item)}`, partText(m.item)].filter(Boolean).join(' · '),
             aside: [privateChip(m.item.private), num(m.item.cents)],
+            extra: markOf(ctx, m),
           }),
         ),
+      )
+    : null;
+
+  const markedCard = marked.length
+    ? card(
+        { title: 'Marked paid', actions: h('span', { class: 'small muted' }, String(marked.length)) },
+        h('p', { class: 'small muted' }, 'Each is under Paid once the Mac has filed its payment.'),
+        marked.map((m) => openRow(ctx, m, g.today, named)),
       )
     : null;
 
@@ -149,6 +166,7 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
     dueNow,
     checkCard,
     maybeCard,
+    markedCard,
     unbilledCard,
     paidCard,
     ...billNotes(ctx, who),
@@ -185,6 +203,7 @@ function callCard(ctx: Ctx, m: Mine<OpenBill>, named: boolean): HTMLElement {
     over > 0 ? h('p', { class: 'call-number' }, num(over), h('span', null, ' may not be owed')) : null,
     b.claimSays === undefined ? h('p', { class: 'small' }, 'If it went through insurance, its claim may not be in these records yet. If it didn’t, it may not be an insurance bill.') : null,
     kv([
+      ['Call', s?.phone ? phoneLink(s.phone) : null],
       ['Whose', named ? called(m.person) : null],
       ['Visit', e ? link(eventRoute(m.person.id, e.event.id), visitText(e)) : 'None in these records'],
       ['Statement', [dateText(s?.statement_date ?? b.bill.date), s?.account ? `account ${s.account}` : null, b.bill.due ? `${b.overdue ? 'was due' : 'due'} ${dateText(b.bill.due)}` : null].filter(Boolean).join(' · ')],
@@ -194,8 +213,9 @@ function callCard(ctx: Ctx, m: Mine<OpenBill>, named: boolean): HTMLElement {
       ['Left to pay', b.cents < b.asked ? money(b.cents) : null],
     ]),
     h('div', { class: 'call-script' }, h('p', { class: 'call-script-label' }, 'What to say'), h('p', null, script(b))),
-    h('p', { class: 'small muted' }, 'The bill’s phone number isn’t in these records yet; it is on the paper.'),
+    s?.phone ? null : h('p', { class: 'small muted' }, 'The bill’s phone number isn’t in these records; it is on the paper.'),
     h('div', { class: 'bill-links' }, link({ name: 'item', person: m.person.id, id: b.bill.doc.id }, 'The bill'), driveLink(ctx, b.bill.doc.path, 'Open the bill in Drive')),
+    markOf(ctx, m),
   );
   return forBill(el, b.bill.doc.id);
 }
@@ -230,6 +250,7 @@ function callsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
               title: m.item.bill.provider ?? 'A provider',
               meta: [named ? called(m.person) : null, `The bill asks ${money(m.item.claimSays! - m.item.asked)} less than ${saysText(m.item)}. Ask for an itemized bill if you want to be sure.`].filter(Boolean).join(' · '),
               aside: privateChip(m.item.private),
+              extra: markOf(ctx, m),
             }),
             m.item.bill.doc.id,
           ),

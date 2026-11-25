@@ -63,6 +63,8 @@ export class FakeGoogle {
   readonly reads: string[] = [];
   /** A file whose content Drive fails to give, as it does now and then; `*` while it answers nothing at all. */
   failing: string | null = null;
+  /** The folder is shared with the account to view only. */
+  viewer = false;
   /** What the sign-in grants, and so what the token may do; a person can untick a scope on Google's screen. */
   granted = [READ, WRITE];
   /** The client tokeninfo names: another one means a token issued to another app. */
@@ -290,7 +292,7 @@ export class FakeGoogle {
       parents: n.parent ? [n.parent] : [],
       ...(n.content !== undefined ? { size: String(n.content.length) } : {}),
       ...(n.md5 !== undefined ? { md5Checksum: n.md5 } : {}),
-      capabilities: { canEdit: n.byApp, canDelete: n.byApp, canAddChildren: n.mimeType === FOLDER_MIME },
+      capabilities: { canEdit: n.byApp, canDelete: n.byApp, canAddChildren: n.mimeType === FOLDER_MIME && !this.viewer },
     };
   }
 }

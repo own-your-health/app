@@ -20,6 +20,7 @@ import { count, dateText, localDay } from '../ui/format';
 import { href, type Route } from '../ui/router';
 import { eventConfidence, eventMoney, eventOf, kindText, paidAtCounter, eventPrivate, ruleText, type CareEvent, type EventMoney } from './event';
 import { groupedByMedrec, personEvents } from './load';
+import { paidControl } from './markPaid';
 import { paidText, unreadText } from './money';
 import { called } from '../model/people';
 import { plainWords } from '../model/words';
@@ -275,7 +276,7 @@ function chargesCard(e: CareEvent, m: EventMoney): HTMLElement | null {
 }
 
 /** Each bill and receipt against what the claims say, and what has no bill yet. */
-function billsCard(idx: PersonIndex, e: CareEvent, m: EventMoney): HTMLElement | null {
+function billsCard(ctx: Ctx, idx: PersonIndex, e: CareEvent, m: EventMoney): HTMLElement | null {
   const bills = e.papers.filter((p) => p.doc.doc_type === 'bill' || p.doc.doc_type === 'receipt').map((p) => p.doc);
   const owed = paidAtCounter(e) ? [] : m.charges.filter((c) => (c.share ?? 0) > 0);
   if (!bills.length && !owed.length) return null;
@@ -292,6 +293,8 @@ function billsCard(idx: PersonIndex, e: CareEvent, m: EventMoney): HTMLElement |
       title: d.doc_type === 'receipt' ? `Receipt from ${d.organization ?? 'a provider'}` : `Bill from ${d.organization ?? 'a provider'}`,
       meta: [due !== undefined ? `${money(due)} due${d.statement?.due_date ? ` by ${dateText(d.statement.due_date)}` : ''}` : null, d.statement?.amount_paid ? `${formatMoney(d.statement.amount_paid)} paid` : null, due === undefined ? dateText(d.statement?.paid_on ?? d.date) : null, bill?.settled ? paidText(bill) : null, part && bill.left ? `${formatMoney(bill.left)} left to pay` : null, bill ? unreadText(bill.unread) : null, bill && !bill.settled && bill.replacedBy ? 'a later statement has its balance' : null].filter(Boolean).join(' · '),
       aside: match,
+      // Two copies of one statement have one Mark paid.
+      extra: bill && (d.id === bill.doc.id || !bills.some((x) => x.id === bill.doc.id)) ? paidControl(ctx, idx, bill) : null,
     });
   };
   const unbilled = billerOf(m, bills.filter((d) => d.doc_type === 'bill'), (d) => d.organization) ? [] : owed.filter((c) => !bills.some((d) => sameProvider(c.provider, d.organization)));
@@ -394,7 +397,7 @@ export function eventView(ctx: Ctx, personId: string, id: string): HTMLElement {
     costCard(e, m),
     changedCard(e),
     chargesCard(e, m),
-    billsCard(idx, e, m),
+    billsCard(ctx, idx, e, m),
     papersCard(ctx, idx, e),
     assemblyCard(ctx, idx, e),
     detailsCard(idx, e),

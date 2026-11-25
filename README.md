@@ -60,7 +60,7 @@ the app and Refresh.
    access to its Drive. It takes about ten minutes and costs nothing:
    [docs/registration.md](docs/registration.md). medrec 0.6.0 and later
    signs in through a Desktop app client in the same project; in another
-   project, medrec cannot see the app's refresh requests.
+   project, medrec cannot see the app's requests.
 3. **For Refresh: `medrec refresh` on the household's Mac.** Run
    `medrec refresh --install` there once. Without it, the app still shows
    everything medrec has loaded, built from medrec's import history, and says
@@ -424,9 +424,11 @@ The privacy policy is at https://own-your-health.github.io/app/privacy.html
   id and the email go to Google as the sign-in's `client_id` and `login_hint`,
   and the folder id goes to Drive when the app reads the folder. During a
   sign-in, a random nonce sits in session storage until Google answers.
-- **Read-only, except requests.** The app writes only refresh requests into
-  `_requests/`, and deletes only requests it made (a cancel). medrec is the
-  only writer of records.
+- **Read-only, except requests.** The app writes only requests into
+  `_requests/` (to refresh, and to mark a bill paid or undo that), and deletes
+  only requests it made (a cancel or an undo). A payment's request holds the
+  person's and the bill's ids, the day and the amount. medrec is the only
+  writer of records.
 - **Records stay in the browser.** Nothing from the folder is sent anywhere
   but back to Drive. Error messages carry no record content. Download CSV
   on the costs screen builds the file in the page and saves it to the
@@ -453,7 +455,7 @@ The privacy policy is at https://own-your-health.github.io/app/privacy.html
 | Scope | What the app does with it |
 |---|---|
 | `drive.readonly` | Reads the records folder, which medrec wrote, so the app did not create it. |
-| `drive.file` | Creates and deletes its own refresh requests in `_requests/`. |
+| `drive.file` | Creates and deletes its own requests in `_requests/`: to refresh, and to mark a bill paid. |
 
 `drive.file` alone reaches only files the app created or was given, so it
 cannot read the records. `drive.readonly` alone cannot create a file. Together
@@ -581,7 +583,9 @@ dropped from the address.
     payment the household marked covers the bill. One partly paid gives what
     is left; one past its due date says "No payment on file, unless it was
     paid elsewhere", or "Not all paid"; one with a receipt whose amount could not be read says "May be
-    paid", after the others and without its due date;
+    paid", after the others and without its due date. Those rows have **Mark
+    paid**, and one whose payment is marked says "Marked paid" until the Mac
+    has filed it;
   - vaccine doses the CDC schedule places by now that the records don't
     show, and this season's flu dose;
   - a refill, from two weeks before the last fill's days' supply runs out
@@ -647,6 +651,19 @@ dropped from the address.
   is not used, for each person with a bill, open or not (on a shared screen, a
   bill that is not private). A list medrec is still writing is read for again,
   as code names are.
+
+  **Mark paid** is beside each bill with something left to pay: on Bills, on
+  Worth a call, on the visit, on the bill itself, and on Home past its due
+  date. It asks for the day and the amount (the day starts from a receipt whose
+  amount could not be read; a day to come is refused, since a scheduled payment
+  is not paid yet) and writes a request, which the Mac records on its next pass
+  (medrec 0.9.1 and later; `src/next/markPaid.ts`). Until then the bill is
+  marked, not settled: it is listed under Marked paid, out of Ready to pay,
+  Worth a call and Home's totals when the payment covers what is left, and
+  **Undo** takes the request back. A filed payment is undone from the bill's
+  page with medrec 0.9.7 and later, and before with the command that page
+  gives. One the Mac could not record says so beside the bill. An account that
+  may only view the folder has no Mark paid.
 - **Health** (`#/health`, from Where everyone stands on Home) gives each
   person a card: what the records can know about them (doctors' records and
   claims, doctors' records only, claims and papers only, or no records

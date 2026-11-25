@@ -134,7 +134,7 @@ The app asks for two Drive scopes, and no others:
 | Scope | Why |
 |---|---|
 | `drive.readonly` | To read the records folder and everything in it. medrec wrote those files, so the app did not create them. |
-| `drive.file` | To create its own refresh requests in `_requests/`, and to delete them when you cancel. |
+| `drive.file` | To create its own requests in `_requests/` (to refresh, and to mark a bill paid), and to delete them when you cancel or undo. |
 
 These were settled by testing, with a client in Testing mode against an
 invented records folder that rclone created, as medrec did before 0.6.0:

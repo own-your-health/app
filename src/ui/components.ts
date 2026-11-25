@@ -4,11 +4,13 @@ import type { PendingRequest } from '../data/store';
 import type { Store } from '../data/store';
 import { isOutOfRange, type ResultFlag } from '../model/flags';
 import { requestWait } from '../model/sources';
-import type { RequestScope } from '../model/types';
+import type { PaidMark, PendingMark, RequestScope, UnpaidMark } from '../model/types';
 import { h, icon, type Child } from './dom';
 import { relative } from './format';
 import type { Route } from './router';
 import { href } from './router';
+
+export type Mark = { paid: PaidMark } | { unpaid: UnpaidMark };
 
 export interface Ctx {
   store: Store;
@@ -22,7 +24,10 @@ export interface Ctx {
   render(): void;
   toast(text: string, kind?: 'info' | 'error'): void;
   refresh(scope: RequestScope, what: string): Promise<void>;
-  cancel(p: PendingRequest): Promise<void>;
+  /** Removes one of the app's own requests while it waits. */
+  cancel(p: PendingRequest | PendingMark): Promise<void>;
+  /** Asks the Mac to mark a bill paid, or to undo that; whether it was sent. */
+  mark(mark: Mark): Promise<boolean>;
   signOut(): void;
 }
 
@@ -48,6 +53,12 @@ export function link(route: Route, ...children: Child[]): HTMLAnchorElement {
 /** A link that leaves the app: a new tab, no opener, no referrer. */
 export function outLink(url: string, ...children: Child[]): HTMLAnchorElement {
   return h('a', { href: url, target: '_blank', rel: 'noopener noreferrer', referrerpolicy: 'no-referrer' }, ...children);
+}
+
+/** A number to call; plain text when it is not one to dial. */
+export function phoneLink(number: string): Child {
+  const digits = number.replace(/[\s().-]/g, '');
+  return /^\+?\d{7,15}$/.test(digits) ? h('a', { href: `tel:${digits}` }, number) : number;
 }
 
 /** A result's flag as a chip, when it is out of range. */
@@ -184,9 +195,11 @@ export function jsonBlock(value: unknown): HTMLElement {
   return h('pre', { class: 'json' }, JSON.stringify(value, null, 2));
 }
 
+/** A panel over the page. It closes on Escape, beside it, or when the page is left; Tab stays in it. */
 export function sheet(title: string, body: Child, onClose: () => void): HTMLElement {
   const close = () => {
     document.removeEventListener('keydown', onKey);
+    window.removeEventListener('hashchange', close);
     scrim.remove();
     onClose();
   };
@@ -201,9 +214,18 @@ export function sheet(title: string, body: Child, onClose: () => void): HTMLElem
     ),
   );
   const onKey = (e: KeyboardEvent) => {
-    if (e.key === 'Escape' || !scrim.isConnected) close();
+    if (e.key === 'Escape' || !scrim.isConnected) return close();
+    if (e.key !== 'Tab') return;
+    const stops = [...scrim.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled])')];
+    const at = stops.indexOf(document.activeElement as HTMLElement);
+    if (at > 0 && at < stops.length - 1) return;
+    if (e.shiftKey ? at <= 0 : at < 0 || at === stops.length - 1) {
+      e.preventDefault();
+      stops[e.shiftKey ? stops.length - 1 : 0]?.focus();
+    }
   };
   document.addEventListener('keydown', onKey);
+  window.addEventListener('hashchange', close);
   return scrim;
 }
 
