@@ -163,7 +163,7 @@ const BILLS = new Set(['bill', 'receipt', 'eob']);
  * The sample with a private part in each open claim of several lines, each
  * open bill, receipt and explanation of benefits, and each visit those claims
  * are of, as medrec 0.9.9 and later says them. With `words`, what is private
- * there says those.
+ * there says those; its amounts and its days, which are not, stay.
  */
 export const linesPrivate = (words?: string): Overlay =>
   rewritten({}, ({ index, events, list, text }) => {
@@ -175,7 +175,7 @@ export const linesPrivate = (words?: string): Overlay =>
       parts[r.id] = { display: 'Sample care', category: 'other', lines: [0], ...(diagnoses?.length ? { diagnoses: [0] } : {}), payer_notes: [0], says: '1 service, 1 diagnosis and 1 payer note not shown' };
       r.fields.payer_notes = [words ?? 'Sample note', 'Placeholder note'];
       if (words === undefined) continue;
-      items[0] = { ...items[0], service: { system: 'http://www.ama-assn.org/go/cpt', code: '00001', display: words }, category: 'imaging', payer_notes: [words], serviced: { start: '2025-01-05', end: '2025-01-05' } };
+      items[0] = { ...items[0], service: { system: 'http://www.ama-assn.org/go/cpt', code: '00001', display: words }, category: 'imaging', payer_notes: [words] };
       delete items[0].records;
       if (diagnoses?.length) diagnoses[0] = { ...diagnoses[0], code: { system: 'http://hl7.org/fhir/sid/icd-10-cm', code: 'Z00.0', display: words } };
       Object.assign(r, { display: words });
