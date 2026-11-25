@@ -495,13 +495,13 @@ export class App {
       const stays = this.demo || (this.token !== null && (link.kind === 'same' || link.kind === 'invalid' || (link.kind === 'different' && ready)));
       if (!stays) return location.reload();
       history.replaceState(null, '', withoutClient(location));
-      if (!this.demo && link.kind === 'different') return this.askClient(link, () => this.show({ name: 'ready' }));
-      if (!this.demo && link.kind === 'invalid') this.toast(KEPT_CLIENT, 'error');
     }
-    // Private events shown on the calendar, and private items on a doctor’s sheet, are left off again once the page is left.
+    // Private events shown on the calendar, and private items on a doctor’s sheet, are left off again once the page is left. A setup link leaves it, whatever page it goes to.
     const now = parseRoute(location.hash);
-    if (now.name !== 'calendar') hidePrivateEvents();
-    leaveOutPrivate(now);
+    if (link.kind !== 'none' || now.name !== 'calendar') hidePrivateEvents();
+    leaveOutPrivate(link.kind === 'none' ? now : { name: 'home' });
+    if (!this.demo && link.kind === 'different') return this.askClient(link, () => this.show({ name: 'ready' }));
+    if (!this.demo && link.kind === 'invalid') this.toast(KEPT_CLIENT, 'error');
     if (this.phase.name === 'ready') {
       this.render();
       window.scrollTo(0, 0);

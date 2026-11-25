@@ -385,6 +385,34 @@ test('a setup link opened over the records keeps them open and goes to its page'
   await expect.poll(() => google.signIns.at(-1)?.clientId).toBe(OTHER_CLIENT);
 });
 
+test('a setup link leaves private items off again, whichever client and page it names', async ({ page }) => {
+  await signIn(page);
+  const open = (hash: string) => page.evaluate((to) => void (location.hash = to), hash);
+  const PRIVATE = '#/calendar?month=2026-11';
+  const notice = page.locator('.cal-private');
+  const link = (client: string, to: string) => open(`#/setup/${client}${to}`);
+  for (const [client, to] of [[OTHER_CLIENT, ''], [OTHER_CLIENT, '/calendar'], [CLIENT, '/calendar'], ['not-a-client-id', '/calendar']] as const) {
+    await open(PRIVATE);
+    await notice.getByRole('button', { name: 'Show them' }).click();
+    await expect(page.locator('.calendar').getByRole('status')).toHaveText('2 private events now shown.');
+    await link(client, to);
+    if (client === OTHER_CLIENT) await page.getByRole('button', { name: 'Keep the current one' }).click();
+    await expect(page).not.toHaveURL(/setup/);
+    await open(PRIVATE);
+    await expect(notice).toContainText('2 private events (sexual health) are kept off this shared view.');
+  }
+  // The same for private items on a doctor's sheet.
+  const SHEET = `#/health/doctor?who=${SAM}`;
+  await open(SHEET);
+  const include = page.getByRole('button', { name: /^Include \d+ private item/ });
+  await include.click();
+  await expect(page.getByRole('button', { name: 'Leave private items off' })).toBeVisible();
+  await link(OTHER_CLIENT, '');
+  await page.getByRole('button', { name: 'Keep the current one' }).click();
+  await open(SHEET);
+  await expect(include).toBeVisible();
+});
+
 test('a setup link opened before anyone signed in starts the app again with its client', async ({ page }) => {
   await page.goto('./');
   await expect(page.locator('input[aria-label="Google OAuth client id or setup link"]')).toBeVisible();
