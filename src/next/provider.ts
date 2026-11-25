@@ -10,6 +10,7 @@ import { sameProvider, type ProviderField } from '../model/providers';
 import { isWithdrawn, originNames } from '../model/records';
 import type { Household, ImagingStudy, MedDocument, MedRecord, PendingMark, PersonIndex } from '../model/types';
 import { householdEvents, type PersonEvent } from './calendar';
+import type { CareEvent } from './event';
 import { forShared, mayBePaid, openBills, unbilledShares, type OpenBill } from './money';
 import { sharedPapers } from './papers';
 import { Providers, providersNamed, sameName, type Named } from './providerNames';
@@ -27,11 +28,8 @@ export interface Records {
 const at = (person: string, id: string): string => `${person}|${id}`;
 const atNamed = (n: Named): string => at(n.person, n.id);
 
-/** Every item of an event, each with whose it is. */
-const membersOf = ({ person, event: e }: Pick<PersonEvent, 'person' | 'event'>): string[] => [
-  ...[...e.claims.map((c) => c.record), ...e.visits.map((v) => v.record), ...e.recorded].map((r) => at(person.id, r.id)),
-  ...e.papers.map((p) => at(p.person ?? person.id, p.doc.id)),
-];
+/** An event's records. */
+const recordsOf = (e: CareEvent): MedRecord[] => [...e.claims.map((c) => c.record), ...e.visits.map((v) => v.record), ...e.recorded];
 
 // ---- What a page may show ---------------------------------------------------
 
@@ -47,7 +45,7 @@ class Quiet {
   constructor(private readonly of: Records) {
     this.events = householdEvents(of.household, (id) => of.indexes.get(id), of.today);
     // A record of a private visit stays off with it, whatever is said of the record alone.
-    for (const x of this.events) if (x.private) for (const m of membersOf(x)) this.visits.add(m);
+    for (const x of this.events) if (x.private) for (const r of recordsOf(x.event)) this.visits.add(at(x.person.id, r.id));
     this.papers = new Set(sharedPapers(of.household, of.indexes, of.today).map((p) => at(p.person, p.doc.id)));
   }
 
@@ -66,8 +64,7 @@ class Quiet {
 
   /** Why an event is private: its own area, or that of a record of it, as it goes by what its records say. */
   event(x: PersonEvent): string | undefined {
-    const e = x.event;
-    return x.private ?? recordsPrivate(this.index(x.person.id), [...e.claims.map((c) => c.record), ...e.visits.map((v) => v.record), ...e.recorded].map((r) => r.id));
+    return x.private ?? recordsPrivate(this.index(x.person.id), recordsOf(x.event).map((r) => r.id));
   }
 
   /** Whether everyone's page may hold an item. */
@@ -255,7 +252,7 @@ function visitsOf({ quiet, scope, providers, named, same, ids, billed }: Its): {
     const area = quiet.event(x);
     const visit: Visit = { event: x, ...(area ? { private: area } : {}) };
     const its = e.visits.length ? withPortal : without;
-    if (!membersOf(x).some((m) => its.has(m))) {
+    if (!recordsOf(e).some((r) => its.has(at(person.id, r.id)))) {
       if (e.papers.some((p) => ids.has(at(p.person ?? person.id, p.doc.id)))) paperVisits.push(visit);
       continue;
     }

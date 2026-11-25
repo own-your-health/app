@@ -207,6 +207,12 @@ describe('a provider’s page', () => {
     const pharmacy = pageOf(anchor(ROBIN, 'pharmacy', 'Example Pharmacy'))!;
     expect(new Set(pharmacy.visits.map((v) => v.event.event.visits.length))).toEqual(new Set([0]));
     expect(pharmacy.visits.length).toBeGreaterThan(0);
+    // A medicine a visit recorded, with the pharmacy it was sent to.
+    const visit = personEvents(index(SAM), SAMPLE.household, TODAY).find((e) => e.visits.length && e.recorded.some((r) => r.kind === 'medication'))!;
+    const listed = visit.recorded.find((r) => r.kind === 'medication')!;
+    const sent = withIndex(SAM, (idx) => ({ ...idx, records: idx.records.map((r) => (r.id === listed.id ? { ...r, fields: { ...r.fields, pharmacy: 'Example Corner Pharmacy' } } : r)) }));
+    const page = pageOf({ person: SAM, id: listed.id, field: 'pharmacy' }, false, SAMPLE, sent)!;
+    expect([page.medicines.map((m) => m.item.id), page.visits]).toEqual([[listed.id], []]);
   });
 
   it('takes what was recorded on a day at two places as neither’s', () => {
