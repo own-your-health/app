@@ -10,6 +10,7 @@ import { conditionName, diagnosisNames, inDetails, nameList } from '../model/cod
 import { sameProvider } from '../model/providers';
 import { AMOUNT_LABELS, docTypeLabel, documentTitle, formatMoney, fromCents, KIND_LABELS, portalCounts, resultPoint, resultReading, str, toCents } from '../model/records';
 import { isOutOfRange, resultFlag } from '../model/flags';
+import { isInError } from '../model/inError';
 import { unitText } from '../model/result';
 import { recordTitle, visitTitle } from '../model/titles';
 import { areaText, knownArea, paperPrivate } from '../model/private';
@@ -18,10 +19,12 @@ import { paperView } from '../paper/view';
 import { card, chip, dotted, driveLink, empty, flagChip, link, row, type Ctx } from '../ui/components';
 import { h, icon, type Child } from '../ui/dom';
 import { count, dateText, localDay } from '../ui/format';
+import { differChip, errorsNote } from '../ui/inError';
 import { href, type Route } from '../ui/router';
 import { eventConfidence, eventMoney, eventOf, kindText, paidAtCounter, eventPrivate, ruleText, type CareEvent, type EventMoney } from './event';
 import { groupedByMedrec, personEvents } from './load';
 import { paidControl } from './markPaid';
+import { eventInError } from './medrecEvents';
 import { billsShares, NO_CLAIM_EXPECTED, paidText, selfPay, unreadText } from './money';
 import { namedOn } from './providerNames';
 import { placeLink, providerRoute } from './providerView';
@@ -85,6 +88,7 @@ function headCard(ctx: Ctx, idx: PersonIndex, e: CareEvent, m: EventMoney): HTML
     sourcesStrip(ctx, idx, e),
     number ? h('p', { class: 'result-value' }, m.share === 0 ? 'Nothing for you to pay' : `${m.shareAdded ? 'Your share' : 'You owe'} ${number}`) : null,
     settledLine(idx, e, m),
+    errorsNote(e.inError ?? 0),
     privateNote(e, idx),
   );
 }
@@ -346,9 +350,9 @@ function grouping(ctx: Ctx, idx: PersonIndex): string {
 
 function assemblyCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
   const items: Child[] = [
-    ...e.visits.map((v) => row({ route: itemRoute(idx.person, v.record.id), title: visitTitle(v.record), meta: `Portal visit · ${ruleText(v.rule)}`, aside: sureWord(v.confidence) })),
-    ...e.claims.map((c) => row({ route: itemRoute(idx.person, c.record.id), title: c.provider ?? recordTitle(c.record), meta: `Claim · ${ruleText(c.rule)}`, aside: sureWord(c.confidence) })),
-    ...e.papers.map((p) => row({ route: itemRoute(p.person ?? idx.person, p.doc.id), title: documentTitle(p.doc), meta: `Paper · ${ruleText(p.rule)}`, aside: sureWord(p.confidence) })),
+    ...e.visits.map((v) => row({ route: itemRoute(idx.person, v.record.id), title: visitTitle(v.record), meta: `Portal visit · ${ruleText(v.rule)}`, aside: [differChip({ type: 'record', record: v.record }), sureWord(v.confidence)] })),
+    ...e.claims.map((c) => row({ route: itemRoute(idx.person, c.record.id), title: c.provider ?? recordTitle(c.record), meta: `Claim · ${ruleText(c.rule)}`, aside: [differChip({ type: 'record', record: c.record }), sureWord(c.confidence)] })),
+    ...e.papers.map((p) => row({ route: itemRoute(p.person ?? idx.person, p.doc.id), title: documentTitle(p.doc), meta: `Paper · ${ruleText(p.rule)}`, aside: [differChip({ type: 'document', document: p.doc }), sureWord(p.confidence)] })),
   ];
   return h(
     'details',
@@ -389,6 +393,23 @@ function detailsCard(idx: PersonIndex, e: CareEvent): HTMLElement {
   );
 }
 
+/** An event of which nothing stands, opened by its id: that it is entered in error, and what is in it. */
+function errorEvent(ctx: Ctx, idx: PersonIndex, id: string): HTMLElement | null {
+  const e = eventInError(idx, ctx.store.household, id);
+  if (!e) return null;
+  const { title, kind } = headline(e);
+  const part = (item: { id: string; title: string; kind: string }) => row({ route: itemRoute(idx.person, item.id), title: item.title, meta: item.kind, aside: isInError(idx, item.id) ? chip('Entered in error', 'attention') : null });
+  return card(
+    {},
+    kind ? h('p', { class: 'event-kind small muted' }, kind) : null,
+    h('div', { class: 'card-head' }, h('h1', null, title), chip('Entered in error', 'attention')),
+    h('p', { class: 'muted' }, dotted([eventWhen(e), e.place])),
+    h('p', null, 'What makes it a visit is entered in error, so it is in no list or total.'),
+    ...[...e.visits.map((v) => v.record), ...e.claims.map((c) => c.record), ...e.recorded].map((r) => part({ id: r.id, title: recordTitle(r), kind: KIND_LABELS[r.kind] ?? r.kind })),
+    ...e.papers.filter((p) => !p.person).map((p) => part({ id: p.doc.id, title: documentTitle(p.doc), kind: docTypeLabel(p.doc.doc_type) })),
+  );
+}
+
 export function eventView(ctx: Ctx, personId: string, id: string): HTMLElement {
   const person = ctx.store.person(personId);
   const idx = ctx.store.index(personId);
@@ -397,7 +418,7 @@ export function eventView(ctx: Ctx, personId: string, id: string): HTMLElement {
   // Any record or paper of the visit opens it, so a saved address still works
   // after the visit is regrouped and led by another record.
   const e = eventOf(personEvents(idx, ctx.store.household, localDay(ctx.now())), id);
-  if (!e) return h('div', { class: 'stack' }, back, card({}, empty('This visit is not in these records.')));
+  if (!e) return h('div', { class: 'stack' }, back, errorEvent(ctx, idx, id) ?? card({}, empty('This visit is not in these records.')));
   if (e.id !== id) history.replaceState(null, '', `${location.pathname}${location.search}${href(eventRoute(personId, e.id))}`);
   const m = eventMoney(e);
   return h(

@@ -116,7 +116,8 @@ interface ByStanding {
 function byStanding(index: PersonIndex, kind: StandingKind, day: string, may: May): ByStanding | undefined {
   const st = index.standing;
   if (!st) return undefined;
-  const byId = new Map(index.records.map((r) => [r.id, r]));
+  // One entered in error is counted, where it may be.
+  const byId = new Map([...index.records, ...(index.inError?.records ?? [])].map((r) => [r.id, r]));
   const records = (ids: string[]) => ids.map((id) => byId.get(id)!);
   const lists = standingLists(st, kind, day, (id) => byId.has(id) && may(id));
   const make = (l: Line): ListItem => {

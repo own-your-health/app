@@ -172,7 +172,7 @@ export function careTeam(index: PersonIndex, today: string, include: (r: MedReco
     }
   }
   const byId = new Map(index.records.map((r) => [r.id, r]));
-  for (const med of medicineList(index, today, (id) => include(byId.get(id)!)).active) {
+  for (const med of medicineList(index, today, (id) => byId.has(id) && include(byId.get(id)!)).active) {
     if (!med.prescriber) continue;
     const m = member(med.prescriber);
     if (!m.prescribes.includes(med.name)) m.prescribes.push(med.name);

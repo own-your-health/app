@@ -876,10 +876,28 @@ dropped from the address.
   changed since `views.json` was written. Results, a test's page and Papers
   then say that some may be about another person and why, as they do where
   `views.json` or its list does not read; so does the sheet for a doctor. What
-  an earlier read of this folder named stays out until a list of its files
+  was named since the app opened the folder stays out until a list of its files
   reads, also when an earlier medrec on another computer writes the views
-  again. The first read of a folder whose views an earlier medrec wrote last
-  names none, and nothing is said.
+  again; nothing is kept once the app is closed. The first read after that of a
+  folder whose views an earlier medrec wrote last names none, and nothing is
+  said.
+- **Entered in error.** A source can say that a record or a paper is entered in
+  error. medrec 0.9.9 and later say of each item that every one of its sources
+  does (`in_error` in `views.json`, `src/model/inError.ts`), and it is taken
+  out of the index when that is read: it is in no list, search, visit, bill,
+  total or doctor's sheet. A statement whose first paper is in error is its
+  next copy's, and a study has no report of one. A list says "1 entered in
+  error, not shown", on everyone's view of those that are not private, and
+  Bills says so of bills, with how many have a payment the household marked,
+  since money may be owed back. One opened by its id says that it is entered in
+  error, what each source says and when that was read, and what the household
+  decided of it, which medrec keeps and does not apply (`not_applied` in
+  `events.json` and `bills.json`). So does a visit that is none without it. One
+  that some source still stands by stays, with **Sources differ** and what each
+  says. A source whose word is not kept is not heard, and does not say so.
+  Where `views.json` does not read, or was made from another index, the words
+  the index itself keeps of each source say it, by the same rule. With an
+  earlier medrec's index, which keeps none, a record's own status alone does.
 - **Papers** (`#/papers`, a tab, also from each
   person's Health): every paper in the Drive folder but those about another
   person (above), newest first by year, each with the visit it belongs to as a

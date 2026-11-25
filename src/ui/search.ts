@@ -18,12 +18,14 @@
 // as written instead.
 
 import { KIND_LABELS } from '../model/records';
+import { errorsIndex } from '../model/inError';
 import { HELD, isHeld, itemPrivate, studyPrivate } from '../model/private';
 import { conceptOf, find, matchRanges, terms, type Found, type Hit, type Searchable } from '../model/search';
 import type { Person, PersonText } from '../model/types';
 import { button, card, empty, filterChips, row, type Ctx } from './components';
 import { h, type Child } from './dom';
 import { count, dateText } from './format';
+import { errorsNote } from './inError';
 import { href, type Route } from './router';
 import { called } from '../model/people';
 import { heldNotes } from '../next/shared';
@@ -191,19 +193,22 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
     }, 0);
   /** Imaging no report judges, counted for everyone and never for what was searched for. */
   const imagingLeft = (n: number) => (n ? ` So ${n === 1 ? 'is' : 'are'} ${count(n, 'imaging study', 'imaging studies')} with no report in these records: nothing says whether ${n === 1 ? 'it is' : 'they are'} private.` : '');
-  const leftNotes = () =>
-    many && who === 'all'
+  let errors: { own: string[]; shared: number } = { own: [], shared: 0 };
+  const leftNotes = () => [
+    errorsNote(many && who === 'all' ? errors.shared : errors.own.filter((p) => who === 'all' || p === who).length),
+    ...(many && who === 'all'
       ? [
           h('p', { class: 'small muted' }, `Private items are left off everyone’s results.${imagingLeft(unjudged())} Choose a person to search theirs.`),
           ...heldNotes(ctx, 'everyone’s results'),
         ]
-      : [];
+      : []),
+  ];
 
   /** `found` searches everyone's shared items; `own` searches private ones too, for the person chosen. */
   const draw = (found: Found, own: Found, untexted: string[], keep?: 'who' | 'kind') => {
     const { hits, terms: ts } = who === 'all' ? found : own;
     say(who === 'all' ? found : own);
-    left.replaceChildren(...leftNotes());
+    left.replaceChildren(...leftNotes().filter((x): x is HTMLElement => !!x));
     const whos = many ? people.map((p) => p.id) : [...new Set(hits.map((x) => x.person))];
     const groups = entriesByKind(hits.filter((x) => who === 'all' || x.person === who));
     // Kinds come from the chosen person's hits, so a kind they have none of falls back to All.
@@ -310,7 +315,12 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
     });
     const untexted = scope.filter((x) => !x.text).map((x) => names.get(x.person) ?? x.person);
     const own = find(scope, q, { words });
-    const found = many ? find(scope.map((s) => ({ ...s, leave: (kind: string, id: string) => !!itemPrivate(s.index, kind, id) })), q, { words }) : own;
+    const shared = (s: Searchable) => ({ ...s, leave: (kind: string, id: string) => !!itemPrivate(s.index, kind, id) });
+    const found = many ? find(scope.map(shared), q, { words }) : own;
+    // The same words over what is entered in error, for how many of it they would have found.
+    const wrong = scope.flatMap((s) => (s.index.inError ? [{ ...s, index: errorsIndex(s.index) }] : []));
+    const how = { words: words || own.how === 'fallback' };
+    errors = { own: wrong.length ? find(wrong, q, how).hits.map((x) => x.person) : [], shared: wrong.length ? find(wrong.map(shared), q, how).hits.length : 0 };
     draw(found, own, many ? untexted : untexted.length ? ['this person'] : []);
   };
 

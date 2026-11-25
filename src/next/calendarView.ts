@@ -8,8 +8,9 @@ import { button, card, chip, empty, link, type Ctx } from '../ui/components';
 import { h, icon } from '../ui/dom';
 import { formatMoney, fromCents } from '../model/records';
 import { count, dateText, localDay } from '../ui/format';
+import { errorsNote } from '../ui/inError';
 import { href, type Route } from '../ui/router';
-import { barPart, householdEvents, inMonth, isMonth, listPage, markShape, monthLabel, monthOf, MONTHS, monthWeeks, onDay, shiftMonth, shown, type PersonEvent } from './calendar';
+import { barPart, errorsLeft, householdEvents, inMonth, isMonth, listPage, markShape, monthLabel, monthOf, MONTHS, monthWeeks, onDay, shiftMonth, shown, type PersonEvent } from './calendar';
 import { doseCount } from './event';
 import { areaText, knownArea } from '../model/private';
 import { anyLeftOff, heldNotes } from './shared';
@@ -266,7 +267,8 @@ export function calendarView(ctx: Ctx, route: CalendarRoute): HTMLElement {
             toggle(!!hidden),
           )
         : null;
-    body.replaceChildren(...[privacy, ...(r.view === 'list' ? listView(r, events, left) : monthView(r, events, laneOf, people, today, left))].filter((x): x is HTMLElement => !!x));
+    const list = () => [...listView(r, events, left), r.before ? null : errorsNote(errorsLeft(people, (id) => store.index(id), who))];
+    body.replaceChildren(...[privacy, ...(r.view === 'list' ? list() : monthView(r, events, laneOf, people, today, left))].filter((x): x is HTMLElement => !!x));
     if (focusToggle) body.querySelector<HTMLButtonElement>('.cal-private button')?.focus();
   };
   if (r.view !== 'ahead') draw();

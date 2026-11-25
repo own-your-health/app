@@ -3,12 +3,13 @@
 // the heading with its Whose choices, and the money formats.
 
 import { receiptDay } from '../model/billing';
-import { knownArea } from '../model/private';
+import { knownArea, paperPrivate } from '../model/private';
 import { formatMoney, fromCents } from '../model/records';
 import type { Person } from '../model/types';
 import { chip, link, type Ctx } from '../ui/components';
 import { h, icon } from '../ui/dom';
 import { localDay } from '../ui/format';
+import { billErrorsText } from '../ui/inError';
 import { href, type Route } from '../ui/router';
 import { householdEvents, sharedEvents, type PersonEvent } from './calendar';
 import { eventWhen } from './eventView';
@@ -77,6 +78,15 @@ export function billNotes(ctx: Ctx, who: string | undefined): HTMLElement[] {
     if (why) return [h('p', { class: 'small muted' }, `${why} Meanwhile only receipts say which of ${called(p)}’s bills are paid.`)];
     return unread ? [h('p', { class: 'small muted' }, `The payments marked for ${called(p)} could not be read, so none of them is counted.`)] : [];
   });
+}
+
+/** The bills entered in error that a page of bills may count: all of a person's own, and of everyone's those that are not private. */
+export function billErrors(ctx: Ctx, who: string | undefined): HTMLElement | null {
+  const errors = ctx.store.household.people.flatMap((p) => {
+    const idx = who && p.id !== who ? undefined : ctx.store.index(p.id);
+    return (idx?.bills?.errors ?? []).filter((b) => who || !paperPrivate(idx!, b.document));
+  });
+  return errors.length ? h('p', { class: 'small muted' }, `${billErrorsText(errors.length, errors.filter((b) => b.marked).length)}.`) : null;
 }
 
 /** A row or card for one bill, so Worth a call can find the one a row named. */

@@ -82,7 +82,8 @@ export function row(opts: { route?: Route; title: Child; meta?: Child; aside?: C
     h('div', { class: 'row-title' }, opts.title),
     opts.meta ? h('div', { class: 'row-meta' }, opts.meta) : null,
   );
-  const aside = opts.aside ? h('div', { class: 'row-aside' }, opts.aside) : null;
+  const beside = Array.isArray(opts.aside) ? opts.aside.filter(Boolean) : opts.aside;
+  const aside = Array.isArray(beside) ? (beside.length ? h('div', { class: 'row-aside' }, beside) : null) : beside ? h('div', { class: 'row-aside' }, beside) : null;
   // The arrow is last, at the right edge, so amounts line up and the text keeps its width.
   const main = opts.route ? h('a', { class: 'row-main', href: href(opts.route) }, body, aside, h('span', { class: 'row-chevron' }, icon('next', 18))) : h('div', { class: 'row-main' }, body, aside);
   return h('div', { class: ['row', opts.class] }, h('div', { class: 'row-line' }, main), opts.extra ?? null);

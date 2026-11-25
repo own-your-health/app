@@ -56,8 +56,8 @@ export function studyTitle(s: ImagingStudy): string {
 }
 
 export type Item =
-  | { type: 'record'; record: MedRecord }
-  | { type: 'document'; document: MedDocument }
+  | { type: 'record'; record: MedRecord; inError?: true }
+  | { type: 'document'; document: MedDocument; inError?: true }
   | { type: 'study'; study: ImagingStudy };
 
 export function findItem(index: PersonIndex, id: string): Item | undefined {
@@ -67,6 +67,10 @@ export function findItem(index: PersonIndex, id: string): Item | undefined {
   if (document) return { type: 'document', document };
   const study = index.studies.find((s) => s.id === id);
   if (study) return { type: 'study', study };
+  const wrongRecord = index.inError?.records.find((r) => r.id === id);
+  if (wrongRecord) return { type: 'record', record: wrongRecord, inError: true };
+  const wrongDocument = index.inError?.documents.find((d) => d.id === id);
+  if (wrongDocument) return { type: 'document', document: wrongDocument, inError: true };
   return undefined;
 }
 
@@ -100,7 +104,7 @@ export function timeline(index: PersonIndex, title: (r: MedRecord) => string): T
 
 /** A record its source withdrew (FHIR entered-in-error): never shown as current. */
 export function isWithdrawn(r: MedRecord): boolean {
-  return r.status === 'entered-in-error';
+  return r.status === 'entered-in-error' && !r.stands;
 }
 
 /** A dose that was given: neither recorded as not done nor withdrawn. */

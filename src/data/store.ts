@@ -11,6 +11,7 @@ import { parseMedrecEvents } from '../model/events';
 import { atLeast, held, isHeld, noList, parsePrivate, type HeldWhy, type Privacy } from '../model/private';
 import { parseCodeNames } from '../model/codeNames';
 import { aboutAnother, stillAbout, withoutAbout, type About } from '../model/aboutAnother';
+import { inErrorIds, withoutErrors } from '../model/inError';
 import { parseStanding } from '../model/standing';
 import { parseViews, viewOf, type PersonView, type ViewFile } from '../model/views';
 import type { AttemptLine, Household, MarkRequest, PaidMark, PendingMark, Person, PersonIndex, PersonText, RefreshRequest, RefreshStatus, RefusedRequest, RequestScope, UnpaidMark } from '../model/types';
@@ -162,7 +163,7 @@ export class Store {
   standingNotes = new Map<string, string>();
   /** Who has no index.json: nothing is imported for them yet. */
   private absent = new Set<string>();
-  /** The items named as about somebody else, by person: they stay out until a list of the folder's files reads. */
+  /** The items named as about somebody else, by person, once a list has been read: they stay out until a list of the folder's files reads. */
   private named = new Map<string, ReadonlySet<string>>();
   private texts = new Map<string, Promise<PersonText | null>>();
   /** Handled requests of the app's own it has tried to remove once. */
@@ -300,10 +301,11 @@ export class Store {
       this.household.people.map(async (p) => {
         const [h, i] = await Promise.all([household, this.folder.md5(`${p.folder}/index.json`)].map((m) => m.catch(() => undefined)));
         const said: About = this.viewsError ? { ids: new Set(), unsure: this.viewsError.kind } : aboutAnother(views, p.id, { household: h, index: i });
-        const about = stillAbout(said, this.named.get(p.id) ?? new Set());
-        named.set(p.id, about.ids);
+        const about = stillAbout(said, this.named.get(p.id));
+        const listed = !said.unsure || said.unsure === 'behind';
+        if (listed || this.named.has(p.id) || about.ids.size) named.set(p.id, about.ids);
         const index = this.indexes.get(p.id);
-        if (index && !this.absent.has(p.id)) this.indexes.set(p.id, withoutAbout(index, about));
+        if (index && !this.absent.has(p.id)) this.indexes.set(p.id, withoutErrors(withoutAbout(index, about), inErrorIds(views, p.id, i)));
       }),
     );
     this.named = named;

@@ -4,17 +4,20 @@
 // are the same whether or not there are any; each shows, marked, on its
 // person's own.
 
+import { errorsOf } from '../model/inError';
 import { docTypeLabel, documentTitle } from '../model/records';
+import type { PersonIndex } from '../model/types';
 import { aboutNote, unsureNote } from '../ui/about';
 import { card, chip, driveLink, empty, filterChips, link, row, type Ctx } from '../ui/components';
 import { h } from '../ui/dom';
 import { count, dateText, localDay } from '../ui/format';
+import { differChip, errorsNote } from '../ui/inError';
 import { href, type Route } from '../ui/router';
 import { yearList } from '../ui/views/person';
 import { eventRoute, eventWhen, headline } from './eventView';
 import { papersOf, sharedPapers, type Paper, type PaperHow } from './papers';
 import { called } from '../model/people';
-import { knownArea } from '../model/private';
+import { knownArea, paperPrivate } from '../model/private';
 import { heldNotes, privateLine } from './shared';
 
 type Show = 'all' | 'with' | 'none';
@@ -57,10 +60,13 @@ function paperRow(ctx: Ctx, p: Paper, everyone: boolean): HTMLElement {
     route: { name: 'item', person: p.person, id: p.doc.id },
     title: documentTitle(p.doc),
     meta: [docTypeLabel(p.doc.doc_type), dateText(p.doc.date), everyone && ctx.store.person(p.person) ? called(ctx.store.person(p.person)!) : null, p.doc.organization, p.doc.pages ? count(p.doc.pages, 'page') : null].filter(Boolean).join(' · '),
-    aside: knownArea(p.private) ? chip('Private', 'muted') : undefined,
+    aside: [differChip({ type: 'document', document: p.doc }), knownArea(p.private) ? chip('Private', 'muted') : null],
     extra: h('div', null, placeLine(ctx, p), h('div', { class: 'row-actions' }, driveLink(ctx, p.doc.path))),
   });
 }
+
+/** The papers entered in error, which no list has: all of a person's own, and of everyone's those that are not private. */
+const errorsIn = (idx: PersonIndex | undefined, shared: boolean): number => (idx ? errorsOf(idx, { document: (d) => !shared || !paperPrivate(idx, d.id) }) : 0);
 
 function head(ctx: Ctx, who: string | undefined): HTMLElement[] {
   const person = who ? ctx.store.person(who) : undefined;
@@ -112,6 +118,7 @@ export function papersView(ctx: Ctx, route: Extract<Route, { name: 'papers' }>):
   const notes = [
     loading ? h('p', { class: 'small muted' }, `Loading ${count(loading, 'person’s', 'people’s')} papers…`) : null,
     ...unreadable.map((p) => h('p', { class: 'small muted' }, `${called(p)}’s records could not be read.`)),
+    errorsNote(people.reduce((n, p) => n + errorsIn(store.index(p.id), !who), 0)),
     ...(own ? [aboutNote(own), unsureNote(own)] : []),
     who ? null : privateLine('Private papers are never listed here. Each shows on its person’s own Papers. This is discretion, not security: everyone the Drive folder is shared with can read every file in it.'),
     ...(who ? [] : heldNotes(ctx, 'this shared view')),

@@ -59,6 +59,8 @@ export interface CareEvent {
   descriptors?: string[];
   /** What medrec still expects for it: the doctors' claims, the hospital's claim, a claim or a bill. */
   expected?: { what: string; why: string; since?: string }[];
+  /** How many items entered in error it would have. */
+  inError?: number;
   /** Set where the event is not private and a record or paper of it, or what gives its place, is: the event without those, named and priced by the rest, as a shared screen shows it. */
   shared?: CareEvent;
   /** On that one: a claim of it is left out, so what it comes to is not what the visit cost. */

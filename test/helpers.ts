@@ -91,9 +91,13 @@ export function standingCase(person: string, { standing = true, hidden = [], sch
   view('bills', { ...viewNow('bills'), bills: {}, copy_of: {}, receipts: [], worth_a_call: [], not_billed: [] });
   view('private', { ...viewNow('private'), records: Object.fromEntries(hidden.map((id) => [id, { area: 'mental_health' }])), documents: {}, events: {}, studies: {}, unreported_studies: [] });
   for (const file of ['code-names', 'providers'] as const) delete v.files[`${file}.json`];
-  const said = fixture<{ records: Record<string, { line: string }> }>('standing/medrec/standing.json');
+  const said = fixture<{ records: Record<string, { line: string }>; in_error: object }>('standing/medrec/standing.json');
   if (line) for (const [id, r] of Object.entries(said.records)) r.line = line(id, r.line);
-  if (standing) view('standing', { ...said, person, ...(schema ? { schema } : {}) });
+  if (standing) {
+    view('standing', { ...said, person, ...(schema ? { schema } : {}) });
+    Object.assign(views, { medrec: '0.9.9' });
+    Object.assign(v, { in_error: said.in_error });
+  }
   out['views/views.json'] = JSON.stringify(views);
   return out;
 }

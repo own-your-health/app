@@ -2,6 +2,7 @@
 // conditions, allergies, immunizations and imaging. Their documents are on
 // Papers.
 
+import { errorsOf } from '../../model/inError';
 import { conditionName } from '../../model/codeNames';
 import { originNames, sortByDateDesc, str, studyTitle } from '../../model/records';
 import { isOutOfRange, rangeFor, resultFlag } from '../../model/flags';
@@ -16,6 +17,7 @@ import { button, card, chip, command, empty, flagChip, link, row, type Ctx } fro
 import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, localDay, yearOf } from '../format';
 import { SECTION_LABELS, type ListSection, type Route } from '../router';
+import { errorsNote } from '../inError';
 import { headedRows, isText, isWord, listNotes, prescriptionOf, standingMeta, standingNote } from '../standing';
 import { called } from '../../model/people';
 
@@ -179,7 +181,8 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
       others.length ? card({ title: `Also in ${group.name}` }, others.map((x) => resultRow(person.id, x))) : null,
     );
   }
-  if (!groups.length) return card({ title: 'Results' }, empty('No results yet.'), unsureNote(idx), aboutNote(idx));
+  const notes = [errorsNote(errorsOf(idx, { record: (r) => r.kind === 'result' })), aboutNote(idx)];
+  if (!groups.length) return card({ title: 'Results' }, empty('No results yet.'), unsureNote(idx), ...notes);
   return h(
     'div',
     { class: 'stack' },
@@ -190,7 +193,7 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
         g.tests.map((t) => resultRow(person.id, t)),
       ),
     ),
-    aboutNote(idx),
+    ...notes,
   );
 }
 
@@ -354,6 +357,7 @@ function immunizationList(ctx: Ctx, person: Person, idx: PersonIndex): HTMLEleme
           notGiven.map((r) => row({ route: itemRoute(person.id, r.id), title: r.display || 'Vaccine', meta: meta(dateText(r.date), sourcesText(ctx, person, r.provenance)) })),
         )
       : null,
+    errorsNote(errorsOf(idx, { record: (r) => r.kind === 'immunization' })),
   );
 }
 

@@ -110,7 +110,8 @@ test('Health and its sheet for a doctor have the same lists, with what they leav
 test('a record’s page says what it is and what each source says of it', async ({ page }) => {
   await lay(page, standingCase(ALEX));
   const says = page.locator('.kv-row', { has: page.locator('dt', { hasText: 'Each source says' }) }).locator('li');
-  const head = page.locator('main .card').first();
+  // What is entered in error says so in a card of its own, before its page.
+  const head = page.locator('main .card:not(.in-error)').first();
   for (const [stem, is, chip, lines] of [
     ['bothsay', 'Condition · Current', ['Sources differ'], ['Example Health: active, read May 2, 2024', 'Sample Clinic East: resolved, read May 3, 2024']],
     ['visitonly', 'Condition · Diagnosis from a visit', [], ['Example Walk-in: active, read May 4, 2024']],
@@ -124,6 +125,7 @@ test('a record’s page says what it is and what each source says of it', async 
     await expect(head.locator('p').first()).toContainText(is);
     await expect(chips(head)).toHaveText([...chip]);
     await expect(says).toHaveText([...lines]);
+    await expect(page.locator('.in-error')).toHaveCount(stem === 'erroraaa' ? 1 : 0);
   }
   // A fill is a fact: it has no standing, and says what it is and when.
   for (const [stem, is] of [

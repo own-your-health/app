@@ -34,6 +34,13 @@ export interface BillState {
   selfPay?: true;
 }
 
+/** A bill none of whose papers stands: entered in error, all of them. */
+export interface BillInError {
+  document: string;
+  /** The payments the household marked on it. */
+  marked: number;
+}
+
 const REASONS = ['asks_more', 'asks_less', 'no_claim', 'desk_copay'] as const;
 export type CallReason = (typeof REASONS)[number];
 
@@ -50,6 +57,8 @@ export interface MedrecBills {
   states: Map<string, BillState>;
   /** None of a settled bill, whatever medrec lists: before 0.9.6 it lists one no claim backs. */
   calls: BillCall[];
+  /** The bills entered in error, which are in no list or total (medrec 0.9.9 and later). */
+  errors: BillInError[];
   /** The household's marks could not be read, so no payment it marked is here. */
   marksUnreadable: boolean;
 }
@@ -87,5 +96,8 @@ export function parseBills(raw: unknown, person: string): MedrecBills {
     const [asked, owed] = [moneyOf(v.asked, v.currency), moneyOf(v.owed, v.currency)];
     return [{ reason, document, ...(asked ? { asked } : {}), ...(owed ? { owed } : {}) }];
   });
-  return { states, calls, marksUnreadable: raw.marks_unreadable !== undefined && raw.marks_unreadable !== false };
+  const errors = Object.entries(isObject(raw.in_error) ? raw.in_error : {}).flatMap(([document, v]): BillInError[] =>
+    isObject(v) && v.as === 'bill' ? [{ document, marked: (Array.isArray(v.not_applied) ? v.not_applied : []).filter((x) => isObject(x) && x.from === 'household').length }] : [],
+  );
+  return { states, calls, errors, marksUnreadable: raw.marks_unreadable !== undefined && raw.marks_unreadable !== false };
 }

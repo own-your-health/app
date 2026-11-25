@@ -53,6 +53,14 @@ export function shown(events: PersonEvent[], who: string | undefined, showPrivat
   return { events: kept.map(asShared), hidden: cleared.length - kept.length };
 }
 
+/** How many events a view leaves out for being entered in error: one person's, or everyone's that are not private. */
+export function errorsLeft(people: Person[], index: (id: string) => PersonIndex | undefined, who: string | undefined): number {
+  return people.reduce((n, p) => {
+    const idx = who && p.id !== who ? undefined : index(p.id);
+    return n + (idx?.events?.errors ?? []).filter((e) => who || (idx!.privacy?.kind === 'known' && !idx!.privacy.events.has(e.id))).length;
+  }, 0);
+}
+
 export type MarkShape = 'dot' | 'ring' | 'bar';
 
 export function markShape(e: CareEvent): MarkShape {

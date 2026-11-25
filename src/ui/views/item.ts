@@ -28,6 +28,7 @@ import { button, card, chip, command, dotted, driveLink, empty, flagChip, jsonBl
 import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, dateTime, localDay } from '../format';
 import type { Route } from '../router';
+import { differChip, errorCard } from '../inError';
 import { differing, fillText, isText, saidLines } from '../standing';
 import { visitContents, visitWhen } from '../visit';
 import { called } from '../../model/people';
@@ -620,7 +621,7 @@ function documentView(ctx: Ctx, idx: PersonIndex, d: MedDocument): Child[] {
     h(
       'section',
       { class: 'card' },
-      h('div', { class: 'card-head card-head-paper' }, h('h1', null, documentTitle(d)), chip(docTypeLabel(d.doc_type), 'muted')),
+      h('div', { class: 'card-head card-head-paper' }, h('h1', null, documentTitle(d)), h('div', { class: 'chips-aside' }, differChip({ type: 'document', document: d }), chip(docTypeLabel(d.doc_type), 'muted'))),
       h('p', { class: 'muted' }, dotted([dateText(d.date), providerLink(ctx, idx, d.id, ['organization'], d.organization)])),
       h('div', { class: 'row-actions' }, paper.button, driveLink(ctx, d.path, 'Open in Drive')),
       paper.panel,
@@ -665,7 +666,7 @@ function documentView(ctx: Ctx, idx: PersonIndex, d: MedDocument): Child[] {
             )
           : null,
       ),
-      provenanceCard(ctx, idx, d.provenance, 0, 1),
+      ...[d.provenance, ...(d.also_from ?? [])].map((p, i, all) => provenanceCard(ctx, idx, p, i, all.length)),
       card({ title: 'Identifiers' }, kv([['Document', h('code', null, d.id)], ['SHA-256', h('code', { class: 'wrap' }, d.sha256)]])),
     ),
   ];
@@ -686,7 +687,7 @@ function studyView(ctx: Ctx, idx: PersonIndex, st: ImagingStudy): Child[] {
         ['Body part', st.body_part],
         ['Referred by', st.referring],
         ['Images', `${count(st.instances, 'image')} in ${count(st.series.length, 'series', 'series')}`],
-        ['Report', report ? link({ name: 'item', person: idx.person, id: st.report! }, report.type === 'document' ? documentTitle(report.document) : report.type === 'record' ? recordTitle(report.record) : 'Report') : undefined],
+        ['Report', report && !('inError' in report) ? link({ name: 'item', person: idx.person, id: st.report! }, report.type === 'document' ? documentTitle(report.document) : report.type === 'record' ? recordTitle(report.record) : 'Report') : undefined],
       ]),
     ),
     technical(
@@ -723,5 +724,5 @@ export function itemView(ctx: Ctx, personId: string, id: string): HTMLElement {
   const item = findItem(idx, id);
   if (!item) return h('div', { class: 'stack' }, back, card({}, empty('This record is not in the index. It may have been merged or removed by medrec.')));
   const body = item.type === 'record' ? recordView(ctx, idx, item.record) : item.type === 'document' ? documentView(ctx, idx, item.document) : studyView(ctx, idx, item.study);
-  return h('div', { class: 'stack' }, back, partOfEvent(ctx, personId, idx, id), ...body);
+  return h('div', { class: 'stack' }, back, partOfEvent(ctx, personId, idx, id), errorCard(ctx, idx, id, item), ...body);
 }

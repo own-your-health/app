@@ -10,12 +10,13 @@ import { formatMoney } from '../model/records';
 import { card, chip, driveLink, kv, link, phoneLink, row, type Ctx } from '../ui/components';
 import { h } from '../ui/dom';
 import { count, dateText } from '../ui/format';
+import { differChip } from '../ui/inError';
 import type { Route } from '../ui/router';
 import { paidControl } from './markPaid';
 import { daysBetween } from './needs';
 import { eventRoute, eventWhen } from './eventView';
 import { callsSummary, mayBePaid, NO_CLAIM_EXPECTED, overAsked, overdueLabel, PAID_ELSEWHERE, paymentText, partText, toPay, unreadText, worthACall, type OpenBill, type PaidBill } from './money';
-import { billNotes, forBill, gather, head, listLine, money, num, privateChip, visitText, type Mine, type MoneyRoute } from './moneyParts';
+import { billErrors, billNotes, forBill, gather, head, listLine, money, num, privateChip, visitText, type Mine, type MoneyRoute } from './moneyParts';
 import { eventsPage, overviewPage } from './moneyYear';
 import { providerLink } from './providerView';
 import { heldNotes } from './shared';
@@ -51,7 +52,7 @@ function openRow(ctx: Ctx, m: Mine<OpenBill>, today: string, named: boolean): HT
       h(
         'div',
         { class: 'bill-line' },
-        h('div', { class: 'chips' }, b.marked || mayBePaid(b) ? null : dueChip(b, today), b.verdict === 'matches' ? chip('Matches the claim', 'ok') : b.verdict === 'self_pay' ? chip(NO_CLAIM_EXPECTED, 'muted') : null, privateChip(b.private)),
+        h('div', { class: 'chips' }, differChip({ type: 'document', document: b.bill.doc }), b.marked || mayBePaid(b) ? null : dueChip(b, today), b.verdict === 'matches' ? chip('Matches the claim', 'ok') : b.verdict === 'self_pay' ? chip(NO_CLAIM_EXPECTED, 'muted') : null, privateChip(b.private)),
         h(
           'div',
           { class: 'bill-links' },
@@ -163,7 +164,7 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
             route: m.item.event ? eventRoute(m.person.id, m.item.event.event.id) : { name: 'item', person: m.person.id, id: m.item.bill.doc.id },
             title: m.item.bill.provider ?? 'A provider',
             meta: [named ? called(m.person) : null, m.item.event ? visitText(m.item.event) : billWhen(m.item), ...m.item.bill.payments.map((p) => paymentText(p, m.item.bill.payments.length > 1))].filter(Boolean).join(' · '),
-            aside: [privateChip(m.item.private), m.item.cents !== undefined ? num(m.item.cents) : null],
+            aside: [differChip({ type: 'document', document: m.item.bill.doc }), privateChip(m.item.private), m.item.cents !== undefined ? num(m.item.cents) : null],
           }),
         ),
       )
@@ -181,6 +182,7 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
     markedCard,
     unbilledCard,
     paidCard,
+    billErrors(ctx, who),
     ...billNotes(ctx, who),
     listLine(who, 'Bills'),
     ...(who ? [] : heldNotes(ctx, 'this shared view')),
