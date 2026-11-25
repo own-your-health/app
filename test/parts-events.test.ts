@@ -1,6 +1,8 @@
 // The private parts of open items (private.json `parts`, medrec 0.9.9) in
 // visits: what a shared screen goes by, and that everything else is whole.
 // The sample's visits, with parts set on what the store read.
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { Store } from '../src/data/store';
 import { claimLines } from '../src/model/claims';
@@ -12,7 +14,7 @@ import { careEvents } from '../src/next/grouping';
 import { personEvents } from '../src/next/load';
 import { explainedLines } from '../src/next/money';
 import { personNamed } from './demo-data';
-import { demoFolderWith } from './helpers';
+import { DEMO, demoFolderWith } from './helpers';
 
 const TODAY = '2026-11-22';
 const FOLDER = demoFolderWith({});
@@ -240,45 +242,44 @@ it('a line the plan did not count is not explained on a shared screen when it is
 });
 
 describe('the text medrec judged', () => {
-  it('is the one the store reads, and no other', async () => {
+  it('is the one that was read, by its own MD5, whatever the folder says of it', async () => {
     const before = await SAMPLE.text(robin);
     const idx = withParts({});
     if (idx.privacy?.kind !== 'known') throw new Error('not known');
     expect([typeof before!.md5, idx.privacy.text]).toEqual(['string', before!.md5]);
     expect(sharedTexts(idx, before)).toEqual(before);
-    // A folder whose text.json changed since.
-    const folder = demoFolderWith({});
+    // A folder whose text.json changed since, and that says it did not.
+    const path = 'Robin Example/text.json';
+    const changed = demoFolderWith({ [path]: `${readFileSync(join(DEMO, path), 'utf8')} ` }, (m) => (m.md5![path] = before!.md5!));
+    const store = new Store(changed);
+    await store.load();
+    const now = await store.text(robin);
+    expect([await changed.md5(path), now!.texts, sharedTexts(idx, now)]).toEqual([before!.md5, before!.texts, null]);
+    // Read for before a reload, and come after it, it is still by its own.
+    const late = new Store(demoFolderWith({}));
+    await late.load();
+    let answer = () => {};
+    const readHashed = late.folder.readHashed.bind(late.folder);
+    late.folder.readHashed = async (p) => (await new Promise<void>((r) => (answer = r)), readHashed(p));
+    const asked = late.text(robin);
+    late.folder.fresh = () => changed;
+    await late.reload();
+    answer();
+    expect([(await asked)!.md5, (await late.text(robin))!.md5]).toEqual([before!.md5, now!.md5]);
+    expect(sharedIndex(idx)).toBe(idx);
+  });
+
+  it('is read once, and again where it was not read', async () => {
+    const folder = demoFolderWith({ 'Robin Example/text.json': null });
     const store = new Store(folder);
     await store.load();
-    folder.md5 = async () => 'f'.repeat(32);
-    expect(sharedTexts(idx, await store.text(robin))).toBeNull();
-    // One that cannot say.
-    const silent = demoFolderWith({});
-    const other = new Store(silent);
-    await other.load();
-    silent.md5 = () => Promise.reject(new Error('offline'));
-    const unsaid = await other.text(robin);
-    expect([Object.keys(unsaid!.texts).length > 0, unsaid!.md5, sharedTexts(idx, unsaid)]).toEqual([true, undefined, null]);
-    // It is asked again the next time, of the text as read, and not once it has said.
-    let [asked, read] = [0, 0];
-    const { readText } = silent;
-    silent.readText = (path) => (read++, readText.call(silent, path));
-    silent.md5 = async () => (asked++, idx.privacy?.kind === 'known' ? idx.privacy.text : undefined);
-    const now = await other.text(robin);
-    expect([now!.md5, now!.texts === unsaid!.texts, sharedTexts(idx, now) === null]).toEqual([before!.md5, true, false]);
-    expect([await other.text(robin), asked, read]).toEqual([now, 1, 0]);
-    // A person with no text.json is looked for once; one that did not read is read again.
-    const bare = demoFolderWith({ 'Robin Example/text.json': null });
-    const third = new Store(bare);
-    await third.load();
-    const looked: string[] = [];
-    const reads = bare.readText.bind(bare);
-    bare.readText = (path) => (looked.push(path), reads(path));
-    expect([await third.text(robin), await third.text(robin), looked]).toEqual([null, null, ['Robin Example/text.json']]);
-    bare.readText = () => Promise.reject(new Error('offline'));
-    await expect(third.text(sam)).rejects.toThrow('offline');
-    bare.readText = reads;
-    expect((await third.text(sam))!.md5).toBeDefined();
-    expect(sharedIndex(idx)).toBe(idx);
+    const reads = folder.readHashed.bind(folder);
+    let read = 0;
+    folder.readHashed = (p) => (read++, reads(p));
+    expect([await store.text(robin), await store.text(robin), await store.text('p_none'), read]).toEqual([null, null, null, 1]);
+    folder.readHashed = () => Promise.reject(new Error('offline'));
+    await expect(store.text(sam)).rejects.toThrow('offline');
+    folder.readHashed = reads;
+    expect((await store.text(sam))!.md5).toBeDefined();
   });
 });

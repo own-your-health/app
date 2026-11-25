@@ -261,7 +261,7 @@ export interface PersonText {
   schema: string;
   person: string;
   texts: Record<string, string>;
-  /** Of the text.json this is, where the folder says. */
+  /** Of the text.json this was read as. */
   md5?: string;
 }
 

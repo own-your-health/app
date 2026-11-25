@@ -161,16 +161,13 @@ export function sharedText(text: string, gone: [number, number][]): string | und
 
 const texts = new WeakMap<PersonIndex, { of: PersonText; twin: PersonText }>();
 
-/** Why a text.json is on no shared screen: it is another than the one medrec said the private lines of, or the folder did not say which it is. */
-export function textUnfit(index: PersonIndex, text: PersonText | null): 'changed' | 'unchecked' | undefined {
-  if (!text || index.privacy?.kind !== 'known' || !index.privacy.parts) return undefined;
-  return text.md5 === undefined ? 'unchecked' : text.md5 !== index.privacy.text ? 'changed' : undefined;
-}
-
-/** A person's texts as a shared screen goes by them: null for one that is on none. */
+/**
+ * A person's texts as a shared screen goes by them: null for a text.json other
+ * than the one medrec said the private lines of.
+ */
 export function sharedTexts(index: PersonIndex, text: PersonText | null): PersonText | null {
-  if (textUnfit(index, text)) return null;
   if (!text || index.privacy?.kind !== 'known' || !index.privacy.parts) return text;
+  if (text.md5 === undefined || text.md5 !== index.privacy.text) return null;
   const hit = texts.get(index);
   if (hit?.of === text) return hit.twin;
   const left = Object.entries(text.texts).flatMap(([id, body]) => {

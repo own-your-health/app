@@ -3,6 +3,7 @@
 // medrec writes them in the index (`Robin Example/index.json`).
 
 import { Drive, DriveError, FOLDER_MIME, readBody, viewUrl, type DriveFile, type ReadOptions } from './drive';
+import { md5 } from './md5';
 
 export interface Entry {
   name: string;
@@ -17,6 +18,8 @@ export interface RecordsFolder {
   readonly id: string;
   readonly name: string;
   readText(path: string): Promise<string | null>;
+  /** A file's text, with the MD5 of the bytes it was read as. */
+  readHashed(path: string): Promise<{ text: string; md5: string } | null>;
   /** A file's bytes, as they are, kept nowhere here; null when it is not there. Only for a paper someone asked to see. */
   readBytes(path: string, opts?: ReadOptions): Promise<Uint8Array<ArrayBuffer> | null>;
   /**
@@ -44,14 +47,23 @@ export interface RecordsFolder {
   fresh(): RecordsFolder;
 }
 
-export async function readJson(folder: RecordsFolder, path: string): Promise<unknown | null> {
-  const text = await folder.readText(path);
-  if (text === null) return null;
+function parsed(text: string, path: string): unknown {
   try {
     return JSON.parse(text) as unknown;
   } catch {
     throw new Error(`${path} is not valid JSON.`);
   }
+}
+
+export async function readJson(folder: RecordsFolder, path: string): Promise<unknown | null> {
+  const text = await folder.readText(path);
+  return text === null ? null : parsed(text, path);
+}
+
+/** A JSON file, with the MD5 of what was read. */
+export async function readHashedJson(folder: RecordsFolder, path: string): Promise<{ json: unknown; md5: string } | null> {
+  const file = await folder.readHashed(path);
+  return file && { json: parsed(file.text, path), md5: file.md5 };
 }
 
 export function splitPath(path: string): string[] {
@@ -134,6 +146,11 @@ export class DriveFolder implements RecordsFolder {
     }
   }
 
+  async readHashed(path: string): Promise<{ text: string; md5: string } | null> {
+    const bytes = await this.readBytes(path);
+    return bytes && { text: new TextDecoder().decode(bytes), md5: md5(bytes) };
+  }
+
   async readBytes(path: string, opts?: ReadOptions): Promise<Uint8Array<ArrayBuffer> | null> {
     const f = await this.resolve(path);
     if (!f || f.mimeType === FOLDER_MIME) return null;
@@ -159,10 +176,7 @@ export class DriveFolder implements RecordsFolder {
     if (!m) {
       m = this.drive.get(f.id).then(
         (x) => x.md5Checksum?.toLowerCase(),
-        () => {
-          this.reread.delete(p);
-          return undefined;
-        },
+        () => undefined,
       );
       this.reread.set(p, m);
     }
@@ -343,6 +357,15 @@ export class DemoFolder implements RecordsFolder {
     if (!(await this.exists(p))) return null;
     const res = await this.fetchImpl(this.url(p));
     return res.ok ? this.shift(await res.text()) : null;
+  }
+
+  /** The MD5 is of the file as written, before the shift. */
+  async readHashed(path: string): Promise<{ text: string; md5: string } | null> {
+    const p = splitPath(path).join('/');
+    const w = this.written.get(p);
+    if (w !== undefined) return { text: w, md5: md5(new TextEncoder().encode(w)) };
+    const bytes = await this.readBytes(p);
+    return bytes && { text: this.shift(new TextDecoder().decode(bytes)), md5: md5(bytes) };
   }
 
   async readBytes(path: string, opts: ReadOptions = {}): Promise<Uint8Array<ArrayBuffer> | null> {

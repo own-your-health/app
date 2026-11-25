@@ -2,7 +2,7 @@
 // read from the folder is written to browser storage or sent anywhere but
 // back to Drive.
 
-import { readJson, REQUESTS_DIR, Unanswered, type Entry, type RecordsFolder } from '../folder';
+import { readHashedJson, readJson, REQUESTS_DIR, Unanswered, type Entry, type RecordsFolder } from '../folder';
 import { FolderError, parseAttempts, parseHousehold, parseIndex, parseMark, parseRefused, parseRequest, parseStatus, parseText } from '../model/parse';
 import { buildMark, buildRequest, markRecorded, requestFileName, sameScope } from '../model/requests';
 import { macState, sourceViews, type MacState, type SourceView } from '../model/sources';
@@ -104,11 +104,11 @@ const requestPaths = (entries: Entry[] | null, done: Entry[] | null): string[] =
 const isRefresh = (p: PendingRequest | PendingMark): p is PendingRequest => 'scope' in p.request;
 const isMark = (p: PendingRequest | PendingMark): p is PendingMark => !isRefresh(p);
 
-/** A person's text.json as read, with its MD5 asked after the read: of this one or a newer. */
-async function withMd5(folder: RecordsFolder, path: string, text: PersonText | null): Promise<PersonText | null> {
-  if (!text || text.md5 !== undefined) return text;
-  const md5 = await folder.md5(path).catch(() => undefined);
-  return { ...text, ...(md5 ? { md5 } : {}) };
+/** A person's text.json, with the MD5 of what was read. */
+async function readTexts(folder: RecordsFolder, path: string): Promise<PersonText | null> {
+  const file = await readHashedJson(folder, path);
+  const text = file && parseText(file.json);
+  return text && { ...text, md5: file.md5 };
 }
 
 export class Store {
@@ -666,15 +666,14 @@ export class Store {
     return this.indexes.get(personId);
   }
 
-  /** The text of a person's papers, read once. While the folder has not said its MD5, it is asked again each time. */
   text(personId: string): Promise<PersonText | null> {
-    const p = this.person(personId);
-    if (!p) return Promise.resolve(null);
-    const at = `${p.folder}/text.json`;
-    const read = this.texts.get(personId) ?? readJson(this.folder, at).then(parseText);
-    const t = read.then((x) => withMd5(this.folder, at, x));
-    t.catch(() => this.texts.delete(personId));
-    this.texts.set(personId, t);
+    let t = this.texts.get(personId);
+    if (!t) {
+      const p = this.person(personId);
+      t = p ? readTexts(this.folder, `${p.folder}/text.json`) : Promise.resolve(null);
+      t.catch(() => this.texts.delete(personId));
+      this.texts.set(personId, t);
+    }
     return t;
   }
 

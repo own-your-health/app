@@ -65,8 +65,6 @@ export class FakeGoogle {
   readonly reads: string[] = [];
   /** A file whose content Drive fails to give, as it does now and then; `*` while it answers nothing at all. */
   failing: string | null = null;
-  /** A file whose details, its MD5 among them, Drive fails to give. */
-  unsaid: string | null = null;
   /** Drive stores the next files the app writes, and its answer is lost. */
   losing = false;
   /** The folder is another account's, shared with this one to view only. */
@@ -267,7 +265,6 @@ export class FakeGoogle {
       if (this.pathOf(node) === this.failing) return driveError(route, 503, 'backendError', 'Backend Error');
       return route.fulfill({ status: 200, headers: { ...cors(), 'content-type': 'application/json' }, body: node.bytes ?? node.content ?? '' });
     }
-    if (this.pathOf(node) === this.unsaid) return driveError(route, 503, 'backendError', 'Backend Error');
     return json(route, 200, this.resource(node));
   }
 

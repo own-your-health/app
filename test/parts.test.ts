@@ -3,7 +3,7 @@ import { claimCents, claimLines, claimNotes } from '../src/model/claims';
 import { diagnosisNames } from '../src/model/codeNames';
 import { costLines, errorLines, totals } from '../src/model/costs';
 import { parseIndex, parseText } from '../src/model/parse';
-import { parseParts, partOf, partSays, sharedIndex, sharedRecord, sharedText, sharedTexts, textUnfit } from '../src/model/parts';
+import { parseParts, partOf, partSays, sharedIndex, sharedRecord, sharedText, sharedTexts } from '../src/model/parts';
 import { parsePrivate, type Privacy } from '../src/model/private';
 import { recordTitle } from '../src/model/titles';
 import { find } from '../src/model/search';
@@ -214,11 +214,10 @@ describe('a paper’s text, on a shared screen', () => {
     expect([sharedTexts(made({}), text), sharedTexts(index, null)]).toEqual([text, null]);
   });
 
-  it('is none where it is another text.json than the one medrec judged, or the folder cannot say', () => {
+  it('is none where it is another text.json than the one medrec judged, or that is not known', () => {
     const other = { ...text, md5: 'a newer text' };
     const unsaid = parseText(fixture('parts/medrec/text.json'))!;
     expect([sharedTexts(index, other), sharedTexts(index, unsaid), sharedTexts(made({}), other)]).toEqual([null, null, null]);
-    expect([textUnfit(index, other), textUnfit(index, unsaid), textUnfit(index, text), textUnfit(index, null), textUnfit(made(undefined), other)]).toEqual(['changed', 'unchecked', undefined, undefined, undefined]);
     expect(sharedTexts({ ...index, privacy: of({}) }, unsaid)).toBeNull();
     // A list of before 0.9.9 judged no lines: the text is as it was.
     expect(sharedTexts(made(undefined), other)).toBe(other);

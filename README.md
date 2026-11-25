@@ -281,8 +281,8 @@ and your share, with its deductible, copay and coinsurance. A claim whose
 lines do not add up to its totals keeps the difference as a line of its own,
 "Not split by line", so a period's totals are always its claims'; a line the
 totals leave out counts nothing, and leaves no such line. On everyone's view the
-private lines of a claim that is listed are one line, "Not shown here". It
-narrows to:
+private lines of a claim that is listed are one line for each of their days,
+"Not shown here". It narrows to:
 - a period: this or last plan year, a calendar year, or every year. A plan
   year starts on the day the plan's claims give for it (the benefit period an
   ExplanationOfBenefit prints, `fields.benefit_period` in the index, when it
@@ -1036,10 +1036,10 @@ page count. Papers took the place of each person's list of documents. A
   left out. Amounts stay, on their days: in Costs a claim's private lines are
   one line for each day, "Not shown here". The app judges no line. A list that
   its places are not of shows nothing of itself. Neither does a person's text
-  where the `text.json` read is not the one the list was made from, or Drive did
-  not say which it is: everyone's search says so, and asks again the next time.
-  Their own pages show all of it and say where it stays off. A list of before
-  0.9.9 has no `parts` and judged none.
+  where the `text.json` read, by its own MD5 (`src/md5.ts`), is not the one the
+  list was made from: everyone's search says so. Their own pages show all of it
+  and say where it stays off. A list of before 0.9.9 has no `parts` and judged
+  none.
 
   **Without a current list, everything of that person's stays off.** The
   list is used only when the MD5s in `views/views.json` are the folder's:

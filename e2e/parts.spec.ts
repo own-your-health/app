@@ -1,6 +1,7 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { linesPrivate, rewritten } from './alter';
 import { lay } from './lay';
+import { macWrites } from './mac';
 import { CLIENT, FakeGoogle, FOLDER_NAME } from './fake-google';
 import { eventId, itemId, ROBIN } from '../test/sample';
 
@@ -110,22 +111,27 @@ async function signedIn(page: Page, context: BrowserContext): Promise<FakeGoogle
   return google;
 }
 
-test('the text of papers Drive did not say the MD5 of is on everyone’s search once it has', async ({ page, context }) => {
+test('everyone’s search goes by the text and the private lines of each read of the records, with its page open', async ({ page, context }) => {
   const google = await signedIn(page, context);
-  google.unsaid = 'Robin Example/text.json';
   await page.evaluate(() => (location.hash = '#/search?q=billing'));
-  const unchecked = 'The text of Robin’s papers is not searched here: it could not be checked against what medrec said is private in it. The next search checks again.';
-  await expect(main(page)).toContainText(unchecked);
-  await expect(main(page)).not.toContainText('it changed since');
-  // While Drive does not say, each search asks again, and reads no text again.
+  const results = main(page).locator('.row');
+  await expect(results.first()).toBeVisible();
   const reads = () => google.reads.filter((x) => x === 'Robin Example/text.json').length;
-  expect(reads()).toBe(1);
   await page.getByRole('searchbox').fill('billing code');
-  await expect(main(page)).toContainText(unchecked);
-  google.unsaid = null;
-  await page.getByRole('searchbox').fill('billing');
-  await expect(main(page)).not.toContainText('is not searched here');
+  await expect(page.locator('main [aria-live]').filter({ hasText: 'match' })).toBeVisible();
   expect(reads()).toBe(1);
+  // medrec wrote the texts again, with other private lines, and its list of them.
+  await macWrites(page, google, linesPrivate(`Newer and longer ${SAID}`), 0);
+  for (const q of ['newer and longer', 'example']) {
+    await page.getByRole('searchbox').fill(q);
+    await expect(page.locator('main [aria-live]').filter({ hasText: 'match' })).toHaveText(q === 'example' ? /^[1-9]\d* matches\./ : /^0 matches\./);
+    await expect(main(page)).not.toContainText('is not searched here');
+    await expect(main(page)).not.toContainText(SAID);
+  }
+  expect(reads()).toBe(2);
+  await page.getByRole('searchbox').fill('newer and longer');
+  await page.getByRole('group', { name: 'Filter by person' }).getByRole('button', { name: 'Robin' }).click();
+  await expect(results.first()).toContainText(`Newer and longer ${SAID}`);
   expect(google.strays).toEqual([]);
 });
 

@@ -19,7 +19,7 @@
 
 import { KIND_LABELS } from '../model/records';
 import { errorsIndex } from '../model/inError';
-import { partSays, sharedIndex, sharedTexts, textUnfit } from '../model/parts';
+import { partSays, sharedIndex, sharedTexts } from '../model/parts';
 import { HELD, isHeld, itemPrivate, studyPrivate } from '../model/private';
 import { conceptOf, find, matchRanges, terms, type Found, type Hit, type Searchable } from '../model/search';
 import type { Person, PersonText } from '../model/types';
@@ -32,12 +32,6 @@ import { called } from '../model/people';
 import { heldNotes } from '../next/shared';
 
 const PAGE = 50;
-
-/** Why the text of someone's papers is not on everyone's search. */
-const UNFIT = [
-  ['changed', 'it changed since medrec said what in it is private. medrec says it again after its next import or refresh.'],
-  ['unchecked', 'it could not be checked against what medrec said is private in it. The next search checks again.'],
-] as const;
 
 /** What a kind's filter says, for more than one. */
 const KIND_PLURAL: Record<string, string> = {
@@ -170,19 +164,17 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
   const filters = h('div', { class: 'search-filters' }, whoRow, kindRow);
   const results = h('div');
   let timer: number | undefined;
-  let texts: Map<string, PersonText | null> | undefined;
+  let reading = true;
   let run = 0;
   let kind = 'all';
   let who = opts.who && people.some((p) => p.id === opts.who) ? opts.who : 'all';
   const address = () => history.replaceState(null, '', href(opts.route(lastQuery || undefined, words, who === 'all' ? undefined : who)));
 
+  /** The store reads them once for each read of the records, which this page stays open through. */
   const loadTexts = async (): Promise<Map<string, PersonText | null>> => {
-    if (texts) return texts;
-    status.textContent = 'Reading the text of the documents…';
-    const loaded = new Map(await Promise.all(people.map(async (p) => [p.id, await ctx.store.text(p.id).catch(() => null)] as const)));
-    // One the folder did not say the MD5 of is asked for again by the next search.
-    if (![...loaded.values()].some((t) => t && t.md5 === undefined)) texts = loaded;
-    return loaded;
+    if (reading) status.textContent = 'Reading the text of the documents…';
+    reading = false;
+    return new Map(await Promise.all(people.map(async (p) => [p.id, await ctx.store.text(p.id).catch(() => null)] as const)));
   };
 
   /** Whether to search the words as written rather than the concept they name; a new query starts over. */
@@ -202,14 +194,14 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
   /** Imaging no report judges, counted for everyone and never for what was searched for. */
   const imagingLeft = (n: number) => (n ? ` So ${n === 1 ? 'is' : 'are'} ${count(n, 'imaging study', 'imaging studies')} with no report in these records: nothing says whether ${n === 1 ? 'it is' : 'they are'} private.` : '');
   let errors: { own: string[]; shared: number } = { own: [], shared: 0 };
-  /** Whose papers' text is not on everyone's search, and why. */
-  let unfit: Record<'changed' | 'unchecked', string[]> = { changed: [], unchecked: [] };
+  /** Whose papers' text changed since medrec said what in it is private. */
+  let unsaid: string[] = [];
   const leftNotes = () =>
     many && who === 'all'
       ? [
           h('p', { class: 'small muted' }, `Private items are left off everyone’s results.${imagingLeft(unjudged())} Choose a person to search theirs.`),
           ...heldNotes(ctx, 'everyone’s results'),
-          ...UNFIT.flatMap(([why, says]) => (unfit[why].length ? [h('p', { class: 'small muted' }, `The text of ${unfit[why].join(' and ')}’s papers is not searched here: ${says}`)] : [])),
+          ...(unsaid.length ? [h('p', { class: 'small muted' }, `The text of ${unsaid.join(' and ')}’s papers is not searched here: it changed since medrec said what in it is private. medrec says it again after its next import or refresh.`)] : []),
         ]
       : [];
 
@@ -331,8 +323,7 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
     });
     const named = (xs: Searchable[]) => xs.map((x) => names.get(x.person) ?? x.person);
     const untexted = named(scope.filter((x) => !x.text));
-    const whose = (why: 'changed' | 'unchecked') => named(scope.filter((x) => textUnfit(x.index, x.text) === why));
-    unfit = { changed: whose('changed'), unchecked: whose('unchecked') };
+    unsaid = named(scope.filter((x) => x.text && !sharedTexts(x.index, x.text)));
     const own = find(scope, q, { words });
     const shared = (s: Searchable): Searchable => ({ ...s, index: sharedIndex(s.index), text: sharedTexts(s.index, s.text), leave: (kind: string, id: string) => !!itemPrivate(s.index, kind, id) });
     const found = many ? find(scope.map(shared), q, { words }) : own;
