@@ -80,7 +80,12 @@ export interface Pdf {
 
 /** Opens a PDF. The bytes go to the worker, and `signal` ends it. */
 export async function openPdf(bytes: Uint8Array, signal: AbortSignal): Promise<Pdf> {
-  const [pdfjs, { worker, stop }] = await Promise.all([import('pdfjs-dist/legacy/build/pdf.mjs'), startWorker(signal)]);
+  const starting = startWorker(signal);
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs').catch((e: unknown) => {
+    void starting.then((w) => w.stop()).catch(() => undefined);
+    throw e;
+  });
+  const { worker, stop } = await starting;
   const failed = new Promise<never>((_, reject) => {
     worker.addEventListener('error', () => reject(new PdfError('This browser could not start the app’s PDF reader.')), { once: true });
     signal.addEventListener('abort', () => reject(signal.reason), { once: true });
