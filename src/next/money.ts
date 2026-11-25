@@ -84,9 +84,12 @@ export function byDue(a: OpenBill, b: OpenBill): number {
   return Number(b.overdue) - Number(a.overdue) || (a.bill.due ?? '9999').localeCompare(b.bill.due ?? '9999');
 }
 
+/** A bill's own id, and those of its copies. */
+export const copiesOf = (idx: PersonIndex, bill: Bill): Set<string> => new Set([bill.doc.id, ...idx.documents.filter((d) => d.same_statement_as === bill.doc.id).map((d) => d.id)]);
+
 /** The payments marked on a bill, or a copy of it, that wait for the Mac. */
 export function billMarks(idx: PersonIndex, bill: Bill, marks: readonly PendingMark[]): PendingMark[] {
-  return marksOn(marks, idx.person, new Set([bill.doc.id, ...idx.documents.filter((d) => d.same_statement_as === bill.doc.id).map((d) => d.id)]));
+  return marksOn(marks, idx.person, copiesOf(idx, bill));
 }
 
 /** What of a bill no payment is known or marked for. */

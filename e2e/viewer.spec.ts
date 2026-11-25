@@ -69,7 +69,8 @@ test('an account that may only view is told so where it would ask the Mac, and h
   await expect(page.getByText('can only view')).toHaveCount(1);
   await expect(page.locator('.row-actions')).toHaveCount(0);
   await expect(buttons).toHaveCount(0);
-  await page.locator('.card', { hasText: 'Other sources' }).locator('.row-main', { hasText: 'Example Health' }).first().click();
+  await page.locator('.card', { hasText: 'Other sources' }).locator('.row-main', { has: page.getByText('Example Health', { exact: true }) }).first().click();
+  await expect(page.locator('h1')).toHaveText('Example Health');
   await expect(page.getByText('can only view')).toHaveCount(1);
   await expect(buttons).toHaveCount(0);
   // A bill with something left to pay says why it has no Mark paid.

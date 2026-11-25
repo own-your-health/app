@@ -17,6 +17,7 @@ import { eventRoute, eventWhen } from './eventView';
 import { callsSummary, mayBePaid, overAsked, overdueLabel, PAID_ELSEWHERE, paymentText, partText, toPay, unreadText, worthACall, type OpenBill, type PaidBill } from './money';
 import { billNotes, forBill, gather, head, listLine, money, num, privateChip, visitText, type Mine, type MoneyRoute } from './moneyParts';
 import { eventsPage, overviewPage } from './moneyYear';
+import { providerLink } from './providerView';
 import { heldNotes } from './shared';
 import { called } from '../model/people';
 
@@ -200,7 +201,7 @@ function callCard(ctx: Ctx, m: Mine<OpenBill>, named: boolean): HTMLElement {
   const s = b.bill.doc.statement;
   const shares = (e?.money.charges ?? []).filter((c) => (c.share ?? 0) > 0);
   const el = card(
-    { title: b.bill.provider ?? 'A provider', class: 'call', actions: privateChip(b.private) },
+    { title: providerLink(ctx, ctx.store.index(m.person.id), b.bill.doc.id, ['organization'], b.bill.provider, named) ?? 'A provider', class: 'call', actions: privateChip(b.private) },
     h('p', { class: 'call-claim' }, b.claimSays === undefined ? `Asks ${money(b.asked)}. No claim in these records is for it.` : `Asks ${money(b.asked)}. The ${b.claimSaysVisit ? 'visit’s claims say' : 'claim says'} ${money(b.claimSays)}.`),
     over > 0 ? h('p', { class: 'call-number' }, num(over), h('span', null, ' may not be owed')) : null,
     b.claimSays === undefined ? h('p', { class: 'small' }, 'If it went through insurance, its claim may not be in these records yet. If it didn’t, it may not be an insurance bill.') : null,

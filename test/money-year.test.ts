@@ -3,8 +3,8 @@ import { offText, unsaidText } from '../src/next/moneyYear';
 
 describe('the network discount’s words', () => {
   it('gives what was taken off what was charged, or that nothing was', () => {
-    expect(offText(418140, 641700)).toBe('$4,181.40 off $6,417.00 charged, 65%');
-    expect(offText(0, 12000)).toBe('Nothing off the $120.00 charged');
+    expect(offText(213570, 388500)).toBe('$2,135.70 off $3,885.00 charged, 55%');
+    expect(offText(0, 8500)).toBe('Nothing off the $85.00 charged');
   });
 
   it('counts the visits and fills the discount order leaves off, apart', () => {

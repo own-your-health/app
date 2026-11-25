@@ -8,22 +8,22 @@ const RIGHT = 640 - 16;
 const TOP = 16;
 const BOTTOM = 220 - 28;
 
-const p = (date: string, value: number, range?: string, unit = 'mg/dL'): ResultPoint => ({ id: date, date, value, text: `${value} ${unit}`, unit, ...(range ? { range } : {}) });
+const p = (date: string, value: number, range?: string, unit = 'mm Hg'): ResultPoint => ({ id: date, date, value, text: `${value} ${unit}`, unit, ...(range ? { range } : {}) });
 
 describe('the axis', () => {
   it('reaches past the highest and lowest value', () => {
-    expect(niceTicks(117, 168)).toEqual([100, 120, 140, 160, 180]);
-    expect(niceTicks(104, 162)).toEqual([100, 120, 140, 160, 180]);
-    expect(niceTicks(3.5, 5.4)).toEqual([3.5, 4, 4.5, 5, 5.5]);
-    expect(niceTicks(0.8, 0.9)).toEqual([0.8, 0.825, 0.85, 0.875, 0.9]);
+    expect(niceTicks(233, 281)).toEqual([220, 240, 260, 280, 300]);
+    expect(niceTicks(43, 57)).toEqual([40, 45, 50, 55, 60]);
+    expect(niceTicks(6.5, 8.1)).toEqual([6.5, 7, 7.5, 8, 8.5]);
+    expect(niceTicks(0.4, 0.5)).toEqual([0.4, 0.425, 0.45, 0.475, 0.5]);
     // One value: half its size either side.
-    expect(niceTicks(5, 5)).toEqual([2, 4, 6, 8]);
+    expect(niceTicks(12, 12)).toEqual([5, 10, 15, 20]);
   });
 });
 
 describe('the reference range behind a chart', () => {
   it('spans the chart when every result came with the same range', () => {
-    const [band, ...rest] = chartBands([p('2026-01-01', 62, '70-99 mg/dL'), p('2026-06-01', 105, '70-99 mg/dL')], 'mg/dL');
+    const [band, ...rest] = chartBands([p('2025-02-11', 8, '11-21 mm Hg'), p('2025-08-19', 25, '11-21 mm Hg')], 'mm Hg');
     expect(rest).toEqual([]);
     expect(band).toMatchObject({ x: LEFT, width: RIGHT - LEFT });
     expect(band!.y).toBeGreaterThan(TOP);
@@ -31,7 +31,7 @@ describe('the reference range behind a chart', () => {
   });
 
   it('changes halfway between two results whose ranges differ', () => {
-    const bands = chartBands([p('2026-01-01', 90, '70-99 mg/dL'), p('2026-03-01', 92, '70-99 mg/dL'), p('2026-05-01', 95, '65-110 mg/dL')], 'mg/dL');
+    const bands = chartBands([p('2025-02-11', 14, '11-21 mm Hg'), p('2025-05-06', 16, '11-21 mm Hg'), p('2025-08-19', 17, '9-24 mm Hg')], 'mm Hg');
     expect(bands).toHaveLength(2);
     expect(bands[0]!.x + bands[0]!.width).toBeCloseTo(bands[1]!.x);
     // The wider range is taller.
@@ -39,16 +39,16 @@ describe('the reference range behind a chart', () => {
   });
 
   it('runs a one-sided range to the chart’s edge, with its bound in view', () => {
-    const [below] = chartBands([p('2025-03-10', 162, '<130 mg/dL'), p('2026-10-01', 104, '<130 mg/dL')], 'mg/dL');
+    const [below] = chartBands([p('2024-04-23', 31, '<24 mm Hg'), p('2025-08-19', 19, '<24 mm Hg')], 'mm Hg');
     expect(below!.y + below!.height).toBeCloseTo(BOTTOM);
     expect(below!.y).toBeGreaterThan(TOP);
-    const [above] = chartBands([p('2025-03-10', 44, '>39 mg/dL'), p('2026-10-01', 51, '>39 mg/dL')], 'mg/dL');
+    const [above] = chartBands([p('2024-04-23', 17, '>15 mm Hg'), p('2025-08-19', 21, '>15 mm Hg')], 'mm Hg');
     expect(above!.y).toBeCloseTo(TOP);
     expect(above!.y + above!.height).toBeLessThan(BOTTOM);
   });
 
   it('draws no range it cannot read in the result’s unit', () => {
-    expect(chartBands([p('2026-01-01', 5, '3.5-5.1 mmol/L', 'mg/dL'), p('2026-02-01', 6, 'Negative', 'mg/dL')], 'mg/dL')).toEqual([]);
-    expect(chartBands([p('2026-01-01', 5, '3.5-5.1 mmol/L')], 'mg/dL')).toEqual([]);
+    expect(chartBands([p('2025-02-11', 15, '1.5-2.8 kPa', 'mm Hg'), p('2025-05-06', 18, 'Not detected', 'mm Hg')], 'mm Hg')).toEqual([]);
+    expect(chartBands([p('2025-02-11', 15, '1.5-2.8 kPa')], 'mm Hg')).toEqual([]);
   });
 });

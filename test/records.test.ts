@@ -18,14 +18,14 @@ describe('results', () => {
   });
 
   it('write a quantity with its unit', () => {
-    expect(valueText({ value: 104, unit: 'mg/dL' })).toBe('104 mg/dL');
-    expect(valueText('positive')).toBe('positive');
+    expect(valueText({ value: 58, unit: 'mm Hg' })).toBe('58 mm Hg');
+    expect(valueText('yellow')).toBe('yellow');
     expect(valueText({ value: null })).toBeUndefined();
   });
 
   it('have a number only when the source sent one', () => {
-    const sent: (Json | undefined)[] = [{ value: 104, unit: 'mg/dL' }, { value: 'high' }, { unit: 'mg/dL' }, 'positive', null, undefined];
-    expect(sent.map(numericValue)).toEqual([104, undefined, undefined, undefined, undefined, undefined]);
+    const sent: (Json | undefined)[] = [{ value: 58, unit: 'mm Hg' }, { value: 'few' }, { unit: 'mm Hg' }, 'yellow', null, undefined];
+    expect(sent.map(numericValue)).toEqual([58, undefined, undefined, undefined, undefined, undefined]);
   });
 });
 

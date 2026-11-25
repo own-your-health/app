@@ -28,6 +28,7 @@ describe('reading bills.json', () => {
       ],
       left: usd('40.00'),
       settled: false,
+      claim: expect.stringMatching(/^r_/) as string,
       owed: usd('64.00'),
     });
     expect(states.get(DENTAL)).toMatchObject({ settled: true, left: usd('0.00') });

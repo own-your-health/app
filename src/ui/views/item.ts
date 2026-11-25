@@ -17,12 +17,14 @@ import { resultContext, unitText, verdict } from '../../model/result';
 import { recordTitle, visitTitle } from '../../model/titles';
 import type { ImagingStudy, Json, MedDocument, MedRecord, PersonIndex, Provenance } from '../../model/types';
 import { claimContext, visitKind, visitOf } from '../../model/visits';
+import { tidyName } from '../../model/words';
 import { partOfEvent } from '../../next/eventView';
 import { markedPayments, paidControl, viewOnlyNote } from '../../next/markPaid';
 import { paymentText, unreadText } from '../../next/money';
+import { providerLink } from '../../next/providerView';
 import { paperView } from '../../paper/view';
 import { rangeBar, resultChart } from '../chart';
-import { button, card, chip, command, driveLink, empty, flagChip, jsonBlock, kv, link, outLink, phoneLink, row, type Ctx } from '../components';
+import { button, card, chip, command, dotted, driveLink, empty, flagChip, jsonBlock, kv, link, outLink, phoneLink, row, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, dateTime, localDay } from '../format';
 import type { Route } from '../router';
@@ -241,8 +243,8 @@ function learnLink(r: MedRecord, name: string): HTMLElement | null {
 }
 
 /** A record page's head: its name, a chip only when it says something, and one plain line. */
-function head(title: string, chipEl: Child, metaParts: (string | null | undefined | false)[], ...rest: Child[]): HTMLElement {
-  return h('section', { class: 'card' }, h('div', { class: 'card-head' }, h('h1', null, title), chipEl), h('p', { class: 'muted' }, metaParts.filter(Boolean).join(' · ')), ...rest);
+function head(title: string, chipEl: Child, metaParts: Child[], ...rest: Child[]): HTMLElement {
+  return h('section', { class: 'card' }, h('div', { class: 'card-head' }, h('h1', null, title), chipEl), h('p', { class: 'muted' }, dotted(metaParts)), ...rest);
 }
 
 const sentence = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
@@ -359,6 +361,8 @@ function medicationView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
     return isObject(q) && q.value !== undefined && q.value !== null ? [String(q.value), str(q.unit as Json)].filter(Boolean).join(' ') : undefined;
   };
   const days = (x: MedRecord) => (typeof x.fields.days_supply === 'number' ? `${x.fields.days_supply} days` : undefined);
+  // The record of the medicine that prints the name.
+  const named = (field: 'prescriber' | 'pharmacy', text: string | undefined) => providerLink(ctx, idx, (m?.records ?? []).find((x) => tidyName(str(x.fields[field])) === tidyName(text))?.id ?? r.id, [field], text);
   const state = m ? (m.active ? 'Taking now' : 'Past medicine') : (statusText(r.status) ?? undefined);
   return [
     head(
@@ -367,8 +371,8 @@ function medicationView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
       ['Medicine', state, m?.first ? `since ${dateText(m.first)}` : dateText(r.date), fromText(ctx, idx, r)],
       str(r.fields.dosage) ? h('p', { class: 'result-value result-value-text' }, str(r.fields.dosage)) : null,
       kv([
-        ['Prescribed by', m?.prescriber ?? str(r.fields.prescriber)],
-        ['Last filled', m?.lastFill ? [dateText(m.lastFill.date), m.lastFill.pharmacy ? `at ${m.lastFill.pharmacy}` : null, m.lastFill.daysSupply ? `for ${m.lastFill.daysSupply} days` : null].filter(Boolean).join(' ') : undefined],
+        ['Prescribed by', named('prescriber', m?.prescriber ?? str(r.fields.prescriber))],
+        ['Last filled', m?.lastFill ? [dateText(m.lastFill.date), m.lastFill.pharmacy ? [' at ', named('pharmacy', m.lastFill.pharmacy)] : null, m.lastFill.daysSupply ? ` for ${m.lastFill.daysSupply} days` : null] : undefined],
         ['How the records know of it', m?.known.length ? m.known.join(', ') : undefined],
       ]),
       learnLink(r, name),
@@ -435,7 +439,7 @@ function immunizationView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
       given ? null : chip(statusText(r.status) ?? 'Not given', 'muted'),
       ['Vaccine', given ? `given ${dateText(r.date)}` : dateText(r.date), fromText(ctx, idx, r)],
       kv([
-        ['Where', str(r.fields.performer)],
+        ['Where', providerLink(ctx, idx, r.id, ['performer'], str(r.fields.performer))],
         ['Site', str(r.fields.site)],
         ['How', route !== undefined ? fieldValue(route) : undefined],
         ['Lot', str(r.fields.lot_number)],
@@ -457,8 +461,8 @@ function encounterView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
       [kind ?? 'Visit', visit ? visitWhen(visit) : dateText(r.date), fromText(ctx, idx, r)],
       kv([
         ['Reason', str(r.fields.reason)],
-        ['With', str(r.fields.practitioner)],
-        ['Where', str(r.fields.location) ?? str(r.fields.service_provider)],
+        ['With', providerLink(ctx, idx, r.id, ['practitioner'], str(r.fields.practitioner))],
+        ['Where', providerLink(ctx, idx, r.id, ['location', 'service_provider'], str(r.fields.location) ?? str(r.fields.service_provider))],
         ['Status', r.status && r.status !== 'finished' ? (statusText(r.status) ?? r.status) : undefined],
       ]),
     ),
@@ -486,7 +490,7 @@ function claimView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
     head(
       recordTitle(r),
       null,
-      ['Claim', dateText(start ?? r.date), claimProvider(r), str(r.fields.insurer) ? `by ${str(r.fields.insurer)}` : null],
+      ['Claim', dateText(start ?? r.date), providerLink(ctx, idx, r.id, ['provider'], claimProvider(r)), str(r.fields.insurer) ? `by ${str(r.fields.insurer)}` : null],
       // The payer's figure is what you owe; the parts added up are your share.
       a.yourShare ? h('p', { class: 'result-value' }, toCents(a.yourShare) === 0 ? 'Nothing for you to pay' : `${a.shareAdded ? 'Your share' : 'You owe'} ${formatMoney(a.yourShare)}`) : null,
       kv([
@@ -530,7 +534,7 @@ function otherView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
       [KIND_LABELS[r.kind] ?? r.kind, statusText(r.status), dateText(r.date), fromText(ctx, idx, r)],
       kv([
         ['Conclusion', str(r.fields.conclusion)],
-        ['Where', str(r.fields.location)],
+        ['Where', providerLink(ctx, idx, r.id, ['location'], str(r.fields.location))],
         ['Plan', str(r.fields.plan)],
         ['Paid by', str(r.fields.payer)],
       ]),
@@ -585,7 +589,7 @@ function documentView(ctx: Ctx, idx: PersonIndex, d: MedDocument): Child[] {
       'section',
       { class: 'card' },
       h('div', { class: 'card-head card-head-paper' }, h('h1', null, documentTitle(d)), chip(docTypeLabel(d.doc_type), 'muted')),
-      h('p', { class: 'muted' }, [dateText(d.date), d.organization].filter(Boolean).join(' · ')),
+      h('p', { class: 'muted' }, dotted([dateText(d.date), providerLink(ctx, idx, d.id, ['organization'], d.organization)])),
       h('div', { class: 'row-actions' }, paper.button, driveLink(ctx, d.path, 'Open in Drive')),
       paper.panel,
       kv([
@@ -641,7 +645,7 @@ function studyView(ctx: Ctx, idx: PersonIndex, st: ImagingStudy): Child[] {
       'section',
       { class: 'card' },
       h('div', { class: 'card-head' }, h('h1', null, studyTitle(st)), chip(st.modalities.join('/') || 'Imaging', 'muted')),
-      h('p', { class: 'muted' }, [dateText(st.date), st.facility].filter(Boolean).join(' · ')),
+      h('p', { class: 'muted' }, dotted([dateText(st.date), providerLink(ctx, idx, st.id, ['facility'], st.facility)])),
       h('p', { class: 'small' }, 'Open it in the DICOM viewer on the Mac:'),
       command(`medrec images open ${st.id}`, ctx),
       h('div', { class: 'row-actions' }, driveLink(ctx, st.path, 'The study’s folder in Drive')),
