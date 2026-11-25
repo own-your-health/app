@@ -173,15 +173,15 @@ any name that is a link: a visit's place, each row of "Who charged what", and
 the provider on a claim, a portal visit, a medicine, a vaccine, a procedure,
 an imaging study, a paper or a bill worth a call. Its address holds the item
 that names the provider, never the name. The page is one person's, or
-everyone's (`?all=1`), newest first:
+everyone's (`?all=1`, and no other value), newest first:
 - what its claims say it charged, what the plan paid and your share, what its
   bills leave to pay, and shares with no bill yet;
 - visits, bills and payments, claims, tests, imaging, medicines, vaccines,
   procedures, papers, and the people or places named at its visits.
 
 Names are one provider when the records give one National Provider Identifier
-for them (never shown), or when one source prints the same name: one sign-in,
-or the papers filed by hand. Names that are only alike are listed under "May
+for them (never shown), or when one source of one person's prints the same
+name: one sign-in, or the papers filed by hand. Names that are only alike are listed under "May
 be the same" and never put together. A name that only a sign-in several
 practices share would give is no link. Everyone's page leaves private items
 off, so a provider named only by private items has none. The rules are

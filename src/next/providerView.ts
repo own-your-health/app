@@ -19,7 +19,8 @@ import { href, type Route } from '../ui/router';
 import { eventRoute, eventWhen, headline } from './eventView';
 import { mayBePaid, paidText, partText, unreadText } from './money';
 import { money, privateChip } from './moneyParts';
-import { namedOn, placeNamed, providerPage, type Alike, type Mine, type Named, type ProviderPage, type Seen } from './provider';
+import { providerPage, type Alike, type Mine, type ProviderPage, type Seen, type Visit } from './provider';
+import { namedOn, placeNamed, type Named } from './providerNames';
 import { heldNotes, privateLine } from './shared';
 import type { CareEvent } from './event';
 
@@ -30,10 +31,14 @@ const SHOWN = 3;
 /** The page of the provider an item names. */
 export const providerRoute = (n: Pick<Named, 'person' | 'id' | 'field'>, all = false): Route => ({ name: 'provider', person: n.person, id: n.id, field: n.field, ...(all ? { all: true as const } : {}) });
 
-/** A provider's name as a link to its page, from the first of the fields that prints it; the words alone where none does. */
-export function providerLink(ctx: Ctx, idx: PersonIndex | undefined, id: string, fields: ProviderField[], text: string | undefined): Child {
+/**
+ * A provider's name as a link to its page, from the first of the fields that
+ * prints it; the words alone where none does. From a screen the household
+ * shares it opens everyone's page, which holds no private item.
+ */
+export function providerLink(ctx: Ctx, idx: PersonIndex | undefined, id: string, fields: ProviderField[], text: string | undefined, shared = false): Child {
   const named = idx && fields.map((f) => namedOn(idx, ctx.store.household, id, f)).find(Boolean);
-  return text && named ? link(providerRoute(named), text) : text;
+  return text && named ? link(providerRoute(named, shared), text) : text;
 }
 
 /** An event's place, as a link to its provider's page where one of its items prints it. */
@@ -132,10 +137,10 @@ export function providerView(ctx: Ctx, route: ProviderRoute): HTMLElement {
     const flag = x.item.kind === 'result' ? resultFlag(resultPoint(x.item)) : undefined;
     return row({ route: item(x.person, x.item.id), title: recordTitle(x.item), meta: meta(dateText(x.item.date), reading ? (unitText(reading) ?? reading) : null, whose(x.person)), aside: [ofRecord(x), isOutOfRange(flag) ? flagChip(flag) : null] });
   };
-  const visitRow = ({ event: x, share }: ProviderPage['visits'][number]) => {
+  const visitRow = ({ event: x, share, private: area }: Visit) => {
     const { title, kind } = headline(x.event);
     const elsewhere = x.event.place && x.event.place !== page.named.name && !page.also.includes(x.event.place) ? x.event.place : null;
-    return row({ route: eventRoute(x.person.id, x.event.id), title, meta: meta(kind, eventWhen(x.event), elsewhere, whose(x.person.id), x.event.what), aside: [priv(x.private), owed(share)] });
+    return row({ route: eventRoute(x.person.id, x.event.id), title, meta: meta(kind, eventWhen(x.event), elsewhere, whose(x.person.id), x.event.what), aside: [priv(area), owed(share)] });
   };
   const billRow = ({ person: id, item: { bill, open } }: ProviderPage['bills'][number]) =>
     row({
@@ -147,7 +152,7 @@ export function providerView(ctx: Ctx, route: ProviderRoute): HTMLElement {
   const paperRow = (x: ProviderPage['papers'][number]) => row({ route: item(x.person, x.item.id), title: documentTitle(x.item), meta: meta(docTypeLabel(x.item.doc_type), dateText(x.item.date), x.item.doc_type === 'receipt' && x.item.statement?.amount_paid ? `${formatMoney(x.item.statement.amount_paid)} paid` : null, whose(x.person)), aside: marked(x.person, 'document', x.item.id) });
   const studyRow = (x: ProviderPage['studies'][number]) => row({ route: item(x.person, x.item.id), title: studyTitle(x.item), meta: meta(dateText(x.item.date), whose(x.person)), aside: marked(x.person, 'study', x.item.id) });
   const seenRow = (s: Seen) => row({ route: providerRoute(s.named, everyone), title: s.named.name, meta: count(s.visits, 'visit') });
-  const alikeRow = (a: Alike) => row({ route: providerRoute(a.named, everyone), title: a.names.join(', '), meta: meta(...a.items.map(({ kind, n }) => count(n, ...(ITEM[kind] ?? ['record', 'records']))), `${a.from.length === 1 ? 'source' : 'sources'}: ${a.from.join(', ')}`) });
+  const alikeRow = (a: Alike) => row({ route: providerRoute(a.named, everyone), title: a.names.join(', '), meta: meta(everyone && a.people.map(name).join(', '), ...a.items.map(({ kind, n }) => count(n, ...(ITEM[kind] ?? ['record', 'records']))), `${a.from.length === 1 ? 'source' : 'sources'}: ${a.from.join(', ')}`) });
 
   const choice = (on: boolean, to: Route, text: string) => h('a', { class: ['filter', on ? 'filter-on' : null], href: href(to), 'aria-current': on ? 'page' : false }, text);
   const everyones = everyone ? page.named : page.everyone;
@@ -174,7 +179,7 @@ export function providerView(ctx: Ctx, route: ProviderRoute): HTMLElement {
     wait,
     totalsCard(page),
     section('Visits', 'visits', page.visits, visitRow, page.claims.length ? 'An amount is what this provider’s own claims say you owe for the visit.' : undefined),
-    section('Visits its papers are with', 'visits', page.paperVisits, (event) => visitRow({ event })),
+    section('Visits its papers are with', 'visits', page.paperVisits, visitRow),
     section('Bills and payments', 'bills', page.bills, billRow),
     section('Receipts', 'receipts', page.receipts, paperRow, 'Payments for none of the bills above.'),
     section('Claims', 'claims', page.claims, claimRow),
@@ -188,7 +193,7 @@ export function providerView(ctx: Ctx, route: ProviderRoute): HTMLElement {
     section('People seen', 'people', page.people, seenRow, 'Named by the visits here.'),
     section('Places', 'places', page.places, seenRow, 'Named by the visits here.'),
     section('May be the same', 'names', page.alike, alikeRow, 'Names like this one that nothing in these records says are the same provider. None of theirs is on this page.'),
-    h('p', { class: 'small muted' }, 'Names are taken as one provider when the records give one National Provider Identifier for them, or one source prints the same name. Names that are only alike are never put together.'),
+    h('p', { class: 'small muted' }, 'Names are taken as one provider when the records give one National Provider Identifier for them, or one source of one person’s prints the same name. Names that are only alike are never put together.'),
     notes,
   );
 }

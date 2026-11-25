@@ -135,6 +135,7 @@ export function parseRoute(hash: string): Route {
     if (b === 'r' && c && ID.test(c) && parts.length === 4) return { name: 'item', person: a, id: c };
     if (b === 'e' && c && ID.test(c) && parts.length === 4) return { name: 'event', person: a, id: c };
     const field = PROVIDER_FIELDS.find((f) => f === parts[4]);
+    // `all=1` is everyone's, and any other value the person's: the item in the path is theirs either way.
     if (b === 'provider' && c && ID.test(c) && field && parts.length === 5) return { name: 'provider', person: a, id: c, field, ...(query.get('all') === '1' ? { all: true as const } : {}) };
     if ((SECTIONS as readonly string[]).includes(b)) {
       const section = b as Section;

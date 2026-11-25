@@ -22,7 +22,7 @@ import { eventConfidence, eventMoney, eventOf, kindText, paidAtCounter, eventPri
 import { groupedByMedrec, personEvents } from './load';
 import { paidControl } from './markPaid';
 import { paidText, unreadText } from './money';
-import { namedOn } from './provider';
+import { namedOn } from './providerNames';
 import { placeLink, providerRoute } from './providerView';
 import { called } from '../model/people';
 import { plainWords } from '../model/words';

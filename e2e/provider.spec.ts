@@ -120,6 +120,38 @@ test('a private provider’s page is its person’s own, marked, and everyone’
   await expect(page.locator('main')).toHaveText(words.replace(/\n+/g, ''), { useInnerText: false });
 });
 
+test('a private provider’s item under another person’s address reads as one that names no provider', async ({ page }) => {
+  const id = recordOf(SAM, 'claim', 'provider', 'Example Sexual Health Clinic');
+  const texts: string[] = [];
+  for (const path of [`#/p/${ROBIN}/provider/${id}/provider`, `#/p/${ROBIN}/provider/r_aaaaaaaaaaaaaaaaaaaa/provider`]) {
+    await go(page, path);
+    await expect(page.locator('main')).toContainText('No provider to show here is named by this item.');
+    texts.push(await page.locator('main').innerText());
+  }
+  expect(texts[0]).toBe(texts[1]);
+});
+
+test('from a screen the household shares a name opens everyone’s page', async ({ page }) => {
+  await go(page, '#/money/calls');
+  await page.locator('main').getByRole('link', { name: 'Example Billing', exact: true }).click();
+  await expect(page).toHaveURL(/\/organization\?all=1$/);
+  await expect(page.locator('h1')).toHaveText('Example Billing');
+  await expect(page.locator('.chip', { hasText: 'Private' })).toHaveCount(0);
+  await expect(page.getByRole('group', { name: 'Whose records' }).locator('[aria-current="page"]')).toHaveText('Everyone');
+  // From one person's, it opens theirs.
+  await go(page, `#/money/calls?who=${SAM}`);
+  await page.locator('main').getByRole('link', { name: 'Example Billing', exact: true }).click();
+  await expect(page).toHaveURL(/\/organization$/);
+});
+
+test('one name in two people’s records is two providers where no identifier says they are one', async ({ page }) => {
+  await go(page, providerPath(ALEX, 'encounter', 'location', 'Example Pediatrics', true));
+  await expect(page.locator('h1')).toHaveText('Example Pediatrics');
+  await expect(page.getByRole('group', { name: 'Whose records' }).getByRole('link')).toHaveText(['Everyone', 'Alex']);
+  await expect(rows(page, 'Visits').locator('.row-meta').filter({ hasText: 'Drew' })).toHaveCount(0);
+  await expect(rows(page, 'May be the same').locator('.row-meta').filter({ hasText: /^Drew · / })).not.toHaveCount(0);
+});
+
 test('everyone’s page of a shared provider names no private item', async ({ page }) => {
   for (const [who, kind, field, name] of [
     [ROBIN, 'claim', 'provider', 'Example Lab'],
