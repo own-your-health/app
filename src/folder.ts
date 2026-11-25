@@ -29,6 +29,7 @@ export interface RecordsFolder {
   /**
    * Whether this account may add a file to `_requests/`: false for one the
    * folder is shared with to view only, undefined when the folder does not say.
+   * The owner of the folder always may.
    */
   mayRequest(): Promise<boolean | undefined>;
   /** Writes `_requests/<name>`; the only write the app makes. */
@@ -69,6 +70,8 @@ export class DriveFolder implements RecordsFolder {
   /** Files read since they were listed, and Drive's MD5 of each, asked again after the read. */
   private served = new Set<string>();
   private reread = new Map<string, Promise<string | undefined>>();
+  /** Whether the account owns `_requests/`, asked once where Drive says it may not add to it. */
+  private own: Promise<boolean> | undefined;
 
   constructor(
     private readonly drive: Drive,
@@ -165,7 +168,14 @@ export class DriveFolder implements RecordsFolder {
 
   async mayRequest(): Promise<boolean | undefined> {
     const dir = await this.resolve(REQUESTS_DIR);
-    return dir?.capabilities?.canAddChildren;
+    const may = dir?.capabilities?.canAddChildren;
+    if (!dir || may !== false) return may;
+    this.own ??= this.drive.folder(dir.id).then((f) => f.ownedByMe === true);
+    const own = await this.own.catch(() => {
+      this.own = undefined;
+      return false;
+    });
+    return own ? undefined : false;
   }
 
   async createRequest(name: string, body: unknown): Promise<void> {

@@ -2,7 +2,8 @@
 // choosing the records folder.
 
 import { readPaste, type Paste } from '../../setup-link';
-import { Drive, folderIdFrom, FOLDER_MIME, HOUSEHOLD_QUERY } from '../../drive';
+import { Drive } from '../../drive';
+import { findFolders, folderOfLink, type Candidate } from '../../find-folder';
 import { button, card, empty, outLink } from '../components';
 import { h } from '../dom';
 import { dateTime } from '../format';
@@ -120,26 +121,26 @@ export function signInView(onSignIn: () => void, opts: { error?: string; account
   );
 }
 
-interface Candidate {
-  id: string;
-  name: string;
-  modified?: string;
+/** Whose a folder is when it is not the account's own, and that it can only view it. */
+function sharing(c: Candidate): string | null {
+  const by = c.owner === undefined ? null : c.owner ? `Shared by ${c.owner}` : 'Shared with you';
+  return c.viewOnly ? `${by}, to view only` : by;
 }
 
-/** Finds folders holding a household.json, and takes a pasted link too. */
-export function folderView(drive: Drive, onPick: (f: { id: string; name: string }) => Promise<void>): HTMLElement {
-  const list = h('div', null, h('p', { class: 'muted' }, 'Looking for records folders in your Drive…'));
+/** Finds folders holding a household.json, those shared with the account too, and takes a pasted link. */
+export function folderView(drive: Drive, opts: { account?: string; onPick: (f: { id: string; name: string }) => Promise<void>; onDifferentAccount: () => void }): HTMLElement {
+  const { account } = opts;
+  const list = h('div', { 'aria-live': 'polite' });
   const msg = h('p', { class: 'error-text small', 'aria-live': 'polite' });
-  const pick = (c: Candidate) => {
+  const pick = (c: { id: string; name: string }) => {
     msg.textContent = '';
-    void onPick({ id: c.id, name: c.name }).catch((e: unknown) => (msg.textContent = e instanceof Error ? e.message : 'That folder could not be opened.'));
+    void opts.onPick({ id: c.id, name: c.name }).catch((e: unknown) => (msg.textContent = e instanceof Error ? e.message : 'That folder could not be opened.'));
   };
-  void (async () => {
+  const lookAgain = () => h('div', { class: 'actions' }, button('Look again', () => void look()));
+  const look = async () => {
+    list.replaceChildren(h('p', { class: 'muted' }, 'Looking for records folders in your Drive, and in what is shared with you…'));
     try {
-      const files = await drive.list(HOUSEHOLD_QUERY, { pageSize: 50 });
-      const parents = [...new Set(files.flatMap((f) => f.parents ?? []))].slice(0, 20);
-      const folders = (await Promise.all(parents.map((id) => drive.get(id).catch(() => null)))).filter((f) => f && f.mimeType === FOLDER_MIME);
-      const candidates: Candidate[] = folders.map((f) => ({ id: f!.id, name: f!.name, modified: files.find((x) => x.parents?.includes(f!.id))?.modifiedTime }));
+      const candidates = await findFolders(drive);
       list.replaceChildren(
         candidates.length
           ? h(
@@ -152,38 +153,38 @@ export function folderView(drive: Drive, onPick: (f: { id: string; name: string 
                   h(
                     'div',
                     { class: 'row-line' },
-                    h('div', { class: 'row-main' }, h('div', { class: 'row-body' }, h('div', { class: 'row-title' }, c.name), h('div', { class: 'row-meta' }, c.modified ? `household.json changed ${dateTime(c.modified)}` : ''))),
+                    h('div', { class: 'row-main' }, h('div', { class: 'row-body' }, h('div', { class: 'row-title' }, c.name), h('div', { class: 'row-meta' }, [sharing(c), c.modified ? `household.json changed ${dateTime(c.modified)}` : null].filter(Boolean).join(' · ')))),
                     h('div', { class: 'row-aside' }, button('Open', () => pick(c), { primary: true, small: true })),
                   ),
                 ),
               ),
             )
-          : empty(
-              'No folder with a household.json was found in this account. medrec creates one when it sets up a records folder. If the records folder was shared with you, paste its link below.',
-              outLink(GETTING_STARTED_URL, 'Getting started with medrec'),
+          : h(
+              'div',
+              null,
+              empty('No folder with a household.json was found in this account, or in the folders shared with it.'),
+              h('p', null, `If someone else keeps the records, ask them to share the folder with ${account ?? 'this account'} in Google Drive. Then look again, or paste its link below.`),
+              h('p', null, 'If no one does yet, medrec makes the folder: ', outLink(GETTING_STARTED_URL, 'Getting started with medrec')),
+              lookAgain(),
             ),
       );
     } catch (e) {
-      list.replaceChildren(empty(e instanceof Error ? e.message : 'Drive did not answer.'));
+      list.replaceChildren(empty(e instanceof Error ? e.message : 'Drive did not answer.'), lookAgain());
     }
-  })();
+  };
+  void look();
   const input = h('input', { class: 'input', type: 'url', autocomplete: 'off', placeholder: 'https://drive.google.com/drive/folders/…', 'aria-label': 'Folder link' });
-  const openLink = () => {
-    const id = folderIdFrom(input.value);
-    if (!id) {
-      msg.textContent = 'Paste a Drive folder link, like https://drive.google.com/drive/folders/….';
-      return;
-    }
-    void drive.get(id).then(
-      (f) => (f.mimeType === FOLDER_MIME ? pick({ id: f.id, name: f.name }) : (msg.textContent = 'That link is a file, not a folder.')),
-      () => (msg.textContent = 'This account cannot open that folder.'),
-    );
+  const openLink = async () => {
+    const of = await folderOfLink(drive, input.value, account);
+    if (typeof of === 'string') msg.textContent = of;
+    else pick(of);
   };
   return h(
     'div',
     { class: 'stack narrow' },
     card({ title: 'Choose the records folder' }, h('p', { class: 'muted small' }, 'The folder medrec keeps, with household.json at its top.'), list),
-    card({ title: 'Or paste its link' }, h('label', { class: 'label' }, 'Folder link', input), msg, h('div', { class: 'actions' }, button('Open', openLink))),
+    card({ title: 'Or paste its link' }, h('label', { class: 'label' }, 'Folder link', input), msg, h('div', { class: 'actions' }, button('Open', () => void openLink()))),
+    card({}, h('p', { class: 'muted small' }, account ? `Signed in as ${account}.` : 'Signed in to Google.'), h('div', { class: 'actions' }, button('Use a different account', opts.onDifferentAccount, { ghost: true }))),
   );
 }
 

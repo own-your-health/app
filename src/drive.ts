@@ -16,6 +16,9 @@ export interface DriveFile {
   parents?: string[];
   /** Whether this token may change the file (drive.file reaches only the app's own). */
   capabilities?: { canEdit?: boolean; canDelete?: boolean; canAddChildren?: boolean };
+  /** Whether the account owns it; not said of what is in a shared drive. */
+  ownedByMe?: boolean;
+  owners?: { displayName?: string }[];
 }
 
 export class DriveError extends Error {
@@ -30,6 +33,8 @@ export class DriveError extends Error {
 }
 
 const FILE_FIELDS = 'id,name,mimeType,modifiedTime,size,md5Checksum,parents,capabilities(canEdit,canDelete,canAddChildren)';
+/** What choosing a folder asks besides: whose it is. */
+const FOLDER_FIELDS = `${FILE_FIELDS},ownedByMe,owners(displayName)`;
 
 /** A string inside a Drive query, quoted, with `'` and `\` escaped. Never quote it again. */
 export function q(s: string): string {
@@ -48,6 +53,17 @@ export function folderNamedQuery(name: string, parentId?: string): string {
 
 /** The query for the household.json files the account can see. */
 export const HOUSEHOLD_QUERY = `name = ${q('household.json')} and trashed = false`;
+
+/** The query for the household.json of one folder. */
+export function householdInQuery(folderId: string): string {
+  return `${q(folderId)} in parents and ${HOUSEHOLD_QUERY}`;
+}
+
+/**
+ * The query for the folders shared with the account. Drive's search by name
+ * need not find a file that is shared only through its folder.
+ */
+export const SHARED_FOLDERS_QUERY = `sharedWithMe = true and mimeType = ${q(FOLDER_MIME)} and trashed = false`;
 
 export class Drive {
   constructor(
@@ -81,14 +97,15 @@ export class Drive {
     return { email: body.user?.emailAddress, name: body.user?.displayName };
   }
 
-  async list(query: string, opts: { pageSize?: number; orderBy?: string } = {}): Promise<DriveFile[]> {
+  /** The files a query finds, every page of them, or no more than `max`. */
+  async list(query: string, opts: { pageSize?: number; orderBy?: string; max?: number; folders?: boolean } = {}): Promise<DriveFile[]> {
     const out: DriveFile[] = [];
     let pageToken: string | undefined;
     do {
       const p = new URLSearchParams({
         q: query,
-        fields: `nextPageToken,files(${FILE_FIELDS})`,
-        pageSize: String(opts.pageSize ?? 1000),
+        fields: `nextPageToken,files(${opts.folders ? FOLDER_FIELDS : FILE_FIELDS})`,
+        pageSize: String(opts.max ?? opts.pageSize ?? 1000),
         spaces: 'drive',
         supportsAllDrives: 'true',
         includeItemsFromAllDrives: 'true',
@@ -99,17 +116,22 @@ export class Drive {
       const body = (await res.json()) as { files?: DriveFile[]; nextPageToken?: string };
       out.push(...(body.files ?? []));
       pageToken = body.nextPageToken;
-    } while (pageToken);
-    return out;
+    } while (pageToken && !(opts.max !== undefined && out.length >= opts.max));
+    return out.slice(0, opts.max);
   }
 
   children(folderId: string): Promise<DriveFile[]> {
     return this.list(childrenQuery(folderId));
   }
 
-  async get(fileId: string): Promise<DriveFile> {
-    const res = await this.call(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?fields=${encodeURIComponent(FILE_FIELDS)}&supportsAllDrives=true`);
+  async get(fileId: string, fields = FILE_FIELDS): Promise<DriveFile> {
+    const res = await this.call(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?fields=${encodeURIComponent(fields)}&supportsAllDrives=true`);
     return (await res.json()) as DriveFile;
+  }
+
+  /** A folder to choose, or a file where a link is one: with whose it is. */
+  folder(fileId: string): Promise<DriveFile> {
+    return this.get(fileId, FOLDER_FIELDS);
   }
 
   async text(fileId: string): Promise<string> {
