@@ -179,7 +179,7 @@ test('what the household marked private stays off, and what it marked not privat
 test('everyone’s search never finds a private item, or says whose it is', async ({ page }) => {
   await go(page, '#/search?q=nicotine');
   await expect(page.locator('main .row')).toHaveCount(0);
-  await expect(page.locator('main')).toContainText('Private items are left off everyone’s results.');
+  await expect(page.locator('main')).toContainText('Private items are left off everyone’s results. So is 1 imaging study with no report in these records: nothing says whether it is private. Choose a person to search theirs.');
   await expect(page.locator('main [aria-live]').filter({ hasText: 'match' })).toHaveText(/^0 matches\./);
   // Everyone's chip is there for any words, so a chip says nothing about who has a match.
   const whose = page.getByRole('group', { name: 'Filter by person' });

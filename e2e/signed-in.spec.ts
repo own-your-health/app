@@ -56,6 +56,15 @@ function answerAsMac(path: string, opts: { removePending?: boolean } = {}): void
   google.writeAsMac('_status/status.json', JSON.stringify(status, null, 2));
 }
 
+/** How many calls Drive has had, once no more come. */
+async function settled(): Promise<number> {
+  for (let n = -1; ; ) {
+    if (n === google.driveCalls) return n;
+    n = google.driveCalls;
+    await new Promise((r) => setTimeout(r, 150));
+  }
+}
+
 /** What the app does when the phone's screen comes back on: it reads the folder again. */
 async function lookAgain(page: Page): Promise<void> {
   await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
@@ -201,6 +210,119 @@ test('Refresh writes one request and shows the Mac’s answer', async ({ page })
   await expect(page.getByText(/Last refresh request just now: loaded/).first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Refresh everything' })).toBeVisible();
   expect(google.changes).toHaveLength(1);
+});
+
+test('a finished Refresh shows what it brought, without a reload', async ({ page }) => {
+  const robin = 'p_xo4em46i7yj3hphlpajo';
+  await signIn(page);
+  await page.getByRole('button', { name: 'Refresh everything' }).click();
+  await expect(page.getByText(/waiting for the Mac/).first()).toBeVisible();
+  await page.evaluate((to) => void (location.hash = to), `#/p/${robin}/allergies`);
+  await expect(page.locator('main .row', { hasText: 'Sulfa drugs' })).toBeVisible();
+
+  // The import filed a new name, and medrec wrote its views of the new index.
+  const index = JSON.parse(google.read('Robin Example/index.json')!) as { rev: number; records: { kind: string; display: string }[] };
+  index.rev += 1;
+  index.records.find((r) => r.display === 'Sulfa drugs')!.display = 'An invented allergy';
+  const md5 = google.writeAsMac('Robin Example/index.json', JSON.stringify(index));
+  const views = JSON.parse(google.read('views/views.json')!) as { people: Record<string, { index: string; linked: Record<string, { index: string }> }> };
+  views.people[robin]!.index = md5;
+  for (const p of Object.values(views.people)) if (p.linked[robin]) p.linked[robin]!.index = md5;
+  google.writeAsMac('views/views.json', JSON.stringify(views));
+  // While the request waits, a look reads no records.
+  const before = google.reads.length;
+  await lookAgain(page);
+  await expect.poll(() => google.reads.slice(before)).toContain('_status/status.json');
+  expect(google.reads.slice(before).filter((f) => !f.startsWith('_'))).toEqual([]);
+
+  answerAsMac(google.changes[0]!.path);
+  await lookAgain(page);
+  await expect(page.locator('main .row', { hasText: 'An invented allergy' })).toBeVisible();
+  await expect(page.locator('main .row', { hasText: 'Sulfa drugs' })).toHaveCount(0);
+  // medrec's lists are of the new index, so nothing is held back.
+  await page.evaluate(() => void (location.hash = '#/'));
+  await expect(page.locator('.stand-name')).toHaveCount(4);
+  await expect(page.locator('main .held-note')).toHaveCount(0);
+});
+
+test('a read that fails after a finished Refresh is tried again while the app stays in front', async ({ page }) => {
+  await page.clock.install();
+  await signIn(page);
+  await page.getByRole('button', { name: 'Refresh everything' }).click();
+  await expect(page.getByText(/waiting for the Mac/).first()).toBeVisible();
+  google.failing = 'household.json';
+  answerAsMac(google.changes[0]!.path);
+  const reads = () => google.reads.filter((f) => f === 'household.json').length;
+  const before = reads();
+  // Each look is the timer's: nothing brings the app to the front.
+  await page.clock.fastForward('00:31');
+  await expect(page.getByText(/Last refresh request just now: loaded/).first()).toBeVisible();
+  await expect.poll(reads).toBe(before + 1);
+  await page.clock.fastForward('00:31');
+  await expect.poll(reads).toBe(before + 2);
+  await expect(page.locator('.toast-error')).toHaveCount(0);
+  // Then Drive answers nothing at all, its listings neither: those tries count too.
+  google.failing = '*';
+  await page.clock.fastForward('01:01');
+  await expect(page.locator('.toast-error')).toHaveText('The records could not be read again, so these are from before. Drive: Backend Error');
+  google.failing = null;
+  await page.clock.fastForward('02:01');
+  await expect.poll(reads).toBe(before + 3);
+  // Read, so nothing looks again.
+  await page.clock.fastForward('20:00');
+  expect(reads()).toBe(before + 3);
+  problems = problems.filter((p) => !/503/.test(p));
+});
+
+test('while Drive is out after a finished Refresh, the looks end', async ({ page }) => {
+  await page.clock.install();
+  await signIn(page);
+  await page.getByRole('button', { name: 'Refresh everything' }).click();
+  await expect(page.getByText(/waiting for the Mac/).first()).toBeVisible();
+  google.failing = 'household.json';
+  answerAsMac(google.changes[0]!.path);
+  await page.clock.fastForward('00:31');
+  await expect(page.getByText(/Last refresh request just now: loaded/).first()).toBeVisible();
+  google.failing = '*';
+  // Each later try, after twice as long: six in all, each one tick of the timer.
+  for (const wait of ['00:31', '01:01', '02:01', '04:01', '08:01']) {
+    const before = await settled();
+    await page.clock.fastForward(wait);
+    await expect.poll(() => google.driveCalls).toBeGreaterThan(before);
+  }
+  const calls = await settled();
+  for (let i = 0; i < 3; i += 1) await page.clock.fastForward('10:00');
+  expect(await settled()).toBe(calls);
+  // At the front they start over.
+  google.failing = null;
+  await lookAgain(page);
+  await expect.poll(() => google.driveCalls).toBeGreaterThan(calls + 5);
+  problems = problems.filter((p) => !/503/.test(p));
+});
+
+test('someone held back is shown again when the app comes to the front after medrec has written their list', async ({ page }) => {
+  const sam = 'p_wwezzed7kml67hnp6s7n';
+  const list = google.list(`views/${sam}`).find((f) => f.startsWith('private.'))!;
+  const content = google.read(`views/${sam}/${list}`)!;
+  google.removeAsMac(`views/${sam}/${list}`);
+  await signIn(page);
+  const note = page.locator('main .held-note');
+  await expect(note).toHaveText('Sam’s items are left off Home. medrec is still writing its list of which items are private. Sam’s own pages show them.');
+
+  // Still not there: the line stays.
+  const before = google.reads.length;
+  await lookAgain(page);
+  await expect.poll(() => google.reads.slice(before).filter((f) => f === 'views/views.json').length).toBe(1);
+  await expect(note).toHaveCount(1);
+  google.writeAsMac(`views/${sam}/${list}`, content);
+  await lookAgain(page);
+  await expect(note).toHaveCount(0);
+
+  // With no one held back, a look reads no records again.
+  const settled = google.reads.length;
+  await lookAgain(page);
+  await expect.poll(() => google.reads.slice(settled)).toContain('_status/status.json');
+  expect(google.reads.slice(settled).filter((f) => !f.startsWith('_'))).toEqual([]);
 });
 
 test('a request is cancelled by removing only its own file', async ({ page }) => {

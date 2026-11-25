@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { Store } from '../src/data/store';
 import { FolderError } from '../src/model/parse';
-import { anyPrivate, documentPrivate, HELD, isHeld, itemPrivate, paperPrivate, parsePrivate, recordPrivate, studyPrivate, whyHeld } from '../src/model/private';
+import { anyPrivate, documentPrivate, HELD, isHeld, itemPrivate, paperPrivate, parsePrivate, recordPrivate, studyPrivate, takenOut, whyHeld } from '../src/model/private';
 import { find } from '../src/model/search';
 import type { PersonIndex } from '../src/model/types';
 import { viewOf } from '../src/model/views';
@@ -13,7 +13,7 @@ import { householdEvents, shown } from '../src/next/calendar';
 import { eventPrivate } from '../src/next/event';
 import { careTeam, doctorSheet } from '../src/next/health';
 import { personEvents } from '../src/next/load';
-import { forShared, openBills, unbilledShares } from '../src/next/money';
+import { billPrivate, forShared, openBills, unbilledShares } from '../src/next/money';
 import { householdPapers, papersOf } from '../src/next/papers';
 import { heldPeople, quietClaims } from '../src/next/shared';
 import { personNamed } from './demo-data';
@@ -82,6 +82,15 @@ describe('reading private.json', () => {
     expect([...p.records]).toEqual([['r_a', 'a_later_area'], ['r_b', 'household'], ['r_c', 'household'], ['r_d', 'household'], ['r_e', 'household']]);
   });
 
+  it('reads the studies medrec 0.9.5 lists, and knows a list from an earlier one by having none', () => {
+    const earlier = parsePrivate({ ...raw, studies: undefined }, sam);
+    const later = parsePrivate({ ...raw, studies: { m_a: { area: 'reproductive', from: 'report' }, m_b: {} }, unreported_studies: ['m_c'] }, sam);
+    if (earlier.kind !== 'known' || later.kind !== 'known') throw new Error('not known');
+    expect([earlier.studies, earlier.unreported.size]).toEqual([null, 0]);
+    expect([[...later.studies!], [...later.unreported]]).toEqual([[['m_a', 'reproductive'], ['m_b', 'household']], ['m_c']]);
+    for (const odd of [{ studies: [] }, { studies: null }, { unreported_studies: {} }, { unreported_studies: [1] }]) expect(() => parsePrivate({ ...raw, ...odd }, sam)).toThrow(FolderError);
+  });
+
   it('holds everything while marks_unreadable is anything but false', () => {
     for (const v of [true, 'yes', 1, null]) expect(parsePrivate({ ...raw, marks_unreadable: v }, sam).kind).toBe('held');
     expect(parsePrivate({ ...raw, marks_unreadable: false }, sam).kind).toBe('known');
@@ -117,6 +126,23 @@ describe('a person whose list can’t be used is held back', () => {
     expect(held(await load({ 'views/views.json': JSON.stringify(older) }))).toEqual(['Robin Example', 'Sam Example']);
     const unread = await load({ 'views/views.json': '{' });
     expect([held(unread).length, why(unread)]).toEqual([4, 'unreadable']);
+  });
+
+  it('when the app does not know the views’ layout, which says to update the app, or they do not read', async () => {
+    const views = demoJson<{ schema: string; people: Record<string, Record<string, unknown>> }>('views/views.json');
+    const with_ = (change: object) => load({ 'views/views.json': JSON.stringify({ ...views, ...change }) });
+    const newer = await with_({ schema: 'medrec-views/v3' });
+    expect([held(newer).length, why(newer), whyHeld(index(newer, sam))]).toEqual([4, 'newer_format', 'medrec’s views, which say which items are private, are written by a newer medrec. Update the app.']);
+    for (const odd of [{ schema: 'medrec-events/v1' }, { schema: 2 }, { schema: undefined }, { people: [] }]) {
+      const store = await with_(odd);
+      expect([held(store).length, why(store), whyHeld(index(store, sam))]).toEqual([4, 'unreadable', 'medrec’s views could not be read, so nothing says which items are private.']);
+    }
+    // v1 is not medrec's: there are no views of its own to read.
+    expect(why(await with_({ schema: 'medrec-views/v1' }))).toBe('none');
+    // Only one person's entry does not read: it is named, and the others' lists stand.
+    const people = { ...views.people, [sam]: { ...views.people[sam], text: 'no md5' } };
+    const one = await with_({ people });
+    expect([held(one), why(one), whyHeld(index(one, sam))]).toEqual([['Sam Example'], 'unreadable', 'medrec’s list of which items are private could not be read: views/views.json does not say which files it was made from.']);
   });
 
   it('when a file medrec read for it has changed, and so for the people linked to it', async () => {
@@ -299,19 +325,103 @@ describe('the app’s own grouping, with medrec’s list', () => {
   });
 });
 
-describe('what medrec’s list does not judge', () => {
-  it('a paper only a record links is as private as that record', () => {
-    const idx = structuredClone(index(SAMPLE, sam));
-    const claim = record(SAMPLE, sam, (r) => r.kind === 'claim' && recordPrivate(index(SAMPLE, sam), r.id) !== undefined);
+/** An index as a list from medrec 0.9.5 or later has it: `studies` and the papers private records link are medrec's own answer. */
+function judged095(store: Store, person: string, lists: { documents?: Record<string, string>; studies?: Record<string, string>; unreported?: string[] } = {}): PersonIndex {
+  const idx = structuredClone(index(store, person));
+  if (idx.privacy?.kind !== 'known') throw new Error('not known');
+  for (const [doc, area] of Object.entries(lists.documents ?? {})) idx.privacy.documents.set(doc, area);
+  idx.privacy.studies = new Map(Object.entries(lists.studies ?? {}));
+  idx.privacy.unreported = new Set(lists.unreported ?? []);
+  return idx;
+}
+
+describe('a paper a private record links', () => {
+  const isPrivate = (kind: string) => record(SAMPLE, sam, (r) => r.kind === kind && recordPrivate(index(SAMPLE, sam), r.id) !== undefined).id;
+  const link = (idx: PersonIndex, rec: string, doc: string) => idx.records.find((r) => r.id === rec)!.documents.push(doc);
+  const shownAs = (idx: PersonIndex, doc: string) => papersOf(idx, SAMPLE.household, TODAY, new Map([[sam, idx]])).find((p) => p.doc.id === doc)!;
+  const added = (idx: PersonIndex) => {
     const eob = { ...idx.documents[0]!, id: 'd_privateclaimseobxxxxx', doc_type: 'eob' };
     idx.documents.push(eob);
-    expect(paperPrivate(idx, eob.id)).toBeUndefined();
-    idx.records.find((r) => r.id === claim.id)!.documents.push(eob.id);
-    expect(paperPrivate(idx, eob.id)).toBe('mental_health');
-    expect(papersOf(idx, SAMPLE.household, TODAY, new Map([[sam, idx]])).find((p) => p.doc.id === eob.id)!.private).toBe('mental_health');
+    return eob.id;
+  };
+
+  it('is private, whether no visit holds it or one that is not private does', () => {
+    const idx = structuredClone(index(SAMPLE, sam));
+    const eob = added(idx);
+    expect(paperPrivate(idx, eob)).toBeUndefined();
+    link(idx, isPrivate('claim'), eob);
+    expect([paperPrivate(idx, eob), shownAs(idx, eob).private]).toEqual(['mental_health', 'mental_health']);
+    const goingHome = paper(SAMPLE, sam, 'Going home after knee surgery').id;
+    expect([paperPrivate(idx, goingHome), shownAs(idx, goingHome).with?.how]).toEqual([undefined, 'event']);
+    link(idx, isPrivate('medication'), goingHome);
+    expect([paperPrivate(idx, goingHome), shownAs(idx, goingHome).private]).toEqual(['substance_use', 'substance_use']);
   });
 
-  it('an imaging study is as private as its report, and held back without one', () => {
+  it('is private whatever else links it', () => {
+    const idx = structuredClone(index(SAMPLE, sam));
+    const eob = added(idx);
+    link(idx, record(SAMPLE, sam, (r) => r.kind === 'allergy').id, eob);
+    expect(paperPrivate(idx, eob)).toBeUndefined();
+    link(idx, isPrivate('medication'), eob);
+    expect(paperPrivate(idx, eob)).toBe('substance_use');
+  });
+
+  it('is not when the household marked it not private: from a visit it made private, or in a list from 0.9.5', () => {
+    const marked = structuredClone(index(MARKED, sam));
+    const goingHome = paper(MARKED, sam, 'Going home after knee surgery').id;
+    link(marked, eventOn(MARKED, sam, '2026-08-26').claims[0]!.record.id, goingHome);
+    expect([takenOut(marked, goingHome), paperPrivate(marked, goingHome)]).toEqual([true, undefined]);
+
+    const later = judged095(SAMPLE, sam);
+    const eob = added(later);
+    expect(takenOut(later, eob)).toBe(false);
+    link(later, isPrivate('claim'), eob);
+    expect([takenOut(later, eob), paperPrivate(later, eob)]).toEqual([true, undefined]);
+    // Its visit stays private, so the paper shows without it.
+    const p = shownAs(later, eob);
+    expect([p.private, p.with?.how, p.with?.private]).toEqual([undefined, 'claim', 'mental_health']);
+    expect(billPrivate(later, later.documents.find((d) => d.id === eob)!, events(SAMPLE).find((x) => x.person.id === sam && x.private)!)).toBeUndefined();
+    expect(paperPrivate(judged095(SAMPLE, sam, { documents: { [eob]: 'mental_health' } }), eob)).toBe('mental_health');
+  });
+
+  it('is not when the record is one the household marked not private, though its visit is private', () => {
+    const idx = structuredClone(index(MARKED, sam));
+    if (idx.privacy?.kind !== 'known') throw new Error('not known');
+    const claim = eventOn(MARKED, sam, '2026-08-26').claims[0]!.record.id;
+    const eob = added(idx);
+    link(idx, claim, eob);
+    expect(shownAs(idx, eob).private).toBe('household');
+    expect(idx.privacy.records.delete(claim)).toBe(true);
+    expect([shownAs(idx, eob).private, shownAs(idx, eob).with?.private]).toEqual([undefined, 'household']);
+  });
+
+  it('makes its visit private in the app’s own grouping', () => {
+    const idx = structuredClone(index(SAMPLE, sam));
+    delete idx.events;
+    const goingHome = paper(SAMPLE, sam, 'Going home after knee surgery').id;
+    const holds = () => personEvents(idx, SAMPLE.household, TODAY).find((e) => e.papers.some((p) => p.doc.id === goingHome));
+    const e = holds();
+    if (!e) throw new Error('the app’s own grouping puts it with no visit');
+    expect(eventPrivate(e, idx)).toBeUndefined();
+    link(idx, isPrivate('medication'), goingHome);
+    expect(eventPrivate(e, idx)).toBe('substance_use');
+  });
+});
+
+describe('an imaging study', () => {
+  it('is as medrec 0.9.5 lists it: private with its report, held back with none', () => {
+    const study = index(SAMPLE, sam).studies[0]!;
+    const note = paper(SAMPLE, sam, 'Sports medicine visit note');
+    const reported = { ...study, report: note.id };
+    expect(studyPrivate(judged095(SAMPLE, sam, { studies: { [study.id]: 'reproductive' } }), reported)).toBe('reproductive');
+    expect(studyPrivate(judged095(SAMPLE, sam, { unreported: [study.id] }), study)).toBe(HELD);
+    expect(studyPrivate(judged095(SAMPLE, sam), reported)).toBeUndefined();
+    // A study medrec lists in neither, with no report here, is nobody's to clear.
+    expect(studyPrivate(judged095(SAMPLE, sam), study)).toBe(HELD);
+    expect(anyPrivate(judged095(SAMPLE, robin, { studies: {} }))).toBe(false);
+  });
+
+  it('is, in an earlier list, as private as its report, a linked paper’s too, and held back without one', () => {
     const idx = structuredClone(index(SAMPLE, sam));
     const study = idx.studies[0]!;
     expect(studyPrivate(idx, study)).toBe(HELD);
@@ -320,8 +430,12 @@ describe('what medrec’s list does not judge', () => {
     const meds = record(SAMPLE, sam, (r) => r.kind === 'medication' && /nicotine/i.test(r.display));
     expect(studyPrivate(idx, { ...study, report: meds.id })).toBe('substance_use');
     expect(studyPrivate(idx, { ...study, report: 'd_notfiledyetxxxxxxxxxx' })).toBe(HELD);
+    idx.records.find((r) => r.id === meds.id)!.documents.push(note.id);
+    expect(studyPrivate(idx, { ...study, report: note.id })).toBe('substance_use');
   });
+});
 
+describe('what medrec’s list does not judge', () => {
   it('another person’s paper in a visit (X2) is judged as its own person’s, and its private visit is not named', () => {
     const jamie = structuredClone(index(SAMPLE, id('Jamie Example')));
     const scan = paper(SAMPLE, robin, 'Vaccination card');

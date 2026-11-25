@@ -56,6 +56,24 @@ describe('DriveFolder', () => {
     expect(calls.filter((c) => c === 'GET /drive/v3/files')).toHaveLength(2);
   });
 
+  it('read anew, shares no listing and no MD5 with the one it came from', async () => {
+    const listed = { ...ROOT['folder-robin']![0]! };
+    const tree = { ...ROOT, 'folder-robin': [listed] };
+    const meta: Record<string, DriveFile> = { [listed.id]: listed };
+    const { drive, calls } = driveWith(tree, { [listed.id]: '{}' }, meta);
+    const folder = new DriveFolder(drive, 'root', 'x');
+    await folder.readText('Robin Example/index.json');
+    expect(await folder.md5('Robin Example/index.json')).toBe(listed.md5Checksum);
+    const before = calls.length;
+    const again = folder.fresh();
+    expect([again.id, again.name, again.kind]).toEqual(['root', 'x', 'drive']);
+    meta[listed.id] = { ...listed, md5Checksum: 'f'.repeat(32) };
+    await again.readText('Robin Example/index.json');
+    expect(await again.md5('Robin Example/index.json')).toBe('f'.repeat(32));
+    expect(calls.length).toBeGreaterThan(before + 2);
+    expect(await folder.md5('Robin Example/index.json')).toBe(listed.md5Checksum);
+  });
+
   it('asks Drive for a read file’s MD5 again after the read, once, so an upload between the listing and the read is seen', async () => {
     const listed = ROOT['folder-robin']![0]!;
     const { drive, calls } = driveWith(ROOT, { 'file-robin-index': '{"rev":2}' }, { 'file-robin-index': { ...listed, md5Checksum: 'ABCDEF0123456789ABCDEF0123456789' } });

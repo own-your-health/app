@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import type { BrowserContext, Request, Route } from '@playwright/test';
 
@@ -27,6 +28,8 @@ interface Node {
   parent: string;
   modifiedTime: string;
   content?: string;
+  /** Drive's md5Checksum: the sample's are of its files as written, which medrec's views name, before their times move. */
+  md5?: string;
   /** Created by the app: the only files drive.file lets it change. */
   byApp: boolean;
 }
@@ -56,6 +59,10 @@ export class FakeGoogle {
   readonly strays: string[] = [];
   /** How many calls reached Drive. */
   driveCalls = 0;
+  /** The path of every file whose content the app read, in order. */
+  readonly reads: string[] = [];
+  /** A file whose content Drive fails to give, as it does now and then; `*` while it answers nothing at all. */
+  failing: string | null = null;
   /** What the sign-in grants, and so what the token may do; a person can untick a scope on Google's screen. */
   granted = [READ, WRITE];
   /** The client tokeninfo names: another one means a token issued to another app. */
@@ -71,7 +78,7 @@ export class FakeGoogle {
   private readonly shiftMs: number;
 
   constructor(now = new Date()) {
-    const manifest = JSON.parse(readFileSync(new URL('manifest.json', DEMO), 'utf8')) as { anchor: string; files: string[] };
+    const manifest = JSON.parse(readFileSync(new URL('manifest.json', DEMO), 'utf8')) as { anchor: string; files: string[]; md5: Record<string, string> };
     // The sample was written at its anchor; move its times to now, as the
     // demo does, so the Mac looks online.
     this.shiftMs = now.getTime() - Date.parse(manifest.anchor);
@@ -81,7 +88,7 @@ export class FakeGoogle {
       const parts = f.split('/');
       const name = parts.pop()!;
       const dir = this.folderAt(parts, true)!;
-      if (name !== '.keep') this.add({ name, mimeType: 'application/json', parent: dir.id, byApp: false, content: this.shift(readFileSync(new URL(f.split('/').map(encodeURIComponent).join('/'), DEMO), 'utf8')) });
+      if (name !== '.keep') this.add({ name, mimeType: 'application/json', parent: dir.id, byApp: false, md5: manifest.md5[f], content: this.shift(readFileSync(new URL(f.split('/').map(encodeURIComponent).join('/'), DEMO), 'utf8')) });
     }
   }
 
@@ -134,16 +141,19 @@ export class FakeGoogle {
     return this.nodeAt(path)?.content;
   }
 
-  /** A write by medrec on the Mac, not by the app. */
-  writeAsMac(path: string, content: string): void {
+  /** A write by medrec on the Mac, not by the app; the file's MD5. */
+  writeAsMac(path: string, content: string): string {
     const parts = path.split('/');
     const name = parts.pop()!;
     const dir = this.folderAt(parts, true)!;
     const held = this.childrenOf(dir.id).find((n) => n.name === name);
+    const md5 = createHash('md5').update(content).digest('hex');
     if (held) {
       held.content = content;
+      held.md5 = md5;
       held.modifiedTime = iso(Date.now());
-    } else this.add({ name, mimeType: 'application/json', parent: dir.id, byApp: false, content });
+    } else this.add({ name, mimeType: 'application/json', parent: dir.id, byApp: false, content, md5 });
+    return md5;
   }
 
   removeAsMac(path: string): void {
@@ -204,6 +214,7 @@ export class FakeGoogle {
     const req = route.request();
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors() });
     this.driveCalls++;
+    if (this.failing === '*') return driveError(route, 503, 'backendError', 'Backend Error');
     if (req.headers()['authorization'] !== `Bearer ${TOKEN}`) return driveError(route, 401, 'authError', 'Invalid Credentials');
     const url = new URL(req.url());
     const path = url.pathname.replace(/^\/(upload\/)?drive\/v3\//, '');
@@ -231,7 +242,11 @@ export class FakeGoogle {
       this.changes.push({ method: req.method(), path: this.pathOf(node), refused: true });
       return driveError(route, 403, 'insufficientFilePermissions', 'The user does not have sufficient permissions for this file.');
     }
-    if (url.searchParams.get('alt') === 'media') return route.fulfill({ status: 200, headers: { ...cors(), 'content-type': 'application/json' }, body: node.content ?? '' });
+    if (url.searchParams.get('alt') === 'media') {
+      this.reads.push(this.pathOf(node));
+      if (this.pathOf(node) === this.failing) return driveError(route, 503, 'backendError', 'Backend Error');
+      return route.fulfill({ status: 200, headers: { ...cors(), 'content-type': 'application/json' }, body: node.content ?? '' });
+    }
     return json(route, 200, this.resource(node));
   }
 
@@ -274,6 +289,7 @@ export class FakeGoogle {
       modifiedTime: n.modifiedTime,
       parents: n.parent ? [n.parent] : [],
       ...(n.content !== undefined ? { size: String(n.content.length) } : {}),
+      ...(n.md5 !== undefined ? { md5Checksum: n.md5 } : {}),
       capabilities: { canEdit: n.byApp, canDelete: n.byApp, canAddChildren: n.mimeType === FOLDER_MIME },
     };
   }

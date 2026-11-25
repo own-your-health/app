@@ -4,7 +4,7 @@
 // to tell a fresh view from a stale one (the data contract's "A reader
 // decides freshness by MD5").
 
-import { isObject } from './parse';
+import { FolderError, isObject } from './parse';
 
 export type Md5 = string | null;
 
@@ -27,20 +27,39 @@ export interface PersonView {
 const MD5 = /^[0-9a-f]{32}$/;
 const md5Of = (v: unknown): Md5 | undefined => (v === null ? null : typeof v === 'string' && MD5.test(v) ? v : undefined);
 
-/** Undefined when the views are not medrec's v2 layout, hold no such file for this person, or leave out what freshness needs. */
-export function viewOf(views: unknown, person: string, file: ViewFile): PersonView | undefined {
-  if (!isObject(views) || views.schema !== 'medrec-views/v2' || !isObject(views.people)) return undefined;
-  const p = views.people[person];
-  if (!isObject(p) || !isObject(p.files)) return undefined;
+/**
+ * views.json, once it is in the layout this app reads (v2, every medrec's so
+ * far). Null for v1, which medrec never wrote: there are no views to read. A
+ * later layout is refused as newer, anything else as malformed.
+ */
+export function parseViews(raw: unknown): Record<string, unknown> | null {
+  if (!isObject(raw) || typeof raw.schema !== 'string' || !raw.schema.startsWith('medrec-views/')) throw new FolderError('malformed', 'views/views.json is not medrec’s list of views.');
+  if (raw.schema === 'medrec-views/v1') return null;
+  if (raw.schema !== 'medrec-views/v2') throw new FolderError('newer_format', 'They are written by a newer medrec. Update the app.');
+  if (!isObject(raw.people)) throw new FolderError('malformed', 'views/views.json names no people.');
+  return raw;
+}
+
+/**
+ * A person's view file as views.json names it, or undefined when it names
+ * none for them: medrec has not written it. An entry that leaves out what
+ * freshness needs is refused as malformed.
+ */
+export function viewOf(views: Record<string, unknown> | null, person: string, file: ViewFile): PersonView | undefined {
+  const p = isObject(views?.people) ? views.people[person] : undefined;
+  if (p === undefined) return undefined;
+  const bad = () => new FolderError('malformed', 'views/views.json does not say which files it was made from.');
+  if (!isObject(p) || !isObject(p.files)) throw bad();
+  if (p.files[file] === undefined) return undefined;
   const md5 = md5Of(p.files[file]);
-  const [household, index, txt, overrides] = [md5Of(views.household), md5Of(p.index), md5Of(p.text), md5Of(p.overrides)];
-  if (!md5 || household === undefined || index === undefined || txt === undefined || overrides === undefined || !isObject(p.linked)) return undefined;
+  const [household, index, txt, overrides] = [md5Of(views!.household), md5Of(p.index), md5Of(p.text), md5Of(p.overrides)];
+  if (!md5 || household === undefined || index === undefined || txt === undefined || overrides === undefined || !isObject(p.linked)) throw bad();
   const marks = md5Of(p.marks);
-  if (file === 'private.json' && marks === undefined) return undefined;
+  if (file === 'private.json' && marks === undefined) throw bad();
   const linked = new Map<string, { index: Md5; text: Md5 }>();
   for (const [id, l] of Object.entries(p.linked)) {
     const [li, lt] = isObject(l) ? [md5Of(l.index), md5Of(l.text)] : [undefined, undefined];
-    if (li === undefined || lt === undefined) return undefined;
+    if (li === undefined || lt === undefined) throw bad();
     linked.set(id, { index: li, text: lt });
   }
   const name = `${file.slice(0, -'.json'.length)}.${md5.slice(0, 12)}.json`;

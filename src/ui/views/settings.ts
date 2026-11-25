@@ -24,7 +24,7 @@ function visitsText(ctx: Ctx): string {
 /** Why the app groups anyone's visits itself when medrec wrote them, one line each. */
 function visitsNotes(ctx: Ctx): HTMLElement[] {
   const { store } = ctx;
-  if (store.viewsError) return [h('p', { class: 'small muted' }, store.viewsError)];
+  if (store.viewsError) return [h('p', { class: 'small muted' }, store.viewsError.text)];
   return store.household.people.flatMap((p) => {
     const note = store.eventsNotes.get(p.id);
     return note ? [h('p', { class: 'small muted' }, `${p.name}: ${note.text}`)] : [];

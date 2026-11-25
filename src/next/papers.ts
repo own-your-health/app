@@ -6,7 +6,7 @@
 // which.
 
 import { billList } from '../model/billing';
-import { HELD, inVisit, paperPrivate } from '../model/private';
+import { HELD, inVisit, paperPrivate, takenOut } from '../model/private';
 import type { Household, MedDocument, PersonIndex } from '../model/types';
 import { dateText } from '../ui/format';
 import { eventPrivate, type CareEvent, type Confidence } from './event';
@@ -78,8 +78,9 @@ export function papersOf(index: PersonIndex, household: Household, today: string
       };
       const place = (event: CareEvent, of: string, how: PaperHow, confidence: Confidence): Paper => {
         const visits = areaOf(event, of);
-        // Another person's visit (X2) does not decide: the paper is judged as its own person's.
-        const judged = of !== person || (how === 'event' && inVisit(index, doc.id));
+        // Another person's visit (X2) does not decide: the paper is judged as its own person's. Nor does
+        // a visit it was judged with, through medrec's events or the record that links it.
+        const judged = of !== person || takenOut(index, doc.id) || (index.events !== undefined && (how === 'event' ? inVisit(index, doc.id) : how !== 'bill'));
         const area = own ?? (judged ? undefined : visits);
         return { doc, person, with: { event, person: of, how, confidence, ...(visits ? { private: visits } : {}) }, ...(area ? { private: area } : {}) };
       };

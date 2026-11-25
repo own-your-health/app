@@ -2,6 +2,7 @@
 
 import { completeSignIn, SCOPE_READ, SCOPE_WRITE, signInErrorText, startSignIn, verifyToken, type Token, type Unsent } from '../auth';
 import { startDemoMac } from '../data/demo-mac';
+import { Rereads } from '../data/rereads';
 import { Store } from '../data/store';
 import { Drive, DriveError } from '../drive';
 import { DemoFolder, DriveFolder } from '../folder';
@@ -70,6 +71,7 @@ export class App {
   private drive: Drive | null = null;
   private demo: boolean;
   private demoMac: ((file: string) => void) | null = null;
+  private rereads: Rereads | null = null;
   private main = h('main', { class: 'main', id: 'main' });
   private bar = h('header', { class: 'app-bar' });
   private banner = h('div', { class: 'banner-slot', 'aria-live': 'polite' });
@@ -119,7 +121,7 @@ export class App {
       if (document.visibilityState !== 'visible') return;
       void this.lookForUpdate();
       if (this.signInEnded()) return this.renew();
-      void this.pollOnce();
+      void this.pollOnce(true);
     });
     if (this.demo) return this.startDemo();
 
@@ -286,7 +288,7 @@ export class App {
       return this.show({ name: 'message', title: 'That folder could not be opened', text, actions: [button('Choose a folder', () => this.show({ name: 'folder' }), { primary: true })] });
     }
     setFolder(f);
-    this.store = store;
+    this.opened(store);
     this.show({ name: 'ready' });
     this.startPolling();
   }
@@ -300,7 +302,7 @@ export class App {
     } catch (e) {
       return this.show({ name: 'message', title: 'The sample records did not load', text: e instanceof Error ? e.message : String(e) });
     }
-    this.store = store;
+    this.opened(store);
     this.scopes = [SCOPE_READ, SCOPE_WRITE];
     this.user = { name: 'Sample visitor' };
     this.demoMac = startDemoMac(folder, () => void this.pollOnce());
@@ -308,22 +310,34 @@ export class App {
     this.startPolling();
   }
 
+  private opened(store: Store): void {
+    this.store = store;
+    this.rereads = new Rereads(store, () => Date.now(), (text) => store === this.store && this.toast(text, 'error'));
+  }
+
   private startPolling(): void {
     window.clearInterval(this.pollTimer);
     // While a request waits, look for the Mac's answer: two Drive listings
     // and a status read per look.
     this.pollTimer = window.setInterval(() => {
-      if (this.store?.pending.length && document.visibilityState === 'visible') void this.pollOnce();
+      if ((this.store?.waiting || this.rereads?.due()) && document.visibilityState === 'visible') void this.pollOnce();
     }, this.demo ? 1500 : 30_000);
   }
 
-  private async pollOnce(): Promise<void> {
-    if (!this.store || (!this.demo && !this.token)) return;
-    try {
-      await this.store.loadRefreshState();
-    } catch {
-      return;
-    }
+  /** Looks for the Mac's answer, draws it, and reads the records again when that is due. */
+  private async pollOnce(front = false): Promise<void> {
+    const { store, rereads } = this;
+    if (!store || !rereads || (!this.demo && !this.token)) return;
+    // With Drive out, a read that is due fails as well: it counts as a try, and is said.
+    await store.loadRefreshState().catch(() => undefined);
+    this.drawIfNew(store);
+    await rereads.look(front);
+    this.drawIfNew(store);
+  }
+
+  /** Draws the page again when what it shows has changed. */
+  private drawIfNew(store: Store): void {
+    if (store !== this.store) return;
     const sig = this.stateSignature();
     if (sig === this.signature) return;
     // Held back, not dropped: the poll stops once nothing is pending, so the change is drawn when the input is let go.
@@ -358,7 +372,7 @@ export class App {
   private stateSignature(): string {
     const st = this.store;
     if (!st) return '';
-    return JSON.stringify([st.status.kind === 'ok' ? st.status.status.updated_at : st.status.kind, st.pending.map((p) => p.file), st.done.length, st.refused.length]);
+    return JSON.stringify([st.status.kind === 'ok' ? st.status.status.updated_at : st.status.kind, st.pending.map((p) => p.file), st.done.length, st.refused.length, st.snapshot]);
   }
 
   private ctx(): Ctx {
@@ -423,6 +437,7 @@ export class App {
   private signOut(): void {
     this.token = null;
     this.store = null;
+    this.rereads = null;
     this.drive = null;
     window.clearInterval(this.pollTimer);
     setAccount(null);

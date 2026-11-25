@@ -18,7 +18,16 @@ export type HeldWhy = 'none' | 'behind' | 'arriving' | 'unchecked' | 'newer_form
 
 /** What medrec says of one person: each private item's area by id, or why that is not known. */
 export type Privacy =
-  | { kind: 'known'; records: Map<string, string>; documents: Map<string, string>; events: Map<string, string> }
+  | {
+      kind: 'known';
+      records: Map<string, string>;
+      documents: Map<string, string>;
+      events: Map<string, string>;
+      /** medrec 0.9.5 and later, which also puts a paper a private record links in `documents`; null in an earlier list. */
+      studies: Map<string, string> | null;
+      /** Studies no report judges (0.9.5 and later). */
+      unreported: Set<string>;
+    }
   | { kind: 'held'; why: HeldWhy; text: string };
 
 /** In place of an area, for an item no current list can clear. */
@@ -58,7 +67,9 @@ export function parsePrivate(raw: unknown, person: string): Privacy {
   if (raw.person !== person) throw new FolderError('malformed', 'it is another person’s.');
   // The household's marks did not read: any item may be one it marked private.
   if (raw.marks_unreadable !== undefined && raw.marks_unreadable !== false) return held('marks', 'The household’s own private marks could not be read.');
-  return { kind: 'known', records: areas(raw.records), documents: areas(raw.documents), events: areas(raw.events) };
+  const unreported = raw.unreported_studies ?? [];
+  if (!Array.isArray(unreported) || !unreported.every((x) => typeof x === 'string')) throw new FolderError('malformed', 'its list of imaging studies with no report does not read.');
+  return { kind: 'known', records: areas(raw.records), documents: areas(raw.documents), events: areas(raw.events), studies: raw.studies === undefined ? null : areas(raw.studies), unreported: new Set(unreported) };
 }
 
 const known = (index: PersonIndex) => (index.privacy?.kind === 'known' ? index.privacy : undefined);
@@ -100,27 +111,48 @@ export function documentPrivate(index: PersonIndex, id: string): string | undefi
   return p ? p.documents.get(id) : HELD;
 }
 
-/** Whether medrec's events put one of the person's own papers in a visit, and so judged it with that visit. */
-export const inVisit = (index: PersonIndex, id: string): boolean => !!index.events?.events.some((e) => e.members.some((m) => m.document === id && !m.person));
+/** The visits medrec's events put one of the person's own papers in, which judged it with them. */
+const visitsWith = (index: PersonIndex, id: string) => (index.events?.events ?? []).filter((e) => e.members.some((m) => m.document === id && !m.person));
+export const inVisit = (index: PersonIndex, id: string): boolean => visitsWith(index, id).length > 0;
+
+/** The area of a private record that links a paper. */
+const linkPrivate = (index: PersonIndex, id: string) => recordsPrivate(index, index.records.filter((r) => r.documents.includes(id)).map((r) => r.id));
 
 /**
- * Why a paper is private, where it is named by itself. medrec judges a paper
- * by its practice and its visit. One that only a record links (an explanation
- * of benefits names its claim) is in no visit of medrec's, so it is also as
- * private as that record.
+ * Whether the household took a paper out itself: its list leaves the paper
+ * off though a rule makes it private, as part of a private visit or, from
+ * 0.9.5, as linked by a private record. Their own mark decides, whatever else
+ * would make it private.
+ */
+export function takenOut(index: PersonIndex, id: string): boolean {
+  const p = known(index);
+  if (!p || p.documents.has(id)) return false;
+  return visitsWith(index, id).some((e) => p.events.has(e.id)) || (p.studies !== null && linkPrivate(index, id) !== undefined);
+}
+
+/**
+ * Why a paper is private: medrec's answer for it, else that of a record that
+ * links it. medrec 0.9.5 and later judges those links itself; a list from an
+ * earlier one does not, so they are judged here the same way.
  */
 export function paperPrivate(index: PersonIndex, id: string): string | undefined {
   const own = documentPrivate(index, id);
-  if (own || inVisit(index, id)) return own;
-  return recordsPrivate(index, index.records.filter((r) => r.documents.includes(id)).map((r) => r.id));
+  if (own || takenOut(index, id)) return own;
+  return linkPrivate(index, id);
 }
 
-/** medrec's list has no imaging studies: one is as private as its report, and held back without one. */
+/**
+ * An imaging study is as private as its report, and held back without one:
+ * medrec 0.9.5 and later lists both, and for an earlier list its report says.
+ */
 export function studyPrivate(index: PersonIndex, study: ImagingStudy): string | undefined {
   const p = known(index);
-  if (!p || !study.report) return HELD;
-  if (!index.records.some((r) => r.id === study.report) && !index.documents.some((d) => d.id === study.report)) return HELD;
-  return p.records.get(study.report) ?? p.documents.get(study.report);
+  if (!p) return HELD;
+  const area = p.studies?.get(study.id);
+  if (area) return area;
+  if (p.unreported.has(study.id) || !study.report) return HELD;
+  if (index.records.some((r) => r.id === study.report)) return p.records.get(study.report);
+  return index.documents.some((d) => d.id === study.report) ? paperPrivate(index, study.report) : HELD;
 }
 
 /** Why one item of a kind is private, as a search finds it. */
