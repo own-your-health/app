@@ -247,7 +247,7 @@
       "fhir_base": "https://example-lab.example",
       "patient_id": "pat-36c1fa",
       "patient_label": "Sam Example",
-      "last_pull": "2026-10-18T20:00:00Z"
+      "last_pull": "2026-11-13T20:00:00Z"
     },
     {
       "id": "s_m4irp47hh4vsmaxokbtc",

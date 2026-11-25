@@ -135,9 +135,11 @@ describe('requests', () => {
   });
 
   it('reads a request medrec refused, which keeps no scope', () => {
-    const r = parseRefused(fixture('folder/done-invalid.json'));
-    expect(r).toMatchObject({ id: null, handled: { outcome: 'invalid', message: 'The request is larger than 4 KiB.' } });
-    expect(parseRequest(fixture('folder/done-invalid.json'))).toBeNull();
+    const large = parseRefused(fixture('rules/refused-large.json'));
+    expect(large).toMatchObject({ id: expect.stringMatching(/^x_[a-z2-7]{20}$/), received: { bytes: 5291, sha256: null }, handled: { outcome: 'invalid', message: 'it is 5291 bytes; a request is at most 4096' } });
+    const misnamed = parseRefused(fixture('rules/refused-name.json'));
+    expect(misnamed).toMatchObject({ id: null, handled: { outcome: 'invalid' } });
+    for (const f of ['rules/refused-large.json', 'rules/refused-name.json']) expect(parseRequest(fixture(f))).toBeNull();
   });
 });
 

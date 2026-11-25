@@ -10,11 +10,12 @@
 //
 // The same steps write the same bytes: the clock stands still at each step's
 // moment, and medrec's ids are drawn from the step (sample/moment.c, which
-// needs a C compiler).
+// needs a C compiler). A step it was not loaded into, which some systems let
+// pass, stops the run.
 
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { accessSync, constants, mkdirSync, mkdtempSync, statSync } from 'node:fs';
+import { accessSync, constants, existsSync, mkdirSync, mkdtempSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -64,6 +65,8 @@ export function scratchMachine(root, { alone = false } = {}) {
   mkdirSync(bin);
   const shim = join(home, MAC ? 'moment.dylib' : 'moment.so');
   execFileSync('cc', ['-O2', '-Wall', '-Werror', ...(MAC ? ['-dynamiclib'] : ['-shared', '-fPIC']), '-o', shim, join(HERE, 'sample', 'moment.c')], { stdio: 'inherit' });
+  const loaded = join(home, 'loaded');
+  mkdirSync(loaded);
   const env = {
     PATH: alone ? bin : `${bin}:${process.env.PATH ?? '/usr/bin:/bin'}`,
     ...(process.env.TMPDIR ? { TMPDIR: process.env.TMPDIR } : {}),
@@ -77,12 +80,16 @@ export function scratchMachine(root, { alone = false } = {}) {
     TZ: 'America/New_York',
     LANG: 'C.UTF-8',
     NO_COLOR: '1',
+    SAMPLE_LOADED: loaded,
     [MAC ? 'DYLD_INSERT_LIBRARIES' : 'LD_PRELOAD']: shim,
   };
   const records = root ?? join(home, 'records');
   const medrec = (before, ...args) => {
     const step = `${args.join(' ').replaceAll(records, 'records').replaceAll(home, 'home')} ${before}`;
-    execFileSync(binary, ['-q', ...args], { env: { ...env, SAMPLE_AT: String(seconds(before)), SAMPLE_SEED: step }, stdio: ['ignore', 'ignore', 'inherit'] });
+    const ran = spawnSync(binary, ['-q', ...args], { env: { ...env, SAMPLE_AT: String(seconds(before)), SAMPLE_SEED: step }, stdio: ['ignore', 'ignore', 'inherit'] });
+    if (ran.error) throw ran.error;
+    if (ran.status !== 0) throw new Error(`medrec ${args.join(' ')} ended with ${ran.signal ?? ran.status}`);
+    if (!existsSync(join(loaded, String(ran.pid)))) throw new Error(`medrec ran on the real clock: ${shim} was not loaded into it (a temporary folder nothing may run from, or a medrec that takes no library)`);
   };
   return { home, bin, root: records, medrec };
 }

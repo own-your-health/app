@@ -502,10 +502,12 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   SHA-256, and compares. Only `views/views.json` and each person's
   `events.json`, `bills.json`, `private.json` and `code-names.json` are kept:
   the app reads no other view. medrec keeps the code names from the committed
-  files, so they need the published table only when the sample gains a code:
-  set `ICD10CM_ZIP` to the zip `medrec tables list` names, downloaded, for that
-  run. `manifest.json` gives each file's MD5, as Drive would, for the store's
-  freshness check.
+  files, so they need the published table only when someone gains a code or
+  their id changes, and the script then says so: set `ICD10CM_ZIP` to the zip
+  `medrec tables list` names, downloaded, for that run. `manifest.json` gives
+  each file's MD5, as Drive would, for the store's freshness check. The READMEs
+  in the folder are medrec's own, written for a real household. Everything there
+  is invented, and nothing is put into it by hand, `inbox/` included.
 - What the tests read besides the sample is medrec's too: the cases laid over
   it (`test/fixtures/private/`, and `test/fixtures/bills/paid/` with payments
   marked), made by `node scripts/private-fixtures.mjs` and

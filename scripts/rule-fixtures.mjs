@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { holdsOnly } from './cases.mjs';
 import { iso } from './medrec.mjs';
 import { machineWith, put } from './providers.mjs';
-import { ASKED, MARKED, PAPERS, PEOPLE, RECORDS, SOURCES } from './sample/rules.mjs';
+import { ASKED, MARKED, MISNAMED, PAPERS, PEOPLE, RECORDS, SOURCES, TOO_LARGE } from './sample/rules.mjs';
 
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'test', 'fixtures', 'rules');
 const DAY = 24 * 60 * 60;
@@ -34,12 +34,14 @@ const val = JSON.parse(readFileSync(join(root, PEOPLE.val.name, 'index.json'), '
 const bill = (due) => val.documents.find((d) => d.doc_type === 'bill' && !d.same_statement_as && d.statement?.amount_due?.amount === due).id;
 for (const [due, on, amount] of MARKED) at(7 * DAY, 'bills', 'paid', bill(due), '--on', on, '--amount', amount);
 // As the app asks, for the Mac's next pass.
-ASKED.forEach(({ of, on, amount }, i) => {
-  const id = `x_${[...createHash('sha256').update(`payment ${i}`).digest().subarray(0, 20)].map((b) => 'abcdefghijklmnopqrstuvwxyz234567'[b % 32]).join('')}`;
+const asks = (i, what, request) => {
+  const id = `x_${[...createHash('sha256').update(what).digest().subarray(0, 20)].map((b) => 'abcdefghijklmnopqrstuvwxyz234567'[b % 32]).join('')}`;
   const asked = iso(6 * DAY + 60 - i);
-  const paid = { person: val.person, document: of ? bill(of) : `d_${'a'.repeat(20)}`, on, amount };
-  put(join(root, '_requests', `${asked.replace(/[-:]/g, '')}_${id}.json`), JSON.stringify({ schema: 'medrec-request/v1', id, requested_at: asked, requested_by: { email: 'robin@example.com' }, paid, app: { name: 'own-your-health-app', version: '0.1.0' } }, null, 2));
-});
+  put(join(root, '_requests', `${asked.replace(/[-:]/g, '')}_${id}.json`), JSON.stringify({ schema: 'medrec-request/v1', id, requested_at: asked, requested_by: { email: 'robin@example.com' }, ...request, app: { name: 'own-your-health-app', version: '0.1.0' } }, null, 2));
+};
+ASKED.forEach(({ of, on, amount }, i) => asks(i, `payment ${i}`, { paid: { person: val.person, document: of ? bill(of) : `d_${'a'.repeat(20)}`, on, amount } }));
+asks(ASKED.length, 'too large', TOO_LARGE);
+put(join(root, '_requests', MISNAMED.file), JSON.stringify(MISNAMED.request));
 at(6 * DAY, '--profile', 'demo', 'refresh', 'add', '--source', idOf(SOURCES.valPlan), '--provider-profile', SOURCES.valPlan.login);
 at(6 * DAY, 'refresh', '--scheduled');
 at(0, 'verify');
@@ -58,7 +60,7 @@ keep(join(views, readdirSync(views).find((f) => f.startsWith('bills.'))), 'bills
 const done = join(root, '_requests', 'done');
 for (const f of readdirSync(done).filter((x) => x.endsWith('.json'))) {
   const answer = JSON.parse(readFileSync(join(done, f), 'utf8'));
-  keep(join(done, f), `paid-${answer.handled.outcome}.json`);
+  keep(join(done, f), answer.paid ? `paid-${answer.handled.outcome}.json` : answer.id ? 'refused-large.json' : 'refused-name.json');
 }
 console.log(`wrote ${written.length} files under test/fixtures/rules/`);
 holdsOnly('rules', written);

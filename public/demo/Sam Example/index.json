@@ -4208,13 +4208,13 @@
     {
       "id": "i_oxeqnaw2bd6vk65oiqlk",
       "source_dir": "Sam Example/Records/labcorp-example-lab",
-      "stream_sha256": "1851a3defaa2a17b8311700fd52b7389f6b5e17ed32b3923399b86afff8ac374",
+      "stream_sha256": "bb62331156da1a465129ac5fc30e8824788a02e1c67f51924a20115418f0c390",
       "stream_bytes": 5348,
       "cli": "labcorp",
       "cli_version": "0.2.1",
       "organization": "example-lab",
       "patient_id": "pat-36c1fa",
-      "pulled_at": "2026-10-18T20:00:00Z",
+      "pulled_at": "2026-11-13T20:00:00Z",
       "imported_at": "2026-11-13T20:00:00Z",
       "counts": {
         "Observation": 7,

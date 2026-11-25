@@ -75,6 +75,7 @@ imports(robinBlood, 12 * DAY, robin.BLOOD[0]);
 
 // A lab that loads every nine days or so, and last did.
 refreshes(samLab, 9 * DAY, '--every', '208h');
+serves(samLab, 9 * DAY, sam.LAB[0]);
 pass(9 * DAY);
 imports(robinChart, 8 * DAY, robin.CHART[1], noClaims);
 imports(robinPlan, 3 * DAY, robin.PLAN[2]);
@@ -128,11 +129,11 @@ pass(2 * MINUTE);
 // ---- The codes' names ----
 
 // They come from CMS's table of ICD-10-CM titles, which medrec reads from a
-// machine that has it and otherwise keeps from the last views. So the table is
-// needed only when the sample gains a code: ICD10CM_ZIP is then the zip `medrec
-// tables list` gives the address of, which medrec checks against its recorded
-// hash. The last pass is on a machine without it, so every machine writes the
-// same views.
+// machine that has it and otherwise keeps from that person's last views. So the
+// table is needed only when someone gains a code or their id changes, and a run
+// that then goes without it stops: ICD10CM_ZIP is the zip `medrec tables list`
+// gives the address of, which medrec checks against its recorded hash. The last
+// pass is on a machine without it, so every machine writes the same views.
 if (process.env.ICD10CM_ZIP) {
   at(2 * MINUTE, 'tables', 'fetch', 'icd10cm', '--file', resolve(process.env.ICD10CM_ZIP));
   at(2 * MINUTE, 'views', 'write', '--all');
@@ -143,6 +144,17 @@ if (process.env.ICD10CM_ZIP) {
 }
 const last = scratchMachine(ROOT).medrec;
 for (const args of [['profiles', 'add', 'demo'], ['init', ROOT], ['views', 'write', '--all'], ['verify']]) last(2 * MINUTE, ...args);
+
+const readJson = (...path) => JSON.parse(readFileSync(join(ROOT, ...path), 'utf8'));
+/** The ICD-10-CM codes anywhere in a record. */
+const icd = (o) => (o && typeof o === 'object' ? [...(o.system === 'http://hl7.org/fhir/sid/icd-10-cm' ? [o.code] : []), ...Object.values(o).flatMap(icd)] : []);
+for (const p of Object.values(PEOPLE)) {
+  const index = readJson(p.name, 'index.json');
+  const names = readdirSync(join(ROOT, 'views', index.person)).filter((f) => f.startsWith('code-names.')).map((f) => readJson('views', index.person, f));
+  const named = new Set(names.flatMap((n) => [...Object.keys(n.codes ?? {}), ...Object.keys(n.private_codes ?? {})]).map((key) => key.split('|')[1]));
+  const unnamed = [...new Set(icd(index.records))].filter((code) => !named.has(code));
+  if (unnamed.length) throw new Error(`${p.name}'s ${unnamed.join(', ')} have no name: run again with ICD10CM_ZIP (above)`);
+}
 
 // ---- The folder as the app ships it ----
 

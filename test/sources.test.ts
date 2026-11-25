@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { headline, importsFor, isOverdue, macState, needsAttention, needsPerson, QUIET_FOR_MS, requestWait, sourceViews } from '../src/model/sources';
 import { buildRequest } from '../src/model/requests';
-import type { RefreshStatus } from '../src/model/types';
+import type { RefreshRequest, RefreshStatus } from '../src/model/types';
 import { demo, sourceOf } from './demo-data';
 
 const NOW = new Date('2026-11-22T20:00:00Z');
@@ -104,6 +104,19 @@ describe('source views over the sample', () => {
     const vs = sourceViews({ household, indexes, status: unset, pending: [req], done: [], now: NOW });
     expect(vs.filter((v) => !v.pending.length).map((v) => v.source.id)).toEqual([drew]);
     expect(vs.every((v) => v.pending.length <= 1)).toBe(true);
+  });
+
+  it('give each source the last request answered for it, and no other’s', () => {
+    const [athena, labcorp] = [sourceOf(household, 'Alex Example', 'athena').id, sourceOf(household, 'Sam Example', 'labcorp').id];
+    const answered = (source: string, finished: string): RefreshRequest => ({
+      ...buildRequest({ scope: { source }, now: new Date(finished), by: {}, appVersion: '0' }),
+      handled: { outcome: 'ok', finished_at: finished, sources: [{ source, outcome: 'ok' }] },
+    });
+    const done = [answered(athena, '2026-11-21T10:00:00Z'), answered(labcorp, '2026-11-22T10:00:00Z'), answered(athena, '2026-11-20T10:00:00Z')];
+    const last = new Map(sourceViews({ household, indexes, status, pending: [], done, now: NOW }).map((v) => [v.source.id, v.lastHandled?.handled?.finished_at]));
+    expect(last.get(athena)).toBe('2026-11-21T10:00:00Z');
+    expect(last.get(labcorp)).toBe('2026-11-22T10:00:00Z');
+    expect([...last.values()].filter(Boolean)).toHaveLength(2);
   });
 });
 

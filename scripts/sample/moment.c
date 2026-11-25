@@ -1,13 +1,25 @@
 // The moment and the ids a program sees: the real-time clock stands still at
 // SAMPLE_AT (seconds since 1970), and a read of 13 random bytes, which is what
 // one of medrec's ids is made of, comes from SAMPLE_SEED and how many came
-// before it. Everything else is the system's.
+// before it. Everything else is the system's. A program it is loaded into has
+// a file of its process id in the folder SAMPLE_LOADED.
 #define _GNU_SOURCE
+#include <fcntl.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <time.h>
+#include <unistd.h>
+
+__attribute__((constructor)) static void loaded(void) {
+  const char *dir = getenv("SAMPLE_LOADED");
+  char path[1024];
+  if (!dir || snprintf(path, sizeof path, "%s/%ld", dir, (long)getpid()) >= (int)sizeof path) return;
+  int fd = open(path, O_CREAT | O_WRONLY | O_CLOEXEC, 0600);
+  if (fd >= 0) close(fd);
+}
 
 static uint64_t mix(uint64_t x) {
   x += 0x9e3779b97f4a7c15ULL;
@@ -48,7 +60,6 @@ INTERPOSE(sample_clock_gettime, clock_gettime)
 #include <dlfcn.h>
 #include <stdarg.h>
 #include <sys/syscall.h>
-#include <unistd.h>
 // Some programs ask the kernel for random bytes themselves.
 long syscall(long number, ...) {
   static long (*next)(long, ...);

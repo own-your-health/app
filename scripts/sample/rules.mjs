@@ -344,3 +344,6 @@ export const ASKED = [
   { of: '90.00', on: '2026-09-29', amount: { amount: '8.00', currency: 'EUR' } },
   { of: null, on: '2026-09-29', amount: '5.00' },
 ];
+/** And two medrec refuses: a file that is not named as a request, and one larger than the 4 KiB a request may be. */
+export const MISNAMED = { file: 'everything.json', request: { scope: { all: true } } };
+export const TOO_LARGE = { scope: { all: true }, note: '0123456789'.repeat(500) };
