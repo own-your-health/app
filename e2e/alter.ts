@@ -6,7 +6,7 @@ import { DEMO, type Overlay } from '../test/helpers';
 type Json = Record<string, unknown>;
 interface Views {
   medrec: string;
-  people: Record<string, { index: string; in_error?: Json; linked: Record<string, { index: string }>; files: Record<string, string> }>;
+  people: Record<string, { index: string; text: string | null; in_error?: Json; linked: Record<string, { index: string; text: string | null }>; files: Record<string, string> }>;
 }
 interface Member {
   record?: string;
@@ -25,7 +25,8 @@ export interface PersonFiles {
   index: { records: (Item & { kind?: string; date?: string; fields: Json })[]; documents: Item[] };
   events: { events: Item[]; pending: (Member & { could_join: string[] })[]; aliases?: { organization: string; document: string }[] };
   bills: { bills: Record<string, Json>; worth_a_call: { bill: string }[]; not_billed: { event: string }[] };
-  list: { records: Json; documents: Json; events: Json };
+  list: { records: Json; documents: Json; events: Json; parts?: Json };
+  text: { texts: Record<string, string> };
   /** Its entry in views.json. */
   view: { in_error?: Json };
 }
@@ -42,17 +43,21 @@ export function rewritten(base: Overlay, change: (files: PersonFiles) => void, m
   for (const p of people) {
     const v = views.people[p.id]!;
     const viewPath = (file: string) => `views/${p.id}/${file}.${v.files[`${file}.json`]!.slice(0, 12)}.json`;
-    const files: PersonFiles = { name: p.name, index: read(`${p.folder}/index.json`), events: read(viewPath('events')), bills: read(viewPath('bills')), list: read(viewPath('private')), view: v };
+    const files: PersonFiles = { name: p.name, index: read(`${p.folder}/index.json`), events: read(viewPath('events')), bills: read(viewPath('bills')), list: read(viewPath('private')), text: read(`${p.folder}/text.json`), view: v };
     change(files);
     for (const [file, x] of [['events', files.events], ['bills', files.bills], ['private', files.list]] as const) {
       const text = JSON.stringify(x);
       v.files[`${file}.json`] = md5(text);
       out[viewPath(file)] = text;
     }
-    const text = JSON.stringify(files.index);
-    out[`${p.folder}/index.json`] = text;
-    v.index = md5(text);
-    for (const other of Object.values(views.people)) if (other.linked[p.id]) other.linked[p.id]!.index = md5(text);
+    const put = (file: string, x: object): string => {
+      const text = JSON.stringify(x);
+      out[`${p.folder}/${file}`] = text;
+      return md5(text);
+    };
+    v.index = put('index.json', files.index);
+    v.text = put('text.json', files.text);
+    for (const other of Object.values(views.people)) if (other.linked[p.id]) other.linked[p.id] = { index: v.index, text: v.text };
   }
   out['views/views.json'] = JSON.stringify(views);
   return out;
@@ -150,6 +155,48 @@ export const removed = (base: Overlay): Overlay =>
     bills.worth_a_call = bills.worth_a_call.filter((x) => !(x.bill in list.documents));
     bills.not_billed = bills.not_billed.filter((x) => !(x.event in list.events));
     Object.assign(list, { records: kept, documents: {}, events: {} });
+  });
+
+const BILLS = new Set(['bill', 'receipt', 'eob']);
+
+/**
+ * The sample with a private part in each open claim of several lines, each
+ * open bill, receipt and explanation of benefits, and each visit those claims
+ * are of, as medrec 0.9.9 and later says them. With `words`, what is private
+ * there says those; its amounts and its days, which are not, stay.
+ */
+export const linesPrivate = (words?: string): Overlay =>
+  rewritten({}, ({ index, events, list, text }) => {
+    const parts: Json = {};
+    for (const r of index.records) {
+      const items = r.fields.items as Json[] | undefined;
+      if (r.kind !== 'claim' || r.id in list.records || !items || items.length < 2) continue;
+      const diagnoses = r.fields.diagnoses as Json[] | undefined;
+      parts[r.id] = { display: 'Sample care', category: 'other', lines: [0], ...(diagnoses?.length ? { diagnoses: [0] } : {}), payer_notes: [0], says: '1 service, 1 diagnosis and 1 payer note not shown' };
+      r.fields.payer_notes = [words ?? 'Sample note', 'Placeholder note'];
+      if (words === undefined) continue;
+      items[0] = { ...items[0], service: { system: 'http://www.ama-assn.org/go/cpt', code: '00001', display: words }, category: 'imaging', payer_notes: [words] };
+      delete items[0].records;
+      if (diagnoses?.length) diagnoses[0] = { ...diagnoses[0], code: { system: 'http://hl7.org/fhir/sid/icd-10-cm', code: 'Z00.0', display: words } };
+      Object.assign(r, { display: words });
+      r.fields.category = 'imaging';
+    }
+    for (const e of events.events) {
+      if (e.id in list.events || !e.members?.some((m) => (m.record ?? '') in parts)) continue;
+      parts[e.id] = { kind: 'service', title: 'Sample visit', what: 'Sample words', what_from: 'claims', place: null, place_from: null, expected: null, says: '1 service not shown' };
+      if (words !== undefined) Object.assign(e, { kind: 'er', title: words, what: words, place: words, place_from: 'portal', expected: [{ what: 'bill', why: words }], members: e.members.map((m) => ((m.record ?? '') in parts ? { ...m, title: words } : m)) });
+    }
+    for (const d of index.documents) {
+      const body = text.texts[d.id];
+      if (body === undefined || d.id in list.documents || !BILLS.has(String(d.doc_type))) continue;
+      const lines = body.split('\n');
+      const at = lines.findIndex((l) => /[a-z]{4}/i.test(l));
+      if (words !== undefined) lines[at] = words;
+      text.texts[d.id] = lines.join('\n');
+      const before = lines.slice(0, at).reduce((n, l) => n + Buffer.byteLength(l) + 1, 0);
+      parts[d.id] = { text: [[before, Buffer.byteLength(lines[at]!)]], says: '1 line not shown' };
+    }
+    list.parts = parts;
   });
 
 const ERROR = { status: 'entered-in-error' };

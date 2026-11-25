@@ -23,7 +23,7 @@ export interface MedrecMember {
 }
 
 const PLACE_FROM = ['portal', 'claims', 'alias', 'linked'] as const;
-type PlaceFrom = (typeof PLACE_FROM)[number];
+export type PlaceFrom = (typeof PLACE_FROM)[number];
 
 export interface MedrecEvent {
   id: string;
@@ -72,7 +72,7 @@ const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object
 const text = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined);
 const strings = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
-const placeFrom = (v: unknown): { placeFrom?: PlaceFrom } => {
+export const placeFrom = (v: unknown): { placeFrom?: PlaceFrom } => {
   const known = PLACE_FROM.find((x) => x === v);
   return known ? { placeFrom: known } : {};
 };

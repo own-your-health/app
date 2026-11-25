@@ -22,6 +22,7 @@ import { callsSummary, mayBePaid, toPay } from './money';
 import { billNotes, gather, head, listLine, money, num, privateChip, type MoneyRoute } from './moneyParts';
 import { heldNotes, privateLine, quietClaims } from './shared';
 import { eventCosts, monthMoney, planLimits, yearMoney, type CostOrder, type EventCost, type Limit, type LimitKind } from './year';
+import { sharedIndex } from '../model/parts';
 import { called } from '../model/people';
 
 /** How many visits the year lists before linking to them all. */
@@ -67,13 +68,17 @@ function yearData(ctx: Ctx, route: MoneyRoute, who: string | undefined): YearDat
   const store = ctx.store;
   const today = localDay(ctx.now());
   const people = store.household.people.filter((p) => !who || p.id === who);
+  const indexOf = (id: string) => {
+    const idx = store.index(id);
+    return idx && !who ? sharedIndex(idx) : idx;
+  };
   const all = householdLines(
-    people.map((p) => ({ id: p.id, index: store.index(p.id) })),
+    people.map((p) => ({ id: p.id, index: indexOf(p.id) })),
     { planStart: getPlanStart() ?? undefined },
   );
   const choices = periods(all, today);
   const chosen = choices.find((p) => p.id === route.period) ?? choices[0];
-  const records = new Map(people.flatMap((p) => (store.index(p.id)?.records ?? []).map((r) => [r.id, r] as const)));
+  const records = new Map(people.flatMap((p) => (indexOf(p.id)?.records ?? []).map((r) => [r.id, r] as const)));
   const quiet = who ? new Map<string, string>() : quietClaims(store, today);
   const lines = chosen ? all.filter((l) => inPeriod(l, chosen.id, today)) : [];
   return { today, people, choices, chosen, lines, named: lines.filter((l) => !quiet.has(l.claim)), records, quiet };
@@ -250,7 +255,7 @@ function costRow(c: EventCost, max: number, who: string | undefined, order: Cost
   return row({
     route: eventRoute(x.person.id, x.event.id),
     title: [x.event.title, x.event.place].filter(Boolean).join(' · '),
-    meta: [eventWhen(x.event), x.event.what, who ? null : called(x.person)].filter(Boolean).join(' · '),
+    meta: [eventWhen(x.event), x.event.what, x.event.says, who ? null : called(x.person)].filter(Boolean).join(' · '),
     aside: num(order === 'share' ? c.share : order === 'discount' ? (c.discount ?? 0) : c.price),
     extra: h(
       'div',

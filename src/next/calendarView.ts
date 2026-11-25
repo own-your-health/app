@@ -81,7 +81,7 @@ function eventRow(x: PersonEvent, opts: { person: boolean; month?: string; brief
           'div',
           { class: 'row-body' },
           h('div', { class: 'row-title' }, [title, opts.brief ? null : e.place].filter(Boolean).join(' · ')),
-          h('div', { class: 'row-meta' }, [opts.person ? called(x.person) : null, ...(opts.brief ? [e.place ?? kind ?? e.what] : [kind, e.what]), e.end > e.start ? `to ${dateText(e.end)}` : null].filter(Boolean).join(' · ')),
+          h('div', { class: 'row-meta' }, [opts.person ? called(x.person) : null, ...(opts.brief ? [e.place ?? kind ?? e.what] : [kind, e.what]), e.says, e.end > e.start ? `to ${dateText(e.end)}` : null].filter(Boolean).join(' · ')),
         ),
         rowAside(knownArea(x.private) ? chip('Private', 'muted') : null, n ? h('span', { class: 'num' }, n) : null),
         h('span', { class: 'row-chevron' }, icon('next', 18)),

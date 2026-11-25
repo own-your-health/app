@@ -1,8 +1,9 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { Drive, DriveError, type DriveFile, FOLDER_MIME } from '../src/drive';
-import { DriveFolder, KEPT_TIMES, LOAD_TIMES, readJson, splitPath, Unanswered } from '../src/folder';
+import { DriveFolder, KEPT_TIMES, LOAD_TIMES, readHashedJson, readJson, splitPath, Unanswered } from '../src/folder';
 import { DEMO, demoFolder, fixture, json } from './helpers';
 
 function driveWith(tree: Record<string, DriveFile[]>, contents: Record<string, string> = {}, meta: Record<string, DriveFile> = {}) {
@@ -86,6 +87,17 @@ describe('DriveFolder', () => {
     // Forgotten, it is as listed again.
     folder.forget('Robin Example');
     expect(await folder.md5('Robin Example/index.json')).toBe('5f2b8c1e9a7d4b3c6e0f1a2b3c4d5e6f');
+  });
+
+  it('gives a file’s text with the MD5 of what was read, whatever the listing says, and null for a missing one', async () => {
+    const { drive } = driveWith(ROOT, { 'file-robin-index': '\ufeff{"é":2}' });
+    const folder = new DriveFolder(drive, 'root', 'x');
+    expect(await folder.readHashed('Robin Example/index.json')).toEqual({ text: '{"é":2}', md5: createHash('md5').update('\ufeff{"é":2}').digest('hex') });
+    expect([await folder.readHashed('Nobody/index.json'), await folder.readHashed('Robin Example')]).toEqual([null, null]);
+    expect(await readHashedJson(folder, 'Robin Example/index.json')).toEqual({ json: { é: 2 }, md5: createHash('md5').update('\ufeff{"é":2}').digest('hex') });
+    expect(await readHashedJson(folder, 'Nobody/index.json')).toBeNull();
+    const bad = new DriveFolder(driveWith(ROOT, { 'file-robin-index': '{' }).drive, 'root', 'x');
+    await expect(readHashedJson(bad, 'Robin Example/index.json')).rejects.toThrow('Robin Example/index.json is not valid JSON.');
   });
 
   it('takes the newer of two files with one name', async () => {
@@ -273,6 +285,18 @@ describe('readBytes', () => {
 });
 
 describe('DemoFolder', () => {
+  it('gives a file’s text with the MD5 of it as written, before its times move', async () => {
+    const folder = demoFolder(new Date('2026-11-23T20:00:00Z'));
+    const path = '_status/status.json';
+    const read = (await folder.readHashed(path))!;
+    expect([read.text, read.md5]).toEqual([await folder.readText(path), createHash('md5').update(readFileSync(join(DEMO, path))).digest('hex')]);
+    expect(read.text).not.toBe(readFileSync(join(DEMO, path), 'utf8'));
+    folder.writeAsMac(path, '{"é":1}', 'f'.repeat(32));
+    expect(await folder.readHashed(path)).toEqual({ text: '{"é":1}', md5: createHash('md5').update('{"é":1}').digest('hex') });
+    folder.removeAsMac(path);
+    expect([await folder.readHashed(path), await folder.readHashed('Nobody/index.json')]).toEqual([null, null]);
+  });
+
   it('moves the sample’s times from its anchor to now', async () => {
     const folder = demoFolder(new Date('2026-11-23T20:00:00Z'));
     const status = JSON.parse((await folder.readText('_status/status.json'))!) as { updated_at: string };

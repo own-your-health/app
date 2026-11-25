@@ -9,6 +9,7 @@ import { sameProvider } from '../model/providers';
 import { practiceName } from '../model/practices';
 import { str } from '../model/records';
 import type { MedrecRule, Sureness } from '../model/events';
+import { sharedRecord } from '../model/parts';
 import { HELD, isHeld, paperPrivate, recordPrivate, recordsPrivate } from '../model/private';
 import type { Household, MedDocument, MedRecord, PersonIndex } from '../model/types';
 import { isDescriptor, placeName, plainWords } from '../model/words';
@@ -63,6 +64,8 @@ export interface CareEvent {
   inError?: number;
   /** Set where the event is not private and a record or paper of it, or what gives its place, is: the event without those, named and priced by the rest, as a shared screen shows it. */
   shared?: CareEvent;
+  /** On that one: how much is left out of its open claims ("1 service not shown"). */
+  says?: string;
   /** On that one: a claim of it is left out, so what it comes to is not what the visit cost. */
   fewerClaims?: true;
 }
@@ -247,13 +250,13 @@ export function eventPrivate(e: CareEvent, index: PersonIndex): string | undefin
   return members() ?? e.papers.map((p) => (p.person ? undefined : paperPrivate(index, p.doc.id))).find(Boolean);
 }
 
-/** An event without its private records and papers; undefined when it has none. Another person's paper is judged as theirs, so it stays. */
+/** An event without its private records and papers, and its open claims without their private lines; undefined when it has none of those. Another person's paper is judged as theirs, so it stays. */
 export function withoutPrivate(e: CareEvent, index: PersonIndex): CareEvent | undefined {
   const open = <T extends { record: MedRecord }>(xs: T[]) => xs.filter((x) => !recordPrivate(index, x.record.id));
-  const rest: CareEvent = { ...e, claims: open(e.claims), visits: open(e.visits), recorded: e.recorded.filter((r) => !recordPrivate(index, r.id)), papers: e.papers.filter((p) => p.person || !paperPrivate(index, p.doc.id)) };
+  const rest: CareEvent = { ...e, claims: open(e.claims).map((c) => ({ ...c, record: sharedRecord(index, c.record) })), visits: open(e.visits), recorded: e.recorded.filter((r) => !recordPrivate(index, r.id)), papers: e.papers.filter((p) => p.person || !paperPrivate(index, p.doc.id)) };
   if (rest.claims.length < e.claims.length) rest.fewerClaims = true;
   const parts = (x: CareEvent) => x.claims.length + x.visits.length + x.recorded.length + x.papers.length;
-  return parts(rest) === parts(e) ? undefined : rest;
+  return parts(rest) === parts(e) && rest.claims.every((c, i) => c.record === e.claims[i]!.record) ? undefined : rest;
 }
 
 /** CPT and HCPCS codes for giving a vaccine, billed beside the vaccine itself. */

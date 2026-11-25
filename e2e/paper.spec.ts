@@ -3,6 +3,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { CLIENT, FakeGoogle, FOLDER_NAME } from './fake-google';
 import { rewritten } from './alter';
 import { lay } from './lay';
+import { macWrites } from './mac';
 import { line, makePdf } from './make-pdf';
 import { demoJson, FIXTURES } from '../test/helpers';
 import { ALEX, DREW, ROBIN, SAM } from '../test/sample';
@@ -675,27 +676,6 @@ test.describe('signed in', () => {
   });
 
   const NO_LONGER = 'That paper is not shown on this page now.';
-  /** The folder as medrec writes it next, read again by the app: a request it saw waiting is done. */
-  async function writes(page: Page, files: ReturnType<typeof filed>, n: number): Promise<void> {
-    const look = () => page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
-    const [at, id] = [new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'), `x_${'abcdefghij'[n]!.repeat(20)}`];
-    const name = `20261122T20031${n}Z_${id}.json`;
-    const asking = { schema: 'medrec-request/v1', id, requested_at: at, requested_by: { email: 'sam@example.com' }, scope: { all: true }, app: { name: 'own-your-health-app', version: '0.1.0' } };
-    const reads = (path: string) => google.reads.filter((r) => r === path).length;
-    google.writeAsMac(`_requests/${name}`, JSON.stringify(asking));
-    const before = reads(`_requests/${name}`);
-    await look();
-    await expect.poll(() => reads(`_requests/${name}`)).toBeGreaterThan(before);
-    for (const [path, text] of Object.entries(files)) google.writeAsMac(path, text!);
-    google.writeAsMac(`_requests/done/${name}`, JSON.stringify({ ...asking, handled: { picked_up_at: at, finished_at: at, outcome: 'ok', sources: [], message: 'loaded', by: 'medrec 0.9.7' } }));
-    google.removeAsMac(`_requests/${name}`);
-    const views = reads('views/views.json');
-    await expect(async () => {
-      await look();
-      expect(reads('views/views.json')).toBeGreaterThan(views);
-    }).toPass();
-  }
-
   test('a paper of someone else’s marked private while its page is open is not shown there, and one that is open closes', async ({ page }) => {
     for (const [path, text] of Object.entries(filed())) google.writeAsMac(path, text!);
     await page.reload();
@@ -708,7 +688,7 @@ test.describe('signed in', () => {
     const pdf = rows.filter({ hasText: 'After visit summary' });
     await pdf.getByRole('button', { name: /^View\b/ }).click();
     await expect(pdf.locator('.textLayer').first()).toContainText('After visit summary');
-    await writes(page, filed(PICTURE), 1);
+    await macWrites(page, google, filed(PICTURE), 1);
     await expect(view).toHaveCount(1);
     const read = google.reads.filter((r) => r === PICTURE.path).length;
     await view.click();
@@ -717,7 +697,7 @@ test.describe('signed in', () => {
     await expect(pdf.locator('.textLayer').first()).toContainText('After visit summary');
     expect(google.reads.filter((r) => r === PICTURE.path)).toHaveLength(read);
     // The one that is open becomes private: it closes, and the page is drawn without it.
-    await writes(page, filed(PICTURE, PDF), 2);
+    await macWrites(page, google, filed(PICTURE, PDF), 2);
     await expect(page.locator('canvas, .paper-box')).toHaveCount(0);
     await expect(rows).toHaveCount(0);
     expect(page.workers()).toHaveLength(0);

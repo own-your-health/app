@@ -280,7 +280,9 @@ claim line in the folder: what was billed, what the plan allowed and paid,
 and your share, with its deductible, copay and coinsurance. A claim whose
 lines do not add up to its totals keeps the difference as a line of its own,
 "Not split by line", so a period's totals are always its claims'; a line the
-totals leave out counts nothing, and leaves no such line. It narrows to:
+totals leave out counts nothing, and leaves no such line. On everyone's view the
+private lines of a claim that is listed are one line for each of their days,
+"Not shown here". It narrows to:
 - a period: this or last plan year, a calendar year, or every year. A plan
   year starts on the day the plan's claims give for it (the benefit period an
   ExplanationOfBenefit prints, `fields.benefit_period` in the index, when it
@@ -613,9 +615,11 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   `test/fixtures/standing/medrec/` is medrec's own fixture for readers of
   `standing.json`, as `tests/fixtures/standing/` of its 0.9.9 has it, and
   `test/fixtures/errors/medrec/` is its fixture of what is entered in error
-  (`tests/fixtures/errors/`, with the `household.json` of the other): no script
-  here writes them, and they are copied again when medrec's change.
-  `test/fixtures/errors/views/` is what medrec 0.9.9 writes of the second, by
+  (`tests/fixtures/errors/`, with the `household.json` of the other).
+  `test/fixtures/parts/medrec/` is its fixture for readers of `parts` in
+  `private.json`. No script here writes these, and they are copied again when
+  medrec's change.
+  `test/fixtures/errors/views/` is what medrec 0.9.9 writes of `errors/medrec/`, by
   `node scripts/error-fixtures.mjs` with `MEDREC` set to that release.
   Written by hand are only Drive's answers, the app's own requests, and files
   medrec never writes: malformed ones, and ones of a later format.
@@ -664,7 +668,8 @@ dropped from the address.
   visit it is with. A place a visit has from another person's (the hospital
   stay a newborn was born in: X1, `place_from` is `linked`) is left out, with
   nothing in its place, where that visit is private, holds a private item of
-  theirs, or nothing can say it does not. A place
+  theirs, or nothing can say it does not; medrec 0.9.9 and later name the visits
+  it can be shown from (`clear_events`). A place
   whose `place_from` is `alias` is there because a paper in the file's
   `aliases` says the clinician works at it: when any paper that says so is
   private, a shared screen leaves the place out. An event's address is medrec's id
@@ -995,12 +1000,15 @@ page count. Papers took the place of each person's list of documents. A
   kept off every shared screen: Home, the Everyone calendar, Money, Papers,
   Health, Costs and everyone's search. Home, Money, Papers and Costs say so in
   a line that is the same whether or not anything is private, and so is every
-  other word there: a list reads as it would with the private items not in the
-  folder, and an empty one always says that nothing is listed. Only Money's
-  totals, months and limits count them. A visit that is not private can have
-  parts that are: there it is named, placed and priced by the others, with
-  medrec's own words for it and its place, unless a private paper says the
-  place, and a bill says nothing of a private claim
+  other word there about an item that is private whole: a list reads as it would
+  without those items in the folder, and an empty one always says that nothing
+  is listed. Only Money's totals, months and limits count them. An open item
+  with a private part is the exception: it says how much it leaves out, and its
+  amounts count, in Costs too (below). A visit that is not private can have
+  private items in it: there it is named, placed and priced by the others.
+  medrec's words for it and its place show, unless a private paper says the
+  place or, from medrec 0.9.9, the visit's entry in `parts` gives others or none
+  (below), and a bill says nothing of a private claim
   (`withoutPrivate`, `sharedEvents`, `sharedOpen`). `e2e/private.spec.ts`
   compares each
   screen with the same folder's, its private items renamed and on other days
@@ -1013,6 +1021,25 @@ page count. Papers took the place of each person's list of documents. A
   is listed there, not that there is nothing. The doctor's sheet
   leaves private items off until they are included. A section it left
   something out of says "None listed here", never that nothing is known.
+
+  **An open item can have a private part.** A claim of several services, a
+  bill and a visit stay open when only part of them is private, and medrec 0.9.9
+  and later say which (`parts` in `private.json`, `src/model/parts.ts`): a
+  claim's private lines, diagnoses and payer's notes by their place in its
+  lists, and a paper's private lines by their bytes in its text. A shared screen
+  leaves those out, names the item by the rest, and says how much it left out in
+  medrec's words ("1 service not shown"). For a visit, `parts` gives what its
+  open members alone say (kind, title, words, place and where that is from, what
+  is expected) where that differs, and a shared screen goes by it. Where the app
+  groups the records itself, a shared screen goes by the lines that are left for
+  a visit's kind and what its claims were for, and the app counts the services
+  left out. Amounts stay, on their days: in Costs a claim's private lines are
+  one line for each day, "Not shown here". The app judges no line. A list that
+  its places are not of shows nothing of itself. Neither does a person's text
+  where the `text.json` read, by its own MD5 (`src/md5.ts`), is not the one the
+  list was made from: everyone's search says so. Their own pages show all of it
+  and say where it stays off. A list of before 0.9.9 has no `parts` and judged
+  none.
 
   **Without a current list, everything of that person's stays off.** The
   list is used only when the MD5s in `views/views.json` are the folder's:

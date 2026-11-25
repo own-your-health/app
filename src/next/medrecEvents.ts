@@ -5,6 +5,7 @@
 import { claimCategory, claimProvider } from '../model/claims';
 import type { MedrecEvent, MedrecEvents } from '../model/events';
 import type { Household, MedDocument, MedRecord, PersonIndex } from '../model/types';
+import { partOf, type EventPart } from '../model/parts';
 import { knownArea, paperPrivate, recordPrivate } from '../model/private';
 import { practiceOf } from '../model/practices';
 import { nameKey, sameProvider } from '../model/providers';
@@ -78,10 +79,40 @@ function placePrivate(m: MedrecEvent, file: MedrecEvents): boolean {
       const other = file.others.get(l.person);
       const stay = other?.events?.events.find((e) => e.id === l.event);
       if (!other || !stay || other.privacy?.kind !== 'known' || other.privacy.events.has(stay.id)) return true;
+      // medrec 0.9.9 and later says which events' places may be shown.
+      if (other.privacy.clear) return !other.privacy.clear.has(stay.id);
       if (stay.placeFrom !== 'portal' && stay.placeFrom !== 'claims') return true;
       return stay.members.some((x) => (x.record ? recordPrivate(other, x.record) : !x.person && paperPrivate(other, x.document!)));
     })
   );
+}
+
+/** Gives an event its kind, as medrec has it, and whether its facility's claim is in; its title, for a kind the app does not know. */
+function kindAs(m: MedrecEvent, e: CareEvent): string | undefined {
+  const { kind, title } = kindOf(m, e.visits[0]?.record);
+  // A day of vaccine claims only is a vaccine visit, as the app's own grouping makes it.
+  e.kind = kind === 'service' && !title && e.claims.length && e.claims.every((c) => claimCategory(c.record) === 'vaccine') ? 'vaccine' : kind;
+  if (m.kind === 'stay_no_facility' || m.kind === 'er_no_facility') e.noFacility = true;
+  else delete e.noFacility;
+  return title;
+}
+
+/** An event as its open members and their open lines alone say it: what medrec has otherwise (0.9.9 and later), and the rest as it was. */
+function leftOf(m: MedrecEvent, p: EventPart): MedrecEvent {
+  const { what, place, placeFrom, ...rest } = m;
+  const now = {
+    what: p.what === undefined ? what : (p.what ?? undefined),
+    place: p.place === undefined ? place : (p.place ?? undefined),
+    placeFrom: p.placeFrom === undefined ? placeFrom : (p.placeFrom ?? undefined),
+  };
+  return {
+    ...rest,
+    kind: p.kind === undefined ? m.kind : (p.kind ?? ''),
+    title: p.title === undefined ? m.title : (p.title ?? ''),
+    expected: p.expected === undefined ? m.expected : (p.expected ?? []),
+    ...(now.what ? { what: now.what } : {}),
+    ...(now.place ? { place: now.place, ...(now.placeFrom ? { placeFrom: now.placeFrom } : {}) } : {}),
+  };
 }
 
 /** The papers of another person's that these events hold (X2), private ones too, for that person's own list of them. */
@@ -130,24 +161,31 @@ export function fromMedrec(file: MedrecEvents, index: PersonIndex, household: Ho
     if (!e.claims.length && !e.visits.length && !e.recorded.length && !e.papers.length) return [];
     // Papers newest first, as the app lists them.
     e.papers.sort((a, b) => (b.doc.date ?? '').localeCompare(a.doc.date ?? ''));
-    const { kind, title } = kindOf(m, e.visits[0]?.record);
-    // A day of vaccine claims only is a vaccine visit, as the app's own grouping makes it.
-    e.kind = kind === 'service' && !title && e.claims.length && e.claims.every((c) => claimCategory(c.record) === 'vaccine') ? 'vaccine' : kind;
-    if (m.kind === 'stay_no_facility' || m.kind === 'er_no_facility') e.noFacility = true;
+    const title = kindAs(m, e);
     const noPlace = !!m.place && placePrivate(m, file);
     if (m.place && placeHolds(m.place, e, household, index.person)) e.place = m.place;
     if (m.expected.length) e.expected = m.expected;
     if (m.inError.length) e.inError = m.inError.length;
     if (m.confidence === 'unsure') e.doubt = m.could_join.length > 1 ? `It could be part of any of ${m.could_join.length} other visits` : m.could_join.length ? 'It could be part of another visit' : 'medrec is not sure what it belongs with';
-    const given = { ...(title ? { title } : {}), ...(m.what ? { what: m.what } : {}), noPlace };
     const area = eventPrivate(e, index);
+    const part = partOf(index, m.id);
+    const left = part ? leftOf(m, part.event) : m;
     // A place a private paper says it is at is private, whatever other paper does: which of them gave it is not said.
-    const told = m.placeFrom === 'alias' && file.aliases.some((a) => a.organization === m.place && paperPrivate(index, a.document));
-    const rest = area ? undefined : (withoutPrivate(e, index) ?? (told ? { ...e } : undefined));
-    nameEvent(e, household, index.person, { ...given, private: !!knownArea(area) });
+    const told = left.placeFrom === 'alias' && file.aliases.some((a) => a.organization === left.place && paperPrivate(index, a.document));
+    const rest = area ? undefined : (withoutPrivate(e, index) ?? (told || part ? { ...e } : undefined));
+    nameEvent(e, household, index.person, { ...(title ? { title } : {}), ...(m.what ? { what: m.what } : {}), noPlace, private: !!knownArea(area) });
     if (rest) {
-      if (told) delete rest.place;
-      nameEvent(rest, household, index.person, given);
+      const name = kindAs(left, rest);
+      // The place is judged as what is left has it.
+      if (told || !left.place) delete rest.place;
+      else if (left.place !== m.place) {
+        if (placeHolds(left.place, rest, household, index.person)) rest.place = left.place;
+        else delete rest.place;
+      }
+      if (left.expected.length) rest.expected = left.expected;
+      else delete rest.expected;
+      if (part?.says) rest.says = part.says;
+      nameEvent(rest, household, index.person, { ...(name ? { title: name } : {}), ...(left.what ? { what: left.what } : {}), noPlace: placePrivate(left, file) });
       e.shared = rest;
     }
     return [e];

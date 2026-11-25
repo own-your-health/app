@@ -17,6 +17,7 @@ import {
   DIMENSION_LABELS,
   errorLines,
   householdLines,
+  NOT_SHOWN,
   inPeriod,
   keyOf,
   monthLabel,
@@ -44,6 +45,7 @@ import { count, dateText, localDay } from '../format';
 import { heldNotes, privateLine, quietClaims } from '../../next/shared';
 import { errorsNote } from '../inError';
 import { href, type CostBy, type CostFilter, type CostFilterBy, type Route } from '../router';
+import { sharedIndex } from '../../model/parts';
 import { called } from '../../model/people';
 
 type CostsRoute = Extract<Route, { name: 'costs' }>;
@@ -158,7 +160,7 @@ function claimRow(c: ClaimCost, record: MedRecord | undefined, who: string | nul
   return row({
     route: itemRoute(c.person, c.claim),
     title: c.title,
-    meta: meta(dateText(c.date), who, c.provider, only?.code ? `${systemName(only.system)} ${only.code}`.trim() : null),
+    meta: meta(dateText(c.date), who, c.provider, only?.code ? `${systemName(only.system)} ${only.code}`.trim() : null, record?.without?.says),
     aside: h('span', { class: 'num strong' }, money(c.cents.youOwe ?? 0)),
     extra: h(
       'div',
@@ -174,23 +176,27 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
   const store = ctx.store;
   const people = store.household.people;
   const names = new Map(people.map((p) => [p.id, called(p)]));
+  const today = localDay(ctx.now());
+  // One person's costs count their private claims; everyone's leave every private one out, and the private lines of the rest.
+  const only = route.only ?? [];
+  const own = only.some((f) => f.by === 'person');
+  const indexOf = (id: string) => {
+    const idx = store.index(id);
+    return idx && !own ? sharedIndex(idx) : idx;
+  };
   const opts = { planStart: getPlanStart() ?? undefined };
   const whole = householdLines(
-    people.map((p) => ({ id: p.id, index: store.index(p.id) })),
+    people.map((p) => ({ id: p.id, index: indexOf(p.id) })),
     opts,
   );
   const records = new Map<string, MedRecord>();
-  for (const p of people) for (const r of store.index(p.id)?.records ?? []) if (r.kind === 'claim') records.set(r.id, r);
-  const today = localDay(ctx.now());
-  // One person's costs count their private claims; everyone's leave every private one out.
-  const only = route.only ?? [];
-  const own = only.some((f) => f.by === 'person');
+  for (const p of people) for (const r of indexOf(p.id)?.records ?? []) if (r.kind === 'claim') records.set(r.id, r);
   const quiet = quietClaims(store, today);
   const shared = whole.filter((l) => !quiet.has(l.claim));
   const all = own ? whole : shared;
   // Claims entered in error are in none of it: the list of claims counts those its choices would have.
   const wrong = people.flatMap((p) => {
-    const idx = store.index(p.id);
+    const idx = indexOf(p.id);
     return idx ? errorLines(p.id, idx, opts).filter((l) => own || !quiet.has(l.claim)) : [];
   });
   const wrongNote = (fits: (l: CostLine) => boolean) => errorsNote(new Set(wrong.filter((l) => only.every((f) => matches(l, f, names)) && fits(l)).map((l) => l.claim)).size);
@@ -504,7 +510,7 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
     showClaims(CLAIMS_SHOWN);
     const claimsCard = card(
       { title: count(claims.length, 'claim') },
-      h('p', { class: 'small muted' }, 'Newest first, each with what it says you owe and the lines it paid for. A line the plan left out of its totals, one it replaced with its own or wrote off, is listed, not owed. Amounts a claim gave only in total are a line of their own, “Not split by line”. The CSV download has a row for each line.'),
+      h('p', { class: 'small muted' }, 'Newest first, each with what it says you owe and the lines it paid for. A line the plan left out of its totals, one it replaced with its own or wrote off, is listed, not owed. Amounts a claim gave only in total are a line of their own, “Not split by line”.', own ? null : ` What is private in a claim listed here is in its totals, as “${NOT_SHOWN}”.`, ' The CSV download has a row for each line.'),
       list,
       wrongNote(inChosen),
     );

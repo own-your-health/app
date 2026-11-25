@@ -354,8 +354,8 @@ function readLines(r: MedRecord): ClaimLine[] {
       revenue,
     });
   }
-  // medrec 0.8.2 and later marks the lines left out; before, the same rule finds them here.
-  if (out.every((l) => l.counted)) for (const i of leftOut(out.map((l) => l.amounts), r)) out[i]!.counted = false;
+  // medrec 0.8.2 and later marks the lines left out; before, the same rule finds them here, from all the claim's lines.
+  if (!r.without && out.every((l) => l.counted)) for (const i of leftOut(out.map((l) => l.amounts), r)) out[i]!.counted = false;
   return out;
 }
 
