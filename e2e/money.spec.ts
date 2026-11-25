@@ -33,7 +33,8 @@ test('bills sets each open bill beside its claim, then what is not billed yet an
   await page.goBack();
   await expect(card(page, 'Not billed yet').locator('.card-head')).toContainText('$289.20');
   await expect(card(page, 'Not billed yet').locator('.row-title')).toHaveText(['Example Pediatrics', 'Example Health', 'Example Lab', 'Example Orthopedic Surgeons', 'Example Health']);
-  await expect(card(page, /^Paid$/).locator('.row-meta')).toHaveText('Robin · Office visit, Mar 10, 2025 · receipt Apr 20, 2025');
+  // The one receipt's amount could not be read, so no bill is known to be paid; a later statement has its bill's balance.
+  await expect(card(page, /^(Paid|May be paid)$/)).toHaveCount(0);
   // Sam's private counseling copay is not billed yet: off the shared view, counted.
   await expect(page.getByText('1 private item is kept off this shared view. Each shows on its person’s own Bills.')).toBeVisible();
 

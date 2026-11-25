@@ -20,7 +20,7 @@ import { count, dateText, localDay } from '../ui/format';
 import { href, type Route } from '../ui/router';
 import { eventConfidence, eventMoney, eventOf, kindText, paidAtCounter, eventPrivate, ruleText, type CareEvent, type EventMoney } from './event';
 import { groupedByMedrec, personEvents } from './load';
-import { paidText } from './money';
+import { paidText, unreadText } from './money';
 import { called } from '../model/people';
 import { plainWords } from '../model/words';
 
@@ -109,7 +109,7 @@ function owedBills(idx: PersonIndex, e: CareEvent, m: EventMoney): { provider: s
     .filter((c) => (c.share ?? 0) > 0)
     .map((c) => {
       const bill = bills.find((b) => sameProvider(c.provider, b.provider)) ?? billerOf(m, bills, (b) => b.provider);
-      return { provider: c.provider, share: c.share!, ...(bill ? { bill, now: bill.settled ? bill : standsFor(bill, all) } : {}) };
+      return { provider: c.provider, share: c.share!, ...(bill ? { bill, now: bill.settled || bill.unread.length ? bill : standsFor(bill, all) } : {}) };
     });
 }
 
@@ -120,7 +120,8 @@ function settledLine(idx: PersonIndex, e: CareEvent, m: EventMoney): HTMLElement
   if (paidAtCounter(e)) return h('p', { class: 'event-settled' }, 'A pharmacy takes your share when you pick up.');
   const sum = (xs: typeof owed) => xs.reduce((t, o) => t + o.share, 0);
   const paid = owed.filter((o) => o.now?.settled);
-  const billed = owed.filter((o) => o.now && !o.now.settled);
+  const billed = owed.filter((o) => o.now && !o.now.settled && !o.now.unread.length);
+  const maybe = owed.filter((o) => o.now?.unread.length);
   const unbilled = owed.filter((o) => !o.bill);
   if (paid.length === owed.length) return h('p', { class: 'event-settled' }, paid.some((o) => o.now!.payments.some((p) => p.from === 'receipt')) ? 'Paid' : 'Marked paid');
   const dues = [...new Set(billed.map((o) => o.now!.due).filter((d): d is string => !!d))].sort();
@@ -132,6 +133,8 @@ function settledLine(idx: PersonIndex, e: CareEvent, m: EventMoney): HTMLElement
     [
       paid.length ? `${money(sum(paid))} paid` : null,
       billed.length ? `${money(sum(billed))} billed${part.length ? `, ${money(part.reduce((t, c) => t + c, 0))} left to pay` : ''}${dues.length === 1 ? `, due ${dateText(dues[0]!)}` : ''}` : null,
+      maybe.length ? `${money(sum(maybe))} billed` : null,
+      ...new Set(maybe.map((o) => unreadText(o.now!.unread))),
       unbilled.length ? `${money(sum(unbilled))} not billed yet` : null,
     ]
       .filter(Boolean)
@@ -287,7 +290,7 @@ function billsCard(idx: PersonIndex, e: CareEvent, m: EventMoney): HTMLElement |
     return row({
       route: itemRoute(idx.person, d.id),
       title: d.doc_type === 'receipt' ? `Receipt from ${d.organization ?? 'a provider'}` : `Bill from ${d.organization ?? 'a provider'}`,
-      meta: [due !== undefined ? `${money(due)} due${d.statement?.due_date ? ` by ${dateText(d.statement.due_date)}` : ''}` : null, d.statement?.amount_paid ? `${formatMoney(d.statement.amount_paid)} paid` : null, due === undefined ? dateText(d.statement?.paid_on ?? d.date) : null, bill?.settled ? paidText(bill) : null, part && bill.left ? `${formatMoney(bill.left)} left to pay` : null, bill && !bill.settled && bill.replacedBy ? 'a later statement has its balance' : null].filter(Boolean).join(' · '),
+      meta: [due !== undefined ? `${money(due)} due${d.statement?.due_date ? ` by ${dateText(d.statement.due_date)}` : ''}` : null, d.statement?.amount_paid ? `${formatMoney(d.statement.amount_paid)} paid` : null, due === undefined ? dateText(d.statement?.paid_on ?? d.date) : null, bill?.settled ? paidText(bill) : null, part && bill.left ? `${formatMoney(bill.left)} left to pay` : null, bill ? unreadText(bill.unread) : null, bill && !bill.settled && bill.replacedBy ? 'a later statement has its balance' : null].filter(Boolean).join(' · '),
       aside: match,
     });
   };

@@ -5,16 +5,16 @@
 // shared screen: private bills stay off it, counted, and show on their
 // person's own view.
 
+import { receiptDay } from '../model/billing';
 import { formatMoney } from '../model/records';
 import { card, chip, driveLink, kv, link, row, type Ctx } from '../ui/components';
 import { h } from '../ui/dom';
 import { count, dateText } from '../ui/format';
-import type { Person } from '../model/types';
 import type { Route } from '../ui/router';
 import { daysBetween } from './needs';
 import { eventRoute, eventWhen } from './eventView';
-import { callsSummary, overAsked, paymentText, partText, worthACall, type OpenBill, type PaidBill } from './money';
-import { billNotes, forBill, gather, head, keptNote, money, num, paidOn, privateChip, visitText, type Mine, type MoneyRoute } from './moneyParts';
+import { callsSummary, mayBePaid, overAsked, paymentText, partText, toPay, unreadText, worthACall, type OpenBill, type PaidBill } from './money';
+import { billNotes, forBill, gather, head, keptNote, money, num, privateChip, visitText, type Mine, type MoneyRoute } from './moneyParts';
 import { eventsPage, overviewPage } from './moneyYear';
 import { anyLeftOff, heldNotes } from './shared';
 import { called } from '../model/people';
@@ -38,13 +38,19 @@ function openRow(ctx: Ctx, m: Mine<OpenBill>, today: string, named: boolean): HT
   return row({
     route: e ? eventRoute(m.person.id, e.event.id) : { name: 'item', person: m.person.id, id: b.bill.doc.id },
     title: b.bill.provider ?? 'A provider',
-    meta: [named ? called(m.person) : null, e ? visitText(e) : null, billWhen(b), partText(b)].filter(Boolean).join(' · '),
+    meta: [named ? called(m.person) : null, e ? visitText(e) : null, billWhen(b), partText(b), unreadText(b.bill.unread)].filter(Boolean).join(' · '),
     aside: num(b.cents),
     extra: h(
       'div',
       { class: 'bill-line' },
-      h('div', { class: 'chips' }, dueChip(b, today), b.verdict === 'matches' ? chip('Matches the claim', 'ok') : null, privateChip(b.private)),
-      h('div', { class: 'bill-links' }, link({ name: 'item', person: m.person.id, id: b.bill.doc.id }, 'The bill'), driveLink(ctx, b.bill.doc.path, 'Open the bill in Drive')),
+      h('div', { class: 'chips' }, mayBePaid(b) ? null : dueChip(b, today), b.verdict === 'matches' ? chip('Matches the claim', 'ok') : null, privateChip(b.private)),
+      h(
+        'div',
+        { class: 'bill-links' },
+        link({ name: 'item', person: m.person.id, id: b.bill.doc.id }, 'The bill'),
+        driveLink(ctx, b.bill.doc.path, 'Open the bill in Drive'),
+        b.bill.unread.map((r) => link({ name: 'item', person: m.person.id, id: r.id }, 'The receipt')),
+      ),
     ),
   });
 }
@@ -55,14 +61,12 @@ function saysText(b: OpenBill): string {
   return `the ${b.claimSaysVisit ? 'visit’s claims say' : 'claim says'} you owe ${money(b.claimSays)}`;
 }
 
-/** Whose money a page is about. */
-const people = (ctx: Ctx, who: string | undefined): Person[] => ctx.store.household.people.filter((p) => !who || p.id === who);
-
 /** Bills: each open bill beside its claim, then what is not billed yet, then what is paid. */
 function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLElement {
   const g = gather(ctx, who);
   const named = !who;
-  const ready = g.open.filter((m) => !worthACall(m.item));
+  const ready = g.open.filter((m) => toPay(m.item));
+  const maybe = g.open.filter((m) => mayBePaid(m.item));
   const check = g.open.filter((m) => worthACall(m.item));
   const matched = ready.filter((m) => m.item.verdict === 'matches').length;
   const readyCents = ready.reduce((t, m) => t + m.item.cents, 0);
@@ -96,6 +100,14 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
             aside: [privateChip(m.item.private), num(m.item.cents)],
           }),
         ),
+      )
+    : null;
+
+  const maybeCard = maybe.length
+    ? card(
+        { title: 'May be paid', actions: h('span', { class: 'small muted' }, String(maybe.length)) },
+        h('p', { class: 'small muted' }, 'A receipt that can be for each of these is in the folder. Check it before paying.'),
+        maybe.map((m) => openRow(ctx, m, g.today, named)),
       )
     : null;
 
@@ -137,9 +149,10 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
     hero,
     dueNow,
     checkCard,
+    maybeCard,
     unbilledCard,
     paidCard,
-    ...billNotes(ctx, people(ctx, who)),
+    ...billNotes(ctx, who),
     keptNote(g.hidden.open.length + g.hidden.unbilled.length + g.hidden.paid, 'Bills'),
     ...(who ? [] : heldNotes(ctx, 'this shared view')),
     !g.open.length && !g.unbilled.length && !g.paid.length ? card({}, h('p', null, 'No bills, receipts or claim shares to show here.')) : null,
@@ -235,7 +248,7 @@ function callsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
           row({
             route: d.event ? eventRoute(person.id, d.event.event.id) : { name: 'item', person: person.id, id: d.receipt.id },
             title: d.provider,
-            meta: [named ? called(person) : null, d.event ? visitText(d.event) : null, `receipt ${dateText(paidOn(d.receipt))}`, `paid ${money(d.cents)}; the claims say you owe ${money(d.claimSays)}`].filter(Boolean).join(' · '),
+            meta: [named ? called(person) : null, d.event ? visitText(d.event) : null, `receipt ${dateText(receiptDay(d.receipt))}`, `paid ${money(d.cents)}; the claims say you owe ${money(d.claimSays)}`].filter(Boolean).join(' · '),
             aside: [privateChip(d.private), num(d.cents - d.claimSays)],
           }),
         ),
@@ -266,7 +279,7 @@ function callsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
     look,
     desk,
     explained,
-    ...billNotes(ctx, people(ctx, who)),
+    ...billNotes(ctx, who),
     keptNote(kept, 'view'),
     ...(who ? [] : heldNotes(ctx, 'this shared view')),
     h('p', { class: 'small' }, link({ name: 'money', view: 'bills', ...(who ? { who } : {}) }, 'All bills')),

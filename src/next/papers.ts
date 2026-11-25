@@ -64,8 +64,9 @@ export function papersOf(index: PersonIndex, household: Household, today: string
     const e = byRecord.get(r.id);
     if (e) for (const d of r.documents) if (!linking.has(d)) linking.set(d, { event: e, claim: r.kind === 'claim' });
   }
-  const paidBill = new Map<string, string>();
-  for (const b of billList(index)) for (const p of b.payments) if (p.receipt && !paidBill.has(p.receipt.id)) paidBill.set(p.receipt.id, b.doc.id);
+  // The bills a receipt pays, or can be for when its amount did not read.
+  const billsOf = new Map<string, string[]>();
+  for (const b of billList(index)) for (const r of [...b.payments.flatMap((p) => p.receipt ?? []), ...b.unread]) billsOf.set(r.id, [...(billsOf.get(r.id) ?? []), b.doc.id]);
   const byId = new Map(events.map((e) => [e.id, e]));
   const pending = new Map((index.events?.pending ?? []).map((p) => [p.document, p.could_join.flatMap((id) => byId.get(id) ?? [])]));
 
@@ -88,8 +89,8 @@ export function papersOf(index: PersonIndex, household: Household, today: string
       if (held) return place(held.event, held.person, 'event', held.confidence);
       const linked = linking.get(doc.id);
       if (linked) return place(linked.event, person, linked.claim ? 'claim' : 'record', 'sure');
-      const bill = paidBill.get(doc.id);
-      const billed = bill ? byDoc.get(bill) : undefined;
+      const bills = billsOf.get(doc.id) ?? [];
+      const billed = bills.length === 1 ? byDoc.get(bills[0]!) : undefined;
       if (billed) return place(billed.event, billed.person, 'bill', 'likely');
       // A paper that could be part of a private visit is private too: its line names that visit.
       const loose = (why: string, could?: CareEvent[]): Paper => {

@@ -18,7 +18,7 @@ import { recordTitle, visitTitle } from '../../model/titles';
 import type { ImagingStudy, Json, MedDocument, MedRecord, PersonIndex, Provenance } from '../../model/types';
 import { claimContext, visitKind, visitOf } from '../../model/visits';
 import { partOfEvent } from '../../next/eventView';
-import { paymentText } from '../../next/money';
+import { paymentText, unreadText } from '../../next/money';
 import { rangeBar, resultChart } from '../chart';
 import { button, card, chip, command, driveLink, empty, flagChip, jsonBlock, kv, link, outLink, row, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
@@ -588,7 +588,7 @@ function documentView(ctx: Ctx, idx: PersonIndex, d: MedDocument): Child[] {
         ['Amount due', formatMoney(d.statement?.amount_due)],
         ['Due', d.statement?.due_date ? dateText(d.statement.due_date) : undefined],
         ['Statement date', d.statement?.statement_date ? dateText(d.statement.statement_date) : undefined],
-        ['Paid', d.doc_type === 'receipt' ? formatMoney(d.statement?.amount_paid) : bill?.payments.length ? bill.payments.map((p) => paymentText(p, true)).join(', ') : undefined],
+        ['Paid', d.doc_type === 'receipt' ? (formatMoney(d.statement?.amount_paid) ?? 'The amount could not be read') : bill?.payments.length ? bill.payments.map((p) => paymentText(p, true)).join(', ') : bill ? unreadText(bill.unread) : undefined],
         ['Paid on', d.doc_type === 'receipt' && d.statement?.paid_on ? dateText(d.statement.paid_on) : undefined],
         ['Left to pay', bill && (bill.settled || bill.payments.length) ? (bill.settled ? 'Nothing' : formatMoney(bill.left)) : undefined],
         ['Later statement', later ? ['Its balance includes this one: ', link({ name: 'item', person: idx.person, id: later.id }, documentTitle(later))] : undefined],

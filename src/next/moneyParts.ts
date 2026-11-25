@@ -2,16 +2,17 @@
 // everyone or one person (private ones kept off the shared view, counted),
 // the heading with its Whose choices, and the money formats.
 
+import { receiptDay, type Bill } from '../model/billing';
 import { knownArea } from '../model/private';
 import { formatMoney, fromCents } from '../model/records';
-import type { MedDocument, Person } from '../model/types';
+import type { Person } from '../model/types';
 import { chip, link, type Ctx } from '../ui/components';
 import { h, icon } from '../ui/dom';
 import { count, localDay } from '../ui/format';
 import { href, type Route } from '../ui/router';
 import { householdEvents, type PersonEvent } from './calendar';
 import { eventWhen } from './eventView';
-import { byDue, deskPayments, explainedLines, forShared, openBills, paidBills, unbilledShares, type DeskPayment, type Explained, type OpenBill, type PaidBill, type Unbilled } from './money';
+import { anyBill, byDue, deskPayments, explainedLines, forShared, openBills, paidBills, unbilledShares, type DeskPayment, type Explained, type OpenBill, type PaidBill, type Unbilled } from './money';
 import { called } from '../model/people';
 
 export type MoneyRoute = Extract<Route, { name: 'money' }>;
@@ -25,9 +26,6 @@ export interface Mine<T> {
   person: Person;
   item: T;
 }
-
-/** The day a receipt says it was paid, else its own. */
-export const paidOn = (receipt: MedDocument): string => receipt.statement?.paid_on ?? receipt.date ?? '';
 
 /** Everyone's bills, or one person's: private ones kept off the shared view, and how many each part left off; those only held back are not counted as private. */
 export function gather(ctx: Ctx, who: string | undefined) {
@@ -54,10 +52,11 @@ export function gather(ctx: Ctx, who: string | undefined) {
       left: who ? [] : xs.filter((x) => knownArea(x.private)),
     });
     const cleared = <T extends { private?: string }>(xs: T[]) => xs.filter((x) => !x.private);
-    const o = keep(openBills(idx, mine, today), forShared);
+    const shared = <T extends { private?: string; event?: PersonEvent; bill?: Bill }>(xs: T[]) => forShared(idx, xs);
+    const o = keep(openBills(idx, mine, today), shared);
     const u = keep(unbilledShares(idx, mine), cleared);
-    const pd = keep(paidBills(idx, mine), forShared);
-    const dk = keep(deskPayments(idx, mine), forShared);
+    const pd = keep(paidBills(idx, mine), shared);
+    const dk = keep(deskPayments(idx, mine), shared);
     const ex = keep(explainedLines(idx, mine, today), cleared);
     open.push(...o.shown);
     unbilled.push(...u.shown);
@@ -73,7 +72,7 @@ export function gather(ctx: Ctx, who: string | undefined) {
   open.sort((a, b) => byDue(a.item, b.item));
   unbilled.sort((a, b) => b.item.event.event.start.localeCompare(a.item.event.event.start));
   paid.sort((a, b) => (b.item.bill.date ?? '').localeCompare(a.item.bill.date ?? ''));
-  desk.sort((a, b) => paidOn(b.item.receipt).localeCompare(paidOn(a.item.receipt)));
+  desk.sort((a, b) => (receiptDay(b.item.receipt) ?? '').localeCompare(receiptDay(a.item.receipt) ?? ''));
   explained.sort((a, b) => b.item.event.event.start.localeCompare(a.item.event.event.start));
   return { today, open, unbilled, paid, desk, explained, hidden, loading };
 }
@@ -83,11 +82,14 @@ export function keptNote(n: number, where: string): HTMLElement | null {
   return n ? h('p', { class: 'small muted' }, `${count(n, 'private item')} ${n === 1 ? 'is' : 'are'} kept off this shared view. Each shows on its person’s own ${where}.`) : null;
 }
 
-/** Whose bills go by the receipts alone, or without the household's marks, and why: one line for each. */
-export function billNotes(ctx: Ctx, people: Person[]): HTMLElement[] {
-  return people.flatMap((p) => {
+/** Whose bills go by the receipts alone, or without the household's marks, and why: one line for each person with a bill the page may speak of. */
+export function billNotes(ctx: Ctx, who: string | undefined): HTMLElement[] {
+  const all = householdEvents(ctx.store.household, (id) => ctx.store.index(id), localDay(ctx.now()));
+  return ctx.store.household.people.flatMap((p) => {
+    const idx = who && p.id !== who ? undefined : ctx.store.index(p.id);
+    if (!idx || !anyBill(idx, all.filter((x) => x.person.id === p.id), !who)) return [];
     const why = ctx.store.billsNotes.get(p.id);
-    const unread = ctx.store.index(p.id)?.bills?.marksUnreadable;
+    const unread = idx.bills?.marksUnreadable;
     if (why) return [h('p', { class: 'small muted' }, `${why} Meanwhile only receipts say which of ${called(p)}’s bills are paid.`)];
     return unread ? [h('p', { class: 'small muted' }, `The payments marked for ${called(p)} could not be read, so none of them is counted.`)] : [];
   });
