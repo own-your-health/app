@@ -490,7 +490,7 @@ describe('everyone’s page', () => {
     expect([billed.private, billed.bills.map((b) => b.private)]).toEqual([true, billed.bills.map((b) => (b.item.bill.doc.id === bill.id ? 'household' : undefined))]);
   });
 
-  it('marks a private test its claim paid for, and an imaging study and a paper, and is marked by any', () => {
+  it('marks a private test its claim paid for, a medicine no event holds and a paper, and is marked by any', () => {
     const provider = anchor(ROBIN, 'provider', 'Example Health');
     const plain = pageOf(provider)!;
     const held = new Set(personEvents(index(ROBIN), SAMPLE.household, TODAY).flatMap((e) => e.recorded.map((r) => r.id)));
@@ -502,10 +502,16 @@ describe('everyone’s page', () => {
         return { ...idx, ...more(idx), privacy: { ...idx.privacy, ...change(idx.privacy) } };
       });
     // No event holds the test, so its claim is all that has it here.
-    const apart = (idx: PersonIndex) => ({ events: { ...idx.events!, events: idx.events!.events.map((e) => ({ ...e, members: e.members.filter((m) => m.record !== test.id) })) } });
+    const without = (id: string) => (idx: PersonIndex) => ({ events: { ...idx.events!, events: idx.events!.events.map((e) => ({ ...e, members: e.members.filter((m) => m.record !== id) })) } });
     expect(held.has(test.id)).toBe(true);
-    const page = pageOf(provider, false, SAMPLE, known((p) => ({ records: new Map([...p.records, [test.id, 'household']]) }), ROBIN, apart))!;
+    const page = pageOf(provider, false, SAMPLE, known((p) => ({ records: new Map([...p.records, [test.id, 'household']]) }), ROBIN, without(test.id)))!;
     expect([page.private, page.tests.filter((t) => t.private).map((t) => t.item.id)]).toEqual([true, [test.id]]);
+    // A medicine no event holds.
+    const pharmacy = anchor(ROBIN, 'provider', 'Example Pharmacy');
+    const fills = pageOf(pharmacy)!;
+    const fill = fills.medicines[0]!.item;
+    const filled = pageOf(pharmacy, false, SAMPLE, known((p) => ({ records: new Map([...p.records, [fill.id, 'household']]) }), ROBIN, without(fill.id)))!;
+    expect([fills.private, filled.private, filled.medicines.filter((x) => x.private).map((x) => x.item.id), filled.visits.some((v) => v.private)]).toEqual([false, true, [fill.id], false]);
     // A paper of its.
     const papers = pageOf(anchor(ROBIN, 'organization', 'Example Health'))!;
     const doc = papers.papers[0]!.item;
