@@ -84,7 +84,9 @@ test('a bill no insurer is billed for is to pay, with no claim expected, and not
   for (const paid of [{}, { paid: [{ from: 'household', on: '2026-11-20', amount: '120.00', currency: 'USD' }], paid_total: '120.00', left: '0.00', settled: true }]) {
     await lay(page, selfPaid(bill, 'Example Lab', paid));
     await go(page, `#/p/${SAM}/r/${bill}`);
+    await page.reload();
     await page.locator('.event-part a').click();
+    await expect(bills.locator('.row', { hasText: '$120.00' })).toContainText('Bill from Example Lab');
     await expect(bills.locator('.row', { hasText: '$120.00' }).locator('.chip')).toHaveText('No claim expected');
     await expect(bills.locator('.event-gap')).toHaveText('No bill from Example Lab filed yet, for the $50.70 its claim says you owe.');
     await expect(page.locator('.event-settled')).toHaveText('$50.70 not billed yet');
