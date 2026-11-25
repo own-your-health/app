@@ -11,9 +11,9 @@ async function open(page: Page, path: string) {
 
 const paper = (page: Page, title: string) => page.locator('.papers .row', { has: page.locator('.row-title', { hasText: new RegExp(`^${title}$`) }) });
 
-test('Home leads to every paper, each with its visit or why it has none', async ({ page }) => {
+test('Papers lists every paper, each with its visit or why it has none', async ({ page }) => {
   await open(page, '#/');
-  await page.getByRole('link', { name: 'Papers: the files in the Drive folder, each with its visit' }).click();
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Papers' }).click();
   await expect(page).toHaveURL(/#\/papers$/);
   await expect(page.locator('main h1')).toHaveText('Papers');
   await expect(page.locator('.papers-count')).toHaveText('19 papers: 17 with a visit, 2 with none.');

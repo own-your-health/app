@@ -59,14 +59,14 @@ test('home says which sign-in needs a person, in one line that opens the source'
   await expect(page.locator('.banner')).toContainText('Invented records');
   // The line carries no command or provider error.
   const notice = page.locator('.signin-notice');
-  await expect(notice).toHaveText('Example Pediatrics needs a sign-in on the Mac');
+  await expect(notice.locator('.row-title')).toHaveText('Example Pediatrics needs a sign-in');
+  await expect(notice.locator('.row-meta')).toHaveText('On the Mac');
   await expect(page.locator('main .command')).toHaveCount(0);
   await expect(page.locator('main')).not.toContainText('auth login');
+  // The failed load retries on its own, so home only counts it. An answer from hours ago is on the Sources screen.
   const strip = page.locator('.status-strip');
-  await expect(strip).toContainText(/^Latest load \d+ hours? ago\./);
-  await expect(strip).toContainText(/Last refresh request for .+ 3 hours ago: loaded/);
-  // The failed load retries on its own, so home only counts it.
-  await expect(strip).toContainText('1 source failed to load; the Mac tries again on its own.');
+  await expect(strip.locator('.status-line')).toHaveText(/^Loaded \d+ hours? ago · 1 failed$/);
+  await expect(strip).not.toContainText('Last refresh request');
   await expect(page.getByRole('button', { name: 'Refresh everything' })).toBeVisible();
   // The bar's menu carries the dot.
   await expect(page.getByRole('button', { name: 'Menu: a source needs attention' })).toBeVisible();
@@ -101,7 +101,7 @@ const wordless = () => {
 test('the Sources screen lists every source and sign-in, and opens one', async ({ page }) => {
   await lay(page, wordless());
   await page.goto('./?demo');
-  await page.getByRole('link', { name: 'Sources and sign-ins' }).click();
+  await page.locator('.status-strip').getByRole('link', { name: /^Loaded .* ago, see Sources$/ }).click();
   await expect(page).toHaveURL(/#\/sources$/);
   await expect(page.locator('h1.glance-answer')).toHaveText('1 sign-in needs a person');
   await expect(page.locator('.glance')).toContainText('The Mac checked in');
@@ -389,10 +389,11 @@ test('a search starts reading the documents’ text before anything is typed, an
     if (r.url().endsWith('/text.json')) reads.push(decodeURIComponent(r.url()));
   });
   await page.goto('./?demo');
-  const field = page.getByRole('searchbox', { name: 'Search everyone’s records' });
-  await expect(field).toBeVisible();
+  await expect(page.locator('.home')).toBeVisible();
   expect(reads).toEqual([]);
-  await field.focus();
+  await page.getByRole('link', { name: 'Search', exact: true }).click();
+  const field = page.getByRole('searchbox', { name: 'Search' });
+  await expect(field).toBeFocused();
   await expect.poll(() => reads.length).toBe(4);
   await field.fill('lisinopril');
   await field.press('Enter');
@@ -400,10 +401,10 @@ test('a search starts reading the documents’ text before anything is typed, an
   expect(reads).toHaveLength(4);
 });
 
-test('one search over everyone, from the home screen, with filters by kind and person', async ({ page }) => {
+test('one search over everyone, from the bar, with filters by kind and person', async ({ page }) => {
   await page.goto('./?demo');
-  await page.getByRole('searchbox', { name: 'Search everyone’s records' }).fill('lisinopril');
-  await page.getByRole('searchbox', { name: 'Search everyone’s records' }).press('Enter');
+  await page.getByRole('link', { name: 'Search', exact: true }).click();
+  await page.getByRole('searchbox', { name: 'Search' }).fill('lisinopril');
   await expect(page).toHaveURL(/#\/search\?q=lisinopril$/);
   const results = page.locator('main .row');
   await expect(results.first()).toContainText('Robin');
@@ -432,21 +433,19 @@ test('a kind the chosen person has none of falls back to All', async ({ page }) 
   await expect(page.locator('main .row').first()).toContainText('Drew');
 });
 
-test('a refresh answer does not wipe what is being typed on the home screen', async ({ page }) => {
+test('a refresh answer does not wipe what is being typed, and Home says it', async ({ page }) => {
   await page.goto('./?demo');
   await page.getByRole('button', { name: 'Refresh everything' }).click();
   await expect(page.getByText(/waiting for the Mac/).first()).toBeVisible();
-  const field = page.getByRole('searchbox', { name: 'Search everyone’s records' });
+  await page.evaluate(() => (location.hash = '#/search'));
+  const field = page.getByRole('searchbox', { name: 'Search' });
   await field.fill('lisi');
   // The sample Mac takes the request after 3 seconds and answers 3 later; then nothing is pending and the poll stops.
   await page.waitForTimeout(8000);
   await expect(field).toHaveValue('lisi');
   await expect(field).toBeFocused();
-  await expect(page.getByText(/Last refresh request just now/)).toHaveCount(0);
-  // Leaving the field empty draws the answer the page held back.
-  await field.fill('');
-  await field.blur();
-  await expect(page.locator('.status-strip')).toContainText(/Last refresh request just now: .*1 needed a person/, { timeout: 3000 });
+  await page.evaluate(() => (location.hash = '#/'));
+  await expect(page.locator('.status-strip')).toContainText(/Last refresh request just now: .*1 needed a person/);
 });
 
 test('search finds a field, says which, and narrows to one person', async ({ page }) => {

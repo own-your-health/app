@@ -25,7 +25,7 @@ test.afterEach(() => {
 });
 
 // Home's line for the sample's one sign-in that needs a person: the folder has loaded.
-const NOTICE = 'Example Pediatrics needs a sign-in on the Mac';
+const NOTICE = 'Example Pediatrics needs a sign-inOn the Mac';
 const ACCOUNT_KEY = 'own-your-health-app.account';
 const REQUEST_FILE = /^_requests\/\d{8}T\d{6}Z_x_[a-z2-7]{20}\.json$/;
 
@@ -128,7 +128,7 @@ test('with no account stored, a browser with two Google accounts asks once', asy
 test('an hour later the sign-in renews itself, as the same account, on the same screen', async ({ page }) => {
   await page.clock.install();
   await signIn(page);
-  await page.locator('.stand-name').getByRole('link', { name: 'Robin' }).click();
+  await page.locator('.stand').getByRole('link', { name: /^Robin/ }).click();
   const lead = page.locator('main .lead');
   await expect(lead).toHaveText('Where Robin stands: what is due, what is current, and what is worth a look.');
   const route = new URL(page.url()).hash;

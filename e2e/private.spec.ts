@@ -34,6 +34,7 @@ const SHARED: [string, string][] = [
   ['#/', 'Home'],
   ['#/calendar?month=2026-11', 'this shared view'],
   ['#/calendar?view=list', 'this shared view'],
+  ['#/calendar?view=ahead', 'this shared view'],
   ['#/money', 'the lists on this shared view'],
   ['#/money/bills', 'this shared view'],
   ['#/money/calls', 'this shared view'],
@@ -96,7 +97,7 @@ test('Home says who is left off, and no screen says that nothing is there', asyn
   const sam = page.locator('.stand', { hasText: 'Sam' });
   await expect(sam).toContainText('Left off Home');
   await expect(sam).not.toContainText(/Nothing due|visit/);
-  await expect(page.locator('.stand', { hasText: 'Robin' })).toContainText('last visit');
+  await expect(page.locator('.stand', { hasText: 'Robin' })).toContainText('Last visit');
   await expect(page.locator('main')).not.toContainText('Nothing needs you');
 });
 
@@ -172,7 +173,7 @@ test('what the household marked private stays off, and what it marked not privat
   await expect(allergies).toContainText('Sulfa drugs');
 });
 
-/** What a screen holds, card by card, once it has all its records; `without` drops one card. */
+/** What a screen holds, card by card, once it has all its records; `without` drops one part. */
 async function holds(page: Page, path: string, without?: string): Promise<string[]> {
   // The screen before this one is marked, to see it go.
   await page.evaluate(() => document.querySelector('main')?.firstElementChild?.setAttribute('data-was', ''));
@@ -189,14 +190,14 @@ async function holds(page: Page, path: string, without?: string): Promise<string
   };
   await expect.poll(settled, { message: path, intervals: [80] }).toBe(true);
   const parts = await main.evaluate((el, skip) => {
-    for (const c of el.querySelectorAll('.card')) if (skip && c.querySelector('.card-head h2')?.textContent === skip) c.remove();
+    for (const c of skip ? el.querySelectorAll(skip) : []) c.remove();
     return el.innerHTML;
   }, without);
   return parts.split(/(?=<section)/);
 }
 
 /** The pages everyone's lists are on, whose words say nothing of how many private items there are. */
-const LISTS: [string, string?][] = [['#/', 'Money'], ['#/money/bills'], ['#/money/calls'], ['#/money/events'], ['#/money/events?sort=discount'], ['#/papers'], ['#/costs'], ['#/search?q=example']];
+const LISTS: [string, string?][] = [['#/', '.money-line'], ['#/calendar?view=ahead'], ['#/money/bills'], ['#/money/calls'], ['#/money/events'], ['#/money/events?sort=discount'], ['#/papers'], ['#/costs'], ['#/search?q=example']];
 
 for (const [name, base] of [
   ['the sample’s', {}],

@@ -131,33 +131,33 @@ describe('home’s line for a sign-in that needs a person', () => {
   const ended = (v: (typeof views)[number]) => ({ ...v, health: 'expired' as const });
 
   it('names the one source, and opens it', () => {
-    expect(signInWords(views)).toEqual({ text: `${peds.name} needs a sign-in on the Mac`, route: { name: 'source', source: peds.source.id } });
+    expect(signInWords(views)).toEqual({ text: `${peds.name} needs a sign-in`, route: { name: 'source', source: peds.source.id } });
   });
 
   it('names two, and opens Sources', () => {
-    expect(signInWords([peds, ended(lab)])).toEqual({ text: `${peds.name} and ${lab.name} need a sign-in on the Mac`, route: { name: 'sources' } });
+    expect(signInWords([peds, ended(lab)])).toEqual({ text: `${peds.name} and ${lab.name} need a sign-in`, route: { name: 'sources' } });
   });
 
   it('counts three or more', () => {
-    expect(signInWords([peds, ended(lab), ended(chart)])?.text).toBe('3 sources need a sign-in on the Mac');
+    expect(signInWords([peds, ended(lab), ended(chart)])?.text).toBe('3 sources need a sign-in');
   });
 
   it('says a Keychain approval when that is what the Mac waits for', () => {
     const keychain = { ...peds, status: { ...peds.status!, sign_in: { ...peds.status!.sign_in!, needs_person: { reason: 'keychain', command: 'medrec refresh sign-in s_x' } } } };
-    expect(signInWords([keychain])?.text).toBe(`${peds.name} needs a Keychain approval on the Mac`);
-    expect(signInWords([keychain, ended(lab)])?.text).toBe(`${peds.name} and ${lab.name} need a person on the Mac`);
+    expect(signInWords([keychain])?.text).toBe(`${peds.name} needs a Keychain approval`);
+    expect(signInWords([keychain, ended(lab)])?.text).toBe(`${peds.name} and ${lab.name} need a person`);
   });
 
   it('tells two people’s sources of the same name apart', () => {
     const twin = { ...ended(lab), name: peds.name };
-    expect(signInWords([peds, twin])?.text).toBe(`${peds.name} (Alex) and ${peds.name} (Sam) need a sign-in on the Mac`);
+    expect(signInWords([peds, twin])?.text).toBe(`${peds.name} (Alex) and ${peds.name} (Sam) need a sign-in`);
   });
 
   it('leaves out a source that loads only after a sign-in', () => {
     const blood = views.find((v) => v.source.id === sourceOf(household, 'Robin Example', 'oneblood').id)!;
     const plan = views.find((v) => v.source.id === sourceOf(household, 'Robin Example', 'uhc').id)!;
     expect([blood.health, plan.health]).toEqual(['awaits_sign_in', 'awaits_sign_in']);
-    expect(signInWords([peds, blood, plan])).toEqual({ text: `${peds.name} needs a sign-in on the Mac`, route: { name: 'source', source: peds.source.id } });
+    expect(signInWords([peds, blood, plan])).toEqual({ text: `${peds.name} needs a sign-in`, route: { name: 'source', source: peds.source.id } });
     expect(signInWords([blood, plan])).toBeUndefined();
   });
 

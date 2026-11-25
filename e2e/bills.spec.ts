@@ -48,15 +48,14 @@ const unread = (bill: string): Overlay =>
 test('a bill the household marked paid is nowhere open, and one partly paid says what is left', async ({ page }) => {
   await lay(page, paidCase());
   await go(page, '#/');
-  const needs = card(page, /^Needs you$/);
-  await expect(needs.locator('.need-kind', { hasText: 'Worth a call' })).toHaveCount(0);
-  await expect(needs).not.toContainText('Example Billing');
-  await expect(needs).not.toContainText('Example Lab');
-  await expect(needs.locator('.row', { hasText: 'Not all paid' })).toContainText('Robin · Example Health $33.68, $20.00 of $53.68 paid · matches the claim · was due Nov 19, 2026');
-  await expect(needs.locator('.row', { hasText: 'No payment on file' })).toContainText('Example Endoscopy Center $90.50');
-  await expect(needs).toContainText('A bill stays here until a receipt, or a payment the household marked, covers it.');
-  const stands = page.locator('.stand', { hasText: 'Sam' });
-  await expect(stands.locator('.kv-row').first()).toHaveText('To pay$90.50 in 1 bill');
+  const bills = card(page, /^Bills$/);
+  await expect(bills.locator('.card-head')).toHaveText(/^Bills\s*2 · \$124\.18$/);
+  await expect(bills.locator('.need-kind')).toHaveText(['No payment on file', 'Not all paid']);
+  await expect(bills.locator('.need-title')).toHaveText(['Hospital visit, Sep 16', 'Office visit, Oct 1']);
+  await expect(bills.locator('.row').last()).toContainText('Robin · $20.00 of $53.68 paid · was due Nov 19 · matches the claim');
+  await expect(bills.locator('.row-aside')).toHaveText(['$90.50', '$33.68']);
+  await expect(bills.locator('.card-all')).toHaveText('All 2 bills');
+  await expect(page.locator('.stand', { hasText: 'Sam' }).locator('.row-aside')).toHaveText('1 bill');
 
   await go(page, '#/money/bills');
   const hero = page.locator('.money-hero');
@@ -125,11 +124,11 @@ test('a list that can’t be used yet is said, and receipts alone say what is pa
     await expect(page.locator('main').getByText(note)).toHaveCount(1);
   }
   await go(page, `#/money/bills?who=${ROBIN}`);
-  await expect(card(page, 'Due now').locator('.row-title')).toHaveText(['Example Health']);
+  await expect(card(page, 'Due now').locator('.row-title')).toHaveText(['Not all paidExample Health']);
   await expect(page.locator('main')).not.toContainText('list of what is paid');
   // Sam's marked bill is open again until then.
   await go(page, '#/');
-  await expect(card(page, /^Needs you$/).locator('.row', { hasText: 'Worth a call' })).toContainText('Example Billing asks $120.00');
+  await expect(card(page, /^Bills$/).locator('.row', { hasText: 'Worth a call' })).toContainText('$120.00');
 });
 
 test('a bill with a receipt whose amount could not be read may be paid, and is not chased', async ({ page }) => {
@@ -144,11 +143,11 @@ test('a bill with a receipt whose amount could not be read may be paid, and is n
   );
   const said = 'Receipt filed Apr 20, 2025; its amount could not be read';
   await go(page, '#/');
-  const need = card(page, /^Needs you$/).locator('.row', { hasText: 'Office visit, Mar 10, 2025' });
-  await expect(need.locator('.need-kind')).toHaveText('May be paid');
-  await expect(need.locator('.need-kind')).toHaveClass(/need-soon/);
-  await expect(need.locator('.row-meta')).toHaveText(`Robin · Example Health $51.18 · ${said}`);
-  await expect(page.locator('.stand', { hasText: 'Robin' }).locator('.kv-row').first()).toHaveText('To pay$72.96 in 2 bills; 1 more may be paid');
+  // Home counts it in a line of its own, and asks for nothing.
+  await expect(card(page, /^Bills$/).locator('.card-head')).toHaveText(/^Bills\s*4 · \$283\.46$/);
+  await expect(card(page, /^Bills$/).locator('.home-quiet')).toHaveText('Besides, 1 may be paid.');
+  await expect(card(page, /^Bills$/).locator('.card-all')).toHaveText('All 5 bills');
+  await expect(page.locator('.stand', { hasText: 'Robin' }).locator('.row-aside')).toHaveText('2 bills');
 
   await go(page, '#/money');
   await expect(card(page, /^Bills$/).locator('.row-title')).toHaveText(['3 bills ready to pay', '1 bill worth a call', '1 bill may be paid', 'No bill listed yet']);

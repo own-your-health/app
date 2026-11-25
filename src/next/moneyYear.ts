@@ -134,7 +134,7 @@ function billsCard(ctx: Ctx, who: string | undefined): HTMLElement {
   const unbilled = g.unbilled.reduce((t, m) => t + m.item.cents, 0);
   const rows = [
     ready.length
-      ? row({ route: to('bills'), title: `${count(ready.length, 'bill')} ready to pay`, meta: `${matched ? 'They match their claims.' : 'Due, and nothing to ask about first.'}${late ? ` ${late === 1 ? (ready.length === 1 ? 'It is' : 'One is') : `${late} are`} past due.` : ''}`, aside: num(readyCents) })
+      ? row({ route: to('bills'), title: `${count(ready.length, 'bill')} ready to pay`, meta: `${matched ? (ready.length === 1 ? 'It matches its claim.' : 'They match their claims.') : 'Due, and nothing to ask about first.'}${late ? ` ${late === 1 ? (ready.length === 1 ? 'It is' : 'One is') : `${late} are`} past due.` : ''}`, aside: num(readyCents) })
       : null,
     calls.asksMore.length
       ? row({
@@ -391,13 +391,14 @@ export function eventsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined)
 }
 
 /** Home's glance at Money: the household's share this plan year. */
-export function moneyGlance(ctx: Ctx): HTMLElement | null {
+export function moneyLine(ctx: Ctx): HTMLElement | null {
   const d = yearData(ctx, { name: 'money' }, undefined);
   if (!d.choices.length) return null;
   const y = yearMoney(d.lines);
-  return card(
-    { title: 'Money' },
-    y.claims ? h('p', { class: 'glance-answer' }, `${money(y.share ?? 0)} your share ${periodWords(d.chosen)}`) : h('p', null, 'No claims yet this plan year.'),
-    h('p', { class: 'small' }, link({ name: 'money' }, 'The year, the bills and the biggest costs')),
-  );
+  return row({
+    route: { name: 'money' },
+    class: 'money-line',
+    title: y.claims ? `Your share ${periodWords(d.chosen)}` : 'No claims yet this plan year',
+    aside: y.claims ? num(y.share ?? 0) : null,
+  });
 }

@@ -191,6 +191,11 @@ export function paidText(b: Pick<Bill, 'payments'>): string {
   return !text ? 'nothing to pay' : b.payments.some((p) => p.from === 'receipt') ? `paid, ${text}` : text;
 }
 
+/** What a past due bill is called while no payment, or only a part, is on file. */
+export const overdueLabel = (b: OpenBill, unpaid = !b.bill.payments.length): string => (unpaid ? 'No payment on file' : 'Not all paid');
+/** What is said beside it: the folder may not show a payment made elsewhere. */
+export const PAID_ELSEWHERE = 'unless it was paid elsewhere';
+
 /** What a bill that is only partly paid says of it: "$20.00 of $53.68 paid". */
 export function partText(b: Pick<OpenBill, 'asked' | 'cents'>): string | undefined {
   return b.cents < b.asked ? `${formatMoney(fromCents(b.asked - b.cents))} of ${formatMoney(fromCents(b.asked))} paid` : undefined;

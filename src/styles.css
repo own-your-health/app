@@ -332,7 +332,8 @@ code,
 .main {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 16px max(16px, env(safe-area-inset-left)) calc(32px + var(--bottom-nav) + env(safe-area-inset-bottom));
+  /* The footer below keeps clear of the bottom bar. */
+  padding: 16px max(16px, env(safe-area-inset-left)) 32px;
 }
 
 .stack {
@@ -462,21 +463,20 @@ code,
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px 16px;
+  gap: 4px 12px;
+  min-height: 44px;
 }
 
-.status-text {
-  display: grid;
-  gap: 4px;
-}
-
-.status-text p {
+.status-strip p {
   margin: 0;
 }
 
-.status-line {
-  font-size: 17px;
-  font-weight: 600;
+.home-lines .row + .status-strip {
+  border-top: 1px solid var(--line);
+}
+
+.status-more {
+  flex-basis: 100%;
 }
 
 .sr-only {
@@ -603,12 +603,18 @@ a.row-main:hover .row-title {
 }
 
 .row-chevron {
+  display: flex;
   color: var(--muted);
   flex: none;
 }
 
 .row-aside {
   flex: none;
+  text-align: right;
+}
+
+.row-aside:empty {
+  display: none;
 }
 
 .row-extra {
@@ -1527,45 +1533,6 @@ mark {
   display: none;
 }
 
-.home-search {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.home-search .input {
-  margin-top: 0;
-}
-
-.home-search .button {
-  flex: none;
-}
-
-/* Home's one line for a sign-in that needs a person, below the people. */
-.signin-notice a {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 44px;
-  padding: 10px 14px;
-  border: 1px solid var(--line);
-  border-left: 4px solid var(--attention);
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--attention-text);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.signin-notice a:hover span {
-  text-decoration: underline;
-}
-
-.signin-notice svg {
-  flex: none;
-}
-
 /* What a provider's tool said, folded away under a source. */
 .error-details {
   margin-top: 6px;
@@ -2262,22 +2229,134 @@ a.cal-day:hover .cal-date {
   gap: 4px;
 }
 
-.stand + .stand {
+/* Short rows: Home's length does not grow with what waits. */
+.home {
+  gap: 10px;
+}
+
+.home > .card {
+  padding: 12px 16px 4px;
+}
+
+.home > .card:has(> .card-all) {
+  padding-bottom: 0;
+}
+
+.home .card-head {
+  margin-bottom: 0;
+}
+
+.home .row {
+  padding: 4px 0;
+}
+
+.home .need-title {
+  display: block;
+}
+
+/* Its text is held to a few lines. On a narrower screen, or one whose text is enlarged, it wraps. */
+@media (min-width: 22em) {
+  .home .ahead .row-title,
+  .home .ahead .row-meta,
+  .home .cal-row .row-title,
+  .home .cal-row .row-meta,
+  .home .need-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .home .home-bill .row-meta {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+}
+
+.home .ahead .chip::before {
+  display: none;
+}
+
+.home-quiet {
+  margin: 0;
+  padding: 8px 0;
   border-top: 1px solid var(--line);
-  margin-top: 12px;
-  padding-top: 4px;
 }
 
-.stand > .small {
-  margin: 0 0 4px;
+/* Mark paid sits under its amount, beside the text. */
+.home-bill-mark {
+  position: relative;
 }
 
-/* Two columns even on a phone: a short label beside its line. */
-.stand .kv-row {
-  grid-template-columns: 4.5em 1fr;
-  gap: 12px;
-  padding: 2px 0;
-  border-top: 0;
+.home-bill-mark .row-main {
+  align-items: flex-start;
+  min-height: 72px;
+}
+
+.home-bill-mark .row-aside {
+  min-width: 84px;
+}
+
+.home-mark {
+  position: absolute;
+  right: 0;
+  bottom: 4px;
+}
+
+.card-all {
+  margin: 0;
+  border-top: 1px solid var(--line);
+}
+
+.card-all a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.card-all a:hover {
+  text-decoration: underline;
+}
+
+.card-notes p {
+  margin: 0;
+}
+
+.card-notes p + p {
+  margin-top: 6px;
+}
+
+.signin-notice .row-title {
+  color: var(--attention-text);
+}
+
+/* One line a person: the name, the latest visit, and the most urgent thing. A
+   day that does not fit beside them goes under the name, never cut short. */
+.stand .row-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 8px;
+}
+
+.stand-name {
+  min-width: 4em;
+  font-weight: 600;
+  color: var(--link);
+}
+
+.stand-said {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.home .stand,
+.home .money-line {
+  padding: 0;
 }
 
 /* ---- Money: bills, and those worth a call ---- */

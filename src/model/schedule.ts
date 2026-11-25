@@ -183,6 +183,8 @@ export function scheduleFor(birth: string, records: MedRecord[], today: string):
 export interface FluSeason {
   /** The season, as "2026–27". */
   season: string;
+  /** The day it starts. */
+  from: string;
   /** Doses this season the schedule gives: 2 in a first season under 9, else 1. */
   due: number;
   given: { day: string; record: MedRecord }[];
@@ -201,7 +203,7 @@ export function fluSeason(birth: string, records: MedRecord[], today: string): F
   const before = all.filter((g) => g.day < start).length;
   const given = all.filter((g) => g.day >= start);
   const due = age < 9 * Y && before < 2 ? 2 : 1;
-  return { season: `${startYear}–${String(startYear + 1).slice(2)}`, due, given, missing: given.length < due };
+  return { season: `${startYear}–${String(startYear + 1).slice(2)}`, from: start, due, given, missing: given.length < due };
 }
 
 export type DigestEntry = { row: ScheduleRow & { next: NonNullable<ScheduleRow['next']> } } | { flu: FluSeason };

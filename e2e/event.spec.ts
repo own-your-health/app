@@ -10,7 +10,7 @@ import { lay } from './lay';
 async function openSam(page: Page) {
   await page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
   await page.goto('./?demo');
-  await page.locator('.stand-name').getByRole('link', { name: 'Sam' }).click();
+  await page.locator('.stand').getByRole('link', { name: /^Sam/ }).click();
   await expect(page).toHaveURL(new RegExp(`#/health\\?who=${SAM}$`));
 }
 

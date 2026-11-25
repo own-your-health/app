@@ -15,7 +15,7 @@ const card = (page: Page, title: string | RegExp) => page.locator('.card', { has
 
 test('everyone’s Health gives each person’s standing and counts what it keeps private', async ({ page }) => {
   await open(page, '#/');
-  await page.getByRole('link', { name: 'Health: what each person has now and what is worth a look' }).click();
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Health' }).click();
   await expect(page).toHaveURL(/#\/health$/);
   await expect(page.locator('main h1')).toHaveText('Health');
   await expect(page.getByRole('group', { name: 'Whose health' }).getByRole('link')).toHaveText(['Everyone', 'Robin', 'Sam', 'Alex', 'Drew']);

@@ -9,10 +9,12 @@ import { h, icon } from '../ui/dom';
 import { formatMoney, fromCents } from '../model/records';
 import { count, dateText, localDay } from '../ui/format';
 import { href, type Route } from '../ui/router';
-import { barPart, householdEvents, inMonth, isMonth, listPage, markShape, monthOf, monthWeeks, onDay, shiftMonth, shown, type PersonEvent } from './calendar';
+import { barPart, householdEvents, inMonth, isMonth, listPage, markShape, monthLabel, monthOf, MONTHS, monthWeeks, onDay, shiftMonth, shown, type PersonEvent } from './calendar';
 import { doseCount } from './event';
 import { areaText, knownArea } from '../model/private';
 import { anyLeftOff, heldNotes } from './shared';
+import { aheadView } from './aheadView';
+import { signInWords } from '../ui/views/sources';
 import { eventNumber, eventRoute, headline } from './eventView';
 import { called } from '../model/people';
 
@@ -26,14 +28,12 @@ export function hidePrivateEvents(): void {
   showPrivate = false;
 }
 
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 /** Five validated lane colors, one per person in household order; a sixth person on keeps a lane in plain ink. */
 const LANE_COLORS = 5;
 const laneClass = (lane: number) => (lane < LANE_COLORS ? `lane-${lane}` : 'lane-other');
 
-const monthLabel = (month: string) => `${MONTHS[Number(month.slice(5, 7)) - 1]} ${month.slice(0, 4)}`;
 const weekday = (day: string) => new Date(`${day}T12:00:00Z`).getUTCDay();
 const dayLabel = (day: string) => `${WEEKDAYS[weekday(day)]}, ${MONTHS[Number(day.slice(5, 7)) - 1]} ${Number(day.slice(8, 10))}`;
 const money = (cents: number) => formatMoney(fromCents(cents)) ?? '';
@@ -59,8 +59,8 @@ function shareText(events: PersonEvent[]): string | null {
   return shares.length ? `your share ${money(shares.reduce((a, b) => a + b, 0))}` : null;
 }
 
-/** One event as a row: its day, what it was and where ("Office visit · Example Pediatrics"), whose it is and its one number. */
-function eventRow(x: PersonEvent, opts: { person: boolean; month?: string }): HTMLElement {
+/** One event as a row: its day, what it was and where ("Office visit · Example Pediatrics"), whose it is and its one number. `brief` is Home's, a line each. */
+function eventRow(x: PersonEvent, opts: { person: boolean; month?: string; brief?: true }): HTMLElement {
   const e = x.event;
   const { title, kind } = headline(e);
   const n = eventNumber(x.money);
@@ -79,12 +79,12 @@ function eventRow(x: PersonEvent, opts: { person: boolean; month?: string }): HT
         h(
           'div',
           { class: 'row-body' },
-          h('div', { class: 'row-title' }, [title, e.place].filter(Boolean).join(' · ')),
-          h('div', { class: 'row-meta' }, [opts.person ? called(x.person) : null, kind, e.what, e.end > e.start ? `to ${dateText(e.end)}` : null].filter(Boolean).join(' · ')),
+          h('div', { class: 'row-title' }, [title, opts.brief ? null : e.place].filter(Boolean).join(' · ')),
+          h('div', { class: 'row-meta' }, [opts.person ? called(x.person) : null, ...(opts.brief ? [e.place ?? kind ?? e.what] : [kind, e.what]), e.end > e.start ? `to ${dateText(e.end)}` : null].filter(Boolean).join(' · ')),
         ),
+        h('div', { class: 'row-aside' }, knownArea(x.private) ? chip('Private', 'muted') : null, n ? h('span', { class: 'num' }, n) : null),
         h('span', { class: 'row-chevron' }, icon('next', 18)),
       ),
-      h('div', { class: 'row-aside' }, knownArea(x.private) ? chip('Private', 'muted') : null, n ? h('span', { class: 'num' }, n) : null),
     ),
   );
 }
@@ -216,6 +216,7 @@ export function calendarView(ctx: Ctx, route: CalendarRoute): HTMLElement {
       [
         ['Month', undefined],
         ['List', 'list'],
+        ['Ahead', 'ahead'],
       ] as const
     ).map(([text, view]) => {
       const on = r.view === view;
@@ -268,7 +269,7 @@ export function calendarView(ctx: Ctx, route: CalendarRoute): HTMLElement {
     body.replaceChildren(...[privacy, ...(r.view === 'list' ? listView(r, events, left) : monthView(r, events, laneOf, people, today, left))].filter((x): x is HTMLElement => !!x));
     if (focusToggle) body.querySelector<HTMLButtonElement>('.cal-private button')?.focus();
   };
-  draw();
+  if (r.view !== 'ahead') draw();
 
   return h(
     'div',
@@ -279,18 +280,17 @@ export function calendarView(ctx: Ctx, route: CalendarRoute): HTMLElement {
     loading ? h('p', { class: 'small muted' }, `Still loading the records of ${count(loading, 'person', 'people')}.`) : null,
     ...(who ? [] : heldNotes(ctx, 'this shared view')),
     said,
-    body,
+    r.view === 'ahead' ? aheadView(ctx, who, signInWords(store.sources(ctx.now()).filter((v) => !who || v.person?.id === who))) : body,
   );
 }
 
 /** Home's way into the calendar: the household's latest events, private ones left off. */
-export function recentCard(ctx: Ctx, shownCount = 3): HTMLElement {
+export function recentCard(ctx: Ctx, shownCount = 2): HTMLElement {
   const all = householdEvents(ctx.store.household, (id) => ctx.store.index(id), localDay(ctx.now()));
   const { events } = shown(all, undefined, false);
   return card(
     { title: 'Recently' },
-    events.length ? events.slice(0, shownCount).map((x) => eventRow(x, { person: true })) : empty('Nothing to show here.'),
-    h('p', { class: 'small' }, link({ name: 'calendar' }, 'Calendar: every visit, test and pharmacy trip, month by month')),
-    h('p', { class: 'small' }, link({ name: 'papers' }, 'Papers: the files in the Drive folder, each with its visit')),
+    events.length ? events.slice(0, shownCount).map((x) => eventRow(x, { person: true, brief: true })) : empty('Nothing to show here.'),
+    h('p', { class: 'card-all' }, link({ name: 'calendar' }, 'Calendar')),
   );
 }

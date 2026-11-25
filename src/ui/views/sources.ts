@@ -3,8 +3,8 @@
 // person.
 
 import { headline, isRecentAnswer, needsAttention, needsPerson, NEEDS_PERSON, type AnsweredRequest, type MacState, type SourceView } from '../../model/sources';
-import { h, icon, type Child } from '../dom';
-import { card, chip, command, empty, link, refreshControl, row, type Ctx, type Tone } from '../components';
+import { h, type Child } from '../dom';
+import { card, chip, command, empty, refreshControl, row, type Ctx, type Tone } from '../components';
 import { clock, dateTime, duration, relative } from '../format';
 import type { ErrorInfo, Handled, Person } from '../../model/types';
 import type { Route } from '../router';
@@ -210,8 +210,8 @@ function waitsFor(v: SourceView): string {
 
 /**
  * The one line for the sign-ins only a person can make ("Example Health
- * Plan needs a sign-in on the Mac"), and where it leads: the source, or
- * Sources for several. Undefined when none does.
+ * Plan needs a sign-in"), and where it leads: the source, or Sources for
+ * several. Undefined when none does.
  */
 export function signInWords(views: SourceView[]): { text: string; route: Route } | undefined {
   const needs = needsPerson(views);
@@ -220,17 +220,11 @@ export function signInWords(views: SourceView[]): { text: string; route: Route }
   const what = needs.every((v) => waitsFor(v) === 'a sign-in') ? 'a sign-in' : needs.length === 1 ? waitsFor(needs[0]!) : 'a person';
   const text =
     needs.length === 1
-      ? `${label(needs[0]!)} needs ${what} on the Mac`
+      ? `${label(needs[0]!)} needs ${what}`
       : needs.length === 2
-        ? `${label(needs[0]!)} and ${label(needs[1]!)} need ${what} on the Mac`
-        : `${needs.length} sources need ${what} on the Mac`;
+        ? `${label(needs[0]!)} and ${label(needs[1]!)} need ${what}`
+        : `${needs.length} sources need ${what}`;
   return { text, route: needs.length === 1 ? { name: 'source', source: needs[0]!.source.id } : { name: 'sources' } };
-}
-
-/** signInWords as a link, for home and a person's overview. */
-export function signInNotice(views: SourceView[]): HTMLElement | null {
-  const words = signInWords(views);
-  return words ? h('p', { class: 'signin-notice' }, link(words.route, h('span', null, words.text), icon('next', 18))) : null;
 }
 
 /** The shorter words for `n` sources with an outcome, counted among others ("2 too soon after their last tries"). */

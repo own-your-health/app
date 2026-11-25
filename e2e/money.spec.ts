@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { SAM } from '../test/sample';
+import { ROBIN, SAM } from '../test/sample';
 
 // Money: the year (its four figures, bills to act on, each
 // person's deductible and out-of-pocket limit, the months, the biggest
@@ -15,7 +15,7 @@ const card = (page: Page, title: string | RegExp) => page.locator('.card', { has
 
 test('bills sets each open bill beside its claim, then what is not billed yet and what is paid', async ({ page }) => {
   await open(page, '#/');
-  await card(page, /^Needs you$/).getByRole('link', { name: 'Bills: each one beside its claim' }).click();
+  await card(page, /^Bills$/).getByRole('link', { name: 'All 4 bills' }).click();
   await expect(page).toHaveURL(/#\/money\/bills$/);
   await expect(page.locator('main h1')).toHaveText('Bills');
 
@@ -24,7 +24,9 @@ test('bills sets each open bill beside its claim, then what is not billed yet an
   await expect(hero).toContainText('3 bills, each asking what its claim says you owe. 1 more bill is worth a call first.');
 
   const due = card(page, 'Due now');
-  await expect(due.locator('.row-title')).toHaveText(['Example Endoscopy Center', 'Example Health', 'Example Lab']);
+  // Past due, and no payment is on file; the receipt may be elsewhere, so the row says that too.
+  await expect(due.locator('.row-title')).toHaveText(['No payment on fileExample Endoscopy Center', 'No payment on fileExample Health', 'Example Lab']);
+  await expect(due.locator('.row-meta')).toHaveText([/ · unless it was paid elsewhere$/, / · unless it was paid elsewhere$/, /statement Oct 28, 2026$/]);
   await expect(due.locator('.row').first().locator('.chip')).toHaveText(['Was due Nov 4, 2026', 'Matches the claim']);
   await expect(card(page, 'Check before paying').locator('.row-meta')).toHaveText('Sam · Lab tests, Jul 9, 2026 · asks $120.00; the visit’s claims say you owe $50.70');
   await card(page, 'Check before paying').locator('a.row-main').click();
@@ -41,7 +43,7 @@ test('bills sets each open bill beside its claim, then what is not billed yet an
   // One person's bills.
   await page.getByRole('group', { name: 'Whose money' }).getByRole('link', { name: 'Robin' }).click();
   await expect(page).toHaveURL(/#\/money\/bills\?who=/);
-  await expect(card(page, 'Due now').locator('.row-title')).toHaveText(['Example Health', 'Example Lab']);
+  await expect(card(page, 'Due now').locator('.row-title')).toHaveText(['No payment on fileExample Health', 'Example Lab']);
   await expect(card(page, 'Check before paying')).toHaveCount(0);
 });
 
@@ -81,9 +83,7 @@ test('worth a call gives each bill the figures and the words to say', async ({ p
 
 test('the year: what care cost, the bills to act on, deductibles, the months and the biggest costs', async ({ page }) => {
   await open(page, '#/');
-  const glance = card(page, /^Money$/);
-  await expect(glance.locator('.glance-answer')).toHaveText('$497.86 your share this plan year');
-  await glance.getByRole('link', { name: 'The year, the bills and the biggest costs' }).click();
+  await page.locator('.money-line').getByRole('link').click();
   await expect(page).toHaveURL(/#\/money$/);
   await expect(page.locator('main h1')).toHaveText('Money');
 
@@ -185,5 +185,20 @@ test('Money fits a 360px phone in the dark theme', async ({ page }) => {
     await open(page, path);
     await expect(page.locator('main h1')).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  }
+});
+
+test('Money says how many of the bills ready to pay are past due', async ({ page }) => {
+  // On the 10th only Sam's is past due, and Robin's two are to come.
+  await page.clock.setFixedTime(new Date('2026-11-10T20:00:00Z'));
+  for (const [path, title, said] of [
+    ['#/money', '3 bills ready to pay', 'They match their claims. One is past due.'],
+    [`#/money?who=${SAM}`, '1 bill ready to pay', 'It matches its claim. It is past due.'],
+    [`#/money?who=${ROBIN}`, '2 bills ready to pay', 'They match their claims.'],
+  ] as const) {
+    await page.goto(`./?demo${path}`);
+    const ready = card(page, /^Bills$/).locator('.row').first();
+    await expect(ready.locator('.row-title'), path).toHaveText(title);
+    await expect(ready.locator('.row-meta'), path).toHaveText(said);
   }
 });

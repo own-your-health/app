@@ -14,7 +14,7 @@ import type { Route } from '../ui/router';
 import { paidControl } from './markPaid';
 import { daysBetween } from './needs';
 import { eventRoute, eventWhen } from './eventView';
-import { callsSummary, mayBePaid, overAsked, paymentText, partText, toPay, unreadText, worthACall, type OpenBill, type PaidBill } from './money';
+import { callsSummary, mayBePaid, overAsked, overdueLabel, PAID_ELSEWHERE, paymentText, partText, toPay, unreadText, worthACall, type OpenBill, type PaidBill } from './money';
 import { billNotes, forBill, gather, head, listLine, money, num, privateChip, visitText, type Mine, type MoneyRoute } from './moneyParts';
 import { eventsPage, overviewPage } from './moneyYear';
 import { heldNotes } from './shared';
@@ -39,10 +39,12 @@ const markOf = (ctx: Ctx, m: Mine<OpenBill>): HTMLElement | null => paidControl(
 function openRow(ctx: Ctx, m: Mine<OpenBill>, today: string, named: boolean): HTMLElement {
   const b = m.item;
   const e = b.event;
+  // One marked paid, or that a receipt may be for, is not chased.
+  const late = b.overdue && !b.marked && !mayBePaid(b);
   return row({
     route: e ? eventRoute(m.person.id, e.event.id) : { name: 'item', person: m.person.id, id: b.bill.doc.id },
-    title: b.bill.provider ?? 'A provider',
-    meta: [named ? called(m.person) : null, e ? visitText(e) : null, billWhen(b), partText(b), unreadText(b.bill.unread)].filter(Boolean).join(' · '),
+    title: late ? [h('span', { class: 'need-kind need-attention' }, overdueLabel(b)), h('span', null, b.bill.provider ?? 'A provider')] : (b.bill.provider ?? 'A provider'),
+    meta: [named ? called(m.person) : null, e ? visitText(e) : null, billWhen(b), partText(b), unreadText(b.bill.unread), late && !b.bill.payments.length ? PAID_ELSEWHERE : null].filter(Boolean).join(' · '),
     aside: num(b.cents),
     extra: [
       h(
@@ -88,7 +90,7 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
     h(
       'p',
       null,
-      ready.length ? (matched === ready.length ? `${count(ready.length, 'bill')}, each asking what its claim says you owe.` : `${count(ready.length, 'bill')}, ${matched ? `${matched} of them asking what ${matched === 1 ? 'its claim says' : 'their claims say'} you owe.` : 'with no one claim to set beside.'}`) : who ? 'No bill that matches its claim is waiting.' : 'No bill listed here matches its claim.',
+      ready.length ? (matched === ready.length ? `${count(ready.length, 'bill')}, ${matched === 1 ? 'asking' : 'each asking'} what its claim says you owe.` : `${count(ready.length, 'bill')}, ${matched ? `${matched} of them asking what ${matched === 1 ? 'its claim says' : 'their claims say'} you owe.` : 'with no one claim to set beside.'}`) : who ? 'No bill that matches its claim is waiting.' : 'No bill listed here matches its claim.',
       check.length ? [' ', link(callsRoute(), `${count(check.length, 'more bill')} ${check.length === 1 ? 'is' : 'are'} worth a call first.`)] : ready.length && who ? ' None asks for more than the claims say.' : null,
     ),
   );
