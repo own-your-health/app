@@ -25,7 +25,7 @@ afterEach(() => {
 });
 
 const owing = (idx: PersonIndex, amount: string): MedDocument => idx.documents.find((d) => d.statement?.amount_due?.amount === amount)!;
-const paid = (person: string, document: string, amount: string, on = '2026-11-20') => ({ paid: { person, document, on, amount } });
+const paid = (person: string, document: string, amount: string, on = '2026-11-17') => ({ paid: { person, document, on, amount } });
 
 async function loaded(folder: DemoFolder = demoFolder(NOW)): Promise<{ folder: DemoFolder; store: Store }> {
   const store = new Store(folder);
@@ -60,11 +60,11 @@ describe('a payment marked', () => {
       requested_at: '2026-11-22T20:00:00Z',
       requested_by: { email: 'robin@example.com' },
       app: { name: 'own-your-health-app', version: '0.1.0' },
-      paid: { person: ROBIN, document: doc, on: '2026-11-20', amount: '53.68' },
+      paid: { person: ROBIN, document: doc, on: '2026-11-17', amount: '53.68' },
     });
     // The same again is the one that waits; another day is another payment.
     expect(await store.requestMark(paid(ROBIN, doc, '53.68'), {}, '0.1.0')).toBe(m);
-    const other = await store.requestMark(paid(ROBIN, doc, '53.68', '2026-11-21'), {}, '0.1.0');
+    const other = await store.requestMark(paid(ROBIN, doc, '53.68', '2026-11-18'), {}, '0.1.0');
     expect(store.marks.map((x) => x.file).sort()).toEqual([m.file, other.file].sort());
     await store.loadRefreshState();
     expect(store.marks.map((x) => [x.file, x.cancellable]).sort()).toEqual([[m.file, true], [other.file, true]].sort());
@@ -179,12 +179,12 @@ describe('a payment marked', () => {
     const { store } = await loaded();
     const idx = store.index(ROBIN)!;
     const doc = owing(idx, '53.68');
-    const held = (p: object, documents = idx.documents): PersonIndex => ({ ...idx, documents, bills: { ...idx.bills!, states: new Map([...idx.bills!.states, [doc.id, { settled: true, payments: [{ from: 'household' as const, id: 'o_1', on: '2026-11-20', amount: { amount: '53.68', currency: 'USD' }, ...p }] }]]) } });
+    const held = (p: object, documents = idx.documents): PersonIndex => ({ ...idx, documents, bills: { ...idx.bills!, states: new Map([...idx.bills!.states, [doc.id, { settled: true, payments: [{ from: 'household' as const, id: 'o_1', on: '2026-11-17', amount: { amount: '53.68', currency: 'USD' }, ...p }] }]]) } });
     const shows = (index: PersonIndex | undefined, mark: ReturnType<typeof paid> | { unpaid: UnpaidMark }) => markRecorded({ ...mark } as MarkRequest, new Map(index ? [[ROBIN, index]] : []));
     const asked = paid(ROBIN, doc.id, '53.68');
     expect(shows(held({}), asked)).toBe(true);
     expect(shows(held({ amount: { amount: '53.680', currency: 'USD' } }), asked)).toBe(true);
-    for (const p of [{ from: 'receipt' }, { on: '2026-11-19' }, { amount: { amount: '53.67', currency: 'USD' } }, { amount: { amount: '53.68', currency: 'EUR' } }, { amount: undefined }]) expect(shows(held(p), asked)).toBe(false);
+    for (const p of [{ from: 'receipt' }, { on: '2026-11-16' }, { amount: { amount: '53.67', currency: 'USD' } }, { amount: { amount: '53.68', currency: 'EUR' } }, { amount: undefined }]) expect(shows(held(p), asked)).toBe(false);
     expect(shows(held({}, [...idx.documents, { ...doc, id: 'd_copy', same_statement_as: doc.id }]), paid(ROBIN, 'd_copy', '53.68'))).toBe(true);
     expect(shows(held({}), paid(ROBIN, 'd_copy', '53.68'))).toBe(false);
     const undo = (payment: string) => ({ unpaid: { person: ROBIN, payment } });
@@ -277,15 +277,15 @@ describe('a payment marked', () => {
     const here = new Store(folder);
     await here.load();
     const stands = () => here.marks.length === 0;
-    const m = await there.requestMark(paid(ROBIN, doc, '50.00'), {}, '0.1.0');
+    const m = await there.requestMark(paid(ROBIN, doc, '41.00'), {}, '0.1.0');
     const requests = async () => (await folder.list('_requests'))!.filter((e) => !e.folder).length;
     for (let i = 0; i < 2; i++) {
       await expect(here.requestMark(paid(ROBIN, doc, '53.68'), {}, '0.1.0', stands)).rejects.toThrow('What is left to pay has changed since this was opened, so nothing was sent.');
       expect([here.marks.map((x) => x.file), await requests()]).toEqual([[m.file], 1]);
     }
     // What the other device asked is the same request.
-    expect((await here.requestMark(paid(ROBIN, doc, '50.00'), {}, '0.1.0', stands)).file).toBe(m.file);
-    expect((await here.requestMark(paid(ROBIN, doc, '3.68'), {}, '0.1.0', () => here.marks.length === 1)).file).not.toBe(m.file);
+    expect((await here.requestMark(paid(ROBIN, doc, '41.00'), {}, '0.1.0', stands)).file).toBe(m.file);
+    expect((await here.requestMark(paid(ROBIN, doc, '12.68'), {}, '0.1.0', () => here.marks.length === 1)).file).not.toBe(m.file);
     expect(await requests()).toBe(2);
   });
 
@@ -694,7 +694,7 @@ describe('the sample’s Mac', () => {
     const doc = owing((await loaded()).store.index(SAM)!, '90.50').id;
     const { store, waited, done, bill } = await marked(paid(SAM, doc, '90.50'));
     expect([waited, done.handled?.outcome, done.paid?.document]).toEqual([[false], 'ok', doc]);
-    expect(bill(SAM, doc)).toMatchObject({ settled: true, payments: [{ from: 'household', on: '2026-11-20', amount: { amount: '90.50', currency: 'USD' } }] });
+    expect(bill(SAM, doc)).toMatchObject({ settled: true, payments: [{ from: 'household', on: '2026-11-17', amount: { amount: '90.50', currency: 'USD' } }] });
     expect(bill(SAM, doc).payments[0]!.id).toMatch(/^o_[a-z2-7]{20}$/);
     expect([store.billsNotes.size, store.mayBring()]).toEqual([0, false]);
   });
@@ -702,17 +702,17 @@ describe('the sample’s Mac', () => {
   it('leaves the rest of one paid in part, and counts a second payment', async () => {
     const start = await loaded();
     const doc = owing(start.store.index(SAM)!, '90.50').id;
-    const one = await marked(paid(SAM, doc, '60'), start);
-    expect(one.bill(SAM, doc)).toMatchObject({ settled: false, left: { amount: '30.50', currency: 'USD' } });
-    const two = await marked(paid(SAM, doc, '50.00', '2026-11-01'), one);
-    expect(two.bill(SAM, doc)).toMatchObject({ settled: true, payments: [{ on: '2026-11-01' }, { on: '2026-11-20', amount: { amount: '60.00' } }] });
-    const again = await marked(paid(SAM, doc, '60.00'), two);
+    const one = await marked(paid(SAM, doc, '55'), start);
+    expect(one.bill(SAM, doc)).toMatchObject({ settled: false, left: { amount: '35.50', currency: 'USD' } });
+    const two = await marked(paid(SAM, doc, '48.00', '2026-11-05'), one);
+    expect(two.bill(SAM, doc)).toMatchObject({ settled: true, payments: [{ on: '2026-11-05' }, { on: '2026-11-17', amount: { amount: '55.00' } }] });
+    const again = await marked(paid(SAM, doc, '55.00'), two);
     expect([again.bill(SAM, doc).payments.length, again.done.handled?.message]).toEqual([2, 'It was marked already.']);
   });
 
   it('does not take off a payment in another currency', async () => {
     const doc = owing((await loaded()).store.index(SAM)!, '90.50').id;
-    const { bill } = await marked({ paid: { person: SAM, document: doc, on: '2026-11-20', amount: { amount: '90.50', currency: 'EUR' } } });
+    const { bill } = await marked({ paid: { person: SAM, document: doc, on: '2026-11-17', amount: { amount: '90.50', currency: 'EUR' } } });
     expect(bill(SAM, doc)).toMatchObject({ settled: false, left: { amount: '90.50' }, payments: [{ apart: true }] });
   });
 
@@ -744,19 +744,19 @@ describe('the sample’s Mac', () => {
 
 describe('a bill whose payment waits for the Mac', () => {
   const request = (p: { person: string; document: string; on: string; amount: string }): MarkRequest => ({ schema: 'medrec-request/v1', id: 'x_aaaaaaaaaaaaaaaaaaaa', requested_at: '2026-11-22T20:00:00Z', requested_by: {}, app: { name: 'own-your-health-app', version: '0.1.0' }, paid: p });
-  const mark = (person: string, document: string, amount: string): PendingMark => ({ file: 'a.json', request: request({ person, document, on: '2026-11-20', amount }), cancellable: true });
+  const mark = (person: string, document: string, amount: string): PendingMark => ({ file: 'a.json', request: request({ person, document, on: '2026-11-17', amount }), cancellable: true });
 
   it('is neither to pay, worth a call, nor one that may be paid when that covers what is left', async () => {
     const { store } = await loaded();
     const idx = store.index(SAM)!;
     const events = householdEvents(store.household, (id) => store.index(id), TODAY).filter((x) => x.person.id === SAM);
     const [billing, center] = [owing(idx, '120.00'), owing(idx, '90.50')];
-    const receipt: MedDocument = { ...billing, id: 'd_unread', doc_type: 'receipt', date: '2026-08-20', statement: undefined };
+    const receipt: MedDocument = { ...billing, id: 'd_unread', doc_type: 'receipt', date: '2026-08-26', statement: undefined };
     const open = (amount: string | null, from: PersonIndex = idx, doc = billing) => openBills(from, events, TODAY, amount === null ? [] : [mark(SAM, doc.id, amount)]).find((b) => b.bill.doc.id === doc.id)!;
     const kinds = (b: ReturnType<typeof open>) => [b.marked, worthACall(b), mayBePaid(b), toPay(b)];
     expect(kinds(open(null))).toEqual([false, true, false, false]);
     expect(kinds(open('119.99'))).toEqual([false, true, false, false]);
-    expect([kinds(open('120.00')), kinds(open('130.00'))]).toEqual([[true, false, false, false], [true, false, false, false]]);
+    expect([kinds(open('120.00')), kinds(open('136.00'))]).toEqual([[true, false, false, false], [true, false, false, false]]);
     expect(kinds(open('90.50', idx, center))).toEqual([true, false, false, false]);
     expect(kinds(open('90.49', idx, center))).toEqual([false, false, false, true]);
     const unread = { ...idx, documents: [...idx.documents, receipt] };
@@ -769,8 +769,8 @@ describe('a bill whose payment waits for the Mac', () => {
     const { store } = await loaded();
     const idx = store.index(SAM)!;
     const bill = billList(idx).find((b) => b.doc.id === owing(idx, '90.50').id)!;
-    const marks = [mark(SAM, bill.doc.id, '50.00')];
-    expect([unmarkedCents(bill, []), unmarkedCents(bill, marks), unmarkedCents(bill, [...marks, ...marks])]).toEqual([9050, 4050, 0]);
+    const marks = [mark(SAM, bill.doc.id, '48.00')];
+    expect([unmarkedCents(bill, []), unmarkedCents(bill, marks), unmarkedCents(bill, [...marks, ...marks])]).toEqual([9050, 4250, 0]);
     const [open] = openBills(idx, [], TODAY, marks).filter((b) => b.bill.doc.id === bill.doc.id);
     expect([open!.cents, open!.asked]).toEqual([9050, 9050]);
   });

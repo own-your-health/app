@@ -21,8 +21,8 @@ describe('a hospital’s revenue code', () => {
   });
 
   it('is said in words, with its code', () => {
-    expect(revenueText({ code: '0260', display: 'IV therapy' })).toBe('IV therapy, revenue code 0260');
-    expect(revenueText({ code: '0250' })).toBe('Revenue code 0250');
+    expect(revenueText({ code: '0540', display: 'Ambulance' })).toBe('Ambulance, revenue code 0540');
+    expect(revenueText({ code: '0110' })).toBe('Revenue code 0110');
   });
 
   it('keeps a line with no service code in every sum, so nothing is left “Not split by line”', () => {

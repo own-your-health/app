@@ -22,7 +22,7 @@ describe('a period’s care in four figures', () => {
 
   it('takes what the plan paid and your share as the price of a line whose allowed amount is negative', () => {
     const line = plan.find((l) => l.cents.billed && l.cents.allowed)!;
-    const odd: CostLine = { ...line, cents: { ...line.cents, allowed: -500 } };
+    const odd: CostLine = { ...line, cents: { ...line.cents, allowed: -650 } };
     expect(yearMoney([odd]).discount).toBe(line.cents.billed! - line.cents.planPaid! - line.cents.youOwe!);
   });
 
@@ -55,7 +55,7 @@ describe('deductibles and out-of-pocket limits', () => {
   });
 
   it('name the claim that met a deductible, when these records’ claims add up to it', () => {
-    // Sam's deductible parts: $50.70 on Jul 9, $100.00 on Sep 16, $70.30 on Oct 12. A $140 deductible is met on Sep 16.
+    // Sam's deductible parts: $50.70 on Jul 9, $100.00 on Sep 16, $70.30 on Oct 12. A $145 deductible is met on Sep 16.
     const lower = (limit: string) =>
       new Map(
         [...records].map(([k, r]): [string, MedRecord] => {
@@ -69,7 +69,7 @@ describe('deductibles and out-of-pocket limits', () => {
         }),
       );
     const sam = (m: Map<string, MedRecord>) => planLimits(plan, m).find((l) => l.person === id('Sam Example') && l.kind === 'deductible')!;
-    expect([sam(lower('140.00')).metOn, sam(lower('221.00')).metOn]).toEqual(['2026-09-16', '2026-10-12']);
+    expect([sam(lower('145.00')).metOn, sam(lower('221.00')).metOn]).toEqual(['2026-09-16', '2026-10-12']);
     // What the plan printed is more than these records' claims add up to: met, with no claim to name.
     const robin = planLimits(plan, records).find((l) => l.person === id('Robin Example') && l.kind === 'deductible')!;
     expect(robin.fromClaims).not.toBe(robin.used);

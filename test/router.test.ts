@@ -57,7 +57,7 @@ describe('routes', () => {
     expect(parseRoute(`#/p/${P}/overview`)).toEqual({ name: 'person', person: P, section: 'overview' });
     expect(href({ name: 'item', person: P, id: 'd_aaaaaaaaaaaaaaaaaaaa' })).toBe(`#/p/${P}/r/d_aaaaaaaaaaaaaaaaaaaa`);
     expect(href({ name: 'huishouden', hh: 'abc' })).toBe('#/hh/abc');
-    expect(href({ name: 'search', query: 'ear pain' })).toBe('#/search?q=ear+pain');
+    expect(href({ name: 'search', query: 'paid receipt' })).toBe('#/search?q=paid+receipt');
     expect(parseRoute('#/search?q=')).toEqual({ name: 'search' });
     expect(parseRoute(`#/p/${P}/timeline/other`)).toEqual({ name: 'not_found' });
     expect(href({ name: 'sources' })).toBe('#/sources');
@@ -121,7 +121,7 @@ describe('addresses from before the redesign', () => {
     expect(to(`#/p/${P}/timeline`)).toBe(`#/calendar?view=list&who=${P}`);
     expect(to(`#/p/${P}/timeline/all`)).toBe(`#/calendar?view=list&who=${P}`);
     expect(to(`#/p/${P}/claims`)).toBe(`#/money?who=${P}`);
-    expect(to(`#/p/${P}/search?q=flu&words=1`)).toBe(`#/search?q=flu&words=1&who=${P}`);
+    expect(to(`#/p/${P}/search?q=receipt&words=1`)).toBe(`#/search?q=receipt&words=1&who=${P}`);
     expect(to(`#/p/${P}/search`)).toBe(`#/search?who=${P}`);
     expect(to(`#/p/${P}/documents`)).toBe(`#/papers?who=${P}`);
   });

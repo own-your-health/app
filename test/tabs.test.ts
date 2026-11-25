@@ -18,6 +18,6 @@ describe('the tab a page belongs to', () => {
   });
 
   it('is none for a visit, a record, search and settings', () => {
-    for (const hash of [`#/p/${P}/e/${R}`, `#/p/${P}/r/${R}`, '#/search?q=flu', '#/settings', '#/sources']) expect(tabOf(parseRoute(hash))).toBeUndefined();
+    for (const hash of [`#/p/${P}/e/${R}`, `#/p/${P}/r/${R}`, '#/search?q=receipt', '#/settings', '#/sources']) expect(tabOf(parseRoute(hash))).toBeUndefined();
   });
 });

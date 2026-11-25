@@ -43,8 +43,8 @@ describe('payments marked', () => {
   });
 
   it('give US dollars as a plain amount, and any other currency by name', () => {
-    expect(paidAmount({ amount: '120.00', currency: 'USD' })).toBe('120.00');
-    expect(paidAmount({ amount: '120.00', currency: 'EUR' })).toEqual({ amount: '120.00', currency: 'EUR' });
+    expect(paidAmount({ amount: '84.50', currency: 'USD' })).toBe('84.50');
+    expect(paidAmount({ amount: '84.50', currency: 'EUR' })).toEqual({ amount: '84.50', currency: 'EUR' });
     expect(markedAmount(paid.paid!)).toEqual({ amount: '120.00', currency: 'USD' });
     expect(markedAmount(fixture<MarkRequest>('rules/paid-ok.json').paid!)).toEqual({ amount: '8.00', currency: 'EUR' });
   });
@@ -57,13 +57,13 @@ describe('payments marked', () => {
   it('are found by the person and the bill, and add up in the bill’s currency', () => {
     const mark = (request: MarkRequest): PendingMark => ({ file: `${request.id}.json`, request, cancellable: true });
     const other = { ...paid, paid: { ...paid.paid!, document: 'd_other' } };
-    const euros = { ...paid, paid: { ...paid.paid!, amount: { amount: '5.00', currency: 'EUR' } } };
+    const euros = { ...paid, paid: { ...paid.paid!, amount: { amount: '7.00', currency: 'EUR' } } };
     const all = [paid, other, euros, unpaid].map(mark);
     const { person, document } = paid.paid!;
     expect(marksOn(all, person, new Set([document])).map((m) => m.request)).toEqual([paid, euros]);
     expect(marksOn(all, person, new Set([document, 'd_other']))).toHaveLength(3);
     expect(marksOn(all, 'p_other', new Set([document]))).toEqual([]);
-    expect([marksTotal(all, 'USD'), marksTotal(all, 'EUR'), marksTotal([], 'USD')]).toEqual([24000, 500, 0]);
+    expect([marksTotal(all, 'USD'), marksTotal(all, 'EUR'), marksTotal([], 'USD')]).toEqual([24000, 700, 0]);
   });
 });
 
