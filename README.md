@@ -350,7 +350,9 @@ that has never opened the app then needs no setup: it signs in and lands on
 the person. The app takes the client id out of the address before signing in.
 A browser sends no server what comes after `#`, so the site never receives the
 id from this link. Links made before, with `?client=<client id>` before the
-`#`, still open.
+`#`, still open. Where the app is already open and signed in, a link that
+names its own client goes to the page and keeps the sign-in; one that names
+another asks first.
 
 The sign-in lasts an hour. When it ends, the app signs in again on its own, as
 the same account, when you come back to it or it next reads the folder. It

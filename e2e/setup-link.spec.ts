@@ -43,7 +43,10 @@ for (const [form, link] of FORMS) {
     await page.goto(link(ID, '/hh/hh-demo-robin'));
     await page.waitForURL(GOOGLE);
     // The app's own site receives the older form's client with the page, and nothing else with it.
-    expect(asked.filter((u) => u.startsWith(baseURL!) && u.split('#')[0]!.includes(ID))).toHaveLength(form === 'after the #' ? 0 : 1);
+    const own = asked.map((u) => new URL(u)).filter((u) => u.origin === new URL(baseURL!).origin);
+    expect(own.length).toBeGreaterThan(0);
+    expect(own.filter((u) => u.searchParams.get('client') === ID)).toHaveLength(form === 'after the #' ? 0 : 1);
+    expect(own.filter((u) => u.pathname.includes('setup') || [...u.searchParams.keys()].some((k) => k !== 'client'))).toEqual([]);
     const req = signInRequest(page);
     expect(req.clientId).toBe(ID);
     expect(req.redirect).toBe(baseURL);
