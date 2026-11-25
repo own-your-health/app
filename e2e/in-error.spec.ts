@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { enteredInError } from './alter';
+import { enteredInError, rewritten } from './alter';
 import { lay } from './lay';
 import { eventId, itemId, ROBIN } from '../test/sample';
 
@@ -95,10 +95,22 @@ test('one that some source stands by stays, and says that they differ', async ({
   await expect(card(page, 'Its sources differ').locator('li')).toHaveCount(2);
 });
 
-test('what it says fits a phone', async ({ page }) => {
-  await page.setViewportSize({ width: 360, height: 780 });
-  for (const path of [`#/p/${ROBIN}/r/${RESULT}`, `#/p/${ROBIN}/r/${DIFFERS}`, `#/p/${ROBIN}/e/${FILL}`, '#/papers', '#/money/bills', '#/calendar?view=list']) {
+test('what it says fits a narrow phone, with a long word in each name', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 780 });
+  const word = 'Chlorobenzylidenemalononitrileacetophenone';
+  const named = rewritten(
+    enteredInError(),
+    ({ name, index }) => {
+      if (name !== 'Robin Example') return;
+      for (const r of index.records) Object.assign(r, { display: `${word} ${String(r.display)}` });
+      for (const d of index.documents) Object.assign(d, { title: `${word} ${String(d.title ?? '')}`, organization: `${word} ${String(d.organization ?? '')}` });
+    },
+    '0.9.9',
+  );
+  await lay(page, named);
+  for (const path of [`#/p/${ROBIN}/r/${RESULT}`, `#/p/${ROBIN}/r/${HELD}`, `#/p/${ROBIN}/r/${BILL}`, `#/p/${ROBIN}/r/${DIFFERS}`, `#/p/${ROBIN}/e/${FILL}`, `#/p/${ROBIN}/e/${VISIT}`, '#/papers', '#/money/bills', '#/calendar?view=list']) {
     await go(page, path);
+    await page.reload();
     await expect(main(page)).toContainText(/entered in error/i);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), path).toBe(0);
   }

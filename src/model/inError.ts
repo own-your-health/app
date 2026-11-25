@@ -13,13 +13,16 @@ import { atLeast } from './private';
 import type { MedDocument, MedRecord, PersonIndex, Provenance, SourceWord } from './types';
 import type { Md5 } from './views';
 
-/** The items views.json says are entered in error, of an index with this MD5; undefined where it does not say. */
+/** The items views.json says are entered in error, of an index with this MD5; undefined where it does not say, or not in lists of ids. */
 export function inErrorIds(views: Record<string, unknown> | null, person: string, index: Md5 | undefined): ReadonlySet<string> | undefined {
   const p = isObject(views?.people) ? views.people[person] : undefined;
   if (!isObject(p) || typeof index !== 'string' || p.index !== index) return undefined;
   if (!atLeast(typeof views!.medrec === 'string' ? views!.medrec : undefined, [0, 9, 9])) return undefined;
-  const lists = isObject(p.in_error) ? Object.values(p.in_error) : [];
-  return new Set(lists.flatMap((ids) => (Array.isArray(ids) ? ids.filter((x): x is string => typeof x === 'string') : [])));
+  if (p.in_error === undefined) return new Set();
+  if (!isObject(p.in_error)) return undefined;
+  const lists: unknown[] = Object.values(p.in_error);
+  const ids = lists.flatMap((list): unknown[] => (Array.isArray(list) ? list : [undefined]));
+  return ids.every((x) => typeof x === 'string') ? new Set(ids) : undefined;
 }
 
 /** The items every source says it of by the words an index keeps, or undefined where it keeps none. */

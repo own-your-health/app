@@ -35,9 +35,12 @@ describe('what views.json says is entered in error', () => {
   const views = (p: object, medrec: unknown = '0.9.9') => ({ medrec, people: { p_a: { index: MD5, ...p } } });
 
   it('is every id it lists, of any kind, for the index it was made from', () => {
-    expect([...inErrorIds(views({ in_error: { result: ['r_1', 7, 'r_2'], document: ['d_1'], claim: 'r_3' } }), 'p_a', MD5)!]).toEqual(['r_1', 'r_2', 'd_1']);
-    expect(inErrorIds(views({}), 'p_a', MD5)!.size).toBe(0);
-    expect(inErrorIds(views({ in_error: ['r_1'] }, '0.10.0'), 'p_a', MD5)).toBeDefined();
+    expect([...inErrorIds(views({ in_error: { result: ['r_1', 'r_2'], document: ['d_1'], claim: [] } }), 'p_a', MD5)!]).toEqual(['r_1', 'r_2', 'd_1']);
+    expect([inErrorIds(views({}), 'p_a', MD5), inErrorIds(views({ in_error: {} }, '0.10.0'), 'p_a', MD5)]).toEqual([new Set(), new Set()]);
+  });
+
+  it('is not known where it is not lists of ids', () => {
+    for (const in_error of [['r_1'], 'r_1', null, { result: 'r_1' }, { result: ['r_1'], claim: { r_2: {} } }, { result: ['r_1', 7] }]) expect(inErrorIds(views({ in_error }), 'p_a', MD5), JSON.stringify(in_error)).toBeUndefined();
   });
 
   it('is not known of another index, an earlier medrec’s views, or none', () => {
