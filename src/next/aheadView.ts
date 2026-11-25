@@ -28,8 +28,8 @@ export function aheadRow(l: AheadLine, opts: { person: boolean; brief?: true }):
   });
 }
 
-/** The sign-ins only a person can make, as a line: what medrec asks for and where it leads. */
-export const signInRow = (words: { text: string; route: Route }): HTMLElement => row({ route: words.route, class: 'signin-notice', title: words.text });
+/** The sign-ins only a person can make, as a line: what medrec asks for, where it is made and where it leads. */
+export const signInRow = (words: { text: string; route: Route }): HTMLElement => row({ route: words.route, class: 'signin-notice', title: words.text, meta: 'On the Mac' });
 
 /** Which schedule the doses are by. */
 export const scheduleNote = (): HTMLElement =>

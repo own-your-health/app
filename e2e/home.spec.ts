@@ -20,7 +20,7 @@ test('home leads with what to do now, then the bills and what is coming up, and 
 
   const now = card(page, /^Do now$/);
   await expect(now.locator('.card-head')).toHaveText(/^Do now\s*2$/);
-  await expect(now.locator('.row-title')).toHaveText(['Flu vaccine, 2026–27 season', 'Example Pediatrics needs a sign-in on the Mac']);
+  await expect(now.locator('.row-title')).toHaveText(['Flu vaccine, 2026–27 season', 'Example Pediatrics needs a sign-in']);
   await expect(now.locator('.row').first()).toContainText('Alex · not in these records');
   await expect(now.locator('.row-aside')).toHaveText(['Due']);
   await expect(now.locator('.card-all')).toHaveCount(0);
@@ -64,14 +64,14 @@ test('home leads with what to do now, then the bills and what is coming up, and 
   await bills.getByRole('link', { name: 'All 4 bills' }).click();
   await expect(page).toHaveURL(/#\/money\/bills$/);
   await page.goBack();
-  await coming.getByRole('link', { name: 'Ahead' }).click();
+  await coming.getByRole('link', { name: 'All 2 coming up' }).click();
   await expect(page).toHaveURL(/#\/calendar\?view=ahead$/);
 });
 
 test('Ahead lists what is due and coming up by month, for everyone or one person, whose private refill is theirs alone', async ({ page }) => {
   await open(page, '#/calendar?view=ahead');
   await expect(page.locator('main .card-head h2')).toHaveText(['Do now', 'November 2026', 'December 2026']);
-  await expect(page.locator('main .row-title')).toHaveText(['Flu vaccine, 2026–27 season', 'Example Pediatrics needs a sign-in on the Mac', 'Famotidine 20 mg tablet', '48-month vaccines']);
+  await expect(page.locator('main .row-title')).toHaveText(['Flu vaccine, 2026–27 season', 'Example Pediatrics needs a sign-in', 'Famotidine 20 mg tablet', '48-month vaccines']);
   await expect(card(page, 'November 2026').locator('.row-meta')).toHaveText('Sam · refill: runs out about Nov 28 · 30 days filled Oct 29 at Example Pharmacy');
   await expect(card(page, 'December 2026').locator('.row-meta')).toHaveText('Drew · from Dec 14 · DTaP, Polio, MMR, Chickenpox');
   // The schedule's version and the court's stay are named.
@@ -112,6 +112,17 @@ for (const n of [0, 15, 50]) {
     }
   });
 }
+
+test('on a narrow screen, or one whose text is enlarged, nothing on Home is cut short', async ({ page }) => {
+  // 320 px is also 640 px at 200%.
+  await page.setViewportSize({ width: 320, height: 844 });
+  await lay(page, busy(15));
+  await open(page, '#/');
+  await expect(card(page, /^Coming up$/).locator('.row')).toHaveCount(3);
+  const cut = await page.locator('.home .row-title, .home .row-meta, .home .need-title, .stand-said').evaluateAll((els) => els.filter((el) => el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1).map((el) => el.textContent));
+  expect(cut).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+});
 
 test('a list’s arrows are last, at its right edge, and its amounts line up before them', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });

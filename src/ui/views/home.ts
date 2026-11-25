@@ -27,7 +27,7 @@ export function homeView(ctx: Ctx): HTMLElement {
   const freshness = h(
     'div',
     { class: 'status-strip' },
-    h('p', { class: 'status-line' }, link({ name: 'sources' }, latest ? `Loaded ${relative(latest, now)}` : 'Nothing loaded yet'), failed ? h('span', { class: 'small error-text' }, ` · ${failed} failed`) : null),
+    h('p', { class: 'status-line' }, link({ name: 'sources' }, h('span', { class: 'sr-only' }, 'Sources: '), latest ? `Loaded ${relative(latest, now)}` : 'Nothing loaded yet'), failed ? h('span', { class: 'small error-text' }, ` · ${failed} failed`) : null),
     h('div', { class: 'status-action' }, refreshControl(ctx, { all: true }, 'everything', { named: true })),
     answered ? h('p', { class: 'status-more small muted' }, requestAnswer(answered, { sources: views, people }, now)) : null,
     mac.attention || store.status.kind === 'missing' ? h('p', { class: ['status-more', 'small', mac.attention ? 'attention' : 'muted'] }, mac.text) : null,

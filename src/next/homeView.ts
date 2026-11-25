@@ -170,6 +170,9 @@ const more = (text: string, route: Route, attrs: Record<string, string> = {}): H
 const dayShort = (day: string, today: string): string => (day.slice(0, 4) === today.slice(0, 4) && day.length === 10 ? monthDayText(day) : dateText(day));
 const whenShort = (e: PersonEvent['event'], today: string): string => (e.end > e.start ? eventWhen(e) : dayShort(e.start, today));
 
+/** The way to a whole list: "All 4 bills". */
+const allOf = (n: number, what: string, one: string): string => (n === 1 ? one : `All ${n} ${what}`);
+
 const headCount = (text: string) => h('span', { class: 'small muted num' }, text);
 
 function billsCard(ctx: Ctx, owing: Owing[], today: string): HTMLElement | null {
@@ -184,7 +187,7 @@ function billsCard(ctx: Ctx, owing: Owing[], today: string): HTMLElement | null 
     { title: 'Bills', class: 'home-bills', actions: open.length ? headCount(`${open.length} · ${money(open.reduce((t, b) => t + b.cents, 0))}`) : null },
     groups.slice(0, HOME_BILLS).map((g) => billRow(ctx, g, today)),
     quiet ? h('p', { class: 'small muted home-quiet' }, `${open.length ? 'Besides, ' : ''}${quiet}.`.replace(/^./, (c) => c.toUpperCase())) : null,
-    more(groups.slice(0, HOME_BILLS).reduce((t, g) => t + g.bills.length, 0) < all.length ? `All ${all.length} bills` : 'Bills', { name: 'money', view: 'bills' }, { 'data-mark-rest': '' }),
+    more(allOf(all.length, 'bills', '1 bill'), { name: 'money', view: 'bills' }, { 'data-mark-rest': '' }),
   );
 }
 
@@ -244,7 +247,7 @@ export function nextHome(ctx: Ctx, signIn: { text: string; route: Route } | unde
   const n = now.length + (signIn ? 1 : 0);
   const doNow = n ? card({ title: 'Do now', actions: headCount(String(n)) }, rows(now, HOME_ROWS - (signIn ? 1 : 0)), signIn ? signInRow(signIn) : null, n > HOME_ROWS ? more(`All ${n} to do now`, ahead) : null) : null;
   const bills = billsCard(ctx, owing, today);
-  const coming = later.length ? card({ title: 'Coming up', actions: headCount(String(later.length)) }, rows(later, HOME_ROWS), more(later.length > HOME_ROWS ? `All ${later.length} coming up` : 'Ahead', ahead)) : null;
+  const coming = later.length ? card({ title: 'Coming up', actions: headCount(String(later.length)) }, rows(later, HOME_ROWS), more(allOf(later.length, 'coming up', '1 coming up'), ahead)) : null;
   const quiet = !doNow && !bills && !coming ? card({ title: 'Needs you' }, h('p', null, 'Nothing listed here needs you: no open bill, no vaccine dose due or coming up, and no refill running out.')) : null;
   return [
     doNow,

@@ -54,8 +54,7 @@ test('a bill the household marked paid is nowhere open, and one partly paid says
   await expect(bills.locator('.need-title')).toHaveText(['Hospital visit, Sep 16', 'Office visit, Oct 1']);
   await expect(bills.locator('.row').last()).toContainText('Robin · $20.00 of $53.68 paid · was due Nov 19 · matches the claim');
   await expect(bills.locator('.row-aside')).toHaveText(['$90.50', '$33.68']);
-  // Both are shown, so the way on counts none.
-  await expect(bills.locator('.card-all')).toHaveText('Bills');
+  await expect(bills.locator('.card-all')).toHaveText('All 2 bills');
   await expect(page.locator('.stand', { hasText: 'Sam' }).locator('.row-aside')).toHaveText('1 bill');
 
   await go(page, '#/money/bills');

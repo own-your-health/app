@@ -25,7 +25,7 @@ test.afterEach(() => {
 });
 
 // Home's line for the sample's one sign-in that needs a person: the folder has loaded.
-const NOTICE = 'Example Pediatrics needs a sign-in on the Mac';
+const NOTICE = 'Example Pediatrics needs a sign-inOn the Mac';
 const ACCOUNT_KEY = 'own-your-health-app.account';
 const REQUEST_FILE = /^_requests\/\d{8}T\d{6}Z_x_[a-z2-7]{20}\.json$/;
 

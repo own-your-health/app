@@ -82,7 +82,7 @@ the app and Refresh.
 Home, Calendar, Money, Health and Papers are tabs: at the bottom of a
 phone's screen, and a row above the page from 640px wide. The bar's menu
 holds Sources and Settings. A sign-in that needs a person is a line of Home's
-Do now ("Example Pediatrics needs a sign-in on the Mac"), which opens the
+Do now ("Example Pediatrics needs a sign-in", "On the Mac"), which opens the
 source; Home closes with when the records last loaded, which opens Sources,
 and **Refresh**, which asks for everything. **Sources** (`#/sources`, in the bar's menu, which
 carries a dot while a source needs attention) has every source: its
@@ -592,8 +592,8 @@ dropped from the address.
   and with none of them Home says that nothing listed needs you.
   - **Do now**: what is overdue or due today, but for bills: vaccine doses
     the CDC schedule places by now that the records don't show, this season's
-    flu dose, refills whose last fill's days' supply has run out, and a
-    sign-in that needs a person. Three rows.
+    flu dose, refills whose last fill's days' supply runs out today or has run
+    out, and a sign-in that needs a person. Three rows.
   - **Bills**: two rows, those past due first, then those worth a call (one
     that asks something other than what the claims say you owe, or that no
     claim in these records backs; `src/next/money.ts`), then the others by due

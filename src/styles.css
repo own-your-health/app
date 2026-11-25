@@ -2229,7 +2229,7 @@ a.cal-day:hover .cal-date {
   gap: 4px;
 }
 
-/* Short rows, and text held to a few lines: Home's length does not grow with what waits. */
+/* Short rows: Home's length does not grow with what waits. */
 .home {
   gap: 10px;
 }
@@ -2250,25 +2250,28 @@ a.cal-day:hover .cal-date {
   padding: 4px 0;
 }
 
-.home .ahead .row-title,
-.home .ahead .row-meta,
-.home .cal-row .row-title,
-.home .cal-row .row-meta,
-.home .need-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .home .need-title {
   display: block;
 }
 
-.home .home-bill .row-meta {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+/* Its text is held to a few lines. On a narrower screen, or one whose text is enlarged, it wraps. */
+@media (min-width: 22em) {
+  .home .ahead .row-title,
+  .home .ahead .row-meta,
+  .home .cal-row .row-title,
+  .home .cal-row .row-meta,
+  .home .need-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .home .home-bill .row-meta {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
 }
 
 .home .ahead .chip::before {
