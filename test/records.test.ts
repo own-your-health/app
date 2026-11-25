@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { asMoney, claimTotals, claimYourShare, findItem, formatMoney, importFor, medicines, resultSeries, timeline, valueText } from '../src/model/records';
-import type { ImportRun, Provenance } from '../src/model/types';
+import { asMoney, claimTotals, claimYourShare, findItem, formatMoney, importFor, medicines, numericValue, resultSeries, timeline, valueText } from '../src/model/records';
+import type { ImportRun, Json, Provenance } from '../src/model/types';
 import { recordTitle } from '../src/model/titles';
 import { demo, personNamed } from './demo-data';
 
@@ -21,6 +21,11 @@ describe('results', () => {
     expect(valueText({ value: 104, unit: 'mg/dL' })).toBe('104 mg/dL');
     expect(valueText('positive')).toBe('positive');
     expect(valueText({ value: null })).toBeUndefined();
+  });
+
+  it('have a number only when the source sent one', () => {
+    const sent: (Json | undefined)[] = [{ value: 104, unit: 'mg/dL' }, { value: 'high' }, { unit: 'mg/dL' }, 'positive', null, undefined];
+    expect(sent.map(numericValue)).toEqual([104, undefined, undefined, undefined, undefined, undefined]);
   });
 });
 

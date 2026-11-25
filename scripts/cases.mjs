@@ -36,6 +36,12 @@ export function only(folder, list, fits, what) {
 /** Whether a file of the folder belongs in a case: the marks, and the views the app reads. */
 const inCase = (f) => f.endsWith('marks.json') || f === join('views', 'views.json') || (f.startsWith(`views${sep}`) && APP_VIEW.test(f.split(sep).at(-1)));
 
+/** Stops the run when test/fixtures/<dir>/ holds a file that is not one of these. */
+export function holdsOnly(dir, files) {
+  const extra = filesIn(join(FIXTURES, dir)).filter((f) => !files.includes(f));
+  if (extra.length) throw new Error(`no longer part of test/fixtures/${dir}/, so remove by hand:\n${extra.map((f) => `  ${f}`).join('\n')}`);
+}
+
 /** Writes test/fixtures/<dir>/: what differs from the sample once `before` has changed its folder and medrec has run `steps` on it, at the sample's moment. */
 export function writeCase(dir, steps, before = () => {}) {
   if (!CASES.includes(dir)) throw new Error(`${dir} is not one of the cases' folders`);
@@ -51,6 +57,5 @@ export function writeCase(dir, steps, before = () => {}) {
     cpSync(join(root, f), join(out, f));
   }
   console.log(`wrote ${keep.length} files under test/fixtures/${dir}/`);
-  const extra = filesIn(out).filter((f) => !keep.includes(f));
-  if (extra.length) throw new Error(`no longer part of test/fixtures/${dir}/, so remove by hand:\n${extra.map((f) => `  ${f}`).join('\n')}`);
+  holdsOnly(dir, keep);
 }

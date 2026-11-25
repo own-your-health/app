@@ -6,13 +6,15 @@
 //   MEDREC=<medrec 0.9.7> node scripts/rule-fixtures.mjs
 //
 // The same sources give the same bytes (medrec.mjs). It writes over its own
-// files alone and deletes nothing.
+// files alone and deletes nothing: a file there it no longer writes stops the
+// run, named, for a person to remove.
 
 import { createHash } from 'node:crypto';
 import { copyFileSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { holdsOnly } from './cases.mjs';
 import { iso } from './medrec.mjs';
 import { machineWith, put } from './providers.mjs';
 import { ASKED, MARKED, PAPERS, PEOPLE, RECORDS, SOURCES } from './sample/rules.mjs';
@@ -43,13 +45,20 @@ at(6 * DAY, 'refresh', '--scheduled');
 at(0, 'verify');
 
 mkdirSync(OUT, { recursive: true });
-copyFileSync(join(root, 'household.json'), join(OUT, 'household.json'));
-for (const [name, p] of Object.entries(PEOPLE)) copyFileSync(join(root, p.name, 'index.json'), join(OUT, `${name}.json`));
+const written = [];
+const keep = (file, as) => {
+  if (written.includes(as)) throw new Error(`two files would be test/fixtures/rules/${as}`);
+  copyFileSync(file, join(OUT, as));
+  written.push(as);
+};
+keep(join(root, 'household.json'), 'household.json');
+for (const [name, p] of Object.entries(PEOPLE)) keep(join(root, p.name, 'index.json'), `${name}.json`);
 const views = join(root, 'views', val.person);
-copyFileSync(join(views, readdirSync(views).find((f) => f.startsWith('bills.'))), join(OUT, 'bills.json'));
+keep(join(views, readdirSync(views).find((f) => f.startsWith('bills.'))), 'bills.json');
 const done = join(root, '_requests', 'done');
 for (const f of readdirSync(done).filter((x) => x.endsWith('.json'))) {
   const answer = JSON.parse(readFileSync(join(done, f), 'utf8'));
-  copyFileSync(join(done, f), join(OUT, `paid-${answer.handled.outcome}.json`));
+  keep(join(done, f), `paid-${answer.handled.outcome}.json`);
 }
-console.log('wrote test/fixtures/rules/');
+console.log(`wrote ${written.length} files under test/fixtures/rules/`);
+holdsOnly('rules', written);

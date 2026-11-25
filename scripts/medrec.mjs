@@ -6,7 +6,7 @@
 // MEDREC_* setting of the shell's. The time zone is fixed (a US one, as
 // medrec reads a UTC time's day in the writing machine's zone), so a visit's
 // local days are the same on every machine. MEDREC names the binary, else
-// `medrec` on the PATH.
+// `medrec` on the shell's PATH; the one whose version is checked runs each step.
 //
 // The same steps write the same bytes: the clock stands still at each step's
 // moment, and medrec's ids are drawn from the step (sample/moment.c, which
@@ -14,17 +14,35 @@
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdirSync, mkdtempSync } from 'node:fs';
+import { accessSync, constants, mkdirSync, mkdtempSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { delimiter, dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const MEDREC = process.env.MEDREC ?? 'medrec';
 const MAC = process.platform === 'darwin';
 
 // The sample is what this release writes.
 const VERSION = '0.9.7';
+
+/** A command as an absolute path: its own, or the first on the shell's PATH, as a step's PATH may have none of that. */
+function commandAt(name) {
+  if (name.includes(sep)) return resolve(name);
+  const found = (process.env.PATH ?? '')
+    .split(delimiter)
+    .filter(Boolean)
+    .map((dir) => resolve(dir, name))
+    .find((path) => {
+      try {
+        accessSync(path, constants.X_OK);
+        return statSync(path).isFile();
+      } catch {
+        return false;
+      }
+    });
+  if (!found) throw new Error(`no ${name} on the PATH: set MEDREC to medrec ${VERSION}`);
+  return found;
+}
 
 /** The moment the sample is as of; the app moves its loads' times from here to now. */
 export const ANCHOR = '2026-11-22T20:00:00Z';
@@ -38,7 +56,8 @@ export const iso = (before) => new Date(seconds(before) * 1000).toISOString().re
  * runs medrec there `before` the anchor, its profile set up for `root`.
  */
 export function scratchMachine(root, { alone = false } = {}) {
-  const version = execFileSync(MEDREC, ['-V'], { encoding: 'utf8' }).trim().split(/\s+/)[1];
+  const binary = commandAt(process.env.MEDREC ?? 'medrec');
+  const version = execFileSync(binary, ['-V'], { encoding: 'utf8' }).trim().split(/\s+/)[1];
   if (version !== VERSION) throw new Error(`medrec ${version} writes the sample differently: set MEDREC to medrec ${VERSION}`);
   const home = mkdtempSync(join(tmpdir(), 'medrec-demo-'));
   const bin = join(home, 'bin');
@@ -63,7 +82,7 @@ export function scratchMachine(root, { alone = false } = {}) {
   const records = root ?? join(home, 'records');
   const medrec = (before, ...args) => {
     const step = `${args.join(' ').replaceAll(records, 'records').replaceAll(home, 'home')} ${before}`;
-    execFileSync(MEDREC, ['-q', ...args], { env: { ...env, SAMPLE_AT: String(seconds(before)), SAMPLE_SEED: step }, stdio: ['ignore', 'ignore', 'inherit'] });
+    execFileSync(binary, ['-q', ...args], { env: { ...env, SAMPLE_AT: String(seconds(before)), SAMPLE_SEED: step }, stdio: ['ignore', 'ignore', 'inherit'] });
   };
   return { home, bin, root: records, medrec };
 }
