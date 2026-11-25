@@ -5,7 +5,7 @@
 
 import { HELD } from '../model/private';
 import type { Household, Person, PersonIndex } from '../model/types';
-import { eventMoney, eventPrivate, type CareEvent, type EventMoney } from './event';
+import { eventMoney, eventPrivate, sharedForm, type CareEvent, type EventMoney } from './event';
 import { personEvents } from './load';
 
 export interface PersonEvent {
@@ -32,8 +32,11 @@ export function householdEvents(household: Household, index: (id: string) => Per
   return out.sort((a, b) => b.event.start.localeCompare(a.event.start) || b.event.end.localeCompare(a.event.end) || a.lane - b.lane || a.event.id.localeCompare(b.event.id));
 }
 
-/** An event that is not private as a screen the household shares shows it: without what in it is. */
-export const asShared = (x: PersonEvent): PersonEvent => (x.event.shared ? { ...x, event: x.event.shared, money: eventMoney(x.event.shared) } : x);
+/** An event that is not private as a screen the household shares shows it: without what in it is private. */
+export const asShared = (x: PersonEvent): PersonEvent => (x.event.shared ? { ...x, event: sharedForm(x.event), money: eventMoney(sharedForm(x.event)) } : x);
+
+/** The same events as a screen the household shares goes by them. A private one is still here, marked, for what is judged by it; no such screen lists it. */
+export const sharedEvents = (...of: Parameters<typeof householdEvents>): PersonEvent[] => householdEvents(...of).map(asShared);
 
 /**
  * What a view shows: one person's events, private ones too (their own page),

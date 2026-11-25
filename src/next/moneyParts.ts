@@ -10,9 +10,9 @@ import { chip, link, type Ctx } from '../ui/components';
 import { h, icon } from '../ui/dom';
 import { localDay } from '../ui/format';
 import { href, type Route } from '../ui/router';
-import { asShared, householdEvents, type PersonEvent } from './calendar';
+import { householdEvents, sharedEvents, type PersonEvent } from './calendar';
 import { eventWhen } from './eventView';
-import { anyBill, byDue, deskPayments, explainedLines, forShared, openBills, paidBills, unbilledShares, type DeskPayment, type Explained, type OpenBill, type PaidBill, type Unbilled } from './money';
+import { anyBill, byDue, deskPayments, explainedLines, forShared, openBills, paidBills, sharedDesk, sharedOpen, unbilledShares, type DeskPayment, type Explained, type OpenBill, type PaidBill, type Unbilled } from './money';
 import { called } from '../model/people';
 import { privateLine } from './shared';
 
@@ -32,7 +32,7 @@ export interface Mine<T> {
 export function gather(ctx: Ctx, who: string | undefined) {
   const store = ctx.store;
   const today = localDay(ctx.now());
-  const all = householdEvents(store.household, (id) => store.index(id), today);
+  const all = (who ? householdEvents : sharedEvents)(store.household, (id) => store.index(id), today);
   const open: Mine<OpenBill>[] = [];
   const unbilled: Mine<Unbilled>[] = [];
   const paid: Mine<PaidBill>[] = [];
@@ -46,14 +46,13 @@ export function gather(ctx: Ctx, who: string | undefined) {
       if (!store.indexErrors.has(p.id)) loading++;
       continue;
     }
-    const mine = all.filter((x) => x.person.id === p.id).map(who ? (x) => x : asShared);
+    const mine = all.filter((x) => x.person.id === p.id);
     const keep = <T extends { private?: string }>(xs: T[], share: (xs: T[]) => T[]): Mine<T>[] => (who ? xs : share(xs)).map((item) => ({ person: p, item }));
     const cleared = <T extends { private?: string }>(xs: T[]) => xs.filter((x) => !x.private);
-    const shared = <T extends Parameters<typeof forShared>[1][number]>(xs: T[]) => forShared(idx, xs);
-    open.push(...keep(openBills(idx, mine, today, store.marks), shared));
+    open.push(...keep(openBills(idx, mine, today, store.marks), (xs) => sharedOpen(idx, xs)));
     unbilled.push(...keep(unbilledShares(idx, mine, !who), cleared));
-    paid.push(...keep(paidBills(idx, mine), shared));
-    desk.push(...keep(deskPayments(idx, mine), shared));
+    paid.push(...keep(paidBills(idx, mine), (xs) => forShared(idx, xs)));
+    desk.push(...keep(deskPayments(idx, mine), sharedDesk));
     explained.push(...keep(explainedLines(idx, mine, today), cleared));
   }
   open.sort((a, b) => byDue(a.item, b.item));

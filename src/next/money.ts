@@ -64,44 +64,47 @@ export function billPrivate(idx: PersonIndex, doc: MedDocument, event?: PersonEv
   return paperPrivate(idx, doc.id) ?? (event && (inVisit(idx, doc.id) || takenOut(idx, doc.id)) ? undefined : event?.private);
 }
 
-/** A bill, or a payment at a visit, by what of it a shared screen may leave out. */
-interface Shareable {
-  private?: string;
-  event?: PersonEvent;
-  bill?: Bill;
-  claimSays?: number;
-  claimSaysVisit?: boolean;
-  verdict?: BillVerdict;
-}
-
-/** Whether what the claims say of a bill comes from a private one: the claim medrec matched, else any the visit's are put beside it. */
-function saidByPrivate(idx: PersonIndex, { bill, event }: Shareable): boolean {
-  const claim = bill?.medrec?.claim;
-  return claim ? !!recordPrivate(idx, claim) : !!event && (!!event.private || !!(event.event.shared ?? event.event).fewerClaims);
-}
-
-/**
- * What a shared screen shows of some bills: those not private, without the
- * visit of one whose visit is, a receipt that is, or what a private claim
- * says. `bills` go by the events as shared screens show them (asShared).
- */
-export function forShared<T extends Shareable>(idx: PersonIndex, bills: T[]): T[] {
-  const isPrivate = (receipt: MedDocument) => !!paperPrivate(idx, receipt.id);
-  return bills.flatMap((b) => {
-    if (b.private) return [];
-    const shown = { ...b };
-    // Nor does it say that no claim backs it: a private one does.
-    if ((b.claimSays !== undefined || b.verdict === 'no_claim') && saidByPrivate(idx, b)) {
-      // A payment at a visit is listed for what the claims say of it alone.
-      if (!b.bill) return [];
-      delete shown.claimSays;
-      Object.assign(shown, { claimSaysVisit: false, verdict: 'unmatched' });
-    }
-    if (b.event?.private) delete shown.event;
-    if (b.bill) shown.bill = { ...b.bill, unread: b.bill.unread.filter((r) => !isPrivate(r)), payments: b.bill.payments.map((p) => (p.receipt && isPrivate(p.receipt) ? { from: p.from } : p)) };
-    return [shown];
+/** Those not private, each without its visit where that is. */
+function notPrivate<T extends { private?: string; event?: PersonEvent }>(all: T[]): T[] {
+  return all.filter((x) => !x.private).map((x) => {
+    const shown = { ...x };
+    if (x.event?.private) delete shown.event;
+    return shown;
   });
 }
+
+/** What a shared screen shows of some bills: those not private, without the visit of one whose visit is, or a receipt that is. Open ones by sharedOpen. */
+export function forShared<T extends { private?: string; event?: PersonEvent; bill: Bill }>(idx: PersonIndex, bills: T[]): T[] {
+  const isPrivate = (receipt: MedDocument) => !!paperPrivate(idx, receipt.id);
+  return notPrivate(bills).map((b) => ({
+    ...b,
+    bill: { ...b.bill, unread: b.bill.unread.filter((r) => !isPrivate(r)), payments: b.bill.payments.map((p) => (p.receipt && isPrivate(p.receipt) ? { from: p.from } : p)) },
+  }));
+}
+
+/** Whether a claim of a visit is private: with the visit, or left out of it as a shared screen shows it (asShared). */
+const holdsPrivateClaim = (event: PersonEvent | undefined): boolean => !!event && (!!event.private || !!event.event.fewerClaims);
+
+/**
+ * The same of open bills, which say nothing of a private claim: neither what
+ * it says nor that none backs them. `bills` go by the events as shared
+ * screens go by them (sharedEvents).
+ */
+export function sharedOpen(idx: PersonIndex, bills: OpenBill[]): OpenBill[] {
+  const said = bills.map((b): OpenBill => {
+    if (b.claimSays === undefined && b.verdict !== 'no_claim') return b;
+    // What they say is of the claim medrec matched, else of any the visit has.
+    const claim = b.bill.medrec?.claim;
+    if (claim ? !recordPrivate(idx, claim) : !holdsPrivateClaim(b.event)) return b;
+    const quiet: OpenBill = { ...b, claimSaysVisit: false, verdict: 'unmatched' };
+    delete quiet.claimSays;
+    return quiet;
+  });
+  return forShared(idx, said);
+}
+
+/** The same of payments at a visit: each is listed for what the claims say of it alone, so not where a private one says it. */
+export const sharedDesk = (paid: DeskPayment[]): DeskPayment[] => notPrivate(paid.filter((d) => !holdsPrivateClaim(d.event)));
 
 /** Whether a page may speak of a person's bills: a shared one only of those that are not private. */
 export function anyBill(idx: PersonIndex, events: PersonEvent[], shared: boolean): boolean {

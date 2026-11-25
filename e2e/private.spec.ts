@@ -1,8 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import { privateCase } from '../test/helpers';
-import { partsPrivate, removed, renamed, rewritten } from './alter';
+import { partsPrivate, placesPrivate, removed, renamed, rewritten } from './alter';
 import { lay } from './lay';
-import { ROBIN, SAM } from '../test/sample';
+import { ALEX, itemId, ROBIN, SAM } from '../test/sample';
 
 // Private items on every screen the household shares: off each with medrec's
 // own list, and everything of a person's off while no current list says which
@@ -200,6 +200,13 @@ async function holds(page: Page, path: string, without?: string): Promise<string
 const LISTS: [string, string?][] = [['#/', '.money-line'], ['#/calendar?view=ahead'], ['#/money/bills'], ['#/money/calls'], ['#/money/events'], ['#/money/events?sort=discount'], ['#/papers'], ['#/costs'], ['#/search?q=example']];
 
 const PARTS: typeof LISTS = [...LISTS, ['#/calendar?view=list', '.cal-private']];
+/** Everyone's pages of providers the sample's open items name. */
+const PROVIDERS = [
+  ['provider', ROBIN, itemId(ROBIN, 'records', (r) => r.kind === 'claim' && r.date === '2026-11-18')],
+  ['provider', SAM, itemId(SAM, 'records', (r) => r.kind === 'claim' && r.date === '2026-07-09')],
+  ['location', ALEX, itemId(ALEX, 'records', (r) => r.kind === 'encounter' && r.date === '2026-01-12')],
+].map(([field, who, id]) => `#/p/${who}/provider/${id}/${field}?all=1`);
+
 // A bill is still beside the private claim medrec matched, where the folder without it has none.
 const BILLS = ['#/', '#/money/bills', '#/money/calls'];
 
@@ -209,15 +216,16 @@ for (const [name, base, lists] of [
   ['parts of visits that are not', partsPrivate(), PARTS],
   ['the portal visits of visits that are not', partsPrivate('encounter'), PARTS],
   ['the claims and portal visits of visits that are not', partsPrivate('claim', 'encounter'), PARTS.filter(([path]) => !BILLS.includes(path))],
+  ['what only a private paper says of where visits are', placesPrivate(), PARTS],
 ] as const) {
   test(`every shared screen reads the same whatever its private items are called and on which day: ${name}`, async ({ page, browser }) => {
     const other = await browser.newPage();
     await other.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
     await lay(page, base);
     await lay(other, renamed(base));
-    for (const path of [...SHARED.map(([p]) => p), ...LISTS.map(([p]) => p), '#/calendar?month=2026-09', '#/calendar?month=2026-07', '#/money?period=plan-1']) {
+    for (const path of [...SHARED.map(([p]) => p), ...LISTS.map(([p]) => p), '#/calendar?month=2026-09', '#/calendar?month=2026-07', '#/money?period=plan-1', ...PROVIDERS]) {
       const [was, is] = await Promise.all([holds(page, path), holds(other, path)]);
-      expect(was.join('').length, path).toBeGreaterThan(400);
+      expect(was.join('').length, path).toBeGreaterThan(path.includes('/provider/') ? 100 : 400);
       expect(is, path).toEqual(was);
     }
     // The other names are in that folder: Sam's own pages say them.

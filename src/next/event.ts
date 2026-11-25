@@ -65,6 +65,9 @@ export interface CareEvent {
   fewerClaims?: true;
 }
 
+/** An event as a screen the household shares shows it: without what in it is private. */
+export const sharedForm = (e: CareEvent): CareEvent => e.shared ?? e;
+
 /** The rules, in words a person can follow. */
 export const RULES = {
   C1: 'The hospital’s own claim, over its dates',
