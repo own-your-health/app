@@ -52,7 +52,7 @@ function billsNote(s: NonNullable<ViewState>): string {
 function heldFor(s: NonNullable<ViewState>): Privacy {
   if (s.kind === 'unchecked') return held('unchecked', 'medrec’s list of which items are private could not be checked against their records.');
   if (s.kind === 'arriving') return held('arriving', 'medrec is still writing its list of which items are private.');
-  if (s.than === 'what a newer medrec found') return held('older_medrec', 'An older medrec wrote which items are private, without what a newer one found of their providers. Update medrec on every computer that writes this folder.');
+  if (s.than === 'what a newer medrec found') return held('older_medrec', 'medrec’s list of which items are private is from an older medrec, without what a newer one found of their providers. It is written again after the next import or refresh of an updated medrec. If this stays, update medrec on every computer that writes this folder.');
   return held('behind', `medrec’s list of which items are private is older than ${s.than}. medrec writes it again after its next import or refresh.`);
 }
 
@@ -69,7 +69,7 @@ const NO_BILLS = {
 };
 
 /** Holds that end once medrec has written, or the folder answers. */
-const MAY_END = new Set<HeldWhy>(['behind', 'arriving', 'unchecked', 'unreadable']);
+const MAY_END = new Set<HeldWhy>(['behind', 'older_medrec', 'arriving', 'unchecked', 'unreadable']);
 
 const DONE_DIR = `${REQUESTS_DIR}/done`;
 
@@ -444,7 +444,7 @@ export class Store {
     const [file, ...now] = await Promise.all([this.folder.md5(`views/${p.id}/${view.name}`), ...read.map(([m]) => m)]);
     if (now.some((m) => m === undefined) || file === undefined) return { kind: 'unchecked' };
     const differs = now.findIndex((m, i) => m !== read[i]![1]);
-    // medrec before 0.9.7 makes no list from provider-state.json, so its next one is behind it too.
+    // An update's first pass, not done yet; or medrec before 0.9.7 wrote last, and its next list is behind too.
     if (view.providerState === null && differs === now.length - 1 && !atLeast(this.medrec, [0, 9, 7])) return { kind: 'behind', than: 'what a newer medrec found' };
     if (differs >= 0) return { kind: 'behind', than: 'their records' };
     return file === view.md5 ? null : { kind: 'arriving' };

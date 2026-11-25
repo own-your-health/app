@@ -212,12 +212,17 @@ describe('a person whose list can’t be used is held back', () => {
     // The one they were made from, and none as medrec before 0.9.7 and as one without a directory has it.
     expect(await of({ [path]: text, 'views/views.json': views(md5) })).toEqual([[], 'known']);
     expect(await of({ 'views/views.json': views(null) })).toEqual([[], 'known']);
-    // Beside a list an older medrec made, its next one will be behind it too: nothing to wait for.
+    // Beside a list an older medrec made: an update whose first pass is not done, or an older one that wrote last.
     const by = async (medrec: string, overlay: Overlay = {}, state?: unknown) => {
       const store = await load({ [path]: text, 'views/views.json': views(state, medrec), ...overlay });
       return [why(store), store.holdMayEnd()];
     };
-    expect([await by('0.9.6'), await by(''), await by('0.9.7'), await by('0.9.6', {}, '0'.repeat(32))]).toEqual([['older_medrec', false], ['older_medrec', false], ['behind', true], ['behind', true]]);
+    expect([await by('0.9.6'), await by(''), await by('0.9.7'), await by('0.9.6', {}, '0'.repeat(32))]).toEqual([['older_medrec', true], ['older_medrec', true], ['behind', true], ['behind', true]]);
+    // The update's first pass ends between two reads.
+    const updating = await load({ [path]: text, 'views/views.json': views(undefined, '0.9.6') });
+    const updated = await load({ [path]: text, 'views/views.json': views(md5) });
+    expect([held(updating), updating.mayBring(), held(updated), updating.snapshot === updated.snapshot]).toEqual([['Sam Example'], true, [], false]);
+    expect(updating.index(sam)!.privacy).toMatchObject({ text: expect.stringMatching(/older medrec.*update medrec on every computer/) });
     const idx = `${folder('Sam Example')}/index.json`;
     expect(await by('0.9.6', { [idx]: `${JSON.stringify(demoJson(idx))} ` })).toEqual(['behind', true]);
     // Only what is made from it waits for it: their visits and bills are medrec's still.

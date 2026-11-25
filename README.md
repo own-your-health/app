@@ -793,6 +793,9 @@ page count. Papers took the place of each person's list of documents. A
   someone's items are held back, the app reads the records again each time it
   comes to the front and, where the list is behind, arriving or unread, with
   the same waits as after a Refresh, so the hold ends once medrec has written.
+  Beside a newer `provider-state.json` that is a medrec 0.9.7 or later: the hold
+  for an earlier one's list also says to update medrec on every computer that
+  writes the folder.
 
   The app says this is discretion, not security: everyone the Drive folder
   is shared with can still read the files. Money's totals count private care
