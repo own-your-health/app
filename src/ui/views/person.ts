@@ -2,8 +2,9 @@
 // conditions, allergies, immunizations and imaging. Their documents are on
 // Papers.
 
+import { errorsOf } from '../../model/inError';
 import { conditionName } from '../../model/codeNames';
-import { originNames, sortByDateDesc, str, studyTitle } from '../../model/records';
+import { originNames, seriesKey, sortByDateDesc, str, studyTitle } from '../../model/records';
 import { isOutOfRange, rangeFor, resultFlag } from '../../model/flags';
 import type { LatestResult } from '../../model/overview';
 import { allergyList, conditionList, CRITICALITY_TEXT, medicineList, statusText, underHeadings, vaccineList, type AllergyItem, type ConditionItem, type ItemStanding, type MedicineItem } from '../../model/lists';
@@ -16,6 +17,7 @@ import { button, card, chip, command, empty, flagChip, link, row, type Ctx } fro
 import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, localDay, yearOf } from '../format';
 import { SECTION_LABELS, type ListSection, type Route } from '../router';
+import { errorsNote } from '../inError';
 import { headedRows, isText, isWord, listNotes, prescriptionOf, standingMeta, standingNote } from '../standing';
 import { called } from '../../model/people';
 
@@ -140,7 +142,8 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
   if (sub) {
     const group = groups.find((g) => g.tests.some((t) => t.series.key === sub));
     const t = group?.tests.find((x) => x.series.key === sub);
-    if (!group || !t) return card({}, empty('This test is not in the records.'));
+    const wrong = errorsNote(errorsOf(idx, { record: (r) => r.kind === 'result' && seriesKey(r) === sub }));
+    if (!group || !t) return card({}, empty('This test is not in the records.'), wrong);
     const s = t.series;
     const chart = resultChart(s.points, s.unit, s.name);
     const others = group.tests.filter((x) => x !== t);
@@ -175,11 +178,13 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
             }),
           ),
         ),
+        wrong,
       ),
       others.length ? card({ title: `Also in ${group.name}` }, others.map((x) => resultRow(person.id, x))) : null,
     );
   }
-  if (!groups.length) return card({ title: 'Results' }, empty('No results yet.'), unsureNote(idx), aboutNote(idx));
+  const notes = [errorsNote(errorsOf(idx, { record: (r) => r.kind === 'result' })), aboutNote(idx)];
+  if (!groups.length) return card({ title: 'Results' }, empty('No results yet.'), unsureNote(idx), ...notes);
   return h(
     'div',
     { class: 'stack' },
@@ -190,7 +195,7 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
         g.tests.map((t) => resultRow(person.id, t)),
       ),
     ),
-    aboutNote(idx),
+    ...notes,
   );
 }
 
@@ -233,14 +238,14 @@ function conditionsSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLElem
       ...saying(ctx, person, i, i.ended ? `${i.first ? `${dateText(i.first)} to ` : 'ended '}${dateText(i.ended)}` : sinceText(i), is ? [is, i.unconfirmed ? chip('Unconfirmed', 'muted') : null] : conditionChips(i)),
     });
   if (all) {
-    if (!all.length && !notes?.inError) return card({ title: 'Conditions' }, empty('No conditions recorded.'));
+    if (!all.length && !notes.inError) return card({ title: 'Conditions' }, empty('No conditions recorded.'));
     return h('div', { class: 'stack' }, card({ title: 'Current' }, active.length ? active.map((i) => render(i)) : empty('No current conditions in these records.'), listNotes(notes)), allOf(ctx, 'All', all, render));
   }
-  if (!active.length && !ended.length && !other.length) return card({ title: 'Conditions' }, empty('No conditions recorded.'));
+  if (!active.length && !ended.length && !other.length) return card({ title: 'Conditions' }, empty('No conditions recorded.'), listNotes(notes));
   return h(
     'div',
     { class: 'stack' },
-    card({ title: 'Active' }, active.length ? active.map((i) => render(i)) : empty('No active conditions recorded.'), standingNote(ctx, idx)),
+    card({ title: 'Active' }, active.length ? active.map((i) => render(i)) : empty('No active conditions recorded.'), standingNote(ctx, idx), listNotes(notes)),
     ended.length ? card({ title: 'Resolved or inactive' }, ended.map((i) => render(i))) : null,
     other.length ? card({ title: 'Ruled out or no status' }, other.map((i) => render(i))) : null,
   );
@@ -255,13 +260,13 @@ function allergiesSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLEleme
       ...saying(ctx, person, i, meta(i.reactions.length ? i.reactions.join(', ') : null, i.criticality ? CRITICALITY_TEXT[i.criticality] ?? i.criticality : null, sinceText(i)), [is ?? (past ? chip(statusText(i.latest.status) ?? 'Ended', 'muted') : null), !past && i.criticality === 'high' ? chip('High risk', 'attention') : null]),
     });
   if (all) {
-    if (!all.length && !notes?.inError) return card({ title: 'Allergies' }, empty('No allergies recorded in these records.'));
+    if (!all.length && !notes.inError) return card({ title: 'Allergies' }, empty('No allergies recorded in these records.'));
     return h('div', { class: 'stack' }, card({ title: 'Current' }, current.length ? current.map((i) => render(i, false)) : empty('No current allergies in these records.'), listNotes(notes)), allOf(ctx, 'All', all, (i, is) => render(i, i.standing?.group !== 'current', is)));
   }
   return h(
     'div',
     { class: 'stack' },
-    card({ title: 'Allergies' }, current.length ? current.map((i) => render(i, false)) : empty('No allergies recorded in these records.'), standingNote(ctx, idx)),
+    card({ title: 'Allergies' }, current.length ? current.map((i) => render(i, false)) : empty('No allergies recorded in these records.'), standingNote(ctx, idx), listNotes(notes)),
     ended.length ? card({ title: 'No longer active' }, ended.map((i) => render(i, true))) : null,
   );
 }
@@ -302,7 +307,7 @@ function medicinesSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLEleme
     });
   };
   if (all) {
-    if (!all.length && !notes?.inError) return card({ title: 'Medicines' }, empty('No medicines yet.'));
+    if (!all.length && !notes.inError) return card({ title: 'Medicines' }, empty('No medicines yet.'));
     // Prescriptions of one medicine are rows under its name.
     const rows = (xs: MedicineItem[]) => underHeadings(xs).flatMap((of) => (of.length === 1 ? [render(of[0]!, false)] : [headedRows('h3', of[0]!.name, filled(of[0]!), of.map((m) => render(m, false, true)))]));
     return h(
@@ -314,11 +319,11 @@ function medicinesSection(ctx: Ctx, person: Person, idx: PersonIndex): HTMLEleme
       allOf(ctx, 'All', all, (m, is) => render(m, !m.standing, false, is)),
     );
   }
-  if (!active.length && !past.length) return card({ title: 'Medicines' }, empty('No medicines yet.'));
+  if (!active.length && !past.length) return card({ title: 'Medicines' }, empty('No medicines yet.'), listNotes(notes));
   return h(
     'div',
     { class: 'stack' },
-    card({ title: 'Active' }, active.length ? active.map((m) => render(m, false)) : empty('No active medicines recorded.'), standingNote(ctx, idx)),
+    card({ title: 'Active' }, active.length ? active.map((m) => render(m, false)) : empty('No active medicines recorded.'), standingNote(ctx, idx), listNotes(notes)),
     past.length ? card({ title: 'Past and other' }, past.map((m) => render(m, true))) : null,
   );
 }
@@ -354,6 +359,7 @@ function immunizationList(ctx: Ctx, person: Person, idx: PersonIndex): HTMLEleme
           notGiven.map((r) => row({ route: itemRoute(person.id, r.id), title: r.display || 'Vaccine', meta: meta(dateText(r.date), sourcesText(ctx, person, r.provenance)) })),
         )
       : null,
+    errorsNote(errorsOf(idx, { record: (r) => r.kind === 'immunization' })),
   );
 }
 

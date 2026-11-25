@@ -27,6 +27,7 @@ import {
   type RefreshStatus,
   type Source,
   type SourceStatus,
+  type SourceWord,
 } from './types';
 import { firstNames } from './people';
 
@@ -113,6 +114,18 @@ function isProvenance(p: unknown): boolean {
   return isObject(p) && isObject(p.source) && isStr(p.method);
 }
 
+/** What each source says of an item, where else a paper came from, and what it is nearly a copy of: what reads of them. */
+function said(x: Record<string, unknown>): { words?: SourceWord[]; also_from?: unknown[]; near_duplicates?: unknown[] } {
+  const { words, also_from, near_duplicates, ...rest } = x;
+  const word = (w: Record<string, unknown>): SourceWord => Object.fromEntries((['raw_path', 'status', 'verification', 'read'] as const).flatMap((k) => (isStr(w[k]) ? [[k, w[k]]] : [])));
+  return {
+    ...rest,
+    ...(Array.isArray(words) ? { words: words.filter(isObject).map(word) } : {}),
+    ...(Array.isArray(also_from) ? { also_from: also_from.filter(isProvenance) } : {}),
+    ...(Array.isArray(near_duplicates) ? { near_duplicates: near_duplicates.filter((n) => isObject(n) && isStr(n.document)) } : {}),
+  };
+}
+
 /** A person's `index.json`; entries missing what the views rely on are dropped. */
 export function parseIndex(json: unknown, personId: string): PersonIndex {
   if (!isObject(json) || json.schema !== INDEX_SCHEMA) {
@@ -121,14 +134,14 @@ export function parseIndex(json: unknown, personId: string): PersonIndex {
   const documents = arr(json.documents)
     .filter(isObject)
     .filter((d) => isStr(d.id) && isStr(d.path) && isProvenance(d.provenance))
-    .map((d) => d as unknown as MedDocument);
+    .map((d) => said(d) as unknown as MedDocument);
   const records = arr(json.records)
     .filter(isObject)
     .filter((r) => isStr(r.id) && isStr(r.kind))
     .map(
       (r) =>
         ({
-          ...r,
+          ...said(r),
           display: isStr(r.display) ? r.display : '',
           fields: isObject(r.fields) ? r.fields : {},
           documents: strArr(r.documents),

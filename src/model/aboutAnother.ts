@@ -38,10 +38,10 @@ export function aboutAnother(views: Record<string, unknown> | null, person: stri
   return same ? { ids } : { ids, unsure: 'behind' };
 }
 
-/** The same, after what an earlier read said: that stands until a list of these files reads. A folder that never said has nothing to say. */
-export function stillAbout(said: About, earlier: ReadonlySet<string>): About {
+/** The same, after what an earlier read said: that stands until a list of these files reads. A folder with no list yet (`earlier` undefined) has nothing to say. */
+export function stillAbout(said: About, earlier: ReadonlySet<string> | undefined): About {
   if (!said.unsure) return said;
-  return { ids: new Set([...earlier, ...said.ids]), ...(said.unsure === 'unsaid' && !earlier.size ? {} : { unsure: said.unsure }) };
+  return { ids: new Set([...(earlier ?? []), ...said.ids]), ...(said.unsure === 'unsaid' && !earlier ? {} : { unsure: said.unsure }) };
 }
 
 /** An index without what is about somebody else, and without the links to it. */

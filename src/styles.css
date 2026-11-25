@@ -373,6 +373,7 @@ code,
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 16px 18px;
+  overflow-wrap: break-word;
 }
 
 .card-attention {
@@ -629,14 +630,6 @@ a.row-main:hover .row-title {
 .row-aside {
   flex: none;
   text-align: right;
-}
-
-.row-aside:empty {
-  display: none;
-}
-
-.row-aside > .chip + .num {
-  margin-left: 8px;
 }
 
 .row-extra {
@@ -2586,6 +2579,7 @@ a.cal-day:hover .cal-date {
   margin: 0;
   padding: 0;
   list-style: none;
+  overflow-wrap: anywhere;
 }
 
 .said-list li + li {

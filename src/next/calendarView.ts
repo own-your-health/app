@@ -4,12 +4,13 @@
 // them off unless the household turns that on for this visit to the page.
 
 import type { Person } from '../model/types';
-import { button, card, chip, empty, link, type Ctx } from '../ui/components';
+import { button, card, chip, empty, link, rowAside, type Ctx } from '../ui/components';
 import { h, icon } from '../ui/dom';
 import { formatMoney, fromCents } from '../model/records';
 import { count, dateText, localDay } from '../ui/format';
+import { errorsNote } from '../ui/inError';
 import { href, type Route } from '../ui/router';
-import { barPart, householdEvents, inMonth, isMonth, listPage, markShape, monthLabel, monthOf, MONTHS, monthWeeks, onDay, shiftMonth, shown, type PersonEvent } from './calendar';
+import { barPart, errorsLeft, householdEvents, inMonth, isMonth, listPage, markShape, monthLabel, monthOf, MONTHS, monthWeeks, onDay, shiftMonth, shown, type PersonEvent } from './calendar';
 import { doseCount } from './event';
 import { areaText, knownArea } from '../model/private';
 import { anyLeftOff, heldNotes } from './shared';
@@ -82,7 +83,7 @@ function eventRow(x: PersonEvent, opts: { person: boolean; month?: string; brief
           h('div', { class: 'row-title' }, [title, opts.brief ? null : e.place].filter(Boolean).join(' · ')),
           h('div', { class: 'row-meta' }, [opts.person ? called(x.person) : null, ...(opts.brief ? [e.place ?? kind ?? e.what] : [kind, e.what]), e.end > e.start ? `to ${dateText(e.end)}` : null].filter(Boolean).join(' · ')),
         ),
-        h('div', { class: 'row-aside' }, knownArea(x.private) ? chip('Private', 'muted') : null, n ? h('span', { class: 'num' }, n) : null),
+        rowAside(knownArea(x.private) ? chip('Private', 'muted') : null, n ? h('span', { class: 'num' }, n) : null),
         h('span', { class: 'row-chevron' }, icon('next', 18)),
       ),
     ),
@@ -266,7 +267,8 @@ export function calendarView(ctx: Ctx, route: CalendarRoute): HTMLElement {
             toggle(!!hidden),
           )
         : null;
-    body.replaceChildren(...[privacy, ...(r.view === 'list' ? listView(r, events, left) : monthView(r, events, laneOf, people, today, left))].filter((x): x is HTMLElement => !!x));
+    const list = () => [...listView(r, events, left), r.before ? null : errorsNote(errorsLeft(store.household, (id) => store.index(id), who))];
+    body.replaceChildren(...[privacy, ...(r.view === 'list' ? list() : monthView(r, events, laneOf, people, today, left))].filter((x): x is HTMLElement => !!x));
     if (focusToggle) body.querySelector<HTMLButtonElement>('.cal-private button')?.focus();
   };
   if (r.view !== 'ahead') draw();

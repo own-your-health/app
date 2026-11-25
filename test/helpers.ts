@@ -91,9 +91,13 @@ export function standingCase(person: string, { standing = true, hidden = [], sch
   view('bills', { ...viewNow('bills'), bills: {}, copy_of: {}, receipts: [], worth_a_call: [], not_billed: [] });
   view('private', { ...viewNow('private'), records: Object.fromEntries(hidden.map((id) => [id, { area: 'mental_health' }])), documents: {}, events: {}, studies: {}, unreported_studies: [] });
   for (const file of ['code-names', 'providers'] as const) delete v.files[`${file}.json`];
-  const said = fixture<{ records: Record<string, { line: string }> }>('standing/medrec/standing.json');
+  const said = fixture<{ records: Record<string, { line: string }>; in_error: object }>('standing/medrec/standing.json');
   if (line) for (const [id, r] of Object.entries(said.records)) r.line = line(id, r.line);
-  if (standing) view('standing', { ...said, person, ...(schema ? { schema } : {}) });
+  if (standing) {
+    view('standing', { ...said, person, ...(schema ? { schema } : {}) });
+    Object.assign(views, { medrec: '0.9.9' });
+    Object.assign(v, { in_error: said.in_error });
+  }
   out['views/views.json'] = JSON.stringify(views);
   return out;
 }
@@ -126,6 +130,28 @@ export function demoFolderWith(overlay: Overlay, manifest: (m: { files: string[]
     return over === null ? new Response('not found', { status: 404 }) : new Response(over, { status: 200 });
   }) as typeof fetch;
   return new DemoFolder('/app/demo/', fetchImpl, new Date(demoJson<{ anchor: string }>('manifest.json').anchor));
+}
+
+/** A folder of these files alone, by their path in it. */
+export function folderOf(files: Record<string, string>): DemoFolder {
+  const md5 = Object.fromEntries(Object.entries(files).map(([f, text]) => [f, createHash('md5').update(text).digest('hex')]));
+  const { anchor } = demoJson<{ anchor: string }>('manifest.json');
+  const all: Record<string, string> = { ...files, 'manifest.json': JSON.stringify({ anchor, files: Object.keys(files), md5 }) };
+  const fetchImpl = (async (input: RequestInfo | URL) => {
+    const text = all[decodeURIComponent(String(input).replace(/^\/app\/demo\//, ''))];
+    return text === undefined ? new Response('not found', { status: 404 }) : new Response(text, { status: 200 });
+  }) as typeof fetch;
+  return new DemoFolder('/app/demo/', fetchImpl, new Date(anchor));
+}
+
+/** medrec's fixture of what is entered in error, with the views medrec 0.9.9 writes of it (scripts/error-fixtures.mjs). */
+export function errorsFolder(change: (files: Record<string, string>) => void = () => {}): DemoFolder {
+  const [given, views] = [join(FIXTURES, 'errors', 'medrec'), join(FIXTURES, 'errors', 'views')];
+  const files: Record<string, string> = {};
+  for (const f of filesUnder(given)) files[f === 'household.json' ? f : `Robin Example/${f}`] = readFileSync(join(given, f), 'utf8');
+  for (const f of filesUnder(views)) files[`views/${f}`] = readFileSync(join(views, f), 'utf8');
+  change(files);
+  return folderOf(files);
 }
 
 export function filesUnder(dir: string): string[] {

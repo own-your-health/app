@@ -177,7 +177,9 @@ export function studyPrivate(index: PersonIndex, study: ImagingStudy): string | 
   if (!p) return HELD;
   const area = p.studies?.get(study.id);
   if (area) return area;
-  if (p.unreported.has(study.id) || !study.report) return HELD;
+  if (p.unreported.has(study.id)) return HELD;
+  // medrec looked for another report of one whose report is in error, and lists it when that is private.
+  if (!study.report) return study.reportInError && p.studies ? undefined : HELD;
   if (index.records.some((r) => r.id === study.report)) return p.records.get(study.report);
   return index.documents.some((d) => d.id === study.report) ? paperPrivate(index, study.report) : HELD;
 }

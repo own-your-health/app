@@ -88,6 +88,15 @@ function placePrivate(m: MedrecEvent, file: MedrecEvents): boolean {
 export const papersHeldFor = (file: MedrecEvents, person: string): { document: string; event: string; confidence: Confidence }[] =>
   file.events.flatMap((e) => e.members.flatMap((x) => (x.person === person && x.document ? [{ document: x.document, event: e.id, confidence: x.confidence }] : [])));
 
+/** An event that is none without what is entered in error, as it would be, asked for by its id. */
+export function eventInError(index: PersonIndex, household: Household, id: string): CareEvent | undefined {
+  const file = index.events;
+  const event = file?.errors.find((e) => e.id === id);
+  if (!file || !event) return undefined;
+  const { records, documents } = index.inError ?? { records: [], documents: [] };
+  return fromMedrec({ ...file, events: [event] }, { ...index, records: [...index.records, ...records], documents: [...index.documents, ...documents] }, household)[0];
+}
+
 /**
  * medrec's events as the app's, newest first as medrec orders them. A
  * member whose record or paper is not in the index (events written before
@@ -128,6 +137,7 @@ export function fromMedrec(file: MedrecEvents, index: PersonIndex, household: Ho
     const noPlace = !!m.place && placePrivate(m, file);
     if (m.place && placeHolds(m.place, e, household, index.person)) e.place = m.place;
     if (m.expected.length) e.expected = m.expected;
+    if (m.inError.length) e.inError = m.inError.length;
     if (m.confidence === 'unsure') e.doubt = m.could_join.length > 1 ? `It could be part of any of ${m.could_join.length} other visits` : m.could_join.length ? 'It could be part of another visit' : 'medrec is not sure what it belongs with';
     const given = { ...(title ? { title } : {}), ...(m.what ? { what: m.what } : {}), noPlace };
     const area = eventPrivate(e, index);

@@ -32,11 +32,11 @@ export const VISIT_CLASS: Record<string, string> = {
 /** What a visit's records are, by kind, in the order a visit summary lists them. */
 const RECORDED: string[] = ['condition', 'result', 'procedure', 'medication', 'immunization', 'allergy', 'report'];
 
-const NOT_A_VISIT = new Set(['cancelled', 'entered-in-error', 'planned']);
+const NOT_A_VISIT = new Set(['cancelled', 'planned']);
 
 /** Visits that happened (not planned, cancelled or in the future), newest first. */
 export function recentVisits(index: PersonIndex, today: string): MedRecord[] {
-  return sortByDateDesc(index.records.filter((r) => r.kind === 'encounter' && !NOT_A_VISIT.has(r.status ?? '') && (!r.date || r.date.slice(0, 10) <= today)));
+  return sortByDateDesc(index.records.filter((r) => r.kind === 'encounter' && !NOT_A_VISIT.has(r.status ?? '') && !isWithdrawn(r) && (!r.date || r.date.slice(0, 10) <= today)));
 }
 
 export interface Visit {

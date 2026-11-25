@@ -73,7 +73,9 @@ describe('the items views.json names', () => {
     ]);
     for (const unsure of ['unreadable', 'newer_format', 'behind', 'unsaid'] as const) expect(now({ ids: new Set(['r_2']), unsure })).toEqual([['r_1', 'r_2'], unsure]);
     // A folder that never said has nothing to say.
-    expect([stillAbout({ ids: new Set(), unsure: 'unsaid' }, new Set()), stillAbout({ ids: new Set(), unsure: 'behind' }, new Set())]).toEqual([only(), { ids: new Set(), unsure: 'behind' }]);
+    expect([stillAbout({ ids: new Set(), unsure: 'unsaid' }, undefined), stillAbout({ ids: new Set(), unsure: 'behind' }, undefined)]).toEqual([only(), { ids: new Set(), unsure: 'behind' }]);
+    // One whose list named nobody did say.
+    expect(stillAbout({ ids: new Set(), unsure: 'unsaid' }, new Set())).toEqual({ ids: new Set(), unsure: 'unsaid' });
   });
 });
 
@@ -229,6 +231,29 @@ describe('a folder', () => {
     // Nor do views that were here and are gone let it in.
     await expect(next({ 'views/views.json': null })).rejects.toThrow('medrec’s views are not in the folder.');
     expect(out(s)).toEqual([1, 'unreadable', true]);
+  });
+
+  it('says that an earlier medrec wrote the views after a list that named nobody, and not where none was', async () => {
+    const after = async (first: Overlay, second: Overlay) => {
+      const folder = demoFolderWith(first);
+      const s = new Store(folder);
+      await s.load();
+      const at = [s.index(ROBIN)!.aboutUnsure];
+      for (const overlay of [second, second]) {
+        s.folder.fresh = () => demoFolderWith(overlay);
+        await s.reload();
+        at.push(s.index(ROBIN)!.aboutUnsure);
+      }
+      return at;
+    };
+    expect(await after(by('0.9.9'), by('0.9.8'))).toEqual([undefined, 'unsaid', 'unsaid']);
+    expect(await after(by('0.9.8'), by('0.9.8'))).toEqual([undefined, undefined, undefined]);
+    expect(await after({ 'views/views.json': '{' }, by('0.9.8'))).toEqual(['unreadable', undefined, undefined]);
+    // One of other files is a list, and so are the ids of one that does not read.
+    const behind = by('0.9.9', (p) => Object.assign(p, { index: createHash('md5').update('other').digest('hex') }));
+    expect(await after(behind, by('0.9.8'))).toEqual(['behind', 'unsaid', 'unsaid']);
+    const part = by('0.9.9', (p) => void (p.about_another = [result, 7]));
+    expect(await after(part, by('0.9.8'))).toEqual(['unreadable', 'unsaid', 'unsaid']);
   });
 
   it('keeps out what a list named of someone whose index did not read', async () => {

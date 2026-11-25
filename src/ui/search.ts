@@ -18,12 +18,14 @@
 // as written instead.
 
 import { KIND_LABELS } from '../model/records';
+import { errorsIndex } from '../model/inError';
 import { HELD, isHeld, itemPrivate, studyPrivate } from '../model/private';
 import { conceptOf, find, matchRanges, terms, type Found, type Hit, type Searchable } from '../model/search';
 import type { Person, PersonText } from '../model/types';
 import { button, card, empty, filterChips, row, type Ctx } from './components';
 import { h, type Child } from './dom';
 import { count, dateText } from './format';
+import { inErrorText } from './standing';
 import { href, type Route } from './router';
 import { called } from '../model/people';
 import { heldNotes } from '../next/shared';
@@ -191,6 +193,7 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
     }, 0);
   /** Imaging no report judges, counted for everyone and never for what was searched for. */
   const imagingLeft = (n: number) => (n ? ` So ${n === 1 ? 'is' : 'are'} ${count(n, 'imaging study', 'imaging studies')} with no report in these records: nothing says whether ${n === 1 ? 'it is' : 'they are'} private.` : '');
+  let errors: { own: string[]; shared: number } = { own: [], shared: 0 };
   const leftNotes = () =>
     many && who === 'all'
       ? [
@@ -230,7 +233,8 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
     const missing = untexted.length ? ` Document text is not searched for ${untexted.join(' and ')}: there is no text.json in ${untexted.length === 1 ? 'their folder' : 'their folders'}.` : '';
     const shown = shownGroups.reduce((n, g) => n + g.entries.length, 0);
     const total = count(all, 'match', 'matches');
-    status.textContent = `${shown === all ? total : `${shown} of ${total}`}.${missing}`;
+    const wrong = many && who === 'all' ? errors.shared : errors.own.filter((p) => who === 'all' || p === who).length;
+    status.textContent = `${shown === all ? total : `${shown} of ${total}`}.${wrong ? ` ${inErrorText(wrong)}.` : ''}${missing}`;
 
     // Headings and rows in order; a page is PAGE rows, with the headings above them.
     type Line = { head: string; level: 'kind' | 'panel' } | { entry: Entry };
@@ -310,7 +314,12 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
     });
     const untexted = scope.filter((x) => !x.text).map((x) => names.get(x.person) ?? x.person);
     const own = find(scope, q, { words });
-    const found = many ? find(scope.map((s) => ({ ...s, leave: (kind: string, id: string) => !!itemPrivate(s.index, kind, id) })), q, { words }) : own;
+    const shared = (s: Searchable) => ({ ...s, leave: (kind: string, id: string) => !!itemPrivate(s.index, kind, id) });
+    const found = many ? find(scope.map(shared), q, { words }) : own;
+    // The same words over what is entered in error, for how many of it they would have found.
+    const wrong = scope.flatMap((s) => (s.index.inError ? [{ ...s, index: errorsIndex(s.index) }] : []));
+    const how = { words: words || own.how === 'fallback' };
+    errors = { own: wrong.length ? find(wrong, q, how).hits.map((x) => x.person) : [], shared: wrong.length ? find(wrong.map(shared), q, how).hits.length : 0 };
     draw(found, own, many ? untexted : untexted.length ? ['this person'] : []);
   };
 

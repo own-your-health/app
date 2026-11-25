@@ -148,7 +148,7 @@ describe('bills as medrec’s list has them', () => {
   const state = (extra: Partial<BillState> = {}): BillState => ({ payments: [], settled: false, left: usd('120.00'), ...extra });
   /** Sam's bills with one state for the billing company's, and these calls. */
   const open = (s: BillState, calls: BillCall[], evs = events(name)) => {
-    const idx: PersonIndex = { ...sam, bills: { states: new Map([...sam.bills!.states, [billing!.id, s]]), calls, marksUnreadable: false } };
+    const idx: PersonIndex = { ...sam, bills: { states: new Map([...sam.bills!.states, [billing!.id, s]]), calls, errors: [], marksUnreadable: false } };
     return openBills(idx, evs, TODAY).find((b) => b.bill.doc.id === billing!.id);
   };
   const call = (reason: BillCall['reason'], owed?: string): BillCall[] => [{ reason, document: billing!.id, asked: usd('120.00'), ...(owed ? { owed: usd(owed) } : {}) }];
@@ -176,7 +176,7 @@ describe('bills as medrec’s list has them', () => {
       const b = open(state({ selfPay: true }), calls)!;
       expect([...says(b), toPay(b)]).toEqual(['self_pay', undefined, false, false, true]);
     }
-    const idx: PersonIndex = { ...sam, bills: { states: new Map([...sam.bills!.states, [billing!.id, state({ selfPay: true })]]), calls: [], marksUnreadable: false } };
+    const idx: PersonIndex = { ...sam, bills: { states: new Map([...sam.bills!.states, [billing!.id, state({ selfPay: true })]]), calls: [], errors: [], marksUnreadable: false } };
     // Its visit's shares are another's to bill: it is no billing company's bill for them.
     expect([shares(name, sam), shares(name, idx)].map((s) => s.filter(([start]) => start === '2026-07-09'))).toEqual([[], [['2026-07-09', 'Example Lab', 5070]]]);
     expect([selfPay(idx, billing!), selfPay(idx, center!), selfPay(sam, billing!), selfPay({ ...sam, bills: undefined }, billing!)]).toEqual([true, false, false, false]);
@@ -216,7 +216,7 @@ describe('bills as medrec’s list has them', () => {
   });
 
   it('are paid once settled by a payment, not while part is left, nor when they asked for nothing', () => {
-    const paid = (s: BillState) => paidBills({ ...sam, bills: { states: new Map([[billing!.id, s]]), calls: [], marksUnreadable: false } }, events(name)).map((p) => p.cents);
+    const paid = (s: BillState) => paidBills({ ...sam, bills: { states: new Map([[billing!.id, s]]), calls: [], errors: [], marksUnreadable: false } }, events(name)).map((p) => p.cents);
     const mark = { from: 'household' as const, on: '2026-11-16', amount: usd('120.00') };
     expect([paid(state({ settled: true, payments: [mark] })), paid(state({ left: usd('75.00'), payments: [{ ...mark, amount: usd('45.00') }] })), paid(state({ settled: true }))]).toEqual([[12000], [], []]);
   });
@@ -238,7 +238,7 @@ describe('bills as medrec’s list has them', () => {
   it('list a payment at a visit above what its claims say', () => {
     const receipt: MedDocument = { ...billing!, id: 'd_desk', doc_type: 'receipt', organization: 'Example Digestive Health', statement: { amount_paid: usd('165.00'), paid_on: '2026-09-16' } };
     const desk = (c: Partial<BillCall>, extra: Partial<PersonIndex> = {}) =>
-      deskPayments({ ...sam, documents: [...sam.documents, receipt], bills: { states: new Map(), calls: [{ reason: 'desk_copay', document: 'd_desk', asked: usd('165.00'), owed: usd('116.20'), ...c }], marksUnreadable: false }, ...extra }, events(name)).map((d) => [d.provider, d.cents, d.claimSays]);
+      deskPayments({ ...sam, documents: [...sam.documents, receipt], bills: { states: new Map(), calls: [{ reason: 'desk_copay', document: 'd_desk', asked: usd('165.00'), owed: usd('116.20'), ...c }], errors: [], marksUnreadable: false }, ...extra }, events(name)).map((d) => [d.provider, d.cents, d.claimSays]);
     expect(desk({})).toEqual([['Example Digestive Health', 16500, 11620]]);
     expect([desk({ reason: 'asks_more' }), desk({ document: 'd_gone' }), desk({ asked: undefined }), desk({ owed: undefined }), desk({}, { bills: undefined })]).toEqual([[], [], [], [], []]);
   });

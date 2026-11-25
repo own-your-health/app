@@ -17,7 +17,7 @@ const code = (s: string) => s.toLowerCase().replace(/[\s_]+/g, '-');
 const verificationText = (v: string) => (code(v) === 'refuted' ? 'ruled out' : lower(statusText(code(v))!));
 
 /** What one source says: "active", "resolved, ended Mar 2, 2024", "active, ends Mar 31, 2024 (prescription)". */
-export function wordText({ word }: SaidBy): string {
+export function wordText({ word }: { name?: string; word: Partial<SaidBy['word']> }): string {
   return [
     word.status ? lower(statusText(code(word.status))!) : 'no status',
     word.verification && code(word.verification) !== 'confirmed' && code(word.verification) !== code(word.status ?? '') ? verificationText(word.verification) : null,
@@ -105,8 +105,7 @@ export function standingNote(ctx: Ctx, idx: PersonIndex): HTMLElement | null {
 }
 
 /** What a list says beside its rows. */
-export function listNotes(notes: ListNotes | undefined, where?: string): HTMLElement[] {
-  if (!notes) return [];
+export function listNotes(notes: ListNotes, where?: string): HTMLElement[] {
   const lines = [...notes.noProblemList.map((n) => noProblemListText(n, where)), ...(notes.inError ? [inErrorText(notes.inError)] : [])];
   return lines.map((x) => h('p', { class: 'small muted' }, `${x}.`));
 }

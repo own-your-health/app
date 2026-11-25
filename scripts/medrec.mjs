@@ -27,7 +27,7 @@ const MAC = process.platform === 'darwin';
 const VERSION = '0.9.7';
 
 /** A command as an absolute path: its own, or the first on the shell's PATH, as a step's PATH may have none of that. */
-function commandAt(name) {
+function commandAt(name, version) {
   if (name.includes(sep)) return resolve(name);
   const found = (process.env.PATH ?? '')
     .split(delimiter)
@@ -41,7 +41,7 @@ function commandAt(name) {
         return false;
       }
     });
-  if (!found) throw new Error(`no ${name} on the PATH: set MEDREC to medrec ${VERSION}`);
+  if (!found) throw new Error(`no ${name} on the PATH: set MEDREC to medrec ${version}`);
   return found;
 }
 
@@ -54,12 +54,13 @@ export const iso = (before) => new Date(seconds(before) * 1000).toISOString().re
 /**
  * A scratch machine: its home, a folder in it that comes first on medrec's
  * PATH (`alone` makes it the only one), and `medrec(before, ...args)`, which
- * runs medrec there `before` the anchor, its profile set up for `root`.
+ * runs medrec there `before` the anchor, its profile set up for `root`. It is
+ * the sample's release, or another where a case says which.
  */
-export function scratchMachine(root, { alone = false } = {}) {
-  const binary = commandAt(process.env.MEDREC ?? 'medrec');
+export function scratchMachine(root, { alone = false, release = VERSION } = {}) {
+  const binary = commandAt(process.env.MEDREC ?? 'medrec', release);
   const version = execFileSync(binary, ['-V'], { encoding: 'utf8' }).trim().split(/\s+/)[1];
-  if (version !== VERSION) throw new Error(`medrec ${version} writes the sample differently: set MEDREC to medrec ${VERSION}`);
+  if (version !== release) throw new Error(`medrec ${version} writes this differently: set MEDREC to medrec ${release}`);
   const home = mkdtempSync(join(tmpdir(), 'medrec-demo-'));
   const bin = join(home, 'bin');
   mkdirSync(bin);

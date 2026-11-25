@@ -131,10 +131,10 @@ function wholeClaimCategory(r: MedRecord): Category {
 }
 
 /** One person's claim lines, and the part of each claim's totals its lines leave out. */
-export function costLines(person: string, index: PersonIndex, opts: CostOptions = {}): CostLine[] {
+export function costLines(person: string, index: PersonIndex, opts: CostOptions = {}, claims = index.records): CostLine[] {
   const out: CostLine[] = [];
   const anniversaries = new Map<string, { anniversary: string; basis: PlanBasis }>();
-  for (const r of index.records) {
+  for (const r of claims) {
     if (r.kind !== 'claim' || isWithdrawn(r)) continue;
     const service = dayOf(r.fields.billable_period) ?? r.date?.slice(0, 10);
     if (!service) continue;
@@ -184,6 +184,11 @@ export function costLines(person: string, index: PersonIndex, opts: CostOptions 
     }
   }
   return out.sort((a, b) => b.date.localeCompare(a.date) || a.claim.localeCompare(b.claim));
+}
+
+/** The lines of a person's claims entered in error as they would be, in the plan years the others give: they are in none of the person's costs. */
+export function errorLines(person: string, index: PersonIndex, opts: CostOptions = {}): CostLine[] {
+  return costLines(person, index, opts, (index.inError?.records ?? []).map((r) => ({ ...r, stands: true as const })));
 }
 
 /** Everyone's lines, newest first. */

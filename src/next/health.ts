@@ -63,8 +63,8 @@ export interface CurrentItems {
   /** Medicines on hold, and those ended by their date, where the sources' words tell. */
   onHold: MedicineItem[];
   endedByDate: MedicineItem[];
-  /** What each list says beside its rows, by the sources' words. */
-  notes: { conditions?: ListNotes; medicines?: ListNotes; allergies?: ListNotes };
+  /** What each list says beside its rows. */
+  notes: { conditions: ListNotes; medicines: ListNotes; allergies: ListNotes };
 }
 
 export interface HealthItems extends CurrentItems {
@@ -172,7 +172,7 @@ export function careTeam(index: PersonIndex, today: string, include: (r: MedReco
     }
   }
   const byId = new Map(index.records.map((r) => [r.id, r]));
-  for (const med of medicineList(index, today, (id) => include(byId.get(id)!)).active) {
+  for (const med of medicineList(index, today, (id) => byId.has(id) && include(byId.get(id)!)).active) {
     if (!med.prescriber) continue;
     const m = member(med.prescriber);
     if (!m.prescribes.includes(med.name)) m.prescribes.push(med.name);

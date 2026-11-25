@@ -110,7 +110,8 @@ test('Health and its sheet for a doctor have the same lists, with what they leav
 test('a record’s page says what it is and what each source says of it', async ({ page }) => {
   await lay(page, standingCase(ALEX));
   const says = page.locator('.kv-row', { has: page.locator('dt', { hasText: 'Each source says' }) }).locator('li');
-  const head = page.locator('main .card').first();
+  // What is entered in error says so in a card of its own, before its page.
+  const head = page.locator('main .card:not(.in-error)').first();
   for (const [stem, is, chip, lines] of [
     ['bothsay', 'Condition · Current', ['Sources differ'], ['Example Health: active, read May 2, 2024', 'Sample Clinic East: resolved, read May 3, 2024']],
     ['visitonly', 'Condition · Diagnosis from a visit', [], ['Example Walk-in: active, read May 4, 2024']],
@@ -124,6 +125,7 @@ test('a record’s page says what it is and what each source says of it', async 
     await expect(head.locator('p').first()).toContainText(is);
     await expect(chips(head)).toHaveText([...chip]);
     await expect(says).toHaveText([...lines]);
+    await expect(page.locator('.in-error')).toHaveCount(stem === 'erroraaa' ? 1 : 0);
   }
   // A fill is a fact: it has no standing, and says what it is and when.
   for (const [stem, is] of [
@@ -179,9 +181,9 @@ test('what a record says of itself is on its page and its rows: not sure of it, 
 test('why the lists go by each record’s own status is said where medrec’s list does not read, and nowhere else', async ({ page }) => {
   await lay(page, standingCase(ALEX, { schema: 'medrec-standing/v2' }));
   const why = 'medrec’s list of what is current could not be read: it is written by a newer medrec. Update the app. Meanwhile each record’s own status says what is current.';
-  for (const path of ['conditions', 'allergies', 'medicines']) {
+  for (const [path, n] of [['conditions', 1], ['allergies', 1], ['medicines', 2]] as const) {
     await go(page, `#/p/${ALEX}/${path}`);
-    await expect(page.locator('main .card').first().locator('p.muted')).toHaveText(why);
+    await expect(page.locator('main .card').first().locator('p.muted'), path).toHaveText([why, `${n} entered in error, not shown.`]);
   }
   for (const path of [`#/health?who=${ALEX}`, `#/health/doctor?who=${ALEX}`]) {
     await go(page, path);

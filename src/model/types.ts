@@ -110,6 +110,15 @@ export interface Statement {
   paid_on?: string;
 }
 
+/** What one source says of a record or a paper that some source says is entered in error, or of a condition, allergy or medicine (medrec 0.9.9 and later). */
+export interface SourceWord {
+  raw_path?: string;
+  status?: string;
+  verification?: string;
+  /** When a paper's was last read. */
+  read?: string;
+}
+
 export interface MedDocument {
   id: string;
   path: string;
@@ -131,6 +140,9 @@ export interface MedDocument {
   same_statement_as?: string;
   near_duplicates?: { document: string; similarity: number }[];
   provenance: Provenance;
+  /** Where else the same bytes came from. */
+  also_from?: Provenance[];
+  words?: SourceWord[];
 }
 
 export type RecordKind =
@@ -158,6 +170,11 @@ export interface MedRecord {
   providers?: Json;
   documents: string[];
   provenance: Provenance[];
+  words?: SourceWord[];
+  /** The raw path of the provenance whose resource the status and fields are of. */
+  fields_from?: string;
+  /** medrec says it stands, whatever its status (src/model/inError.ts). */
+  stands?: true;
 }
 
 export interface ImagingSeries {
@@ -183,6 +200,8 @@ export interface ImagingStudy {
   instances: number;
   size: number;
   report?: string;
+  /** It had a report, which is entered in error (src/model/inError.ts). */
+  reportInError?: true;
   filed_at: string;
   provenance: Provenance[];
 }
@@ -215,6 +234,8 @@ export interface PersonIndex {
   records: MedRecord[];
   studies: ImagingStudy[];
   imports: ImportRun[];
+  /** What medrec says is entered in error, which the lists above do not have (src/model/inError.ts); absent where it does not say. */
+  inError?: { records: MedRecord[]; documents: MedDocument[]; /** The first papers of statements a copy stands for. */ carried?: ReadonlySet<string> };
   /** How many of the chart's items are about somebody else, and not here (src/model/aboutAnother.ts). */
   about?: number;
   /** Why there may be others here. */

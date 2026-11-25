@@ -5,7 +5,8 @@ import { DEMO, type Overlay } from '../test/helpers';
 
 type Json = Record<string, unknown>;
 interface Views {
-  people: Record<string, { index: string; linked: Record<string, { index: string }>; files: Record<string, string> }>;
+  medrec: string;
+  people: Record<string, { index: string; in_error?: Json; linked: Record<string, { index: string }>; files: Record<string, string> }>;
 }
 interface Member {
   record?: string;
@@ -25,20 +26,23 @@ export interface PersonFiles {
   events: { events: Item[]; pending: (Member & { could_join: string[] })[]; aliases?: { organization: string; document: string }[] };
   bills: { bills: Record<string, Json>; worth_a_call: { bill: string }[]; not_billed: { event: string }[] };
   list: { records: Json; documents: Json; events: Json };
+  /** Its entry in views.json. */
+  view: { in_error?: Json };
 }
 
 const md5 = (text: string) => createHash('md5').update(text).digest('hex');
 
-/** The folder with each person's files changed, named and checked as medrec would. `base` is laid over the sample first. */
-export function rewritten(base: Overlay, change: (files: PersonFiles) => void): Overlay {
+/** The folder with each person's files changed, named and checked as medrec would, by this version of it. `base` is laid over the sample first. */
+export function rewritten(base: Overlay, change: (files: PersonFiles) => void, medrec?: string): Overlay {
   const out: Overlay = { ...base };
   const read = <T>(path: string) => JSON.parse(out[path] ?? readFileSync(join(DEMO, path), 'utf8')) as T;
   const views = read<Views>('views/views.json');
+  if (medrec) views.medrec = medrec;
   const { people } = read<{ people: { id: string; name: string; folder: string }[] }>('household.json');
   for (const p of people) {
     const v = views.people[p.id]!;
     const viewPath = (file: string) => `views/${p.id}/${file}.${v.files[`${file}.json`]!.slice(0, 12)}.json`;
-    const files: PersonFiles = { name: p.name, index: read(`${p.folder}/index.json`), events: read(viewPath('events')), bills: read(viewPath('bills')), list: read(viewPath('private')) };
+    const files: PersonFiles = { name: p.name, index: read(`${p.folder}/index.json`), events: read(viewPath('events')), bills: read(viewPath('bills')), list: read(viewPath('private')), view: v };
     change(files);
     for (const [file, x] of [['events', files.events], ['bills', files.bills], ['private', files.list]] as const) {
       const text = JSON.stringify(x);
@@ -147,3 +151,73 @@ export const removed = (base: Overlay): Overlay =>
     bills.not_billed = bills.not_billed.filter((x) => !(x.event in list.events));
     Object.assign(list, { records: kept, documents: {}, events: {} });
   });
+
+const ERROR = { status: 'entered-in-error' };
+const FIRST = 'Records/first/Binary/a.json';
+
+/**
+ * The sample with items of Robin's entered in error, as medrec 0.9.9 and later
+ * leaves them: a result of a visit, a bill with a payment marked on it, and
+ * the claim and the medicine of a fill; and a result and a bill some source
+ * still stands by. A bill of Sam's is too, with no payment on it.
+ */
+export const enteredInError = (): Overlay =>
+  rewritten(
+    {},
+    ({ name, index, events, bills, view }) => {
+      view.in_error = {};
+      const doc = (amount: string) => index.documents.find((d) => d.doc_type === 'bill' && (d.statement as { amount_due?: { amount: string } }).amount_due?.amount === amount)!;
+      if (name === 'Sam Example') {
+        const { id } = Object.assign(doc('90.50'), ERROR);
+        view.in_error = { document: [id] };
+        for (const e of events.events) {
+          const its = e.members!.length;
+          e.members = e.members!.filter((m) => m.document !== id);
+          if (e.members.length < its) Object.assign(e, { in_error: [id] });
+        }
+        delete bills.bills[id];
+        Object.assign(bills, { in_error: { [id]: { as: 'bill' } } });
+      }
+      if (name !== 'Robin Example') return;
+      const record = (fits: (r: (typeof index.records)[number]) => boolean) => index.records.find(fits)!;
+      const event = (start: string) => events.events.find((e) => e.start === start)!;
+      const member = (e: Item, m: Member) => e.members!.some((x) => (x.record ?? x.document) === (m.record ?? m.document));
+      const visit = event('2026-11-18');
+      const result = record((r) => r.kind === 'result' && r.display === 'Potassium' && member(visit, { record: r.id }));
+      const fill = event('2026-10-08');
+      const gone = [result, ...index.records.filter((r) => member(fill, { record: r.id }))];
+      for (const r of gone) Object.assign(r, ERROR);
+      const wrong = doc('19.28');
+      const word = (path: unknown, more: object) => ({ raw_path: path, read: '2026-11-20T12:00:00Z', ...more });
+      const from = (x: Item) => x.provenance as Json;
+      Object.assign(from(wrong), { raw_path: FIRST });
+      Object.assign(wrong, { words: [word(FIRST, ERROR)] });
+      const differs = doc('53.68');
+      Object.assign(from(differs), { raw_path: FIRST });
+      Object.assign(differs, { also_from: [{ ...from(differs), raw_path: 'Records/second/Binary/b.json' }], words: [word(FIRST, ERROR), word('Records/second/Binary/b.json', { status: 'current' })] });
+      const held = record((r) => r.kind === 'result' && r.display === 'Creatinine' && member(visit, { record: r.id }));
+      const [source] = held.provenance as Json[];
+      held.provenance = [{ ...source, raw_path: FIRST }, { ...source, raw_path: 'Records/second/Observation/b.json' }];
+      Object.assign(held, { fields_from: 'Records/second/Observation/b.json', words: [word(FIRST, ERROR), word('Records/second/Observation/b.json', { status: 'final' })] });
+      view.in_error = { result: [result.id], claim: gone.filter((r) => r.kind === 'claim').map((r) => r.id), medication: gone.filter((r) => r.kind === 'medication').map((r) => r.id), document: [wrong.id] };
+      // Its visits: one without the result, one without the bill, and one that is none.
+      const out = new Set([result.id, wrong.id]);
+      for (const e of events.events) {
+        const its = e.members!.map((m) => (m.record ?? m.document)!).filter((id) => out.has(id));
+        if (!its.length) continue;
+        e.members = e.members!.filter((m) => !out.has((m.record ?? m.document)!));
+        e.in_error = its;
+      }
+      const { events: list } = events;
+      events.events = list.filter((e) => e !== fill);
+      Object.assign(events, {
+        events_in_error: [{ ...fill, in_error: gone.slice(1).map((r) => r.id) }],
+        in_error: { [result.id]: { event: visit.id, not_applied: [{ id: 'o_aaaaaaaaaaaaaaaaaaaa', kind: 'apart', members: [result.id], at: '2026-11-19T12:00:00Z' }] }, ...Object.fromEntries(gone.slice(1).map((r) => [r.id, { event: fill.id }])), [wrong.id]: { event: list.find((e) => (e.in_error as string[] | undefined)?.includes(wrong.id))!.id } },
+      });
+      delete bills.bills[wrong.id];
+      bills.not_billed = bills.not_billed.filter((x) => x.event !== fill.id);
+      Object.assign(bills, { in_error: { [wrong.id]: { as: 'bill', not_applied: [{ from: 'household', id: 'o_bbbbbbbbbbbbbbbbbbbb', on: '2026-11-04', amount: '19.28', currency: 'USD' }] } } });
+      Object.assign(bills.bills[differs.id]!, { differs: true });
+    },
+    '0.9.9',
+  );

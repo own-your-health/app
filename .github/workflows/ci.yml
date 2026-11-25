@@ -52,14 +52,26 @@ jobs:
         run: |
           node scripts/demo-folder.mjs "$RUNNER_TEMP/sample"
           diff -r "$RUNNER_TEMP/sample" public/demo
+      # medrec 0.9.9 writes what the sample's release does not yet.
+      - name: Install medrec 0.9.9
+        env:
+          MEDREC_URL: https://github.com/own-your-health/medrec-cli/releases/download/v0.9.9/medrec-x86_64-unknown-linux-gnu.tar.gz
+          MEDREC_SHA256: cac7992477055e653da0512c219c412d6d2c1cd277aec80d3ab2e7c719b76ea2
+        run: |
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/medrec-0.9.9.tar.gz" "$MEDREC_URL"
+          echo "$MEDREC_SHA256  $RUNNER_TEMP/medrec-0.9.9.tar.gz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/medrec-0.9.9"
+          tar xzf "$RUNNER_TEMP/medrec-0.9.9.tar.gz" -C "$RUNNER_TEMP/medrec-0.9.9"
       # So are the cases the tests read: medrec writes each, never a hand.
-      - name: Private-items, bill and rule cases match their generators
+      - name: Private-items, bill, rule and entered-in-error cases match their generators
         env:
           MEDREC: ${{ runner.temp }}/medrec/medrec
+          MEDREC_099: ${{ runner.temp }}/medrec-0.9.9/medrec
         run: |
           node scripts/private-fixtures.mjs
           node scripts/bill-fixtures.mjs
           node scripts/rule-fixtures.mjs
+          MEDREC="$MEDREC_099" node scripts/error-fixtures.mjs
           git diff --exit-code -- test/fixtures
           test -z "$(git status --porcelain -- test/fixtures)"
 

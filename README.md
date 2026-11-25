@@ -19,8 +19,9 @@ Google Drive. It reads the records folder that
   recent), their full lists of results against their reference range,
   medicines, conditions, allergies, immunizations and imaging, and a sheet to
   hand a doctor;
-- **Papers**: the folder's papers, but those about another person, each with
-  the visit it belongs to, for everyone or one person, by kind of paper;
+- **Papers**: the folder's papers, but those about another person or entered
+  in error, each with the visit it belongs to, for everyone or one person, by
+  kind of paper;
 - one search over everyone's records, documents and imaging, and the text
   medrec extracted from documents, from the search button in the bar;
 - for any record, the raw FHIR the source served, where it came from, and the
@@ -599,10 +600,14 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   that give each reading rule a case (`test/fixtures/rules/`, from
   `scripts/sample/rules.mjs`), made by `node scripts/rule-fixtures.mjs`. They
   delete nothing: medrec works in a new temporary folder, and a file no longer
-  part of a case is named for a person to remove. CI runs all four scripts.
+  part of a case is named for a person to remove. CI runs all five scripts.
   `test/fixtures/standing/medrec/` is medrec's own fixture for readers of
-  `standing.json`, as `tests/fixtures/standing/` of its 0.9.9 has it: no script
-  here writes it, and it is copied again when medrec's changes.
+  `standing.json`, as `tests/fixtures/standing/` of its 0.9.9 has it, and
+  `test/fixtures/errors/medrec/` is its fixture of what is entered in error
+  (`tests/fixtures/errors/`, with the `household.json` of the other): no script
+  here writes them, and they are copied again when medrec's change.
+  `test/fixtures/errors/views/` is what medrec 0.9.9 writes of the second, by
+  `node scripts/error-fixtures.mjs` with `MEDREC` set to that release.
   Written by hand are only Drive's answers, the app's own requests, and files
   medrec never writes: malformed ones, and ones of a later format.
 - The PNG icons in `public/` (for the manifest and the iPhone Home Screen) are
@@ -860,10 +865,10 @@ dropped from the address.
   fill can be its newest. The file is made from the records alone, so what the
   household marked or said never makes it stale; it is used, and read for
   again, as code names are. Without one the lists go by each record's own
-  status, and nothing is said of sources that differ. Where medrec's views list
-  one that is stale, still to come or refused, the lists, Health (everyone's
-  too) and the sheet say why; a folder of an earlier medrec has none, and they
-  say nothing.
+  status, and nothing is said of sources that differ but on what is entered in
+  error (below). Where medrec's views list one that is stale, still to come or
+  refused, the lists, Health (everyone's too) and the sheet say why; a folder
+  of an earlier medrec has none, and they say nothing.
 - **About another person.** A chart can hold what is about somebody else: a
   screening a parent answers about themselves, or a result its source says is
   another's. medrec 0.9.9 and later name those items by id (`about_another` in
@@ -876,13 +881,39 @@ dropped from the address.
   changed since `views.json` was written. Results, a test's page and Papers
   then say that some may be about another person and why, as they do where
   `views.json` or its list does not read; so does the sheet for a doctor. What
-  an earlier read of this folder named stays out until a list of its files
+  was named since the app opened the folder stays out until a list of its files
   reads, also when an earlier medrec on another computer writes the views
-  again. The first read of a folder whose views an earlier medrec wrote last
-  names none, and nothing is said.
+  again; nothing is kept once the app is closed. The first read after that of a
+  folder whose views an earlier medrec wrote last names none, and nothing is
+  said.
+- **Entered in error.** A source can say that a record or a paper is entered in
+  error. medrec 0.9.9 and later say of each item that every one of its sources
+  does (`in_error` in `views.json`, `src/model/inError.ts`), and it is taken
+  out of the index when that is read: it is in no list, search, visit, bill,
+  total or doctor's sheet. A statement whose first paper is in error is its
+  next copy's, and a study has no report of one. Results, a test's page,
+  conditions, allergies and medicines (on Health and the sheet for a doctor
+  too), immunizations, Papers, the claims under Costs, the calendar's list, a
+  visit and search say how many they leave out ("1 entered in error, not
+  shown"), on everyone's view of those that are not private (medrec's private
+  list names those too). Costs also leaves out a claim of a private visit, as
+  it does of those that stand, and one whose visit is not there to judge; the
+  calendar counts only visits that are not private. Bills says so of bills,
+  with how many have a payment the household marked, and which, since money may
+  be owed back. One opened by its id says that it is entered in error, what
+  each source says and when that was read, and what the household decided of
+  it, which medrec keeps and does not apply (`not_applied` in `events.json` and
+  `bills.json`). So does a visit that is none without it. One that some source
+  still stands by stays, with **Sources differ** and what each says. A source
+  whose word is not kept is not heard, and does not say so.
+  Where `views.json` does not read, or was made from another index, what the
+  index itself keeps of each source says it, by the same rule. The views of an
+  earlier medrec are made of the whole index, so beside those nothing is taken
+  out: as before, a record whose own status says so is treated as withdrawn,
+  and none of the counts and cards above is of it.
 - **Papers** (`#/papers`, a tab, also from each
   person's Health): every paper in the Drive folder but those about another
-  person (above), newest first by year, each with the visit it belongs to as a
+  person or entered in error (both above), newest first by year, each with the visit it belongs to as a
   link. A paper is with a visit when the visit holds it, when a record of
   the visit links it (an explanation of benefits names its claim), or when
   it is the receipt for a bill the visit holds (or the only one it can be
@@ -914,8 +945,9 @@ page count. Papers took the place of each person's list of documents. A
   marks. From 0.9.5 the list has two more rules: a paper that a private
   record links is private, whatever else links it, and an imaging study is
   as private as its report (`studies`), or judged by nothing without one
-  (`unreported_studies`). medrec 0.9.6 also judges the papers tied to a
-  private one. The app judges the first two, and the copies of one statement,
+  (`unreported_studies`). One whose report is entered in error has none in the
+  app; medrec looks for another report of it, so a study in neither is not
+  private. medrec 0.9.6 also judges the papers tied to a private one. The app judges the first two, and the copies of one statement,
   the same way where an earlier medrec wrote the list (`medrec` in
   `views.json`). The household's own mark on a paper wins; an earlier list
   shows one only on a paper in a private visit, so a paper it took out that a

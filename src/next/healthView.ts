@@ -135,7 +135,7 @@ function dueCard(p: Person, idx: PersonIndex, today: string): HTMLElement {
 
 /** Current: conditions, medicines and allergies, each with when it was last recorded. */
 function currentCard(p: Person, idx: PersonIndex, h0: HealthItems, words: string, from: From, today: string, note: HTMLElement | null): HTMLElement {
-  const group = (title: string, rows: HTMLElement[], none: string, notes?: ListNotes) => [h('h3', { class: 'health-group' }, title), rows.length ? rows : h('p', { class: 'small muted' }, none), listNotes(notes)];
+  const group = (title: string, rows: HTMLElement[], none: string, notes?: ListNotes) => [h('h3', { class: 'health-group' }, title), rows.length ? rows : h('p', { class: 'small muted' }, none), notes ? listNotes(notes) : null];
   const some = (title: string, xs: MedicineItem[]) => (xs.length ? group(title, medicineRows(p, idx, xs, from, today), '') : null);
   return card(
     { title: 'Current' },
@@ -149,10 +149,10 @@ function currentCard(p: Person, idx: PersonIndex, h0: HealthItems, words: string
 }
 
 /** Quiet: what is not news, counted, each a link to all of it. */
-function quietCard(p: Person, h0: HealthItems): HTMLElement | null {
+function quietCard(p: Person, idx: PersonIndex, h0: HealthItems): HTMLElement | null {
   const q = h0.quiet;
   // By every source's word, what is not current is each for its own reason.
-  const said = h0.notes.conditions !== undefined;
+  const said = idx.standing !== undefined;
   const line = (n: number, what: string, why: string, section: 'conditions' | 'medicines' | 'allergies' | 'results' | 'immunizations') =>
     n ? row({ route: { name: 'person', person: p.id, section }, title: `${n} ${what}`, meta: why }) : null;
   const rows = [
@@ -197,7 +197,7 @@ function personPage(ctx: Ctx, p: Person, idx: PersonIndex): HTMLElement {
     currentCard(p, idx, h0, words, from, today, standingNote(ctx, idx)),
     card({ title: 'Worth noticing' }, h0.noticing.length ? h0.noticing.map((x) => resultRow(p, idx, x, from)) : empty(`No result out of range in the last two years ${words}.`)),
     eventsCard(ctx, p.id, idx, 3),
-    quietCard(p, h0),
+    quietCard(p, idx, h0),
   );
 }
 
