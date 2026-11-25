@@ -85,6 +85,7 @@ export function settingsView(
       h('ul', { class: 'plain' },
         h('li', null, 'Your records stay in your Drive and in this page’s memory. Closing the page forgets them.'),
         h('li', null, 'Browser storage holds only your Google client id, which folder to open, the email of the Google account that signed in (so the next sign-in needs no account chooser), the theme you chose, and the month your plan year starts, if you set it.'),
+        h('li', null, 'A paper’s own file is read from your Drive when you tap View, shown in the page, and dropped when you close it or leave the page. Nothing in it runs.'),
         h('li', null, 'The Google sign-in lives in memory and ends within an hour.'),
         h('li', null, 'The page talks only to Google: the sign-in and the Drive API. It loads no other scripts, fonts or trackers.'),
         h('li', null, 'The only files it writes are requests in the folder’s _requests/ folder: to refresh a source, and to mark a bill paid.'),

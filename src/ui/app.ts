@@ -32,6 +32,7 @@ import { healthView, leaveOutPrivate } from '../next/healthView';
 import { papersView } from '../next/papersView';
 import { eventView } from '../next/eventView';
 import { providerView } from '../next/providerView';
+import { RECHECK } from '../paper/view';
 
 /** What the app says when a renewal interrupted a write the person asked for. */
 const UNSENT_TEXT: Record<Unsent, string> = {
@@ -98,6 +99,8 @@ export class App {
   /** The folder's state changed while the page held input; it is drawn when the input is let go. */
   private stale = false;
   private pollTimer: number | undefined;
+  /** Ends what the page drawn now started. */
+  private leave = new AbortController();
 
   constructor(private readonly root: HTMLElement) {
     this.demo = new URLSearchParams(location.search).has('demo');
@@ -119,8 +122,8 @@ export class App {
     }
     window.addEventListener('hashchange', () => this.onRoute());
     // Leaving or emptying a text field draws a change the poll held back for it.
-    // After the event, so focus has moved on by the time it is checked.
-    for (const type of ['focusout', 'input']) this.main.addEventListener(type, () => window.setTimeout(() => this.drawIfStale(), 0));
+    // So does closing a paper. After the event, so focus has moved on by the time it is checked.
+    for (const type of ['focusout', 'input', 'close']) this.main.addEventListener(type, () => window.setTimeout(() => this.drawIfStale(), 0));
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState !== 'visible') return;
       void this.lookForUpdate();
@@ -347,6 +350,8 @@ export class App {
     // Held back, not dropped: the poll stops once nothing is pending, so the change is drawn when the input is let go.
     if (this.holdsInput()) {
       this.stale = true;
+      // What is open may be no longer.
+      for (const p of this.main.querySelectorAll('.paper:not([hidden])')) p.dispatchEvent(new Event(RECHECK));
       return;
     }
     this.signature = sig;
@@ -361,12 +366,13 @@ export class App {
 
   /**
    * Whether drawing the page again would lose what someone is doing: a search
-   * page (its words, filters and results), or any text field on the page that
-   * has focus or has been typed in (the setup screens').
+   * page (its words, filters and results), any text field on the page that
+   * has focus or has been typed in (the setup screens'), or a paper open on it.
    */
   private holdsInput(): boolean {
     const r = parseRoute(location.hash);
     if (r.name === 'search' || (r.name === 'person' && r.section === 'search')) return true;
+    if (this.main.querySelector('.paper:not([hidden])')) return true;
     return [...this.main.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea')].some((el) => {
       if (el instanceof HTMLInputElement && !['text', 'search', 'email', 'url'].includes(el.type)) return false;
       return el === document.activeElement || el.value !== el.defaultValue;
@@ -389,6 +395,7 @@ export class App {
       now: () => this.now(),
       go: (r: Route) => (location.hash = href(r)),
       render: () => this.render(),
+      leaving: this.leave.signal,
       toast: (t, kind) => this.toast(t, kind),
       refresh: (scope, what) => this.refresh(scope, what),
       cancel: async (p) => {
@@ -552,6 +559,8 @@ export class App {
     const to = moved(parseRoute(location.hash));
     if (to) history.replaceState(null, '', href(to));
     this.renderBar();
+    this.leave.abort();
+    this.leave = new AbortController();
     clear(this.main);
     const p = this.phase;
     switch (p.name) {

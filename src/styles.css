@@ -402,6 +402,17 @@ code,
   margin-bottom: 8px;
 }
 
+/* A paper's title may be a file's name, one long word: its kind goes under it where both do not fit. */
+.card-head-paper {
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.card-head-paper h1 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .subcard {
   margin-top: 16px;
   padding: 12px 14px;
@@ -2616,5 +2627,235 @@ a.cal-day:hover .cal-date {
     border: 0;
     box-shadow: none;
     padding: 0;
+  }
+}
+
+/* ---- A paper, shown on request ---- */
+
+.paper {
+  margin-top: 12px;
+}
+
+.paper[hidden] {
+  display: none;
+}
+
+.paper-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.paper-bar p {
+  margin: 0;
+  flex: 1 1 180px;
+}
+
+.paper-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.paper-controls .button {
+  min-width: 44px;
+  justify-content: center;
+}
+
+.paper-zoom {
+  min-width: 4ch;
+  text-align: center;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.paper-progress {
+  display: block;
+  width: 100%;
+  accent-color: var(--primary);
+}
+
+/* One finger scrolls it, and two make it larger (zoom.ts), not the page. */
+.paper-box {
+  max-height: 80vh;
+  max-height: 80svh;
+  overflow: auto;
+  touch-action: pan-x pan-y;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  background: var(--sunken);
+}
+
+.paper-pages {
+  --zoom: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  width: max-content;
+  min-width: 100%;
+  box-sizing: border-box;
+}
+
+/* `--w` is the page's own width, and `--box` what its box has for it: both set as it is read. */
+.paper-page {
+  position: relative;
+  flex: none;
+  width: calc(min(var(--box), var(--w)) * var(--zoom));
+  margin: 0 auto;
+  overflow: hidden;
+  background: #fff;
+  color: #141b2d;
+}
+
+.paper-canvas,
+.paper-page > .paper-picture {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.paper-failed {
+  margin: 0;
+  padding: 12px;
+}
+
+.paper-note {
+  position: sticky;
+  left: 8px;
+  width: var(--box);
+  margin: 0;
+}
+
+.paper-text {
+  --zoom: 1;
+  padding: 12px;
+  background: var(--surface);
+  font-size: calc(15px * var(--zoom));
+  line-height: 1.5;
+  overflow-wrap: break-word;
+}
+
+.paper-text :is(h1, h2, h3, h4) {
+  margin: 1em 0 0.35em;
+  font-family: var(--serif);
+  font-size: 1.1em;
+  line-height: 1.3;
+}
+
+.paper-text :is(p, ul, ol, dl, blockquote, pre) {
+  margin: 0.5em 0;
+}
+
+.paper-text > :first-child {
+  margin-top: 0;
+}
+
+.paper-text table {
+  border-collapse: collapse;
+  margin: 0.5em 0;
+}
+
+.paper-text caption {
+  text-align: left;
+  font-weight: 600;
+}
+
+.paper-text :is(td, th) {
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.paper-text .paper-picture {
+  max-width: 100%;
+  height: auto;
+}
+
+.paper-pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.paper-text hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+/* A PDF's words over its picture, see-through, to select and copy: pdf.js's own layer. */
+.textLayer {
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+  --scale-round-x: 1px;
+  --scale-round-y: 1px;
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  text-align: initial;
+  line-height: 1;
+  letter-spacing: normal;
+  word-spacing: normal;
+  -webkit-text-size-adjust: none;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+}
+
+.textLayer[data-main-rotation='90'] {
+  transform: rotate(90deg) translateY(-100%);
+}
+
+.textLayer[data-main-rotation='180'] {
+  transform: rotate(180deg) translate(-100%, -100%);
+}
+
+.textLayer[data-main-rotation='270'] {
+  transform: rotate(270deg) translateX(-100%);
+}
+
+.textLayer :is(span, br) {
+  position: absolute;
+  color: transparent;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.textLayer > :not(.markedContent),
+.textLayer .markedContent span:not(.markedContent) {
+  --font-height: 0;
+  --scale-x: 1;
+  --rotate: 0deg;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+
+.textLayer .markedContent {
+  display: contents;
+}
+
+.textLayer ::selection {
+  background: rgb(47 63 179 / 0.3);
+  color: transparent;
+}
+
+@media print {
+  .paper-bar .paper-controls {
+    display: none;
+  }
+
+  .paper-box {
+    max-height: none;
+    overflow: visible;
   }
 }
