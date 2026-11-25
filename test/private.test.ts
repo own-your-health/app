@@ -721,7 +721,7 @@ describe('another person’s paper in a visit (X2), and a visit linked to anothe
     for (const e of child.events!.events) e.members = e.members.filter((m) => m.document !== doc.id);
     const visit = parent.events!.events.find((e) => e.members.some((m) => m.kind === 'claim') && e.members.some((m) => m.document))!;
     visit.members.push({ ...visit.members.find((m) => m.document)!, document: doc.id, person: drew, rule: 'X2' as MedrecRule });
-    parent.events!.others.set(drew, child);
+    parent.events!.others = new Map([[drew, child]]);
     const all = new Map([...SAMPLE.indexes, [robin, parent], [drew, child]]);
     if (child.privacy?.kind !== 'known' || parent.privacy?.kind !== 'known') throw new Error('not known');
     return {
@@ -755,7 +755,7 @@ describe('another person’s paper in a visit (X2), and a visit linked to anothe
       else s.child.privacy = marked;
       const e = s.event();
       expect(ids(e)).toEqual(ids(was).filter((x) => x !== s.doc.id));
-      expect(JSON.stringify({ ...e, closed: undefined })).not.toContain(s.doc.id);
+      expect(JSON.stringify(e)).not.toContain(s.doc.id);
       expect(ids(sharedForm(e))).not.toContain(s.doc.id);
       expect(eventOf(personEvents(s.parent, SAMPLE.household, TODAY), s.doc.id)).toBeUndefined();
       expect([s.listed().with?.event.id, s.listed().with?.person, s.listed().with?.private, s.everyone()]).toEqual([s.visit.id, robin, undefined, undefined]);
@@ -767,11 +767,11 @@ describe('another person’s paper in a visit (X2), and a visit linked to anothe
 
   it('one of a person whose index is not here, or that their index does not have, is not shown', () => {
     const gone = shared();
-    gone.parent.events!.others.clear();
-    expect([ids(gone.event()).includes(gone.doc.id), gone.event().closed]).toEqual([false, undefined]);
+    gone.parent.events!.others = new Map();
+    expect(ids(gone.event())).not.toContain(gone.doc.id);
     const missing = shared();
     missing.child.documents = missing.child.documents.filter((d) => d.id !== missing.doc.id);
-    expect([ids(missing.event()).includes(missing.doc.id), missing.event().closed]).toEqual([false, undefined]);
+    expect(ids(missing.event())).not.toContain(missing.doc.id);
   });
 
   it('a visit with nothing else is not there', () => {
@@ -812,33 +812,52 @@ describe('another person’s paper in a visit (X2), and a visit linked to anothe
 
   it('a place that is a linked visit’s is left out, on its own person’s pages too, where that visit is private or not known not to be', () => {
     const AT = 'Placeholder Hospital';
-    const place = (change: (parent: PersonIndex, stay: { id: string; members: { record?: string }[] }, e: { links?: object[]; place_from: string }) => void, from = 'linked') => {
+    const at = personEvents(index(SAMPLE, drew), SAMPLE.household, TODAY).find((e) => e.visits.some((v) => v.record.fields.location))!.id;
+    const place = (change: (parent: PersonIndex, stay: { id: string; members: { record?: string; document?: string; person?: string }[]; placeFrom?: 'alias' | 'linked' }, e: { links?: object[]; place_from: string }) => void, from = 'linked') => {
       const [parent, child] = [structuredClone(index(SAMPLE, robin)), structuredClone(index(SAMPLE, drew))];
       const stay = parent.events!.events.find((e) => e.members.some((m) => m.kind === 'claim'))!;
       const raw = demoJson<{ events: { id: string; members: { kind: string }[] }[] }>(eventsPath(drew));
-      const e = Object.assign(raw.events[0]!, { place: AT, place_from: from, links: [{ event: stay.id, person: robin, relation: 'born_during' }] as object[] | undefined });
+      const e = Object.assign(raw.events.find((x) => x.id === at)!, { place: AT, place_from: from, links: [{ event: stay.id, person: robin, relation: 'born_during' }] as object[] | undefined });
       change(parent, stay, e as { links?: object[]; place_from: string });
       child.events = parseMedrecEvents(raw, drew);
-      child.events.others.set(robin, parent);
+      child.events.others = new Map([[robin, parent]]);
       return personEvents(child, SAMPLE.household, TODAY).find((x) => x.id === e.id)!.place;
     };
     const known = (p: PersonIndex) => {
       if (p.privacy?.kind !== 'known') throw new Error('not known');
       return p.privacy;
     };
-    const none = place((_, __, e) => Object.assign(e, { place: undefined }));
-    expect(none).not.toBe(AT);
+    const none = undefined;
+    // Its own records would name one, had medrec given none.
+    expect(place((_, __, e) => Object.assign(e, { place: undefined }))).toMatch(/^Example /);
     expect(place(() => {})).toBe(AT);
     expect(place((p, s) => known(p).events.set(s.id, 'household'))).toBe(none);
     expect(place((p, s) => known(p).records.set(s.members.find((m) => m.record)!.record!, 'household'))).toBe(none);
+    const paper = (person?: string) =>
+      place((p, s) => {
+        s.members.push({ document: p.documents[0]!.id, ...(person ? { person } : {}) });
+        known(p).documents.set(p.documents[0]!.id, 'household');
+      });
+    // A private paper of theirs too, and not one of another person's.
+    expect([paper(), paper(drew)]).toEqual([none, AT]);
     expect(place((p) => delete p.privacy)).toBe(none);
     expect(place((p, s) => ((s.members = []), delete p.privacy))).toBe(none);
     expect(place((p, s) => (p.events!.events = p.events!.events.filter((x) => x.id !== s.id)))).toBe(none);
     expect(place((p) => delete p.events)).toBe(none);
     expect(place((_, __, e) => delete e.links)).toBe(none);
-    expect(place((_, s, e) => (e.links = [{ event: s.id, person: 'p_aaaaaaaaaaaaaaaaaaaa' }]))).toBe(none);
+    expect(place((_, s, e) => (e.links = [{ event: s.id, person: 'p_aaaaaaaaaaaaaaaaaaaa', relation: 'born_during' }]))).toBe(none);
+    // A stay whose own place is a paper's, or another's, has no claim that gives it.
+    expect([place((_, s) => (s.placeFrom = 'alias')), place((_, s) => (s.placeFrom = 'linked'))]).toEqual([none, none]);
     // Any of several, as which gave it is not said.
-    expect(place((p, s, e) => (e.links!.push({ event: p.events!.events.find((x) => x.id !== s.id)!.id, person: robin }), known(p).events.set(p.events!.events.find((x) => x.id !== s.id)!.id, 'household')))).toBe(none);
+    const another = (relation: string) =>
+      place((p, s, e) => {
+        const second = p.events!.events.find((x) => x.id !== s.id)!.id;
+        e.links!.push({ event: second, person: robin, relation });
+        known(p).events.set(second, 'household');
+      });
+    expect(another('born_during')).toBe(none);
+    // A relation the app does not know says nothing of the place.
+    expect(another('later')).toBe(AT);
     // One its own records give is its own.
     expect(place((p, s) => known(p).events.set(s.id, 'household'), 'portal')).toBe(AT);
   });

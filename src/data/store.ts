@@ -332,10 +332,9 @@ export class Store {
     );
     // Another person's paper (X2) or event (X1) in someone's events is of that person's index, and as private as it says.
     for (const index of this.indexes.values()) {
-      for (const id of (index.events?.events ?? []).flatMap((e) => [...e.members, ...e.links].flatMap((x) => x.person ?? []))) {
-        const other = id === index.person ? undefined : this.indexes.get(id);
-        if (other) index.events!.others.set(id, other);
-      }
+      if (!index.events) continue;
+      const named = new Set(index.events.events.flatMap((e) => [...e.members, ...e.bornDuring].flatMap((x) => x.person ?? [])));
+      index.events.others = new Map([...this.indexes].filter(([id]) => id !== index.person && named.has(id)));
     }
   }
 

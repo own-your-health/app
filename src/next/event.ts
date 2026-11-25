@@ -49,8 +49,6 @@ export interface CareEvent {
   /** What the portal recorded at those visits: results, reports, diagnoses, medicines. */
   recorded: MedRecord[];
   papers: EventPaper[];
-  /** Other people's private papers it holds (X2): only their own person's pages name them. */
-  closed?: { document: string; person: string; confidence: Confidence }[];
   /** A hospital visit known only from its doctors' claims. */
   noFacility?: boolean;
   /** Why it is not as sure as the rest: other events of the day that could own a part of it. */
@@ -295,14 +293,15 @@ const sameWords = (a: string, b: string) => {
  * `what`, the portal's name for the visit, its reason and the claims' services
  * that is in plain words and says more than the title; the billing
  * descriptors among them go to `descriptors`, for Details. The place is the
- * first of medrec's, the visit's and the claims' that names a place.
+ * first of medrec's, the visit's and the claims' that names a place; none
+ * where medrec's is left out (`noPlace`).
  */
-export function nameEvent(e: CareEvent, household: Household, person: string, given: { title?: string; what?: string; private?: boolean } = {}): void {
+export function nameEvent(e: CareEvent, household: Household, person: string, given: { title?: string; what?: string; private?: boolean; noPlace?: boolean } = {}): void {
   const v = e.visits[0]?.record;
   // Every practice the visit came through, so a connection's name does not hide one that is a place.
   const orgs = (v?.provenance ?? []).map((p) => practiceName(household, person, p.source));
   const places = [e.place, str(v?.fields.location), str(v?.fields.service_provider), ...orgs, e.claims.find((c) => c.role === 'office')?.provider, ...e.claims.map((c) => c.provider)];
-  e.place = places.map(placeName).find(Boolean);
+  e.place = given.noPlace ? undefined : places.map(placeName).find(Boolean);
   const first = e.claims[0]?.record;
   const claimSaid = first ? claimTitle(first) : undefined;
   const portal = [v?.display, str(v?.fields.reason)];

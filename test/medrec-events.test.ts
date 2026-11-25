@@ -13,7 +13,7 @@ import { doseCount, eventOf, eventPrivate, nameEvent, ruleText, type CareEvent }
 import { groupedByMedrec, personEvents } from '../src/next/load';
 import { claimLines } from '../src/model/claims';
 import { careEvents } from '../src/next/grouping';
-import { fromMedrec } from '../src/next/medrecEvents';
+import { fromMedrec, papersHeldFor } from '../src/next/medrecEvents';
 import { demo, demoEventsNotes, personNamed } from './demo-data';
 import { demoFetch, demoJson, fixture } from './helpers';
 
@@ -169,11 +169,12 @@ describe('when the store uses medrec’s events', () => {
     const store = await loadWith((path, text) => {
       if (path !== eventsPath(drew)) return text;
       const file = JSON.parse(text) as { events: { links?: object[] }[] };
-      file.events[0]!.links = [{ event: 'e_stay', person: robin, relation: 'born_during' }, { event: 'e_own', person: drew }, { event: 'e_gone', person: 'p_gone' }, { person: robin }];
+      const relation = 'born_during';
+      file.events[0]!.links = [{ event: 'e_stay', person: robin, relation }, { event: 'e_own', person: drew, relation }, { event: 'e_gone', person: 'p_gone', relation }, { person: robin, relation }, { event: 'e_new', person: id('Sam Example'), relation: 'later' }];
       return JSON.stringify(file);
     });
     expect([...store.index(drew)!.events!.others].map(([p, idx]) => [p, idx === store.index(robin)])).toEqual([[robin, true]]);
-    expect(store.index(drew)!.events!.events[0]!.links).toEqual([{ event: 'e_stay', person: robin }, { event: 'e_own', person: drew }, { event: 'e_gone', person: 'p_gone' }]);
+    expect(store.index(drew)!.events!.events[0]!.bornDuring).toEqual([{ event: 'e_stay', person: robin }, { event: 'e_own', person: drew }, { event: 'e_gone', person: 'p_gone' }]);
     expect(store.index(robin)!.events!.others.size).toBe(0);
   });
 
@@ -235,11 +236,12 @@ describe('medrec’s events as the app’s', () => {
       documents: [{ ...doc, id: 'd_known' }, { ...doc, id: 'd_paper' }],
     };
     const file = parseMedrecEvents(fixture('events/odd.json'), ODD);
-    file.others.set('p_bbbbbbbbbbbbbbbbbbbb', { ...sam, person: 'p_bbbbbbbbbbbbbbbbbbbb', documents: [{ ...other, id: 'd_other' }] });
+    file.others = new Map([['p_bbbbbbbbbbbbbbbbbbbb', { ...sam, person: 'p_bbbbbbbbbbbbbbbbbbbb', documents: [{ ...other, id: 'd_other' }] }]]);
     const [withVisit, papersOnly] = fromMedrec(file, index, household);
     // medrec's title names a kind the app does not know, and its `what` says what it was.
     expect([withVisit!.kind, withVisit!.title, withVisit!.what, withVisit!.place, withVisit!.visits.length, withVisit!.recorded.length]).toEqual(['service', 'Video visit', 'Follow-up', 'Example Clinic', 1, 0]);
     expect(withVisit!.papers.map((p) => [p.doc.id, p.person])).toEqual(expect.arrayContaining([['d_known', undefined], ['d_other', 'p_bbbbbbbbbbbbbbbbbbbb']]));
+    expect(papersHeldFor(file, 'p_bbbbbbbbbbbbbbbbbbbb')).toEqual([{ document: 'd_other', event: withVisit!.id, confidence: 'likely' }]);
     expect(withVisit!.doubt).toBe('It could be part of any of 2 other visits');
     expect(ruleText(withVisit!.papers.find((p) => p.doc.id === 'd_known')!.rule)).toBe('medrec’s rule D9');
     expect([papersOnly!.kind, papersOnly!.title]).toEqual(['service', 'Video visit']);

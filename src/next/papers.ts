@@ -11,6 +11,7 @@ import type { Household, MedDocument, PersonIndex } from '../model/types';
 import { dateText } from '../ui/format';
 import { eventPrivate, sharedForm, type CareEvent, type Confidence } from './event';
 import { personEvents } from './load';
+import { papersHeldFor } from './medrecEvents';
 
 /** How a paper is with its visit: the visit holds it, a record of the visit links it, or it is the receipt for the visit's bill. */
 export type PaperHow = 'event' | 'claim' | 'record' | 'bill';
@@ -58,9 +59,10 @@ export function papersOf(index: PersonIndex, household: Household, today: string
   // A paper of this person's in another person's visit.
   for (const [other, idx] of indexes) {
     if (other === person) continue;
-    for (const e of eventsOf(idx, false)) {
-      const held = [...e.papers.map((p) => ({ document: p.doc.id, person: p.person, confidence: p.confidence })), ...(e.closed ?? [])];
-      for (const p of held) if (p.person === person && !byDoc.has(p.document)) byDoc.set(p.document, { event: e, person: other, confidence: p.confidence });
+    const visits = new Map(eventsOf(idx, false).map((e) => [e.id, e]));
+    for (const x of idx.events ? papersHeldFor(idx.events, person) : []) {
+      const event = visits.get(x.event);
+      if (event && !byDoc.has(x.document)) byDoc.set(x.document, { event, person: other, confidence: x.confidence });
     }
   }
   const byRecord = new Map<string, CareEvent>();

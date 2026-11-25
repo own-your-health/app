@@ -84,11 +84,18 @@ describe('where each paper belongs', () => {
     const letter = drew.documents.find((d) => d.doc_type === 'letter')!;
     const visit = robin.events!.events[0]!;
     visit.members.push({ document: letter.id, person: drew.person, kind: 'letter', role: 'paper', rule: 'X2' as MedrecRule, confidence: 'likely' });
-    robin.events!.others.set(drew.person, drew);
-    drew.events!.events.forEach((e) => (e.members = e.members.filter((m) => m.document !== letter.id)));
+    robin.events!.others = new Map([[drew.person, drew]]);
+    const own = drew.events!.events.find((e) => e.members.some((m) => m.document === letter.id))!;
     const all = new Map([...indexes, [robin.person, robin], [drew.person, drew]]);
-    const p = papersOf(drew, household, TODAY, all).find((x) => x.doc.id === letter.id)!;
-    expect([p.with?.person, p.with?.event.id, p.with?.how]).toEqual([robin.person, visit.id, 'event']);
+    const placed = (idx: PersonIndex) => {
+      const p = papersOf(idx, household, TODAY, new Map([...all, [idx.person, idx]])).find((x) => x.doc.id === letter.id)!;
+      return [p.with?.person, p.with?.event.id, p.with?.how];
+    };
+    // One in a visit of its own person's too is with that one.
+    expect(placed(drew)).toEqual([drew.person, own.id, 'event']);
+    const alone = structuredClone(drew);
+    for (const e of alone.events!.events) e.members = e.members.filter((m) => m.document !== letter.id);
+    expect(placed(alone)).toEqual([robin.person, visit.id, 'event']);
   });
 });
 

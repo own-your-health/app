@@ -32,8 +32,8 @@ export interface MedrecEvent {
   place?: string;
   /** Whether the place is a practice a paper says its clinician works at (N5), or that of another person's event it is linked to (X1). */
   placeFrom?: 'alias' | 'linked';
-  /** Other people's events it is linked to (X1): a newborn's, and the stay they were born in. */
-  links: { event: string; person: string }[];
+  /** Other people's stays that it was during, of a newborn's events (X1): the only links the app reads. */
+  bornDuring: { event: string; person: string }[];
   confidence: Sureness;
   members: MedrecMember[];
   expected: { what: string; why: string; since?: string }[];
@@ -53,8 +53,8 @@ export interface MedrecEvents {
   pending: MedrecPending[];
   /** The practices clinicians were learned to work at, with the paper that says so (N5). */
   aliases: { organization: string; document: string }[];
-  /** The indexes of the other people whose events (X1) and papers (X2) these name; the store fills it in. */
-  others: Map<string, PersonIndex>;
+  /** The indexes of the other people whose events (X1) and papers (X2) these name, from the load this file is of; the store fills it in. */
+  others: ReadonlyMap<string, PersonIndex>;
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -102,7 +102,7 @@ export function parseMedrecEvents(raw: unknown, person: string): MedrecEvents {
       title: text(e.title) ?? '',
       ...(text(e.what) ? { what: text(e.what) } : {}),
       ...(text(e.place) ? { place: text(e.place), ...(e.place_from === 'alias' || e.place_from === 'linked' ? { placeFrom: e.place_from } : {}) } : {}),
-      links: (Array.isArray(e.links) ? e.links : []).filter(isObj).flatMap((x) => (text(x.event) && text(x.person) ? [{ event: text(x.event)!, person: text(x.person)! }] : [])),
+      bornDuring: (Array.isArray(e.links) ? e.links : []).filter(isObj).flatMap((x) => (x.relation === 'born_during' && text(x.event) && text(x.person) ? [{ event: text(x.event)!, person: text(x.person)! }] : [])),
       confidence: sureness(e.confidence),
       members,
       expected,

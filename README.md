@@ -640,8 +640,9 @@ dropped from the address.
   is private, or that nothing can say is not, is in none of the visit, on the
   pages of the visit's own person too, and its own person's Papers says which
   visit it is with. A place a visit has from another person's (the hospital
-  stay a newborn was born in: X1, `place_from` is `linked`) is judged the same
-  way. A place
+  stay a newborn was born in: X1, `place_from` is `linked`) is left out, with
+  nothing in its place, where that visit is private, holds a private item of
+  theirs, or nothing can say it does not. A place
   whose `place_from` is `alias` is there because a paper in the file's
   `aliases` says the clinician works at it: when any paper that says so is
   private, a shared screen leaves the place out. An event's address is medrec's id
