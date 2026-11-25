@@ -36,13 +36,10 @@ function signature(bytes: Uint8Array): PaperType | undefined {
   return /^\s*<\?xml/i.test(start) ? { kind: 'xml' } : undefined;
 }
 
-/** The start of a file as text, without its byte order mark; as UTF-16 when its mark says so. */
+/** The start of a file as text, without its byte order mark; as UTF-16 where it starts with that mark's first byte, which no markup does. */
 function textStart(bytes: Uint8Array): string {
-  const [a, b, c] = bytes;
-  const head = bytes.subarray(0, 4096);
-  if (a === 0xff && b === 0xfe) return new TextDecoder('utf-16le').decode(head);
-  if (a === 0xfe && b === 0xff) return new TextDecoder('utf-16be').decode(head);
-  return ascii(head, a === 0xef && b === 0xbb && c === 0xbf ? 3 : 0, head.length).replace(/^\s+/, '');
+  const label = bytes[0] === 0xff ? 'utf-16le' : bytes[0] === 0xfe ? 'utf-16be' : 'utf-8';
+  return new TextDecoder(label).decode(bytes.subarray(0, 4096)).replace(/^\s+/, '');
 }
 
 /** What a paper is. */

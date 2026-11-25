@@ -40,8 +40,6 @@ interface Group {
   /** How many characters stand in for a \u character where it cannot be read. */
   instead: number;
   font: number | undefined;
-  /** In the font table: the font whose character set comes next. */
-  table: boolean;
 }
 
 export interface RtfText {
@@ -55,9 +53,10 @@ export function rtfText(bytes: Uint8Array): RtfText {
   let pictures = false;
   let codePage = 1252;
   let deffont: number | undefined;
-  const fonts = new Map<number, number>();
+  /** The code page of each font's characters. */
+  const fonts = new Map<number | undefined, number | undefined>();
   const groups: Group[] = [];
-  let g: Group = { out: false, hidden: false, instead: 1, font: undefined, table: false };
+  let g: Group = { out: false, hidden: false, instead: 1, font: undefined };
   /** Characters still to leave out after a \u. */
   let skip = 0;
   let starred = false;
@@ -66,9 +65,7 @@ export function rtfText(bytes: Uint8Array): RtfText {
 
   const flush = () => {
     if (!pending.length) return;
-    const font = g.font ?? deffont;
-    const page = (font !== undefined ? fonts.get(font) : undefined) ?? codePage;
-    src.push(decoder(page).decode(new Uint8Array(pending)));
+    src.push(decoder(fonts.get(g.font ?? deffont) ?? codePage).decode(new Uint8Array(pending)));
     pending = [];
   };
   const put = (text: string) => {
@@ -126,30 +123,26 @@ export function rtfText(bytes: Uint8Array): RtfText {
       if (bytes[i] === 0x20) i++;
       const wasStarred = starred;
       starred = false;
-      if (word === 'bin') {
-        i += Math.max(0, value ?? 0);
-        continue;
-      }
       if (word === 'pict' || word === 'object') pictures = true;
-      if (word === 'fonttbl') g.table = true;
       // A text box's words, within a shape that is otherwise left out.
       if (word === 'shptxt') g.out = false;
       else if (LEFT_OUT.has(word) || (wasStarred && word !== 'shppict')) {
         flush();
         g.out = true;
-        continue;
-      }
-      if (word === 'u') {
-        if (skip > 0) skip--;
-        else if (value !== undefined) {
-          const code = value < 0 ? value + 0x10000 : value;
-          // A pair of surrogates is two of these, joined as the text is.
-          if (code >= 0 && code <= 0xffff) put(String.fromCharCode(code));
-          skip = g.instead;
-        }
-        continue;
       }
       switch (word) {
+        case 'bin':
+          i += Math.max(0, value ?? 0);
+          break;
+        case 'u':
+          if (skip > 0) skip--;
+          else if (value !== undefined) {
+            const code = value < 0 ? value + 0x10000 : value;
+            // A pair of surrogates is two of these, joined as the text is.
+            if (code >= 0 && code <= 0xffff) put(String.fromCharCode(code));
+            skip = g.instead;
+          }
+          break;
         case 'uc':
           g.instead = Math.max(0, value ?? 1);
           break;
@@ -178,7 +171,7 @@ export function rtfText(bytes: Uint8Array): RtfText {
           g.hidden = false;
           break;
         case 'fcharset':
-          if (g.table && g.font !== undefined && value !== undefined && CHARSETS[value]) fonts.set(g.font, CHARSETS[value]);
+          fonts.set(g.font, CHARSETS[value ?? 0]);
           break;
         case 'v':
           flush();

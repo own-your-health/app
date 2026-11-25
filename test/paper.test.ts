@@ -98,6 +98,9 @@ describe('text in a file', () => {
     expect(decodeText(latin('caf\xe9 \x80'))).toBe('café €');
     expect(decodeText(latin('<?xml version="1.0" encoding="iso-8859-5"?>\xd1'))).toContain('б');
     expect(decodeText(latin('<meta charset="koi8-r">\xc1'))).toContain('а');
+    // A mark is all of its bytes; after one, what is not UTF-8 is left as not read.
+    expect(decodeText(latin('\xef\xbb\xbfcaf\xe9'))).toBe('caf\ufffd');
+    for (const text of ['\xffab', 'a\xfeb', '\xfeab', 'a\xffb', '\xefab\xe9', 'a\xbb\xe9', 'ab\xbf\xe9', '\xef\xbbb\xe9']) expect(decodeText(latin(text))).toBe(text);
     // A name that is none, or a lie, is Windows-1252.
     expect(decodeText(latin('<meta charset="nonesuch">\xe9'))).toContain('é');
     expect(decodeText(latin('<meta charset="utf-8">\xe9'))).toContain('é');
@@ -145,7 +148,7 @@ describe('a paper in HTML', () => {
     expect(text).toContain('{A shape}');
     expect(html('<img src="https://elsewhere.example/a.png">x')).toBe('{picture}x');
     expect(html('<img src="https://elsewhere.example/a.png" alt="">x<img alt="Seal" height="1">')).toBe('x');
-    expect(html('<img src="data:image/png;base64,!!" alt="Broken">')).toBe('{Broken}');
+    expect(htmlPaper('<img src="data:image/png;base64,!!" alt="Broken">').parts).toEqual([{ picture: { alt: 'Broken' } }]);
   });
 
   it('shows a form’s fields as they are filled in', () => {
@@ -155,6 +158,16 @@ describe('a paper in HTML', () => {
   });
 
   it('reads loose markup as a browser does', () => {
+    expect(html('&#xd800;&#xdfff;&#xe000;&#x1f600;')).toBe('\ufffd\ufffd\ue000😀');
+    // The first of two of one attribute; a span only of a cell.
+    expect(html('<table><tr><td colspan=2 colspan=3>a</table><p colspan=2>b</p>')).toBe('<table><tr><td c2>a</></></><p>b</>');
+    // An end tag closes nothing outside its cell.
+    expect(html('<b>x<table><tr><td>a</b>c</td></table>')).toBe('<strong>x<table><tr><td>ac</></></></>');
+    expect(html('<select>\n<option>One</option>\n<option>Two</option></select>')).toBe('One');
+    expect(html('<pre>a <!-- --> b</pre>')).toBe('<pre>a  b</>');
+    expect(html('<p><b>a</b> <i>b</i></p>')).toBe('<p><strong>a</> <em>b</></>');
+    expect(html('<table><div>words</div><tr><td>cell</table><ul><img alt="A seal"></ul>')).toBe('<table><tr><td><div>words</></></><tr><td>cell</></></><ul><li>{A seal}</></>');
+    expect(html('a<br> b<p>c</p> d')).toBe('a<br></>b<p>c</>d');
     expect(html('<p>a<div>b</div>')).toBe('<p>a</><div>b</>');
     expect(html('<table><tr><td>a<table><tr><td>b</table></td><td>c</table>')).toBe('<table><tr><td>a<table><tr><td>b</></></></><td>c</></></>');
     expect(html('<b>a</i>b</b></p>c')).toBe('<strong>ab</>c');
@@ -193,6 +206,13 @@ describe('a clinical document', () => {
       '<h2>Medicines</><table><tr><th>Medicine</><th>How</></><tr><td><strong>Ibuprofen</></><td>200 mg & food</></><tr><td c2><em>As needed</></></></>' +
         '<h2>Plan</><div><p>Rest.</><ol><li>Call us (https://portal.example/call)</><li>Return</></><div>An X-ray</>{picture} 5 < 6</><h3>At home</><div><s>Ice</> Heat</>',
     );
+  });
+
+  it('shows a section with no title or no words, and none with neither', () => {
+    const of = (...sections: string[]) => shown(cdaPaper(`<ClinicalDocument><component><structuredBody>${sections.map((s) => `<component><section>${s}</section></component>`).join('')}</structuredBody></component></ClinicalDocument>`).parts);
+    expect(of('<text>Only words</text>', '<title>Only a title</title>', '<text> </text>', '')).toBe('<div>Only words</><h2>Only a title</>');
+    expect(of('<component><section><title>Within</title></section></component>')).toBe('<h3>Within</>');
+    expect(of('<text>a<br>not shown</br>b</text>')).toBe('<div>a<br></>b</>');
   });
 
   it('that only holds a file is that file', () => {
@@ -244,6 +264,9 @@ describe('a paper in RTF', () => {
     expect(of('{\\*\\unknown a}b{\\unknown c}')).toBe('bc');
     expect(of('{\\v a{\\v0 b}c}d')).toBe('bd');
     expect(of('{\\v a\\plain b}')).toBe('b');
+    expect(of("{\\v a\\emdash\\u233?}{\\info\\emdash\\u233?}b")).toBe('b');
+    expect(of('\\u70000?a')).toBe('a');
+    expect(of("{\\fonttbl{\\f1\\fcharset204 A;}{\\f2\\fcharset999 B;}}{\\f1\\'cf}{\\f2\\'e9}{\\f3\\'e9}")).toBe('Пéé');
     expect(rtfText(latin("{\\rtf1\\mac caf\\'8e}")).text).toBe('café');
     expect(rtfText(latin("{\\rtf1\\ansicpg1251\\'cf}")).text).toBe('П');
     expect(rtfText(latin("{\\rtf1\\ansicpg9999 caf\\'e9}")).text).toBe('café');

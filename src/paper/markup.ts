@@ -240,7 +240,7 @@ function htmlParts(children: readonly (Node | string)[]): Part[] {
 }
 
 function element(tag: Tag, children: Part[], from?: Node): Element {
-  const el: Element = { tag, children: tag === 'br' || tag === 'hr' ? [] : children };
+  const el: Element = { tag, children };
   if (from && (tag === 'td' || tag === 'th')) {
     const span = (attr: string, most: number) => {
       const n = Number(from.attrs.get(attr));
@@ -423,6 +423,7 @@ function base64(text: string): Uint8Array | undefined {
 
 const INLINE = new Set<Tag>(['strong', 'em', 'u', 's', 'sub', 'sup', 'br']);
 const isBlock = (p: Part): boolean => typeof p !== 'string' && 'tag' in p && !INLINE.has(p.tag);
+const isBreak = (p: Part | undefined): boolean => p !== undefined && typeof p !== 'string' && 'tag' in p && p.tag === 'br';
 
 /** What may be where: rows in tables, cells in rows, items in lists. Anything else there is shown after it. */
 const WITHIN: Partial<Record<Tag, Tag[]>> = { table: ['tr', 'caption'], tr: ['td', 'th'], ul: ['li'], ol: ['li'], dl: ['dt', 'dd'] };
@@ -468,11 +469,10 @@ function trim(parts: Part[], pre: boolean): Part[] {
     if (typeof p !== 'string') return [p];
     let text = p;
     const [before, after] = [parts[i - 1], parts[i + 1]];
-    if (before === undefined || isBlock(before) || (typeof before !== 'string' && 'tag' in before && before.tag === 'br')) text = text.replace(/^ +/, '');
+    if (before === undefined || isBlock(before) || isBreak(before)) text = text.replace(/^ +/, '');
     if (after === undefined || isBlock(after)) text = text.replace(/ +$/, '');
     return text ? [text] : [];
   });
-  const isBreak = (p: Part | undefined) => p !== undefined && typeof p !== 'string' && 'tag' in p && p.tag === 'br';
   while (isBreak(out[0])) out.shift();
   while (isBreak(out.at(-1))) out.pop();
   return out;
