@@ -48,6 +48,9 @@ describe('what a paper is', () => {
       ['XHTML', latin('<?xml version="1.0"?><!DOCTYPE html><html xmlns="x">'), 'html'],
       ['a clinical document', latin('<?xml version="1.0"?>\n<?xml-stylesheet href="a"?><!-- b -->\n<ClinicalDocument xmlns="urn:hl7-org:v3">'), 'cda'],
       ['one with a prefix', latin('<n1:ClinicalDocument>'), 'cda'],
+      ['one after a comment that holds another’s end', latin('<!-- a --><!-- b -- > <html> --><ClinicalDocument>'), 'cda'],
+      ['a comment with no end', latin('<!-- a --><!-- <html>'), 'other'],
+      ['words before an element', latin('a <html>'), 'other'],
       ['one with a mark', latin('\xef\xbb\xbf<?xml version="1.0"?><ClinicalDocument>'), 'cda'],
       ['one in UTF-16', utf16('<?xml version="1.0"?><ClinicalDocument>', true), 'cda'],
       ['one in UTF-16, big', utf16('<?xml version="1.0"?><ClinicalDocument>', false), 'cda'],
@@ -61,6 +64,8 @@ describe('what a paper is', () => {
     }
     // A portal's own type does not change what the bytes say.
     expect(paperType('text/html', latin('%PDF-1.4')).kind).toBe('pdf');
+    // Markup made to be tried in every way is read in one.
+    for (const x of ['--><!--', '?><?', '><!doctype', ' ', '\n<', 'a.', 'a:']) for (const start of ['<!--', '<?', '<!doctype', '<']) expect(paperType('text/plain', latin(start + x.repeat(2000))).kind, start + x).toBe('text');
   });
 
   it('goes by its type where the bytes do not say', () => {

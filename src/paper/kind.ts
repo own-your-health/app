@@ -28,12 +28,18 @@ function signature(bytes: Uint8Array): PaperType | undefined {
   if (ascii(bytes, 0, 1024 + 5).includes('%PDF-')) return { kind: 'pdf' };
   const start = textStart(bytes);
   if (/^\{\\rtf/.test(start)) return { kind: 'rtf' };
-  // Comments, a declaration and a style sheet's line may come before the root element.
-  const root = /^(?:<\?[^]*?\?>|<!--[^]*?-->|<!doctype[^>]*>|\s)*<(?:([\w.-]+):)?([\w.-]+)/i.exec(start);
+  const root = rootElement(start);
   if (!root) return undefined;
-  if (root[2] === 'ClinicalDocument') return { kind: 'cda' };
-  if (/^(html|head|body)$/i.test(root[2]!) || /^\s*<!doctype html/i.test(start)) return { kind: 'html' };
+  if (root === 'ClinicalDocument') return { kind: 'cda' };
+  if (/^(html|head|body)$/i.test(root) || /^\s*<!doctype html/i.test(start)) return { kind: 'html' };
   return /^\s*<\?xml/i.test(start) ? { kind: 'xml' } : undefined;
+}
+
+/** The name of markup's root element. Comments, a declaration and a style sheet's line may come before it, each taken once and never tried another way. */
+function rootElement(start: string): string | undefined {
+  let from = 0;
+  for (const m of start.matchAll(/<\?[^]*?\?>|<!--[^]*?-->|<!doctype[^>]*>|\s+/giy)) from = m.index + m[0].length;
+  return /^<(?:[\w.-]+:)?([\w.-]+)/.exec(start.slice(from))?.[1];
 }
 
 /** The start of a file as text, without its byte order mark; as UTF-16 where it starts with that mark's first byte, which no markup does. */
