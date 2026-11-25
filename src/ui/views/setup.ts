@@ -140,13 +140,13 @@ export function folderView(drive: Drive, opts: { account?: string; onPick: (f: {
   const look = async () => {
     list.replaceChildren(h('p', { class: 'muted' }, 'Looking for records folders in your Drive, and in what is shared with you…'));
     try {
-      const candidates = await findFolders(drive);
+      const { folders, incomplete } = await findFolders(drive);
       list.replaceChildren(
-        candidates.length
+        folders.length
           ? h(
               'div',
               null,
-              candidates.map((c) =>
+              folders.map((c) =>
                 h(
                   'div',
                   { class: 'row' },
@@ -158,6 +158,7 @@ export function folderView(drive: Drive, opts: { account?: string; onPick: (f: {
                   ),
                 ),
               ),
+              incomplete ? [h('p', { class: 'muted small' }, 'Google Drive did not answer everything it was asked, so there may be more.'), lookAgain()] : null,
             )
           : h(
               'div',

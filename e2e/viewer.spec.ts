@@ -122,11 +122,26 @@ test('a folder no longer shared says which account cannot open it', async ({ pag
 });
 
 test('a search Drive does not answer is tried again', async ({ page }) => {
-  google.searchDown = true;
+  // An owner whose folder the search by name would find is not told there is none.
+  google.searchDown = 'by name';
   await page.goto(`./?client=${CLIENT}`);
   await expect(page.getByText('Drive: Backend Error')).toBeVisible();
-  google.searchDown = false;
+  await expect(page.getByText('No folder with a household.json')).toHaveCount(0);
+  google.searchDown = undefined;
   await page.getByRole('button', { name: 'Look again' }).click();
+  await expect(folderRow(page)).toHaveCount(1);
+  await expect(page.getByText('there may be more')).toHaveCount(0);
+});
+
+test('a list Drive did not all answer for says there may be more', async ({ page }) => {
+  google.viewer = true;
+  google.searchDown = 'by name';
+  await page.goto(`./?client=${CLIENT}`);
+  await expect(folderRow(page)).toHaveCount(1);
+  await expect(page.getByText('Google Drive did not answer everything it was asked, so there may be more.')).toBeVisible();
+  google.searchDown = undefined;
+  await page.getByRole('button', { name: 'Look again' }).click();
+  await expect(page.getByText('there may be more')).toHaveCount(0);
   await expect(folderRow(page)).toHaveCount(1);
 });
 

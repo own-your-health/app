@@ -199,7 +199,8 @@ describe('DriveFolder', () => {
   });
 
   it('says whether the account may add a request, as Drive’s listing has it', async () => {
-    const may = async (capabilities?: DriveFile['capabilities']) => new DriveFolder(driveWith({ ...ROOT, root: ROOT.root!.map((f) => (f.name === '_requests' ? { ...f, capabilities } : f)) }).drive, 'root', 'x').mayRequest();
+    const requests = ROOT.root!.find((f) => f.name === '_requests')!;
+    const may = async (capabilities?: DriveFile['capabilities']) => new DriveFolder(driveWith({ ...ROOT, root: ROOT.root!.map((f) => (f === requests ? { ...f, capabilities } : f)) }, {}, { [requests.id]: { ...requests, ownedByMe: false } }).drive, 'root', 'x').mayRequest();
     expect([await may({ canAddChildren: true }), await may({ canAddChildren: false }), await may()]).toEqual([true, false, undefined]);
     expect(await new DriveFolder(driveWith({ root: [] }).drive, 'root', 'x').mayRequest()).toBeUndefined();
   });
@@ -220,13 +221,16 @@ describe('DriveFolder', () => {
     expect(await new DriveFolder(drive, 'root', 'x').mayRequest()).toBe(false);
     owned = undefined;
     expect(await new DriveFolder(drive, 'root', 'x').mayRequest()).toBe(false);
-    // Not answered, it is asked again.
+    // Not answered, the folder does not say, and it is asked again.
     fails = true;
+    owned = false;
     const later = new DriveFolder(drive, 'root', 'x');
-    expect(await later.mayRequest()).toBe(false);
-    fails = false;
-    owned = true;
     expect(await later.mayRequest()).toBeUndefined();
+    fails = false;
+    expect(await later.mayRequest()).toBe(false);
+    // Settled, a folder read again keeps it.
+    asks = 0;
+    expect([await later.fresh().mayRequest(), await mine.fresh().mayRequest(), asks]).toEqual([false, undefined, 0]);
   });
 
   it('links to Drive’s viewer', async () => {

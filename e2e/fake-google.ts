@@ -71,8 +71,8 @@ export class FakeGoogle {
   throughFolder = false;
   /** It is not shared with the account: Drive says of it what it says of a folder that is not there. */
   unshared = false;
-  /** Drive answers no search. */
-  searchDown = false;
+  /** Drive answers no search, or none by name. */
+  searchDown: 'all' | 'by name' | undefined;
   /** Drive says the account may not add to a folder, though the folder is its own. */
   saysNo = false;
   /** What the sign-in grants, and so what the token may do; a person can untick a scope on Google's screen. */
@@ -268,7 +268,7 @@ export class FakeGoogle {
     const unq = (s: string) => s.replace(/\\(.)/g, '$1');
     let found: Node[];
     let m: RegExpExecArray | null;
-    if (this.searchDown) return driveError(route, 503, 'backendError', 'Backend Error');
+    if (this.searchDown === 'all' || (this.searchDown && /^name = /.test(q))) return driveError(route, 503, 'backendError', 'Backend Error');
     if ((m = new RegExp(`^${str} in parents and trashed = false$`).exec(q))) found = this.childrenOf(unq(m[1]!));
     else if ((m = new RegExp(`^${str} in parents and name = ${str} and trashed = false$`).exec(q))) found = this.childrenOf(unq(m[1]!)).filter((n) => n.name === unq(m![2]!));
     else if ((m = new RegExp(`^name = ${str} and trashed = false$`).exec(q))) found = this.throughFolder ? [] : [...this.nodes.values()].filter((n) => n.name === unq(m![1]!));
