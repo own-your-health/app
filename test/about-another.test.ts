@@ -33,10 +33,12 @@ describe('an index without them', () => {
     expect(lineOf(without)).toEqual(lineOf(claim).map((ids) => ids?.filter((x) => x !== result)));
     expect(left.records.some((r) => r.documents.includes(doc.id))).toBe(false);
     // Nothing else of a record changes, and none gains a list it has not.
-    expect(JSON.stringify(left.records.filter((r) => r.id !== claim.id && !index.records.find((x) => x.id === r.id)!.documents.includes(doc.id)))).toBe(
-      JSON.stringify(index.records.filter((r) => ![claim.id, result].includes(r.id) && !r.documents.includes(doc.id))),
+    expect(left.records.filter((r) => r.id !== claim.id && !index.records.find((x) => x.id === r.id)!.documents.includes(doc.id))).toStrictEqual(
+      index.records.filter((r) => ![claim.id, result].includes(r.id) && !r.documents.includes(doc.id)),
     );
     expect({ ...without, fields: { ...without.fields, results: claim.fields.results, items: claim.fields.items } }).toEqual(claim);
+    const hasList = (r: MedRecord) => (r.fields.items as object[]).map((l) => 'records' in l);
+    expect(hasList(without)).toEqual(hasList(claim));
   });
 
   it('is the index itself where there are none', () => {
