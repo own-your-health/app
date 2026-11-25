@@ -181,9 +181,9 @@ test('what a record says of itself is on its page and its rows: not sure of it, 
 test('why the lists go by each record’s own status is said where medrec’s list does not read, and nowhere else', async ({ page }) => {
   await lay(page, standingCase(ALEX, { schema: 'medrec-standing/v2' }));
   const why = 'medrec’s list of what is current could not be read: it is written by a newer medrec. Update the app. Meanwhile each record’s own status says what is current.';
-  for (const path of ['conditions', 'allergies', 'medicines']) {
+  for (const [path, n] of [['conditions', 1], ['allergies', 1], ['medicines', 2]] as const) {
     await go(page, `#/p/${ALEX}/${path}`);
-    await expect(page.locator('main .card').first().locator('p.muted')).toHaveText(why);
+    await expect(page.locator('main .card').first().locator('p.muted'), path).toHaveText([why, `${n} entered in error, not shown.`]);
   }
   for (const path of [`#/health?who=${ALEX}`, `#/health/doctor?who=${ALEX}`]) {
     await go(page, path);

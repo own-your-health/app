@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { allergyList, conditionList, fold, medicineList, recordsOf, saidOf, underHeadings, type ItemStanding, type ListItem, type MedicineItem } from '../src/model/lists';
+import { allergyList, conditionList, fold, isGiven, medicineList, recordsOf, saidOf, underHeadings, type ItemStanding, type ListItem, type MedicineItem } from '../src/model/lists';
 import { parseIndex } from '../src/model/parse';
 import { parsePrivate } from '../src/model/private';
 import { parseStanding } from '../src/model/standing';
+import { recentVisits } from '../src/model/visits';
 import type { MedRecord, PersonIndex } from '../src/model/types';
 import { careTeam, currentOf, doctorSheet, healthOf, openTo, privateOf } from '../src/next/health';
 import { refillsDue } from '../src/next/needs';
@@ -303,10 +304,38 @@ describe('refills', () => {
 });
 
 describe('without standing.json', () => {
+  it('each list counts those of its kind that are entered in error, of what may be shown', () => {
+    const wrong = (['condition', 'condition', 'allergy', 'medication'] as const).map((kind, i) => ({ ...idx.records[0]!, id: `r_wrong${i}`, kind }));
+    const before = { ...idx, standing: undefined, inError: { records: wrong, documents: [] } };
+    const counts = (may?: (id: string) => boolean) => [conditionList, allergyList, medicineList].map((list) => list(before, DAY, may).notes.inError);
+    expect([counts(), counts((x) => x !== 'r_wrong1'), counts(() => false)]).toEqual([
+      [2, 1, 1],
+      [1, 1, 1],
+      [0, 0, 0],
+    ]);
+  });
+
+  it('a fill and a visit that stand are there, whatever their status says', () => {
+    const fill = idx.records.find((r) => r.id === id('fillafter'))!;
+    const visit = { ...fill, id: 'r_visit', kind: 'encounter' as const, date: '2024-06-01' };
+    const is = (status: string | undefined, stands?: true) => {
+      const as = (r: MedRecord) => ({ ...r, status, ...(stands ? { stands } : {}) });
+      return [isGiven(as(fill)), recentVisits({ ...idx, records: [as(visit)] }, DAY).length];
+    };
+    expect([is('entered-in-error'), is('entered-in-error', true), is('cancelled'), is('planned'), is(undefined), is('completed')]).toEqual([
+      [false, 0],
+      [true, 1],
+      [false, 0],
+      [false, 0],
+      [true, 1],
+      [true, 1],
+    ]);
+  });
+
   it('lists go by each record’s own status, and nothing is said of sources', () => {
     const before = { ...idx, standing: undefined };
     const c = conditionList(before, DAY);
-    expect([c.all, c.notes, c.active.some((i: ListItem) => i.standing)]).toEqual([undefined, undefined, false]);
+    expect([c.all, c.notes, c.active.some((i: ListItem) => i.standing)]).toEqual([undefined, { inError: 0, noProblemList: [] }, false]);
     expect(named(c.ended)).toContain('Sample knot');
     const m = medicineList(before, DAY);
     expect([m.onHold, m.endedByDate, m.all, m.active.some((i: MedicineItem) => i.standing)]).toEqual([[], [], undefined, false]);

@@ -3,21 +3,23 @@
 // total, so it is taken out of the index when that is read and kept aside: a
 // list says how many it leaves out, and one opened by its id says what each
 // source says. views.json names them (`people.<id>.in_error`), for the index
-// it was made from. Where it does not read, or was made from another, the
-// words the index itself keeps say it, by the same rule. With none kept, as in
-// an earlier medrec's index, a record's own status does (records.ts
-// isWithdrawn).
+// it was made from. Where it does not read, or was made from another, what the
+// index itself keeps of each source says it, item by item, by the same rule.
+// The views of an earlier medrec are made of the whole index, so nothing is
+// taken out beside those: a record's own status says it is withdrawn, as
+// before (records.ts isWithdrawn).
 
 import { isObject } from './parse';
 import { atLeast } from './private';
+import type { BillInError } from './bills';
 import type { MedDocument, MedRecord, PersonIndex, Provenance, SourceWord } from './types';
 import type { Md5 } from './views';
 
-/** The items views.json says are entered in error, of an index with this MD5; undefined where it does not say, or not in lists of ids. */
-export function inErrorIds(views: Record<string, unknown> | null, person: string, index: Md5 | undefined): ReadonlySet<string> | undefined {
+/** The items views.json says are entered in error, of an index with this MD5: 'unsaid' by an earlier medrec's, and undefined where it is of no such index, or has no lists of ids. */
+export function inErrorIds(views: Record<string, unknown> | null, person: string, index: Md5 | undefined): ReadonlySet<string> | 'unsaid' | undefined {
   const p = isObject(views?.people) ? views.people[person] : undefined;
   if (!isObject(p) || typeof index !== 'string' || p.index !== index) return undefined;
-  if (!atLeast(typeof views!.medrec === 'string' ? views!.medrec : undefined, [0, 9, 9])) return undefined;
+  if (!atLeast(typeof views!.medrec === 'string' ? views!.medrec : undefined, [0, 9, 9])) return 'unsaid';
   if (p.in_error === undefined) return new Set();
   if (!isObject(p.in_error)) return undefined;
   const lists: unknown[] = Object.values(p.in_error);
@@ -25,39 +27,38 @@ export function inErrorIds(views: Record<string, unknown> | null, person: string
   return ids.every((x) => typeof x === 'string') ? new Set(ids) : undefined;
 }
 
-/** The items every source says it of by the words an index keeps, or undefined where it keeps none. */
-function byWords(index: PersonIndex): ReadonlySet<string> | undefined {
-  if (![...index.records, ...index.documents].some((x) => x.words)) return undefined;
-  return new Set([...index.records.filter((r) => everySays(recordSays(r))), ...index.documents.filter((d) => everySays(documentSays(d)))].map((x) => x.id));
-}
+/** The items every source says it of, by what an index keeps of each. */
+const byWords = (index: PersonIndex): ReadonlySet<string> => new Set([...index.records.filter((r) => everySays(recordSays(r))), ...index.documents.filter((d) => everySays(documentSays(d)))].map((x) => x.id));
 
 /** An index without what is entered in error, as medrec's own views are made of it. */
-export function withoutErrors(index: PersonIndex, listed: ReadonlySet<string> | undefined): PersonIndex {
+export function withoutErrors(index: PersonIndex, listed: ReturnType<typeof inErrorIds>): PersonIndex {
+  if (listed === 'unsaid') return index;
   const ids = listed ?? byWords(index);
-  if (!ids) return index;
   const gone = { records: index.records.filter((r) => ids.has(r.id)), documents: index.documents.filter((d) => ids.has(d.id)) };
   // A statement whose first paper is in error is its next copy's.
   const next = new Map<string, string>();
   const again = (doc: MedDocument): MedDocument => {
-    const d = doc.near_duplicates ? { ...doc, near_duplicates: doc.near_duplicates.filter((n) => !ids.has(n.document)) } : doc;
+    const d = Array.isArray(doc.near_duplicates) ? { ...doc, near_duplicates: doc.near_duplicates.filter((n) => !ids.has(n.document)) } : doc;
     const { same_statement_as: of, ...rest } = d;
     if (!of || !ids.has(of)) return d;
     const first = next.get(of);
     if (!first) next.set(of, d.id);
     return first ? { ...rest, same_statement_as: first } : rest;
   };
+  const documents = index.documents.filter((d) => !ids.has(d.id)).map(again);
+  // One that some source stands by stands, whichever source's status it has. With no list to say so, its sources' words do.
+  const stands = (r: MedRecord) => saysError(r) && (!!listed || !!r.words?.length);
   return {
     ...index,
-    // One that some source stands by stands, whichever source's status it has.
-    records: index.records.filter((r) => !ids.has(r.id)).map((r) => (saysError(r) ? { ...r, stands: true as const } : r)),
-    documents: index.documents.filter((d) => !ids.has(d.id)).map(again),
+    records: index.records.filter((r) => !ids.has(r.id)).map((r) => (stands(r) ? { ...r, stands: true as const } : r)),
+    documents,
     studies: index.studies.map((s) => (s.report && ids.has(s.report) ? { ...s, report: undefined, reportInError: true as const } : s)),
-    inError: gone,
+    inError: { ...gone, carried: new Set(next.keys()) },
   };
 }
 
 /** A code as medrec compares them. */
-const code = (s: string | undefined) => (s ?? '').trim().toLowerCase().replace(/[\s_]+/g, '-');
+const code = (s: unknown) => (typeof s === 'string' ? s.trim().toLowerCase().replace(/[\s_]+/g, '-') : '');
 export const saysError = (w: { status?: string; verification?: string }): boolean => code(w.status) === 'entered-in-error' || code(w.verification) === 'entered-in-error';
 
 /** What one of an item's sources says of it. */
@@ -117,4 +118,12 @@ export function errorsIndex(index: PersonIndex): PersonIndex {
 export function errorsOf(index: PersonIndex, fits: { record?: (r: MedRecord) => boolean; document?: (d: MedDocument) => boolean }): number {
   const { records, documents } = index.inError ?? { records: [], documents: [] };
   return (fits.record ? records.filter(fits.record).length : 0) + (fits.document ? documents.filter(fits.document).length : 0);
+}
+
+/** A person's bills entered in error: medrec's, and where its list of bills is not here, those none of whose papers stands. */
+export function billsInError(index: PersonIndex): BillInError[] {
+  if (index.bills) return index.bills.errors;
+  const { documents = [], carried } = index.inError ?? {};
+  const here = new Set([...documents, ...index.documents].map((d) => d.id));
+  return documents.filter((d) => d.doc_type === 'bill' && !(d.same_statement_as && here.has(d.same_statement_as)) && !carried?.has(d.id)).map((d) => ({ document: d.id, marked: 0 }));
 }

@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { Store } from '../src/data/store';
-import { documentSays, errorsIndex, errorsOf, inErrorIds, isInError, recordSays, saysError, withoutErrors } from '../src/model/inError';
+import { billsInError, documentSays, errorsIndex, errorsOf, inErrorIds, isInError, recordSays, saysError, withoutErrors } from '../src/model/inError';
 import { billList } from '../src/model/billing';
+import { costLines, errorLines } from '../src/model/costs';
 import { latestResults } from '../src/model/overview';
 import { vaccineList } from '../src/model/lists';
 import { parseIndex } from '../src/model/parse';
-import { HELD, studyPrivate } from '../src/model/private';
+import { HELD, itemPrivate, paperPrivate, recordPrivate, studyPrivate } from '../src/model/private';
 import { findItem, isWithdrawn } from '../src/model/records';
 import { find } from '../src/model/search';
-import type { ImagingStudy, Person, PersonIndex } from '../src/model/types';
+import type { Household, ImagingStudy, MedRecord, PersonIndex } from '../src/model/types';
 import { differs, billErrorsText, keptText } from '../src/ui/inError';
 import { parseBills } from '../src/model/bills';
 import { parseMedrecEvents, type MedrecEvents } from '../src/model/events';
@@ -16,7 +17,7 @@ import { errorsLeft } from '../src/next/calendar';
 import { personEvents } from '../src/next/load';
 import { eventInError } from '../src/next/medrecEvents';
 import { demo } from './demo-data';
-import { demoFolderWith, demoJson, fixture } from './helpers';
+import { demoFolderWith, demoJson, errorsFolder, fixture } from './helpers';
 import { ROBIN, SAM } from './sample';
 
 // What is entered in error, over medrec's own fixture for it
@@ -43,7 +44,7 @@ describe('what views.json says is entered in error', () => {
     for (const in_error of [['r_1'], 'r_1', null, { result: 'r_1' }, { result: ['r_1'], claim: { r_2: {} } }, { result: ['r_1', 7] }]) expect(inErrorIds(views({ in_error }), 'p_a', MD5), JSON.stringify(in_error)).toBeUndefined();
   });
 
-  it('is not known of another index, an earlier medrec’s views, or none', () => {
+  it('is not known of another index, or of none', () => {
     const says = { in_error: { result: ['r_1'] } };
     expect([
       inErrorIds(views(says), 'p_a', MD5.replace('0', '1')),
@@ -51,10 +52,11 @@ describe('what views.json says is entered in error', () => {
       inErrorIds(views(says), 'p_a', null),
       inErrorIds(views({ ...says, index: null }), 'p_a', null),
       inErrorIds(views(says), 'p_b', MD5),
-      inErrorIds(views(says, '0.9.8'), 'p_a', MD5),
-      inErrorIds(views(says, null), 'p_a', MD5),
+      inErrorIds(views(says, '0.9.8'), 'p_a', MD5.replace('0', '1')),
       inErrorIds(null, 'p_a', MD5),
-    ]).toEqual(Array(8).fill(undefined));
+    ]).toEqual(Array(7).fill(undefined));
+    // Those of an earlier medrec are made of the whole index.
+    expect([inErrorIds(views(says, '0.9.8'), 'p_a', MD5), inErrorIds(views(says, null), 'p_a', MD5)]).toEqual(['unsaid', 'unsaid']);
   });
 });
 
@@ -68,18 +70,26 @@ describe('an index without it', () => {
     expect(errorsOf(index, { record: () => true, document: () => true })).toBe(0);
   });
 
-  it('goes by the words the index keeps, where no list is of it: the same items, by the same rule', () => {
+  it('goes by what the index keeps of each source, where no list is of it: the same items, by the same rule', () => {
     expect(withoutErrors(index, undefined)).toEqual(left);
     // A source that says otherwise, or whose word is not kept, stands by it.
-    const changed = { ...index, records: index.records.map((r) => (r.id === id('r_levelerror') ? { ...r, provenance: [...r.provenance, { ...r.provenance[0]!, raw_path: 'other' }] } : r)) };
-    const some = withoutErrors(changed, undefined);
-    expect([isInError(some, id('r_levelerror')), isInError(some, id('r_doseerror')), isWithdrawn(some.records.find((r) => r.id === id('r_levelerror'))!)]).toEqual([false, true, false]);
+    const wrong = record('r_levelerror');
+    const twice = { ...wrong, provenance: [...wrong.provenance, { ...wrong.provenance[0]!, raw_path: 'other' }] };
+    const of = (r: MedRecord, listed?: ReadonlySet<string>) => withoutErrors({ ...index, records: [r, record('r_doseerror')] }, listed);
+    const worded = of({ ...twice, words: [{ raw_path: twice.provenance[0]!.raw_path, status: 'entered-in-error' }] });
+    expect([worded.records.map((r) => [r.id, isWithdrawn(r)]), isInError(worded, id('r_doseerror'))]).toEqual([[[wrong.id, false]], true]);
+    // With the word of none it stands by a list alone: an earlier medrec's index keeps none of any, and its own status withdraws it.
+    expect([of(twice), of(twice, new Set([id('r_doseerror')]))].map((x) => x.records.map(isWithdrawn))).toEqual([[true], [false]]);
   });
 
-  it('is the index itself where nothing says, and has nothing aside where none is', () => {
-    const bare = { ...index, records: index.records.map((r) => ({ ...r, words: undefined })), documents: index.documents.map((d) => ({ ...d, words: undefined })) };
-    expect(withoutErrors(bare, undefined)).toBe(bare);
-    expect(withoutErrors(index, new Set()).inError).toEqual({ records: [], documents: [] });
+  it('is made item by item, whatever is kept of the others', () => {
+    const bare = { ...index, records: index.records.filter((r) => !r.words), documents: [] };
+    expect(withoutErrors(bare, undefined).inError!.records.map((r) => r.id)).toEqual(WRONG.filter((x) => x.startsWith('r_')));
+  });
+
+  it('is the index itself beside an earlier medrec’s views, and has nothing aside where none is', () => {
+    expect(withoutErrors(index, 'unsaid')).toBe(index);
+    expect(withoutErrors(index, new Set()).inError).toEqual({ records: [], documents: [], carried: new Set() });
   });
 
   it('finds one by its id, as entered in error', () => {
@@ -100,6 +110,24 @@ describe('an index without it', () => {
     expect(of(['d_first'])).toEqual({ d_second: undefined, d_third: 'd_second', d_other: undefined, d_copy: 'd_other' });
     expect(of(['d_second'])).toEqual({ d_first: undefined, d_third: 'd_first', d_other: undefined, d_copy: 'd_other' });
     expect(billList(withoutErrors(copies, new Set(['d_first']))).map((b) => b.doc.id).sort()).toEqual(['d_other', 'd_second']);
+    // Without medrec's list of bills, one is in error where none of its papers stands.
+    const wrong = (gone: string[], more: Partial<PersonIndex> = {}) => billsInError({ ...withoutErrors(copies, new Set(gone)), ...more });
+    const unmarked = (...ids: string[]) => ids.map((x) => ({ document: x, marked: 0 }));
+    expect([wrong(['d_first']), wrong(['d_second']), wrong(['d_first', 'd_second']), wrong(['d_first', 'd_second', 'd_third']), wrong(['d_other', 'd_copy', 'd_second'])]).toEqual([[], [], [], unmarked('d_first'), unmarked('d_other')]);
+    const letter = { ...copies, documents: copies.documents.map((d) => ({ ...d, doc_type: d.id === 'd_other' ? 'other' : d.doc_type, ...(d.id === 'd_first' ? { same_statement_as: 'd_gone' } : {}) })) };
+    expect(billsInError(withoutErrors(letter, new Set(letter.documents.map((d) => d.id))))).toEqual(unmarked('d_first'));
+    expect([wrong(['d_first', 'd_second', 'd_third'], { bills: { errors: unmarked('d_9') } as PersonIndex['bills'] }), billsInError(copies)]).toEqual([unmarked('d_9'), []]);
+  });
+
+  it('keeps what reads of an index that does not all read', () => {
+    const odd = { ...raw, records: [{ ...record('r_leveldiffers'), words: 'none' }, { ...record('r_filldiffers'), words: [null, 'x', { raw_path: 7, status: 8, verification: null, read: 'x' }, ...record('r_filldiffers').words!] }, { ...record('r_levelerror'), status: 7 }], documents: [{ ...paper('d_eyebill'), also_from: {}, words: {}, near_duplicates: 'none' }, { ...paper('d_skinbill'), also_from: [null, {}, { source: 'x', method: 'y' }, ...paper('d_eyebill').also_from!] }] };
+    const read = parseIndex(odd, raw.person);
+    expect([read.records.map((r) => r.words), read.documents.map((d) => d.also_from), read.documents.map((d) => d.words)]).toEqual([
+      [undefined, [{ read: 'x' }, ...record('r_filldiffers').words!], undefined],
+      [undefined, paper('d_eyebill').also_from],
+      [undefined, paper('d_skinbill').words],
+    ]);
+    expect(withoutErrors(read, undefined).inError!.records).toEqual([]);
   });
 
   it('is no paper’s likely duplicate', () => {
@@ -189,6 +217,12 @@ describe('what each source says', () => {
     const of = (stem: string) => (stem.startsWith('r_') ? differs({ type: 'record', record: record(stem) }) : differs({ type: 'document', document: paper(stem) }));
     expect(['r_leveldiffers', 'r_filldiffers', 'd_eyebill', 'r_levelerror', 'd_skinbill', 'r_skinvisit'].map(of)).toEqual([true, true, true, false, false, false]);
     expect(differs({ type: 'study', study: {} as ImagingStudy })).toBe(false);
+    // One an earlier medrec's status withdraws does not stay, and one medrec says stands does.
+    const { words, ...none } = { ...record('r_leveldiffers'), status: 'entered-in-error', fields_from: undefined };
+    const as = (more: Partial<MedRecord>) => differs({ type: 'record', record: { ...none, ...more } });
+    expect([as({}), as({ words }), as({ stands: true }), as({ words, status: 'final' }), as({ words, stands: true })]).toEqual([false, false, true, true, true]);
+    // Nor is one of an earlier medrec's that says it by its verification.
+    expect([undefined, words].map((w) => as({ words: w, status: 'active', fields: { verification_status: 'entered-in-error' } }))).toEqual([false, true]);
   });
 
   it('is in error by the status or the verification, however it is written', () => {
@@ -247,14 +281,19 @@ describe('medrec’s views of what is entered in error', () => {
   });
 
   it('are counted on everyone’s calendar by those that are not private, and on one person’s all of them', () => {
-    const people = [{ id: 'p_a' }, { id: 'p_b' }] as Person[];
-    const of = (events: MedrecEvents, privacy: PersonIndex['privacy']): PersonIndex => ({ ...left, events, privacy });
+    const household = { people: [{ id: 'p_a' }, { id: 'p_b' }], sources: [], organizations: [] } as unknown as Household;
+    const wrong = { ...record('r_levelerror'), id: 'r_1' };
+    const of = (events: MedrecEvents, privacy: PersonIndex['privacy']): PersonIndex => ({ ...left, events, privacy, inError: { records: [wrong], documents: [] } });
     const known = (...ids: string[]): PersonIndex['privacy'] => ({ kind: 'known', records: new Map(), documents: new Map(), events: new Map(ids.map((x) => [x, 'household'])), studies: new Map(), unreported: new Set(), ties: true });
     const two = events({ events_in_error: [{ ...event, id: 'e_2' }, { ...event, id: 'e_3' }] });
-    const at = (a: PersonIndex | undefined, who?: string, b?: PersonIndex) => errorsLeft(people, (x) => (x === 'p_a' ? a : b), who);
+    const at = (a: PersonIndex | undefined, who?: string, b?: PersonIndex) => errorsLeft(household, (x) => (x === 'p_a' ? a : b), who);
     expect([at(of(two, known())), at(of(two, known('e_3'))), at(of(two, known('e_3')), 'p_a'), at(of(two, known()), 'p_b'), at(of(two, known()), undefined, of(two, known('e_2')))]).toEqual([2, 1, 2, 0, 3]);
     // Of someone whose private items are not known, none on a shared screen.
     expect([at(of(two, { kind: 'held', why: 'none', text: '' })), at(of(two, undefined)), at(undefined)]).toEqual([0, 0, 0]);
+    // Nor one nothing of which is here to judge it by, and a fill is judged by its records too.
+    const fill = events({ events_in_error: [{ ...event, id: 'e_2', kind: 'fill' }, { ...event, id: 'e_3', members: [{ record: 'r_9' }] }] });
+    const wrongItem = { ...known(), records: new Map([['r_1', 'household']]) } as PersonIndex['privacy'];
+    expect([at(of(fill, known())), at(of(fill, wrongItem)), at(of(two, wrongItem)), at(of(fill, wrongItem), 'p_a')]).toEqual([1, 0, 2, 2]);
   });
 });
 
@@ -283,9 +322,72 @@ describe('a folder', () => {
   it('is read without what its views say is in error, and only where they are of the index it has', async () => {
     const wrong = { result: [result] };
     const read = await load((v, p) => Object.assign(v, { medrec: '0.9.9' }) && Object.assign(p, { in_error: wrong }));
-    expect([isInError(read.index(ROBIN)!, result), read.index(SAM)!.inError]).toEqual([true, { records: [], documents: [] }]);
+    expect([isInError(read.index(ROBIN)!, result), read.index(SAM)!.inError]).toEqual([true, { records: [], documents: [], carried: new Set() }]);
     const behind = await load((v, p) => Object.assign(v, { medrec: '0.9.9' }) && Object.assign(p, { in_error: wrong, index: '0'.repeat(32) }));
-    expect([behind.index(ROBIN)!.inError, findItem(behind.index(ROBIN)!, result)?.type]).toEqual([undefined, 'record']);
+    expect([isInError(behind.index(ROBIN)!, result), findItem(behind.index(ROBIN)!, result)?.type]).toEqual([false, 'record']);
     expect((await load(() => undefined)).index(ROBIN)!.inError).toBeUndefined();
+  });
+});
+
+// medrec's own views of its fixture, as 0.9.9 writes them. One claim is marked
+// private, and its bill, so the visit they would make is.
+describe('medrec’s own views of the fixture', () => {
+  const opened = async (change?: (files: Record<string, string>) => void) => {
+    const s = new Store(errorsFolder(change));
+    await s.load();
+    return { store: s, idx: s.index(raw.person)! };
+  };
+  const ids = (xs: { id: string }[]) => xs.map((x) => x.id).sort();
+
+  it('take out the same items as its rule does', async () => {
+    const { idx } = await opened();
+    expect(ids([...idx.inError!.records, ...idx.inError!.documents])).toEqual([...WRONG].sort());
+    expect([idx.events!.errors.length, idx.events!.notApplied.get(id('d_letter')), idx.bills!.errors]).toEqual([
+      4,
+      1,
+      [
+        { document: id('d_footbill'), marked: 0 },
+        { document: id('d_skinbill'), marked: 1 },
+      ],
+    ]);
+    expect([keptText(idx, id('d_letter')), keptText(idx, id('d_skinbill'))]).toEqual(['Kept and not applied: 1 decision about its visit.', 'Kept and not applied: 1 payment on it.']);
+    const its = personEvents(idx, (await opened()).store.household, '2026-11-22');
+    expect(its.map((e) => [e.start, e.inError])).toEqual([
+      ['2024-03-09', undefined],
+      ['2024-03-05', 2],
+    ]);
+  });
+
+  it('say which of them are private, so no shared screen counts those', async () => {
+    const { store, idx } = await opened();
+    expect([idx.privacy!.kind, recordPrivate(idx, id('r_footvisit')), paperPrivate(idx, id('d_footbill')), paperPrivate(idx, id('d_skinbill'))]).toEqual(['known', 'household', 'household', undefined]);
+    const open = { record: (r: MedRecord) => !recordPrivate(idx, r.id), document: (d: { id: string }) => !paperPrivate(idx, d.id) };
+    expect([errorsOf(idx, open), errorsLeft(store.household, (x) => store.index(x), undefined), errorsLeft(store.household, (x) => store.index(x), raw.person)]).toEqual([6, 3, 4]);
+    expect(billsInError(idx).filter((b) => !paperPrivate(idx, b.document)).map((b) => b.document)).toEqual([id('d_skinbill')]);
+    const wrong = { person: raw.person, index: errorsIndex(idx), text: null };
+    const hits = (q: string) => [wrong, { ...wrong, leave: (kind: string, x: string) => !!itemPrivate(wrong.index, kind, x) }].map((s) => ids(find([s], q).hits));
+    expect([hits('foot'), hits('eye')]).toEqual([
+      [[id('d_footbill'), id('r_footvisit')].sort(), []],
+      [[id('r_eyevisit')], [id('r_eyevisit')]],
+    ]);
+    const claims = (xs: { claim: string }[]) => [...new Set(xs.map((l) => l.claim))].sort();
+    expect([claims(errorLines(raw.person, idx)), claims(costLines(raw.person, idx)), errorLines(raw.person, { ...idx, inError: undefined })]).toEqual([[id('r_eyevisit'), id('r_footvisit')], [id('r_skinvisit')], []]);
+    // In the plan year the claims that stand give, not their own.
+    const year = (rs: MedRecord[], start: string) => rs.map((r) => ({ ...r, fields: { ...r.fields, benefit_period: { start: `2023-${start}`, end: `2024-${start}` } } }));
+    const planned = { ...idx, records: year(idx.records, '07-01'), inError: { ...idx.inError!, records: year(idx.inError!.records, '10-01') } };
+    expect(new Set(errorLines(raw.person, planned).map((l) => l.planYear.start))).toEqual(new Set(['2023-07-01']));
+    expect(errorLines(raw.person, idx, { planStart: '05-01' }).map((l) => [l.claim, l.planYear.start]).sort()).toEqual([[id('r_eyevisit'), '2023-05-01'], [id('r_footvisit'), '2024-05-01']]);
+  });
+
+  it('are not there yet: the index itself says it, and the app makes the visits and bills of what is left', async () => {
+    const { store, idx } = await opened((files) => (files['views/views.json'] = files['views/views.json']!.replaceAll(/"index":"[0-9a-f]{32}"/g, `"index":"${'0'.repeat(32)}"`)));
+    expect([ids([...idx.inError!.records, ...idx.inError!.documents]), idx.events, idx.bills, store.billsNotes.has(raw.person)]).toEqual([[...WRONG].sort(), undefined, undefined, true]);
+    expect(billsInError(idx)).toEqual([{ document: id('d_skinbill'), marked: 0 }, { document: id('d_footbill'), marked: 0 }]);
+    expect(errorsLeft(store.household, (x) => store.index(x), undefined)).toBe(0);
+  });
+
+  it('are an earlier medrec’s, made of the whole index: it is read whole', async () => {
+    const { idx } = await opened((files) => (files['views/views.json'] = files['views/views.json']!.replace('"medrec":"0.9.9"', '"medrec":"0.9.8"')));
+    expect([idx.inError, idx.records.length, idx.documents.length, !!idx.events, !!idx.bills]).toEqual([undefined, index.records.length, index.documents.length, true, true]);
   });
 });

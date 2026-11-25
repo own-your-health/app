@@ -267,7 +267,7 @@ export function calendarView(ctx: Ctx, route: CalendarRoute): HTMLElement {
             toggle(!!hidden),
           )
         : null;
-    const list = () => [...listView(r, events, left), r.before ? null : errorsNote(errorsLeft(people, (id) => store.index(id), who))];
+    const list = () => [...listView(r, events, left), r.before ? null : errorsNote(errorsLeft(store.household, (id) => store.index(id), who))];
     body.replaceChildren(...[privacy, ...(r.view === 'list' ? list() : monthView(r, events, laneOf, people, today, left))].filter((x): x is HTMLElement => !!x));
     if (focusToggle) body.querySelector<HTMLButtonElement>('.cal-private button')?.focus();
   };

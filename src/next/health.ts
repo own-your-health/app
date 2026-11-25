@@ -63,8 +63,8 @@ export interface CurrentItems {
   /** Medicines on hold, and those ended by their date, where the sources' words tell. */
   onHold: MedicineItem[];
   endedByDate: MedicineItem[];
-  /** What each list says beside its rows, by the sources' words. */
-  notes: { conditions?: ListNotes; medicines?: ListNotes; allergies?: ListNotes };
+  /** What each list says beside its rows. */
+  notes: { conditions: ListNotes; medicines: ListNotes; allergies: ListNotes };
 }
 
 export interface HealthItems extends CurrentItems {

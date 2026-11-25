@@ -105,8 +105,7 @@ export function standingNote(ctx: Ctx, idx: PersonIndex): HTMLElement | null {
 }
 
 /** What a list says beside its rows. */
-export function listNotes(notes: ListNotes | undefined, where?: string): HTMLElement[] {
-  if (!notes) return [];
+export function listNotes(notes: ListNotes, where?: string): HTMLElement[] {
   const lines = [...notes.noProblemList.map((n) => noProblemListText(n, where)), ...(notes.inError ? [inErrorText(notes.inError)] : [])];
   return lines.map((x) => h('p', { class: 'small muted' }, `${x}.`));
 }

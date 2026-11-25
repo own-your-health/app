@@ -57,8 +57,72 @@ test('is in no list, which says how many it leaves out', async ({ page }) => {
     await expect(main(page).locator('.row', { hasText: '19.28' })).toHaveCount(1);
     await expect(main(page).locator('.row', { hasText: '19.28' })).not.toContainText('Matches the claim');
   }
+  // The claims of a person's costs, and of everyone's, none of which is private.
+  for (const who of [`&only=person:${ROBIN}`, '']) {
+    await go(page, `#/costs?period=all${who}`);
+    await expect(card(page, '')).toContainText([ONE]);
+  }
+  await go(page, '#/costs?period=all&only=category:vaccine');
+  await expect(main(page)).toContainText('Costs');
+  await expect(main(page)).not.toContainText('entered in error');
+  // A test's own page, of those of that test.
+  await go(page, `#/p/${ROBIN}/results`);
+  await main(page).locator('.row', { hasText: 'Potassium' }).getByRole('link').click();
+  await expect(main(page).getByRole('heading', { name: 'Potassium', level: 1 })).toBeVisible();
+  await expect(main(page)).toContainText(ONE);
+});
+
+test('a search announces how many it leaves out, with how many it found', async ({ page }) => {
+  const said = main(page).locator('[aria-live=polite]', { hasText: /match(es)?\./ });
   await go(page, `#/search?q=potassium&who=${ROBIN}`);
-  await expect(main(page)).toContainText(/\d entered in error, not shown\./);
+  await expect(said).toHaveText(/^\d+ match(es)?\. \d entered in error, not shown\.$/);
+  await go(page, `#/search?q=magnesium&who=${ROBIN}`);
+  await expect(said).toHaveText(/^\d+ match(es)?\.$/);
+});
+
+test('a bill with a payment marked is named, since money may be owed back, and opens as no bill', async ({ page }) => {
+  await go(page, '#/money/bills');
+  const link = main(page).getByRole('link', { name: 'Robin, Statement from Example Lab, Oct 28, 2026' });
+  await expect(link).toHaveCount(1);
+  await expect(main(page).getByRole('link', { name: /^Sam, / })).toHaveCount(0);
+  await link.click();
+  await expect(card(page, 'Entered in error')).toContainText('Kept and not applied: 1 payment on it.');
+  // One that copies a bill that stands has none of that one's payments.
+  const copy = rewritten(
+    enteredInError(),
+    ({ name, index, bills }) => {
+      if (name !== 'Robin Example') return;
+      Object.assign(index.documents.find((d) => d.id === BILL)!, { same_statement_as: DIFFERS });
+      Object.assign(bills.bills[DIFFERS]!, { paid: [{ from: 'household', id: 'o_cccccccccccccccccccc', on: '2026-11-04', amount: '53.68', currency: 'USD' }], paid_total: '53.68', left: '0.00', settled: true });
+    },
+    '0.9.9',
+  );
+  await lay(page, copy);
+  await page.reload();
+  await expect(card(page, 'Entered in error')).toBeVisible();
+  await expect(main(page)).toContainText('Same statement as');
+  await expect(main(page)).not.toContainText('Left to pay');
+  await go(page, `#/p/${ROBIN}/r/${DIFFERS}`);
+  await expect(main(page)).toContainText('Left to pay');
+});
+
+test('without medrec’s views, what each source says is kept in the index, and the lists count by it', async ({ page }) => {
+  await lay(page, { ...enteredInError(), 'views/views.json': '{' });
+  for (const [path, says] of [
+    [`#/p/${ROBIN}/results`, ONE],
+    [`#/p/${ROBIN}/medicines`, ONE],
+    [`#/papers?who=${ROBIN}`, ONE],
+    [`#/money/bills?who=${ROBIN}`, '1 bill entered in error, not shown.'],
+  ] as const) {
+    await go(page, path);
+    await expect(main(page), path).toContainText(says);
+  }
+  // Nothing says which are private, so everyone's count none.
+  for (const path of ['#/papers', '#/money/bills', '#/costs?period=all', '#/calendar?view=list']) {
+    await go(page, path);
+    await expect(main(page).locator('h1'), path).toBeVisible();
+    await expect(main(page), path).not.toContainText('entered in error');
+  }
 });
 
 test('one opened by its id says what each source says of it, and what the household decided', async ({ page }) => {
@@ -112,6 +176,34 @@ test('what it says fits a narrow phone, with a long word in each name', async ({
     await go(page, path);
     await page.reload();
     await expect(main(page)).toContainText(/entered in error/i);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), path).toBe(0);
+  }
+});
+
+test('a row with several things beside it keeps its name’s width on a narrow phone', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 780 });
+  // Private and paid, and its sources differ on it.
+  const all = rewritten(
+    enteredInError(),
+    ({ name, bills, list }) => {
+      if (name !== 'Robin Example') return;
+      list.documents[DIFFERS] = { area: 'household', from: 'household' };
+      Object.assign(bills.bills[DIFFERS]!, { paid: [{ from: 'household', id: 'o_cccccccccccccccccccc', on: '2026-11-04', amount: '53.68', currency: 'USD' }], paid_total: '53.68', left: '0.00', settled: true });
+    },
+    '0.9.9',
+  );
+  await lay(page, all);
+  for (const [path, beside] of [
+    [`#/papers?who=${ROBIN}`, ['Sources differ', 'Private']],
+    [`#/money/bills?who=${ROBIN}`, ['Sources differ', 'Private', '$53.68']],
+  ] as const) {
+    await go(page, path);
+    const row = main(page).locator('.row', { has: page.locator('.row-aside', { hasText: 'Sources differ' }) });
+    await expect(row.locator('.row-aside > *'), path).toHaveText([...beside]);
+    expect((await row.locator('.row-body').boundingBox())!.width, path).toBeGreaterThan(90);
+    // One under the other.
+    const tops = await row.locator('.row-aside > *').evaluateAll((xs) => xs.map((x) => x.getBoundingClientRect()).map((b) => [b.top, b.bottom]));
+    expect(tops.slice(1).every((b, i) => b[0]! > tops[i]![1]!), path).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), path).toBe(0);
   }
 });

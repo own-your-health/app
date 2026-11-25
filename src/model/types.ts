@@ -235,7 +235,7 @@ export interface PersonIndex {
   studies: ImagingStudy[];
   imports: ImportRun[];
   /** What medrec says is entered in error, which the lists above do not have (src/model/inError.ts); absent where it does not say. */
-  inError?: { records: MedRecord[]; documents: MedDocument[] };
+  inError?: { records: MedRecord[]; documents: MedDocument[]; /** The first papers of statements a copy stands for. */ carried?: ReadonlySet<string> };
   /** How many of the chart's items are about somebody else, and not here (src/model/aboutAnother.ts). */
   about?: number;
   /** Why there may be others here. */

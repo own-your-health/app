@@ -155,6 +155,9 @@ function grouped(records: MedRecord[]): [string, MedRecord[]][] {
   return [...groups];
 }
 
+/** What a list made without standing.json says beside its items. */
+const errorsIn = (index: PersonIndex, kind: StandingKind, may: May): ListNotes => ({ inError: (index.inError?.records ?? []).filter((r) => r.kind === kind && may(r.id)).length, noProblemList: [] });
+
 const newestFirst = (a: ListItem, b: ListItem) => (b.latest.date ?? '').localeCompare(a.latest.date ?? '') || a.name.localeCompare(b.name);
 
 // ---- Conditions ----
@@ -184,7 +187,7 @@ export interface ConditionLists {
   other: ConditionItem[];
   /** By standing.json alone: every record by itself, and what is said beside the list. */
   all?: ConditionItem[];
-  notes?: ListNotes;
+  notes: ListNotes;
 }
 
 /**
@@ -218,7 +221,7 @@ export function conditionList(index: PersonIndex, day: string, may: May = everyt
     .map(condition)
     .sort(newestFirst);
   const ended = (i: ConditionItem) => !i.refuted && ENDED.has(i.latest.status ?? '');
-  return { active: all.filter((i) => i.isActive), ended: all.filter(ended), other: all.filter((i) => !i.isActive && !ended(i)) };
+  return { active: all.filter((i) => i.isActive), ended: all.filter(ended), other: all.filter((i) => !i.isActive && !ended(i)), notes: errorsIn(index, 'condition', may) };
 }
 
 // ---- Allergies ----
@@ -241,7 +244,7 @@ export interface AllergyLists {
   ended: AllergyItem[];
   /** By standing.json alone: every record by itself, and what is said beside the list. */
   all?: AllergyItem[];
-  notes?: ListNotes;
+  notes: ListNotes;
 }
 
 /** Current and ended. Without standing.json, current is anything not inactive or resolved, a missing status included. */
@@ -256,7 +259,7 @@ export function allergyList(index: PersonIndex, day: string, may: May = everythi
     .map(allergy)
     .sort(newestFirst);
   const isEnded = (i: AllergyItem) => i.latest.status === 'inactive' || i.latest.status === 'resolved';
-  return { current: all.filter((i) => !isEnded(i)), ended: all.filter(isEnded) };
+  return { current: all.filter((i) => !isEnded(i)), ended: all.filter(isEnded), notes: errorsIn(index, 'allergy', may) };
 }
 
 // ---- Medicines ----
@@ -282,14 +285,14 @@ export interface MedicineLists {
   endedByDate: MedicineItem[];
   /** By standing.json alone: each prescription by itself, then the medicines known by their fills, and what is said beside the list. */
   all?: MedicineItem[];
-  notes?: ListNotes;
+  notes: ListNotes;
 }
 
 const KNOWN: Record<string, string> = { request: 'prescribed', statement: 'reported', dispense: 'filled' };
 
 export const isFill = (r: MedRecord): boolean => r.kind === 'medication' && r.fields.source === 'dispense';
-/** A fill that was given, as medrec counts them. */
-export const isGiven = (r: MedRecord) => !r.status || r.status === 'completed' || r.status === 'unknown';
+/** A fill that was given, as medrec counts them. One that stands whatever its status says counts as one with none. */
+export const isGiven = (r: MedRecord) => !r.status || r.status === 'completed' || r.status === 'unknown' || !!r.stands;
 
 /** Letters with no accent to take off that medrec folds too. */
 const LETTERS: Record<string, string> = { đ: 'd', ø: 'o', ł: 'l', ı: 'i', ß: 'ss', æ: 'ae' };
@@ -342,7 +345,7 @@ export function medicineList(index: PersonIndex, day: string, may: May = everyth
   const all = shownOf(groups, may)
     .map((g) => medicine(g, g.key))
     .sort(byDateThenName);
-  return { active: all.filter((m) => m.active), past: all.filter((m) => !m.active), onHold: [], endedByDate: [] };
+  return { active: all.filter((m) => m.active), past: all.filter((m) => !m.active), onHold: [], endedByDate: [], notes: errorsIn(index, 'medication', may) };
 }
 
 function prescriptions(index: PersonIndex, s: ByStanding, may: May): MedicineLists {

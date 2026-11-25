@@ -19,8 +19,9 @@ Google Drive. It reads the records folder that
   recent), their full lists of results against their reference range,
   medicines, conditions, allergies, immunizations and imaging, and a sheet to
   hand a doctor;
-- **Papers**: the folder's papers, but those about another person, each with
-  the visit it belongs to, for everyone or one person, by kind of paper;
+- **Papers**: the folder's papers, but those about another person or entered
+  in error, each with the visit it belongs to, for everyone or one person, by
+  kind of paper;
 - one search over everyone's records, documents and imaging, and the text
   medrec extracted from documents, from the search button in the bar;
 - for any record, the raw FHIR the source served, where it came from, and the
@@ -599,10 +600,14 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   that give each reading rule a case (`test/fixtures/rules/`, from
   `scripts/sample/rules.mjs`), made by `node scripts/rule-fixtures.mjs`. They
   delete nothing: medrec works in a new temporary folder, and a file no longer
-  part of a case is named for a person to remove. CI runs all four scripts.
+  part of a case is named for a person to remove. CI runs all five scripts.
   `test/fixtures/standing/medrec/` is medrec's own fixture for readers of
-  `standing.json`, as `tests/fixtures/standing/` of its 0.9.9 has it: no script
-  here writes it, and it is copied again when medrec's changes.
+  `standing.json`, as `tests/fixtures/standing/` of its 0.9.9 has it, and
+  `test/fixtures/errors/medrec/` is its fixture of what is entered in error
+  (`tests/fixtures/errors/`, with the `household.json` of the other): no script
+  here writes them, and they are copied again when medrec's change.
+  `test/fixtures/errors/views/` is what medrec 0.9.9 writes of the second, by
+  `node scripts/error-fixtures.mjs` with `MEDREC` set to that release.
   Written by hand are only Drive's answers, the app's own requests, and files
   medrec never writes: malformed ones, and ones of a later format.
 - The PNG icons in `public/` (for the manifest and the iPhone Home Screen) are
@@ -886,21 +891,26 @@ dropped from the address.
   does (`in_error` in `views.json`, `src/model/inError.ts`), and it is taken
   out of the index when that is read: it is in no list, search, visit, bill,
   total or doctor's sheet. A statement whose first paper is in error is its
-  next copy's, and a study has no report of one. A list says "1 entered in
-  error, not shown", on everyone's view of those that are not private, and
-  Bills says so of bills, with how many have a payment the household marked,
-  since money may be owed back. One opened by its id says that it is entered in
+  next copy's, and a study has no report of one. Results, a test's page,
+  conditions, allergies, medicines, immunizations, Papers, the claims under
+  Costs, the calendar's list, a visit and search say how many they leave out
+  ("1 entered in error, not shown"), on everyone's view of those that are not
+  private: medrec's private list names those too. Bills says so of bills, with
+  how many have a payment the household marked, and which, since money may be
+  owed back. One opened by its id says that it is entered in
   error, what each source says and when that was read, and what the household
   decided of it, which medrec keeps and does not apply (`not_applied` in
   `events.json` and `bills.json`). So does a visit that is none without it. One
   that some source still stands by stays, with **Sources differ** and what each
   says. A source whose word is not kept is not heard, and does not say so.
-  Where `views.json` does not read, or was made from another index, the words
-  the index itself keeps of each source say it, by the same rule. With an
-  earlier medrec's index, which keeps none, a record's own status alone does.
+  Where `views.json` does not read, or was made from another index, what the
+  index itself keeps of each source says it, by the same rule. The views of an
+  earlier medrec are made of the whole index, so beside those nothing is taken
+  out: as before, a record whose own status says so is treated as withdrawn,
+  and none of the counts and cards above is of it.
 - **Papers** (`#/papers`, a tab, also from each
   person's Health): every paper in the Drive folder but those about another
-  person (above), newest first by year, each with the visit it belongs to as a
+  person or entered in error (both above), newest first by year, each with the visit it belongs to as a
   link. A paper is with a visit when the visit holds it, when a record of
   the visit links it (an explanation of benefits names its claim), or when
   it is the receipt for a bill the visit holds (or the only one it can be

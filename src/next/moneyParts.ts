@@ -3,12 +3,13 @@
 // the heading with its Whose choices, and the money formats.
 
 import { receiptDay } from '../model/billing';
+import { billsInError } from '../model/inError';
 import { knownArea, paperPrivate } from '../model/private';
-import { formatMoney, fromCents } from '../model/records';
+import { documentTitle, formatMoney, fromCents } from '../model/records';
 import type { Person } from '../model/types';
 import { chip, link, type Ctx } from '../ui/components';
 import { h, icon } from '../ui/dom';
-import { localDay } from '../ui/format';
+import { dateText, localDay } from '../ui/format';
 import { billErrorsText } from '../ui/inError';
 import { href, type Route } from '../ui/router';
 import { householdEvents, sharedEvents, type PersonEvent } from './calendar';
@@ -82,11 +83,15 @@ export function billNotes(ctx: Ctx, who: string | undefined): HTMLElement[] {
 
 /** The bills entered in error that a page of bills may count: all of a person's own, and of everyone's those that are not private. */
 export function billErrors(ctx: Ctx, who: string | undefined): HTMLElement | null {
-  const errors = ctx.store.household.people.flatMap((p) => {
-    const idx = who && p.id !== who ? undefined : ctx.store.index(p.id);
-    return (idx?.bills?.errors ?? []).filter((b) => who || !paperPrivate(idx!, b.document));
+  const errors = ctx.store.household.people.flatMap((person) => {
+    const idx = who && person.id !== who ? undefined : ctx.store.index(person.id);
+    return (idx ? billsInError(idx) : []).filter((b) => who || !paperPrivate(idx!, b.document)).map((b) => ({ ...b, person, doc: idx!.inError?.documents.find((d) => d.id === b.document) }));
   });
-  return errors.length ? h('p', { class: 'small muted' }, `${billErrorsText(errors.length, errors.filter((b) => b.marked).length)}.`) : null;
+  if (!errors.length) return null;
+  // Money may be owed back on one that a payment is marked on, so it is named.
+  const marked = errors.filter((b) => b.marked);
+  const links = marked.flatMap(({ doc, person }) => (doc ? [link({ name: 'item', person: person.id, id: doc.id }, [who ? null : called(person), documentTitle(doc), dateText(doc.date)].filter(Boolean).join(', '))] : []));
+  return h('div', { class: 'small muted' }, h('p', null, `${billErrorsText(errors.length, marked.length)}.`), links.length ? h('ul', { class: 'said-list' }, links.map((x) => h('li', null, x))) : null);
 }
 
 /** A row or card for one bill, so Worth a call can find the one a row named. */

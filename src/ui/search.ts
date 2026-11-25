@@ -25,7 +25,7 @@ import type { Person, PersonText } from '../model/types';
 import { button, card, empty, filterChips, row, type Ctx } from './components';
 import { h, type Child } from './dom';
 import { count, dateText } from './format';
-import { errorsNote } from './inError';
+import { inErrorText } from './standing';
 import { href, type Route } from './router';
 import { called } from '../model/people';
 import { heldNotes } from '../next/shared';
@@ -194,21 +194,19 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
   /** Imaging no report judges, counted for everyone and never for what was searched for. */
   const imagingLeft = (n: number) => (n ? ` So ${n === 1 ? 'is' : 'are'} ${count(n, 'imaging study', 'imaging studies')} with no report in these records: nothing says whether ${n === 1 ? 'it is' : 'they are'} private.` : '');
   let errors: { own: string[]; shared: number } = { own: [], shared: 0 };
-  const leftNotes = () => [
-    errorsNote(many && who === 'all' ? errors.shared : errors.own.filter((p) => who === 'all' || p === who).length),
-    ...(many && who === 'all'
+  const leftNotes = () =>
+    many && who === 'all'
       ? [
           h('p', { class: 'small muted' }, `Private items are left off everyone’s results.${imagingLeft(unjudged())} Choose a person to search theirs.`),
           ...heldNotes(ctx, 'everyone’s results'),
         ]
-      : []),
-  ];
+      : [];
 
   /** `found` searches everyone's shared items; `own` searches private ones too, for the person chosen. */
   const draw = (found: Found, own: Found, untexted: string[], keep?: 'who' | 'kind') => {
     const { hits, terms: ts } = who === 'all' ? found : own;
     say(who === 'all' ? found : own);
-    left.replaceChildren(...leftNotes().filter((x): x is HTMLElement => !!x));
+    left.replaceChildren(...leftNotes());
     const whos = many ? people.map((p) => p.id) : [...new Set(hits.map((x) => x.person))];
     const groups = entriesByKind(hits.filter((x) => who === 'all' || x.person === who));
     // Kinds come from the chosen person's hits, so a kind they have none of falls back to All.
@@ -235,7 +233,8 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
     const missing = untexted.length ? ` Document text is not searched for ${untexted.join(' and ')}: there is no text.json in ${untexted.length === 1 ? 'their folder' : 'their folders'}.` : '';
     const shown = shownGroups.reduce((n, g) => n + g.entries.length, 0);
     const total = count(all, 'match', 'matches');
-    status.textContent = `${shown === all ? total : `${shown} of ${total}`}.${missing}`;
+    const wrong = many && who === 'all' ? errors.shared : errors.own.filter((p) => who === 'all' || p === who).length;
+    status.textContent = `${shown === all ? total : `${shown} of ${total}`}.${wrong ? ` ${inErrorText(wrong)}.` : ''}${missing}`;
 
     // Headings and rows in order; a page is PAGE rows, with the headings above them.
     type Line = { head: string; level: 'kind' | 'panel' } | { entry: Entry };

@@ -7,6 +7,7 @@ import { HELD } from '../model/private';
 import type { Household, Person, PersonIndex } from '../model/types';
 import { eventMoney, eventPrivate, sharedForm, type CareEvent, type EventMoney } from './event';
 import { personEvents } from './load';
+import { eventInError } from './medrecEvents';
 
 export interface PersonEvent {
   person: Person;
@@ -54,10 +55,14 @@ export function shown(events: PersonEvent[], who: string | undefined, showPrivat
 }
 
 /** How many events a view leaves out for being entered in error: one person's, or everyone's that are not private. */
-export function errorsLeft(people: Person[], index: (id: string) => PersonIndex | undefined, who: string | undefined): number {
-  return people.reduce((n, p) => {
+export function errorsLeft(household: Household, index: (id: string) => PersonIndex | undefined, who: string | undefined): number {
+  const open = (idx: PersonIndex, id: string) => {
+    const e = eventInError(idx, household, id);
+    return !!e && !eventPrivate(e, idx);
+  };
+  return household.people.reduce((n, p) => {
     const idx = who && p.id !== who ? undefined : index(p.id);
-    return n + (idx?.events?.errors ?? []).filter((e) => who || (idx!.privacy?.kind === 'known' && !idx!.privacy.events.has(e.id))).length;
+    return n + (idx?.events?.errors ?? []).filter((e) => who || open(idx!, e.id)).length;
   }, 0);
 }
 

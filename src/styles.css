@@ -636,10 +636,6 @@ a.row-main:hover .row-title {
   display: none;
 }
 
-.row-aside > .chip + .num {
-  margin-left: 8px;
-}
-
 .row-extra {
   margin-top: 6px;
   display: flex;

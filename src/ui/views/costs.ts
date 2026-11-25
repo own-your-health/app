@@ -15,6 +15,7 @@ import {
   codeLines,
   comparableCodes,
   DIMENSION_LABELS,
+  errorLines,
   householdLines,
   inPeriod,
   keyOf,
@@ -33,6 +34,7 @@ import {
   type PlanYear,
 } from '../../model/costs';
 import { bornClause, coverageChangesIn } from '../../model/coverage';
+import { recordPrivate } from '../../model/private';
 import { AMOUNT_LABELS, formatMoney, fromCents } from '../../model/records';
 import { getPlanStart } from '../../settings';
 import type { MedRecord } from '../../model/types';
@@ -41,6 +43,7 @@ import { button, card, empty, link, row, type Ctx } from '../components';
 import { h } from '../dom';
 import { count, dateText, localDay } from '../format';
 import { heldNotes, privateLine, quietClaims } from '../../next/shared';
+import { errorsNote } from '../inError';
 import { href, type CostBy, type CostFilter, type CostFilterBy, type Route } from '../router';
 import { called } from '../../model/people';
 
@@ -49,6 +52,8 @@ type CostsRoute = Extract<Route, { name: 'costs' }>;
 const money = (c: number | undefined) => (c === undefined ? '' : (formatMoney(fromCents(c)) ?? ''));
 const meta = (...parts: (string | null | undefined | false)[]) => parts.filter(Boolean).join(' · ');
 const itemRoute = (person: string, id: string): Route => ({ name: 'item', person, id });
+
+const claimsIn = (lines: CostLine[]): number => new Set(lines.map((l) => l.claim)).size;
 
 /** How many claims show before "Show all". */
 const CLAIMS_SHOWN = 25;
@@ -172,18 +177,25 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
   const store = ctx.store;
   const people = store.household.people;
   const names = new Map(people.map((p) => [p.id, called(p)]));
+  const opts = { planStart: getPlanStart() ?? undefined };
   const whole = householdLines(
     people.map((p) => ({ id: p.id, index: store.index(p.id) })),
-    { planStart: getPlanStart() ?? undefined },
+    opts,
   );
   const records = new Map<string, MedRecord>();
   for (const p of people) for (const r of store.index(p.id)?.records ?? []) if (r.kind === 'claim') records.set(r.id, r);
   const today = localDay(ctx.now());
   // One person's costs count their private claims; everyone's leave every private one out.
-  const own = (route.only ?? []).some((f) => f.by === 'person');
+  const only = route.only ?? [];
+  const own = only.some((f) => f.by === 'person');
   const quiet = quietClaims(store, today);
   const shared = whole.filter((l) => !quiet.has(l.claim));
   const all = own ? whole : shared;
+  // Claims entered in error are in none of it: the list of claims counts those its choices would have.
+  const wrong = people.flatMap((p) => {
+    const idx = store.index(p.id);
+    return idx ? errorLines(p.id, idx, opts).filter((l) => own || !recordPrivate(idx, l.claim)) : [];
+  });
   const leftLine = privateLine('Private claims are left out here, totals too. ');
   leftLine.append(link({ name: 'money' }, 'Money’s totals'), ' count every claim. Choose a person to see theirs.');
   const leftOut = own ? [] : [leftLine, ...heldNotes(ctx, 'this shared view, its totals too')];
@@ -196,14 +208,13 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
     h('p', { class: 'muted small' }, 'What each visit, test and fill cost, from the claims the health plans sent: what was billed, what the plan allowed and paid, and your share.'),
   );
   if (!all.length) {
-    page.append(head, card({}, empty(`No claims ${own ? 'in these records' : 'listed here'} yet. Once medrec imports a health plan’s claims, what each visit cost shows here.`)), ...leftOut);
+    page.append(head, card({}, empty(`No claims ${own ? 'in these records' : 'listed here'} yet. Once medrec imports a health plan’s claims, what each visit cost shows here.`)), errorsNote(claimsIn(wrong.filter((l) => only.every((f) => matches(l, f, names))))) ?? '', ...leftOut);
     return page;
   }
 
   // The route's choices, kept as the page is used; a choice replaces the address, a drill-down adds to history.
   let period = route.period;
   let by: CostBy | undefined = route.by;
-  const only = route.only ?? [];
   const body = h('div', { class: 'stack' });
   // A choice redraws the page below it; this says what the page now shows. It is never redrawn itself.
   const said = h('p', { class: 'sr-only', role: 'status', 'aria-live': 'polite' });
@@ -496,6 +507,7 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
       { title: count(claims.length, 'claim') },
       h('p', { class: 'small muted' }, 'Newest first, each with what it says you owe and the lines it paid for. A line the plan left out of its totals, one it replaced with its own or wrote off, is listed, not owed. Amounts a claim gave only in total are a line of their own, “Not split by line”. The CSV download has a row for each line.'),
       list,
+      errorsNote(claimsIn(wrong.filter((l) => only.every((f) => matches(l, f, names)) && (!chosen || inPeriod(l, chosen.id, today))))),
     );
 
     body.replaceChildren(controls, summary, balanceCard ?? '', monthCard ?? '', breakdownCard ?? '', priceCard ?? '', claimsCard);
