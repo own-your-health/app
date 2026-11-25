@@ -22,6 +22,9 @@ export interface MedrecMember {
   provider?: string;
 }
 
+const PLACE_FROM = ['portal', 'claims', 'alias', 'linked'] as const;
+type PlaceFrom = (typeof PLACE_FROM)[number];
+
 export interface MedrecEvent {
   id: string;
   kind: string;
@@ -30,8 +33,8 @@ export interface MedrecEvent {
   title: string;
   what?: string;
   place?: string;
-  /** Whether the place is a practice a paper says its clinician works at (N5), or that of another person's event it is linked to (X1). */
-  placeFrom?: 'alias' | 'linked';
+  /** Where the place is from: its portal, its claims, a paper that says its clinician works there (N5), or another person's stay it is linked to (X1). Absent for one the app does not know. */
+  placeFrom?: PlaceFrom;
   /** Other people's stays that it was during, of a newborn's events (X1): the only links the app reads. */
   bornDuring: { event: string; person: string }[];
   confidence: Sureness;
@@ -60,6 +63,10 @@ export interface MedrecEvents {
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const text = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined);
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const placeFrom = (v: unknown): { placeFrom?: PlaceFrom } => {
+  const known = PLACE_FROM.find((x) => x === v);
+  return known ? { placeFrom: known } : {};
+};
 const sureness = (v: unknown): Sureness => (v === 'sure' || v === 'likely' ? v : 'unsure');
 
 /**
@@ -101,7 +108,7 @@ export function parseMedrecEvents(raw: unknown, person: string): MedrecEvents {
       end: String(e.end),
       title: text(e.title) ?? '',
       ...(text(e.what) ? { what: text(e.what) } : {}),
-      ...(text(e.place) ? { place: text(e.place), ...(e.place_from === 'alias' || e.place_from === 'linked' ? { placeFrom: e.place_from } : {}) } : {}),
+      ...(text(e.place) ? { place: text(e.place), ...placeFrom(e.place_from) } : {}),
       bornDuring: (Array.isArray(e.links) ? e.links : []).filter(isObj).flatMap((x) => (x.relation === 'born_during' && text(x.event) && text(x.person) ? [{ event: text(x.event)!, person: text(x.person)! }] : [])),
       confidence: sureness(e.confidence),
       members,

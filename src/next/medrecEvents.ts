@@ -68,7 +68,7 @@ function placeHolds(place: string, e: CareEvent, household: Household, person: s
  * theirs, so it is left out on this person's pages too, and nothing takes its
  * place. medrec takes it from the claim of a stay this event was during, and
  * does not say which, so any of several is enough. A stay whose own place is
- * not from its portal or claims has no such claim, and is not told.
+ * not from its portal or claims has no such claim to tell by.
  */
 function placePrivate(m: MedrecEvent, file: MedrecEvents): boolean {
   if (m.placeFrom !== 'linked') return false;
@@ -77,7 +77,8 @@ function placePrivate(m: MedrecEvent, file: MedrecEvents): boolean {
     m.bornDuring.some((l) => {
       const other = file.others.get(l.person);
       const stay = other?.events?.events.find((e) => e.id === l.event);
-      if (!other || !stay || stay.placeFrom || other.privacy?.kind !== 'known' || other.privacy.events.has(stay.id)) return true;
+      if (!other || !stay || other.privacy?.kind !== 'known' || other.privacy.events.has(stay.id)) return true;
+      if (stay.placeFrom !== 'portal' && stay.placeFrom !== 'claims') return true;
       return stay.members.some((x) => (x.record ? recordPrivate(other, x.record) : !x.person && paperPrivate(other, x.document!)));
     })
   );

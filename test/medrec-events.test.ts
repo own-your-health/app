@@ -164,6 +164,12 @@ describe('when the store uses medrec’s events', () => {
     expect([odd.viewsError, [...odd.eventsNotes]]).toEqual([null, [[sam, { kind: 'unreadable', text: 'medrec’s grouping of these visits could not be read: views/views.json does not say which files it was made from. The app groups them itself.' }]]]);
   });
 
+  it('keeps where a place is from when it knows it', () => {
+    const from = (place_from: unknown, place: unknown = 'Example Clinic') => parseMedrecEvents({ schema: 'medrec-events/v1', person: ODD, events: [{ id: 'e_one', start: '2026-05-20', end: '2026-05-20', members: [], place, place_from }] }, ODD).events[0]!.placeFrom;
+    expect(['portal', 'claims', 'alias', 'linked', 'later', undefined, 7].map((x) => from(x))).toEqual(['portal', 'claims', 'alias', 'linked', undefined, undefined, undefined]);
+    expect(from('portal', null)).toBeUndefined();
+  });
+
   it('knows the indexes of the other people its events are linked to (X1), and no others', async () => {
     const [drew, robin] = [id('Drew Example'), id('Robin Example')];
     const store = await loadWith((path, text) => {

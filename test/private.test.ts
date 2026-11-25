@@ -5,7 +5,7 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { Store } from '../src/data/store';
-import { parseMedrecEvents, type MedrecRule } from '../src/model/events';
+import { parseMedrecEvents, type MedrecEvent, type MedrecRule } from '../src/model/events';
 import { FolderError } from '../src/model/parse';
 import { anyPrivate, atLeast, documentPrivate, HELD, isHeld, itemPrivate, paperPrivate, parsePrivate, recordPrivate, studyPrivate, takenOut, whyHeld } from '../src/model/private';
 import { documentTitle } from '../src/model/records';
@@ -813,7 +813,7 @@ describe('another person’s paper in a visit (X2), and a visit linked to anothe
   it('a place that is a linked visit’s is left out, on its own person’s pages too, where that visit is private or not known not to be', () => {
     const AT = 'Placeholder Hospital';
     const at = personEvents(index(SAMPLE, drew), SAMPLE.household, TODAY).find((e) => e.visits.some((v) => v.record.fields.location))!.id;
-    const place = (change: (parent: PersonIndex, stay: { id: string; members: { record?: string; document?: string; person?: string }[]; placeFrom?: 'alias' | 'linked' }, e: { links?: object[]; place_from: string }) => void, from = 'linked') => {
+    const place = (change: (parent: PersonIndex, stay: { id: string; members: { record?: string; document?: string; person?: string }[]; placeFrom?: MedrecEvent['placeFrom'] }, e: { links?: object[]; place_from: string }) => void, from = 'linked') => {
       const [parent, child] = [structuredClone(index(SAMPLE, robin)), structuredClone(index(SAMPLE, drew))];
       const stay = parent.events!.events.find((e) => e.members.some((m) => m.kind === 'claim'))!;
       const raw = demoJson<{ events: { id: string; members: { kind: string }[] }[] }>(eventsPath(drew));
@@ -846,8 +846,9 @@ describe('another person’s paper in a visit (X2), and a visit linked to anothe
     expect(place((p) => delete p.events)).toBe(none);
     expect(place((_, __, e) => delete e.links)).toBe(none);
     expect(place((_, s, e) => (e.links = [{ event: s.id, person: 'p_aaaaaaaaaaaaaaaaaaaa', relation: 'born_during' }]))).toBe(none);
-    // A stay whose own place is a paper's, or another's, has no claim that gives it.
-    expect([place((_, s) => (s.placeFrom = 'alias')), place((_, s) => (s.placeFrom = 'linked'))]).toEqual([none, none]);
+    // Only a stay whose own place is its portal's or its claims' has a claim that gives it.
+    expect([place((_, s) => (s.placeFrom = 'portal')), place((_, s) => (s.placeFrom = 'claims'))]).toEqual([AT, AT]);
+    expect([place((_, s) => (s.placeFrom = 'alias')), place((_, s) => (s.placeFrom = 'linked')), place((_, s) => delete s.placeFrom)]).toEqual([none, none, none]);
     // Any of several, as which gave it is not said.
     const another = (relation: string) =>
       place((p, s, e) => {
