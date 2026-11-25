@@ -434,6 +434,7 @@ export class Store {
       [this.folder.md5(`${p.folder}/overrides.json`), view.overrides],
     ];
     if (view.marks !== undefined) read.push([this.folder.md5(`${p.folder}/marks.json`), view.marks]);
+    if (view.providerState !== undefined) read.push([this.folder.md5(`${p.folder}/provider-state.json`), view.providerState]);
     for (const [id, l] of view.linked) {
       const f = folderOf(id)!;
       read.push([this.folder.md5(`${f}/index.json`), l.index], [this.folder.md5(`${f}/text.json`), l.text]);

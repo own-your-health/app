@@ -708,7 +708,7 @@ dropped from the address.
   grouping use the source's words alone. A title only private items' codes
   have (`private_codes`) is given to a private record alone. The file is used
   only when the MD5s in `views/views.json` are the folder's, the person's
-  `marks.json` too, as for private items. Without one, or for a code it does
+  `marks.json` and `provider-state.json` too, as for private items. Without one, or for a code it does
   not name, the source's words show, and nothing says so. While a file
   `views/views.json` lists is not there yet, is stale or could not be read,
   the records are read again with the same waits as after a Refresh; one the
@@ -778,11 +778,13 @@ page count. Papers took the place of each person's list of documents. A
 
   **Without a current list, everything of that person's stays off.** The
   list is used only when the MD5s in `views/views.json` are the folder's:
-  the same files as for events, and the person's `marks.json`
-  (`src/model/private.ts`, `src/data/store.ts`). A list that is missing,
-  behind, still arriving, unreadable or from a newer medrec, or one that
-  says the household's marks could not be read (`marks_unreadable`), holds
-  back all of that person's items from every shared screen, which says so in
+  the same files as for events, and the person's `marks.json` and
+  `provider-state.json` (`src/model/private.ts`, `src/data/store.ts`). A list
+  that is missing, behind, still arriving, unreadable or from a newer medrec,
+  or one that says the household's marks could not be read
+  (`marks_unreadable`) or that medrec has not looked up every provider
+  (`labels_unreadable`, medrec 0.9.7 and later), holds back all of that
+  person's items from every shared screen, which says so in
   a line with the reason. So does a `views.json` in a layout newer than the
   app knows, which says to update the app, or one that does not read. Their
   own pages still show everything. Settings gives each person's reason. While

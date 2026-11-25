@@ -14,7 +14,7 @@ import { FolderError, isObject } from './parse';
 import type { ImagingStudy, PersonIndex } from './types';
 
 /** Why a person's items are held back from shared screens: no current list says which are private. */
-export type HeldWhy = 'none' | 'behind' | 'arriving' | 'unchecked' | 'newer_format' | 'unreadable' | 'marks';
+export type HeldWhy = 'none' | 'behind' | 'arriving' | 'unchecked' | 'newer_format' | 'unreadable' | 'marks' | 'labels';
 
 /** What medrec says of one person: each private item's area by id, or why that is not known. */
 export type Privacy =
@@ -67,6 +67,8 @@ export function parsePrivate(raw: unknown, person: string, medrec?: string): Pri
   if (!isObject(raw) || typeof raw.schema !== 'string' || !raw.schema.startsWith('medrec-private/')) throw new FolderError('malformed', 'it is not medrec’s list of private items.');
   if (raw.schema !== 'medrec-private/v1') throw new FolderError('newer_format', 'it is written by a newer medrec. Update the app.');
   if (raw.person !== person) throw new FolderError('malformed', 'it is another person’s.');
+  // A provider's specialty can make an item private, and medrec has not looked every one up (0.9.7 and later). `marks_unreadable` is true with it.
+  if (raw.labels_unreadable !== undefined && raw.labels_unreadable !== false) return held('labels', 'medrec has not looked up every provider in these records, so it is not known which of them make an item private.');
   // The household's marks did not read: any item may be one it marked private.
   if (raw.marks_unreadable !== undefined && raw.marks_unreadable !== false) return held('marks', 'The household’s own private marks could not be read.');
   const unreported = raw.unreported_studies ?? [];

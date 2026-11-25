@@ -21,6 +21,8 @@ export interface PersonView {
   overrides: Md5;
   /** marks.json's MD5, for the views made from it as well: every one but events.json. */
   marks?: Md5;
+  /** provider-state.json's MD5, for the views made from it as well: private.json and code-names.json. */
+  providerState?: Md5;
   linked: Map<string, { index: Md5; text: Md5 }>;
 }
 
@@ -57,6 +59,10 @@ export function viewOf(views: Record<string, unknown> | null, person: string, fi
   const marks = md5Of(p.marks);
   const fromMarks = file !== 'events.json';
   if (fromMarks && marks === undefined) throw bad();
+  const fromLabels = file === 'private.json' || file === 'code-names.json';
+  // Absent when there is none, as in every views.json before medrec 0.9.7.
+  const providerState = md5Of(p.provider_state ?? null);
+  if (fromLabels && providerState === undefined) throw bad();
   const linked = new Map<string, { index: Md5; text: Md5 }>();
   for (const [id, l] of Object.entries(p.linked)) {
     const [li, lt] = isObject(l) ? [md5Of(l.index), md5Of(l.text)] : [undefined, undefined];
@@ -64,5 +70,5 @@ export function viewOf(views: Record<string, unknown> | null, person: string, fi
     linked.set(id, { index: li, text: lt });
   }
   const name = `${file.slice(0, -'.json'.length)}.${md5.slice(0, 12)}.json`;
-  return { name, md5, household, index, text: txt, overrides, ...(fromMarks ? { marks: marks! } : {}), linked };
+  return { name, md5, household, index, text: txt, overrides, ...(fromMarks ? { marks: marks! } : {}), ...(fromLabels ? { providerState: providerState! } : {}), linked };
 }
