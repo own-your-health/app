@@ -261,6 +261,8 @@ test('a bill says nothing of a private claim, or of a visit by one, on the scree
   // Their own pages have it.
   await go(page, `#/money/calls?who=${SAM}`);
   await expect(page.locator('main')).toContainText('$50.70');
+  await go(page, `#/money/bills?who=${SAM}`);
+  await expect(bill('Check before paying').locator('.row-meta').first()).toContainText('Lab tests, Jul 9, 2026');
 });
 
 /** The folder with Sam's one private claim from a plan no other claim names, on this day, and with every claim of Alex's private. */
