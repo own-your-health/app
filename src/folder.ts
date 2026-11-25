@@ -32,6 +32,8 @@ export interface RecordsFolder {
   deleteRequest(name: string): Promise<void>;
   /** Forgets what was read under a path, so the next read goes to Drive. */
   forget(prefix: string): void;
+  /** The same folder with nothing read of it yet, sharing nothing with what is being read of this one. */
+  fresh(): RecordsFolder;
 }
 
 export async function readJson(folder: RecordsFolder, path: string): Promise<unknown | null> {
@@ -168,6 +170,10 @@ export class DriveFolder implements RecordsFolder {
     for (const k of [...this.listings.keys()]) if (under(k)) this.listings.delete(k);
     for (const k of [...this.served]) if (under(k)) this.served.delete(k);
     for (const k of [...this.reread.keys()]) if (under(k)) this.reread.delete(k);
+  }
+
+  fresh(): DriveFolder {
+    return new DriveFolder(this.drive, this.id, this.name);
   }
 }
 
@@ -325,4 +331,9 @@ export class DemoFolder implements RecordsFolder {
   }
 
   forget(): void {}
+
+  /** Nothing of it is remembered but what was written to it. */
+  fresh(): DemoFolder {
+    return this;
+  }
 }

@@ -99,7 +99,7 @@ export class Store {
   /** Handled requests of the app's own it has tried to remove once. */
   private tidied = new Set<string>();
 
-  constructor(readonly folder: RecordsFolder) {}
+  constructor(public folder: RecordsFolder) {}
 
   /** Reads household.json, every person's index, the status and the requests. */
   async load(): Promise<void> {
@@ -132,8 +132,8 @@ export class Store {
 
   private async readAgain(run: number): Promise<void> {
     const upTo = this.finished;
-    this.folder.forget('');
-    const next = new Store(this.folder);
+    // Its own view of the folder: a call that hangs, or a read taken over, touches nothing others use.
+    const next = new Store(this.folder.fresh());
     await next.loadHousehold();
     await next.loadRecords();
     // Another read took over from this one, which had stalled.
@@ -144,6 +144,7 @@ export class Store {
       if (error && this.indexes.get(p.id)?.rev) throw new Error(`${p.name}’s records could not be read: ${error}`);
     }
     if (this.hasViews && !next.hasViews && !next.viewsError) throw new Error('medrec’s views are not in the folder.');
+    this.folder = next.folder;
     this.household = next.household;
     this.indexes = next.indexes;
     this.absent = next.absent;

@@ -328,11 +328,8 @@ export class App {
   private async pollOnce(front = false): Promise<void> {
     const { store, rereads } = this;
     if (!store || !rereads || (!this.demo && !this.token)) return;
-    try {
-      await store.loadRefreshState();
-    } catch {
-      return;
-    }
+    // With Drive out, a read that is due fails as well: it counts as a try, and is said.
+    await store.loadRefreshState().catch(() => undefined);
     this.drawIfNew(store);
     await rereads.look(front);
     this.drawIfNew(store);

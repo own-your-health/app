@@ -61,7 +61,7 @@ export class FakeGoogle {
   driveCalls = 0;
   /** The path of every file whose content the app read, in order. */
   readonly reads: string[] = [];
-  /** A file whose content Drive fails to give, as it does now and then. */
+  /** A file whose content Drive fails to give, as it does now and then; `*` while it answers nothing at all. */
   failing: string | null = null;
   /** What the sign-in grants, and so what the token may do; a person can untick a scope on Google's screen. */
   granted = [READ, WRITE];
@@ -214,6 +214,7 @@ export class FakeGoogle {
     const req = route.request();
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors() });
     this.driveCalls++;
+    if (this.failing === '*') return driveError(route, 503, 'backendError', 'Backend Error');
     if (req.headers()['authorization'] !== `Bearer ${TOKEN}`) return driveError(route, 401, 'authError', 'Invalid Credentials');
     const url = new URL(req.url());
     const path = url.pathname.replace(/^\/(upload\/)?drive\/v3\//, '');

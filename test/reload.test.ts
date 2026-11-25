@@ -8,23 +8,18 @@ import { heldPeople } from '../src/next/shared';
 import { personNamed } from './demo-data';
 import { demoFolderWith, demoJson, privateCase, type Overlay } from './helpers';
 
-/** A folder that moves on to the next of `states` each time all that was read of it is forgotten, and stays at the last, as Drive's does as medrec writes. */
+/** A folder that is the next of `states` each time it is read anew, and stays the last, as Drive's does as medrec writes. */
 function changing(...states: DemoFolder[]): { folder: DemoFolder; reads: () => number } {
-  let at = 0;
   let reads = 0;
-  const folder = new Proxy(states[0]!, {
-    get: (_, key) => {
-      if (key === 'forget')
-        return (prefix: string) => {
-          if (prefix !== '') return;
-          reads += 1;
-          at = Math.min(at + 1, states.length - 1);
-        };
-      const value: unknown = Reflect.get(states[at]!, key, states[at]!);
-      return typeof value === 'function' ? value.bind(states[at]!) : value;
-    },
-  });
-  return { folder, reads: () => reads };
+  const view = (state: DemoFolder): DemoFolder =>
+    new Proxy(state, {
+      get: (t, key) => {
+        if (key === 'fresh') return () => view(states[Math.min((reads += 1), states.length - 1)]!);
+        const value: unknown = Reflect.get(t, key, t);
+        return typeof value === 'function' ? value.bind(t) : value;
+      },
+    });
+  return { folder: view(states[0]!), reads: () => reads };
 }
 
 async function opened(...states: Overlay[]) {
@@ -115,38 +110,41 @@ describe('reading the records again', () => {
     expect(reads()).toBe(1);
   });
 
-  it('takes over from a read that has stalled, which then changes nothing', async () => {
-    const { folder } = changing(demoFolderWith({}), demoFolderWith({}));
+  it('takes over from a read that has stalled, which then changes nothing and shares nothing', async () => {
     let release = () => {};
     const stall = new Promise<void>((r) => (release = r));
-    let stalls = false;
-    const store = new Store(
-      new Proxy(folder, {
-        get: (t, key) => {
-          const value: unknown = Reflect.get(t, key, t);
-          if (key === 'readText' && stalls) return async (p: string) => (await stall, folder.readText(p));
-          return value;
-        },
-      }),
-    );
+    const stalled = demoFolderWith({});
+    const slow = new Proxy(stalled, { get: (t, key) => (key === 'readText' ? async (p: string) => (await stall, t.readText(p)) : (Reflect.get(t, key, t) as unknown)) });
+    const { folder, reads } = changing(demoFolderWith({}), slow, demoFolderWith({}));
+    const store = new Store(folder);
     await store.load();
     vi.useFakeTimers({ toFake: ['Date'] });
     try {
-      stalls = true;
       const first = store.reload();
       expect(store.reload()).toBe(first);
-      stalls = false;
       vi.setSystemTime(Date.now() + 121_000);
       const second = store.reload();
       expect(second).not.toBe(first);
       await second;
-      const { indexes } = store;
+      const { indexes, folder: read } = store;
+      expect(read).not.toBe(folder);
       release();
       await first;
-      expect(store.indexes).toBe(indexes);
+      expect([store.indexes === indexes, store.folder === read, reads()]).toEqual([true, true, 2]);
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('leaves the folder it had in use while it reads, and when it fails', async () => {
+    const { store } = await opened({}, { 'household.json': null }, {});
+    const { folder } = store;
+    await expect(store.reload()).rejects.toThrow();
+    expect(store.folder).toBe(folder);
+    const reading = store.reload();
+    expect(store.folder).toBe(folder);
+    await reading;
+    expect(store.folder).not.toBe(folder);
   });
 });
 

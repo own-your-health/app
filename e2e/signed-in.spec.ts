@@ -56,6 +56,15 @@ function answerAsMac(path: string, opts: { removePending?: boolean } = {}): void
   google.writeAsMac('_status/status.json', JSON.stringify(status, null, 2));
 }
 
+/** How many calls Drive has had, once no more come. */
+async function settled(): Promise<number> {
+  for (let n = -1; ; ) {
+    if (n === google.driveCalls) return n;
+    n = google.driveCalls;
+    await new Promise((r) => setTimeout(r, 150));
+  }
+}
+
 /** What the app does when the phone's screen comes back on: it reads the folder again. */
 async function lookAgain(page: Page): Promise<void> {
   await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
@@ -252,15 +261,42 @@ test('a read that fails after a finished Refresh is tried again while the app st
   await page.clock.fastForward('00:31');
   await expect.poll(reads).toBe(before + 2);
   await expect(page.locator('.toast-error')).toHaveCount(0);
+  // Then Drive answers nothing at all, its listings neither: those tries count too.
+  google.failing = '*';
   await page.clock.fastForward('01:01');
-  await expect.poll(reads).toBe(before + 3);
   await expect(page.locator('.toast-error')).toHaveText('The records could not be read again, so these are from before. Drive: Backend Error');
   google.failing = null;
   await page.clock.fastForward('02:01');
-  await expect.poll(reads).toBe(before + 4);
+  await expect.poll(reads).toBe(before + 3);
   // Read, so nothing looks again.
   await page.clock.fastForward('20:00');
-  expect(reads()).toBe(before + 4);
+  expect(reads()).toBe(before + 3);
+  problems = problems.filter((p) => !/503/.test(p));
+});
+
+test('while Drive is out after a finished Refresh, the looks end', async ({ page }) => {
+  await page.clock.install();
+  await signIn(page);
+  await page.getByRole('button', { name: 'Refresh everything' }).click();
+  await expect(page.getByText(/waiting for the Mac/).first()).toBeVisible();
+  google.failing = 'household.json';
+  answerAsMac(google.changes[0]!.path);
+  await page.clock.fastForward('00:31');
+  await expect(page.getByText(/Last refresh request just now: loaded/).first()).toBeVisible();
+  google.failing = '*';
+  // Each later try, after twice as long: six in all, each one tick of the timer.
+  for (const wait of ['00:31', '01:01', '02:01', '04:01', '08:01']) {
+    const before = await settled();
+    await page.clock.fastForward(wait);
+    await expect.poll(() => google.driveCalls).toBeGreaterThan(before);
+  }
+  const calls = await settled();
+  for (let i = 0; i < 3; i += 1) await page.clock.fastForward('10:00');
+  expect(await settled()).toBe(calls);
+  // At the front they start over.
+  google.failing = null;
+  await lookAgain(page);
+  await expect.poll(() => google.driveCalls).toBeGreaterThan(calls + 5);
   problems = problems.filter((p) => !/503/.test(p));
 });
 
