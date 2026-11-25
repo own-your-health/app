@@ -3,6 +3,7 @@ import { allergyList, conditionList, medicineList, statusText, vaccineList } fro
 import type { MedRecord, PersonIndex } from '../src/model/types';
 import { demo, personNamed } from './demo-data';
 
+const TODAY = '2026-11-22';
 const { household, indexes } = demo();
 const index = (name: string) => indexes.get(personNamed(household, name).id)!;
 const names = (xs: { name: string }[]) => xs.map((x) => x.name);
@@ -15,7 +16,7 @@ function withRecords(idx: PersonIndex, extra: Partial<MedRecord>[]): PersonIndex
 
 describe('conditions', () => {
   it('splits active from resolved, newest first, with when each began and ended', () => {
-    const c = conditionList(index('Sam Example'));
+    const c = conditionList(index('Sam Example'), TODAY);
     expect(names(c.active)).toEqual(['Vitamin D deficiency']);
     expect(c.active[0]!.first).toBe('2026-04-02');
     expect(names(c.ended)).toEqual(['Right ankle sprain']);
@@ -26,10 +27,10 @@ describe('conditions', () => {
   it('goes by a condition’s newest record, and leaves out one entered in error', () => {
     const idx = index('Robin Example');
     const htn = idx.records.find((r) => r.display === 'High blood pressure')!;
-    const later = conditionList(withRecords(idx, [{ kind: 'condition', code: htn.code, display: 'High blood pressure', date: '2026-10-20', status: 'resolved' }]));
+    const later = conditionList(withRecords(idx, [{ kind: 'condition', code: htn.code, display: 'High blood pressure', date: '2026-10-20', status: 'resolved' }]), TODAY);
     expect(later.active).toEqual([]);
     expect(later.ended.find((i) => i.name === 'High blood pressure')).toMatchObject({ first: '2025-03-10', records: [expect.anything(), expect.anything()] });
-    const mistaken = conditionList(withRecords(idx, [{ kind: 'condition', display: 'Plantar fasciitis', date: '2026-10-20', status: 'entered-in-error' }]));
+    const mistaken = conditionList(withRecords(idx, [{ kind: 'condition', display: 'Plantar fasciitis', date: '2026-10-20', status: 'entered-in-error' }]), TODAY);
     expect(names([...mistaken.active, ...mistaken.ended, ...mistaken.other])).not.toContain('Plantar fasciitis');
   });
 
@@ -40,6 +41,7 @@ describe('conditions', () => {
         { kind: 'condition', display: 'Cataract', date: '2026-08-12', status: 'active', fields: { verification_status: 'refuted' } },
         { kind: 'condition', display: 'Nosebleeds', date: '2026-06-25' },
       ]),
+      TODAY,
     );
     expect(c.active.find((i) => i.name === 'Tennis elbow')).toMatchObject({ isActive: true, unconfirmed: true, refuted: false, statusNote: 'Recurred' });
     expect(names(c.other)).toEqual(['Cataract', 'Nosebleeds']);
@@ -49,7 +51,7 @@ describe('conditions', () => {
   });
 
   it('keeps a ruled-out condition out of Resolved, whatever its status', () => {
-    const c = conditionList(withRecords(index('Sam Example'), [{ kind: 'condition', display: 'Strep throat', date: '2026-08-12', status: 'resolved', fields: { verification_status: 'refuted' } }]));
+    const c = conditionList(withRecords(index('Sam Example'), [{ kind: 'condition', display: 'Strep throat', date: '2026-08-12', status: 'resolved', fields: { verification_status: 'refuted' } }]), TODAY);
     expect(names(c.ended)).not.toContain('Strep throat');
     expect(c.other.find((i) => i.name === 'Strep throat')).toMatchObject({ refuted: true });
   });
@@ -57,16 +59,16 @@ describe('conditions', () => {
 
 describe('allergies', () => {
   it('keeps every reaction and the criticality, and splits off the inactive ones', () => {
-    const sam = allergyList(index('Sam Example'));
+    const sam = allergyList(index('Sam Example'), TODAY);
     expect(sam.current).toHaveLength(1);
     expect(sam.current[0]).toMatchObject({ name: 'Peanuts', reactions: ['Hives', 'Swelling of the lips'], criticality: 'high' });
-    const robin = allergyList(index('Robin Example'));
+    const robin = allergyList(index('Robin Example'), TODAY);
     expect(names(robin.current)).toEqual(['Sulfa drugs']);
     expect(names(robin.ended)).toEqual(['Latex']);
   });
 
   it('shows one without a status as current', () => {
-    const a = allergyList(withRecords(index('Sam Example'), [{ kind: 'allergy', display: 'Bee stings', date: '2017-07-15' }, { kind: 'allergy', display: 'Nickel', date: '2014-02-19', status: 'resolved' }]));
+    const a = allergyList(withRecords(index('Sam Example'), [{ kind: 'allergy', display: 'Bee stings', date: '2017-07-15' }, { kind: 'allergy', display: 'Nickel', date: '2014-02-19', status: 'resolved' }]), TODAY);
     expect(names(a.current)).toEqual(['Bee stings', 'Peanuts']);
     expect(names(a.ended)).toEqual(['Nickel']);
   });
@@ -74,7 +76,7 @@ describe('allergies', () => {
 
 describe('medicines', () => {
   it('joins a prescription to its fills: who prescribed, since when, the last fill and where', () => {
-    const { active, past } = medicineList(index('Robin Example'));
+    const { active, past } = medicineList(index('Robin Example'), TODAY);
     expect(names(active)).toEqual(['Lisinopril 10 mg tablet', 'Atorvastatin 20 mg tablet']);
     expect(active[0]).toMatchObject({ first: '2025-03-12', known: ['filled', 'prescribed'], prescriber: 'Dr. Jordan Sample', lastFill: { date: '2026-11-12', pharmacy: 'Example Pharmacy', daysSupply: 90 } });
     expect(names(past)).toEqual(['Cetirizine 10 mg tablet']);
@@ -85,13 +87,13 @@ describe('medicines', () => {
     const idx = index('Robin Example');
     const lisinopril = idx.records.find((r) => r.display === 'Lisinopril 10 mg tablet')!;
     const withdrawn = withRecords(idx, [{ kind: 'medication', code: lisinopril.code, display: 'Lisinopril 2.5 mg tablet', date: '2026-11-17', status: 'entered-in-error', fields: { dosage: 'Take half a tablet', source: 'request' } }]);
-    const m = medicineList(withdrawn).active.find((x) => x.key === `${lisinopril.code!.system}|${lisinopril.code!.code}`)!;
+    const m = medicineList(withdrawn, TODAY).active.find((x) => x.key === `${lisinopril.code!.system}|${lisinopril.code!.code}`)!;
     expect(m).toMatchObject({ name: 'Lisinopril 10 mg tablet', latest: { date: '2026-11-12' } });
     expect(m.records.map((r) => r.status)).not.toContain('entered-in-error');
   });
 
   it('says when a medicine is only reported', () => {
-    const { active, past } = medicineList(index('Sam Example'));
+    const { active, past } = medicineList(index('Sam Example'), TODAY);
     expect(names(active)).toEqual(['Emtricitabine-tenofovir 200-300 mg tablet', 'Famotidine 20 mg tablet', 'Vitamin D3 2,000 unit capsule']);
     expect(active[1]).toMatchObject({ known: ['filled', 'prescribed'], lastFill: { date: '2026-10-29', daysSupply: 30 } });
     expect(active[2]).toMatchObject({ known: ['prescribed'] });
@@ -99,7 +101,7 @@ describe('medicines', () => {
   });
 
   it('lists the active medicines of a child', () => {
-    expect(names(medicineList(index('Alex Example')).active)).toEqual(['Amoxicillin 400 mg/5 mL suspension']);
+    expect(names(medicineList(index('Alex Example'), TODAY).active)).toEqual(['Amoxicillin 400 mg/5 mL suspension']);
   });
 });
 

@@ -6,7 +6,7 @@
 // shared views, and off the doctor's sheet unless turned on.
 
 import { isOutOfRange } from '../model/flags';
-import { allergyList, conditionList, medicineList, vaccineList, type AllergyItem, type ConditionItem, type MedicineItem, type VaccineItem } from '../model/lists';
+import { allergyList, conditionList, medicineList, vaccineList, type AllergyItem, type ConditionItem, type ItemStanding, type ListItem, type ListNotes, type May, type MedicineItem, type VaccineItem } from '../model/lists';
 import { latestResults, type LatestResult } from '../model/overview';
 import { isWithdrawn, str } from '../model/records';
 import { recordPrivate, recordsPrivate } from '../model/private';
@@ -40,8 +40,11 @@ export function coverageOf(index: PersonIndex): Coverage {
   return { kind: 'none', words: 'No records yet', detail: 'Nothing has been loaded for this person yet.' };
 }
 
-/** Why an item is private, from any of its records: their area, or HELD; undefined when none is. */
-export const privateOf = (index: PersonIndex, records: MedRecord[]): string | undefined => recordsPrivate(index, records.map((r) => r.id));
+/** Why an item is private, from any of its records, those that say otherwise of it too: their area, or HELD; undefined when none is. */
+export const privateOf = (index: PersonIndex, x: { records: MedRecord[]; standing?: ItemStanding }): string | undefined => recordsPrivate(index, [...x.records, ...(x.standing?.against ?? [])].map((r) => r.id));
+
+/** The records a shared screen may show. */
+export const openTo = (index: PersonIndex): May => (id) => !recordPrivate(index, id);
 
 /** A result's record, for its page. */
 const recordOf = (index: PersonIndex, x: LatestResult) => index.records.find((r) => r.id === x.latest.id);
@@ -52,11 +55,19 @@ export const resultPrivate = (index: PersonIndex, x: LatestResult) => recordsPri
 /** Whether a result is a vital sign (weight, height, blood pressure) rather than a lab test. */
 export const isVital = (index: PersonIndex, x: LatestResult) => /vital/i.test(String(recordOf(index, x)?.fields.category ?? ''));
 
-export interface HealthItems {
-  /** Current: active conditions, active medicines, current allergies. */
+/** Current: active conditions, active medicines, current allergies. */
+export interface CurrentItems {
   conditions: ConditionItem[];
   medicines: MedicineItem[];
   allergies: AllergyItem[];
+  /** Medicines on hold, and those ended by their date, where the sources' words tell. */
+  onHold: MedicineItem[];
+  endedByDate: MedicineItem[];
+  /** What each list says beside its rows, by the sources' words. */
+  notes: { conditions?: ListNotes; medicines?: ListNotes; allergies?: ListNotes };
+}
+
+export interface HealthItems extends CurrentItems {
   /** Worth noticing: each test's newest result when it is out of range and from the last NOTICE_DAYS, critical first. */
   noticing: LatestResult[];
   /** Quiet: what is not news, kept and counted. */
@@ -74,18 +85,32 @@ export interface HealthItems {
 
 const since = (today: string, days: number) => new Date(Date.parse(`${today}T00:00:00Z`) - days * 86_400_000).toISOString().slice(0, 10);
 
+function lists(index: PersonIndex, today: string, may?: May) {
+  const conditions = conditionList(index, today, may);
+  const medicines = medicineList(index, today, may);
+  const allergies = allergyList(index, today, may);
+  const current: CurrentItems = {
+    conditions: conditions.active,
+    medicines: medicines.active,
+    allergies: allergies.current,
+    onHold: medicines.onHold,
+    endedByDate: medicines.endedByDate,
+    notes: { conditions: conditions.notes, medicines: medicines.notes, allergies: allergies.notes },
+  };
+  return { conditions, medicines, allergies, current };
+}
+
+/** What is current, of the records that may be shown. */
+export const currentOf = (index: PersonIndex, today: string, may: May): CurrentItems => lists(index, today, may).current;
+
 /** A person's health, sorted into what is current, what is worth noticing, and what is quiet. */
 export function healthOf(index: PersonIndex, today: string): HealthItems {
-  const conditions = conditionList(index);
-  const medicines = medicineList(index);
-  const allergies = allergyList(index);
+  const { conditions, medicines, allergies, current } = lists(index, today);
   const from = since(today, NOTICE_DAYS);
   const results = latestResults(index);
   const flagged = results.filter((x) => isOutOfRange(x.flag));
   return {
-    conditions: conditions.active,
-    medicines: medicines.active,
-    allergies: allergies.current,
+    ...current,
     noticing: flagged.filter((x) => (x.latest.date ?? '') >= from),
     quiet: {
       conditions: [...conditions.ended, ...conditions.other],
@@ -146,8 +171,9 @@ export function careTeam(index: PersonIndex, today: string, include: (r: MedReco
       m.place = placeName(str(r.fields.service_provider)) ?? placeName(str(r.fields.location));
     }
   }
-  for (const med of medicineList(index).active) {
-    if (!med.prescriber || !med.records.every(include)) continue;
+  const byId = new Map(index.records.map((r) => [r.id, r]));
+  for (const med of medicineList(index, today, (id) => include(byId.get(id)!)).active) {
+    if (!med.prescriber) continue;
     const m = member(med.prescriber);
     if (!m.prescribes.includes(med.name)) m.prescribes.push(med.name);
   }
@@ -158,7 +184,12 @@ export function careTeam(index: PersonIndex, today: string, include: (r: MedReco
 export interface DoctorSheet {
   allergies: AllergyItem[];
   medicines: MedicineItem[];
+  /** Medicines on hold, and those ended by their date, where the sources' words tell. */
+  onHold: MedicineItem[];
+  endedByDate: MedicineItem[];
   problems: ConditionItem[];
+  /** What each list says beside its rows, of what the sheet may show. */
+  notes: CurrentItems['notes'];
   /** Each vaccine with its doses, newest vaccine first. */
   vaccines: VaccineItem[];
   /** Each test's newest result from the last NOTICE_DAYS: lab tests, and vital signs. */
@@ -175,6 +206,7 @@ export type SheetSection = 'allergies' | 'medicines' | 'problems' | 'vaccines' |
 
 export function doctorSheet(index: PersonIndex, today: string, withPrivate: boolean): DoctorSheet {
   const h = healthOf(index, today);
+  const shown = withPrivate ? h : currentOf(index, today, openTo(index));
   const from = since(today, NOTICE_DAYS);
   const recent = latestResults(index).filter((x) => (x.latest.date ?? '') >= from);
   let left = 0;
@@ -189,16 +221,26 @@ export function doctorSheet(index: PersonIndex, today: string, withPrivate: bool
     note(section, xs.length - out.length);
     return out;
   };
+  // Several prescriptions of a medicine, and its fills, are one.
+  const noted = <T extends ListItem & { heading?: string }>(section: SheetSection, all: T[]) => {
+    if (!withPrivate) note(section, new Set(all.filter((x) => privateOf(index, x)).map((x) => x.heading ?? x.key)).size);
+  };
+  noted('allergies', h.allergies);
+  noted('medicines', [...h.medicines, ...h.onHold, ...h.endedByDate]);
+  noted('problems', h.conditions);
   const byName = <T extends { name: string }>(xs: T[]) => [...xs].sort((a, b) => a.name.localeCompare(b.name));
   const vitals = recent.filter((x) => isVital(index, x));
   const everyone = careTeam(index, today);
   const team = careTeam(index, today, (r) => !recordPrivate(index, r.id));
   if (!withPrivate) note('careTeam', everyone.filter((m) => !team.some((t) => t.name === m.name)).length);
   return {
-    allergies: keep('allergies', h.allergies, (x) => privateOf(index, x.records)),
-    medicines: keep('medicines', byName(h.medicines), (x) => privateOf(index, x.records)),
-    problems: keep('problems', h.conditions, (x) => privateOf(index, x.records)),
-    vaccines: keep('vaccines', h.quiet.vaccines, (x) => privateOf(index, x.records)),
+    allergies: shown.allergies,
+    medicines: byName(shown.medicines),
+    onHold: byName(shown.onHold),
+    endedByDate: byName(shown.endedByDate),
+    problems: shown.conditions,
+    notes: shown.notes,
+    vaccines: keep('vaccines', h.quiet.vaccines, (x) => privateOf(index, x)),
     labs: keep(
       'labs',
       recent.filter((x) => !vitals.includes(x)),

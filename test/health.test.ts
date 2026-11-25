@@ -24,7 +24,7 @@ describe('a person’s health', () => {
   it('sorts what is current, worth noticing and quiet', () => {
     const h = healthOf(index('Sam Example'), TODAY);
     expect(h.conditions.map((c) => c.name)).toEqual(['Vitamin D deficiency']);
-    expect(h.medicines.map((m) => [m.name, privateOf(index('Sam Example'), m.records) ?? null])).toEqual([
+    expect(h.medicines.map((m) => [m.name, privateOf(index('Sam Example'), m) ?? null])).toEqual([
       ['Emtricitabine-tenofovir 200-300 mg tablet', 'sexual_health'],
       ['Famotidine 20 mg tablet', null],
       ['Vitamin D3 2,000 unit capsule', null],

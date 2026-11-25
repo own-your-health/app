@@ -402,15 +402,16 @@ code,
   margin-bottom: 8px;
 }
 
-/* A paper's title may be a file's name, one long word: its kind goes under it where both do not fit. */
+/* A title may be one long word: a medicine's name, a file's. */
+.card-head h1 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* A paper's kind goes under its title where both do not fit. */
 .card-head-paper {
   flex-wrap: wrap;
   gap: 4px 12px;
-}
-
-.card-head-paper h1 {
-  min-width: 0;
-  overflow-wrap: anywhere;
 }
 
 .subcard {
@@ -1653,8 +1654,10 @@ mark {
   margin-top: 6px;
 }
 
+/* It has the record's name, whose words may be long. */
 .learn-more {
   margin-top: 14px;
+  overflow-wrap: anywhere;
 }
 
 .learn-site {
@@ -2548,6 +2551,44 @@ a.cal-day:hover .cal-date {
 }
 
 .health-group:first-of-type {
+  margin-top: 4px;
+}
+
+/* What each source says of a row's item, and what stands out of it. */
+.row-said {
+  display: block;
+}
+
+.row-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin-top: 4px;
+}
+
+/* The medicine several prescriptions are rows under. */
+.list-heading {
+  margin: 12px 0 0;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: 600;
+}
+
+/* Every record of a list, one tap away. */
+.list-all > summary {
+  cursor: pointer;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* What each source says of a record. */
+.said-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.said-list li + li {
   margin-top: 4px;
 }
 

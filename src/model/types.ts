@@ -4,6 +4,7 @@
 
 import type { MedrecBills } from './bills';
 import type { CodeNames } from './codeNames';
+import type { Standings } from './standing';
 import type { MedrecEvents } from './events';
 import type { Privacy } from './private';
 
@@ -219,6 +220,8 @@ export interface PersonIndex {
   privacy?: Privacy;
   /** The names of these conditions' and claim diagnoses' codes (src/model/codeNames.ts), when the store found them written from this index. */
   codeNames?: CodeNames;
+  /** What is current by every source's word (src/model/standing.ts), when the store found it written from this index: without it, a record's own status says. */
+  standing?: Standings;
   /** What medrec says of these bills (src/model/bills.ts), when the store found it written from this index: without it, the receipts say what is paid. */
   bills?: MedrecBills;
 }
