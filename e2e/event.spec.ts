@@ -73,7 +73,7 @@ test('a visit’s page says what happened, what it cost and whether it is paid, 
   await expect(bills.locator('.row')).toHaveText([/Bill from Example Endoscopy Center.*\$90\.50 due by Nov 4, 2026.*Matches the claim/]);
   await expect(bills).toContainText('No bill from Example Digestive Health filed yet, for the $116.20 its claim says you owe.');
 
-  await expect(card(page, /^Papers$/).locator('.row-title')).toHaveText(['Statement from Example Endoscopy Center.pdf', 'After your upper endoscopy.pdf']);
+  await expect(card(page, /^Papers$/).locator('.row-title')).toHaveText(['Statement from Example Endoscopy Center', 'After your upper endoscopy']);
 
   // How it was put together, and the claims themselves, wait folded.
   const folded = page.locator('details.tech');

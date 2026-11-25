@@ -43,8 +43,11 @@ export function docTypeLabel(t: string | undefined): string {
   return (t && DOC_TYPE_LABELS[t]) || 'Document';
 }
 
+const FILE_ENDING = /\.(pdf|png|jpe?g|gif|tiff?|heic|webp|html?|xml|txt|rtf|docx?|bin)$/i;
+
+/** A paper's title, else its file's name without the ending, else its type. */
 export function documentTitle(d: MedDocument): string {
-  return d.title || d.original_name || docTypeLabel(d.doc_type);
+  return d.title || d.original_name?.replace(FILE_ENDING, '').trim() || docTypeLabel(d.doc_type);
 }
 
 export function studyTitle(s: ImagingStudy): string {

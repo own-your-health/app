@@ -89,6 +89,11 @@ test('home says which sign-in needs a person, in one line that opens the source'
   const attempts = page.locator('.card', { hasText: 'Attempts' });
   await expect(attempts.locator('.row').first()).toBeVisible();
   await expect(attempts.getByText(/could not be renewed/)).toBeHidden();
+  // What to do now is at the top of the page; an earlier try says what went wrong, and gives no command.
+  await attempts.getByText('Error details').first().click();
+  await expect(attempts.getByText(/could not be renewed/).first()).toBeVisible();
+  await expect(attempts).toContainText('athena needs a sign-in: its export answered that the sign-in has ended');
+  await expect(attempts).not.toContainText('medrec refresh');
 });
 
 /** The sample's status, where the blood center's tool gave no words with its answer. */
@@ -311,6 +316,21 @@ test('a claim medrec linked says what it paid for: the visit, the diagnosis and 
   await expect(page.locator('main h1')).toHaveText('Sick visit');
 });
 
+test('a visit its portal gives billing words is named by its reason, on a claim’s line and its own page', async ({ page }) => {
+  await openClaim(page, 'Robin', 'Office visit and blood cell test');
+  await expect(paidFor(page).locator('.row-title').first()).toHaveText('Annual physical');
+  await expect(page.locator('.claim-paid-for').first()).toHaveText('Paid for: Annual physical');
+  await page.locator('.claim-paid-for').first().getByRole('link').click();
+  await expect(page.locator('main h1')).toHaveText('Annual physical');
+  // Its reason is its title, so it is not said twice; the portal's words are in the technical details.
+  const head = page.locator('main section.card', { has: page.locator('h1') });
+  await expect(head).toContainText('With');
+  await expect(head).not.toContainText('Reason');
+  await expect(page.locator('main section.card').filter({ hasText: 'YEARLY EXAM RETURNING ADULT' }).locator('visible=true')).toHaveCount(0);
+  await page.getByText('Technical details').click();
+  await expect(field(page, 'Name at the source')).toHaveText('YEARLY EXAM RETURNING ADULT');
+});
+
 test('a lab claim lists the results of its day once, a claim without the payer’s figure adds up your share, and a fill gives its discount', async ({ page }) => {
   await openClaim(page, 'Sam', 'Blood cell test and vitamin D test');
   await expect(page.locator('main .result-value').first()).toHaveText('You owe $70.30');
@@ -379,7 +399,7 @@ test('a visit’s page shows what belongs to it, a hand-filed note among them', 
   await page.locator('.row', { hasText: 'Portal visit' }).locator('a.row-main').click();
   await expect(page.locator('.card-head h1').first()).toHaveText('Sick visit');
   const at = page.locator('.card', { hasText: 'At this visit' });
-  await expect(at.locator('.visit-docs li')).toHaveText(['Care instructions Visit summary', 'School note.jpg Letter']);
+  await expect(at.locator('.visit-docs li')).toHaveText(['Care instructions Visit summary', 'School note Letter']);
   await expect(at.locator('.visit-line')).toHaveText(['Diagnosis: Ear infection', 'Medicine: Amoxicillin 400 mg/5 mL suspension', 'Claim: your share $30.00 from Example Care Plan']);
 });
 

@@ -58,7 +58,7 @@ describe('search', () => {
     expect(brief(search(index, text, '53.68'))).toEqual(
       expect.arrayContaining([
         ['Preventive visit, flu vaccine and 1 more', 'field', 'Total'],
-        ['Statement from Example Health.pdf', 'field', 'Statement'],
+        ['Statement from Example Health', 'field', 'Statement'],
         ['Explanation of Benefits', 'text', null],
       ]),
     );
@@ -119,6 +119,20 @@ describe('snippet', () => {
     expect(snippet('short needle', 'needle')).toBe('short needle');
     expect(snippet('nothing', 'needle')).toBe('');
     expect(snippet('Le café est fermé', 'cafe', 3)).toBe('Le café es…');
+  });
+});
+
+describe('a visit with billing words for its name', () => {
+  it('is titled by its reason, and found by either', () => {
+    const visit = index.records.find((r) => r.kind === 'encounter' && r.display === 'YEARLY EXAM RETURNING ADULT')!;
+    // Its code's words can be the source's too; without a code only its name holds them.
+    const bare = { ...index, records: index.records.map((r) => (r.id === visit.id ? { ...r, code: {} } : r)) };
+    const found = (q: string) => search(bare, null, q).find((x) => x.id === visit.id);
+    expect([found('annual physical')?.title, found('annual physical')?.where, search(index, null, 'yearly exam')[0]?.title]).toEqual(['Annual physical', 'title', 'Annual physical']);
+    expect([found('returning adult')?.title, found('returning adult')?.field, found('returning adult')?.snippet]).toEqual(['Annual physical', 'Name at the source', 'YEARLY EXAM RETURNING ADULT']);
+    // No other kind of record is found by it: a result goes by its test's name.
+    const odd = { ...index, records: index.records.map((r) => (r.kind === 'result' ? { ...r, display: 'Zzyzx panel' } : r)) };
+    expect(search(odd, null, 'zzyzx')).toEqual([]);
   });
 });
 
@@ -188,7 +202,7 @@ describe('concepts', () => {
     // No lab result or lab report says "statement": the lab's statement is what was meant.
     const f = find(everyone, 'lab statement');
     expect(f).toMatchObject({ how: 'fallback', named: { id: 'labs' }, rest: ['statement'], terms: ['lab', 'statement'] });
-    expect(f.hits.map((x) => x.title)).toContain('Statement from Example Lab.pdf');
+    expect(f.hits.map((x) => x.title)).toContain('Statement from Example Lab');
   });
 });
 

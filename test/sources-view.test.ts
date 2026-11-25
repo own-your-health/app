@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ANSWER_SHOWN_MS, ATTENTION, HEALTH_ORDER, isRecentAnswer, latestAnswered, needsAttention, needsPerson, sourceViews, type AnsweredRequest } from '../src/model/sources';
 import type { ErrorInfo, RefreshRequest } from '../src/model/types';
 import { clock } from '../src/ui/format';
-import { isMedrecOwnError, remedyCommand, requestAnswer, signInWords } from '../src/ui/views/sources';
+import { isMedrecOwnError, remedyCommand, requestAnswer, shownRemedy, signInWords } from '../src/ui/views/sources';
 import { demo, sourceOf } from './demo-data';
 
 const NOW = new Date('2026-11-22T20:00:00Z');
@@ -182,6 +182,21 @@ describe('remedyCommand', () => {
     for (const said of [{ provider_message: 'Session ended.' }, { provider_message: '' }, {}, { provider_message: null } as unknown as ErrorInfo]) {
       expect(remedyCommand({ ...base, remedy: own, ...said })).toBe('medrec refresh sign-in s_aaaaaaaaaaaaaaaaaaaa');
     }
+  });
+});
+
+describe('shownRemedy', () => {
+  const base = { code: 'needs_person', message: 'athena needs a sign-in: its export answered that the sign-in has ended' };
+  const own = { ...base, remedy: 'run `medrec refresh sign-in s_aaaaaaaaaaaaaaaaaaaa` on this machine', provider_message: '' };
+  it('leaves medrec’s own out where its command is above it, and of a try that is past', () => {
+    expect([shownRemedy(own, {}), shownRemedy(own, { commandAbove: true }), shownRemedy(own, { past: true })]).toEqual([own.remedy, undefined, undefined]);
+  });
+  it('keeps a past one that gives no medrec command, and a provider tool’s own', () => {
+    const wait = { ...base, remedy: 'ask the practice', provider_message: 'Account closed.' };
+    expect([shownRemedy(wait, { past: true }), shownRemedy(wait, { commandAbove: true })]).toEqual(['ask the practice', undefined]);
+    const tool = { ...base, remedy: 'Run `athena auth login`, then import again.' };
+    expect([shownRemedy(tool, { past: true }), shownRemedy(tool, { commandAbove: true })]).toEqual([tool.remedy, tool.remedy]);
+    expect(shownRemedy(base, {})).toBeUndefined();
   });
 });
 

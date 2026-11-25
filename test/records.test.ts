@@ -1,11 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { asMoney, claimTotals, claimYourShare, findItem, formatMoney, importFor, medicines, numericValue, resultSeries, timeline, valueText } from '../src/model/records';
-import type { ImportRun, Json, Provenance } from '../src/model/types';
+import { asMoney, claimTotals, claimYourShare, documentTitle, findItem, formatMoney, importFor, medicines, numericValue, resultSeries, timeline, valueText } from '../src/model/records';
+import type { ImportRun, Json, MedDocument, Provenance } from '../src/model/types';
 import { recordTitle } from '../src/model/titles';
 import { demo, personNamed } from './demo-data';
 
 const { household, indexes } = demo();
 const robin = indexes.get(personNamed(household, 'Robin Example').id)!;
+
+describe('a paper’s title', () => {
+  const titled = (over: Partial<MedDocument>) => documentTitle({ ...robin.documents[0]!, title: undefined, original_name: undefined, doc_type: 'letter', ...over } as MedDocument);
+
+  it('is its own, else its file’s name without the ending, else its type', () => {
+    expect(titled({ title: 'Leaving the hospital.pdf', original_name: 'a.pdf' })).toBe('Leaving the hospital.pdf');
+    expect(titled({ original_name: 'School note.jpg' })).toBe('School note');
+    expect([titled({}), titled({ original_name: '.pdf' })]).toEqual(['Letter', 'Letter']);
+  });
+
+  it('keeps what only looks like an ending', () => {
+    const names = ['Statement.PDF', 'Photo.jpeg', 'Page.htm', 'Visit 2.5', 'Dr. Example', 'notes.final', 'scan.pdf.png', 'pdf'];
+    expect(names.map((original_name) => titled({ original_name }))).toEqual(['Statement', 'Photo', 'Page', 'Visit 2.5', 'Dr. Example', 'notes.final', 'scan.pdf', 'pdf']);
+  });
+});
 
 describe('results', () => {
   it('group one test over time under the source’s name for it', () => {

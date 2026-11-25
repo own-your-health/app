@@ -30,7 +30,7 @@ test('Papers lists every paper, each with its visit or why it has none', async (
   await page.getByRole('button', { name: 'With none (2)' }).click();
   await expect(page.getByRole('button', { name: 'With none (2)' })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.papers').getByRole('status')).toHaveText('2 papers with no visit.');
-  await expect(page.locator('.papers .row-title')).toHaveText(['Referral to digestive health', 'scan_0007.png']);
+  await expect(page.locator('.papers .row-title')).toHaveText(['Referral to digestive health', 'scan_0007']);
   await expect(page.locator('.paper-none')).toHaveText(['With no visit. No visit listed here is on or near Aug 3, 2026.', 'With no visit. A vaccine record covers many visits.']);
 });
 
@@ -41,10 +41,10 @@ test('a person’s papers are theirs, and a receipt is with its bill’s visit',
   await expect(page.locator('main h1')).toHaveText('Robin’s papers');
   await expect(page.getByRole('group', { name: 'Whose papers' }).getByRole('link', { name: 'Robin' })).toHaveAttribute('aria-current', 'page');
   await expect(page.locator('.papers-count')).toHaveText('9 papers: 8 with a visit, 1 with none.');
-  await expect(paper(page, 'Payment receipt\\.pdf').locator('.paper-place')).toHaveText('With Office visit at Example Health Main Clinic, Mar 10, 2025, as the receipt for its bill, likely.');
+  await expect(paper(page, 'Payment receipt').locator('.paper-place')).toHaveText('With Office visit at Example Health Main Clinic, Mar 10, 2025, as the receipt for its bill, likely.');
   // A paper opens on its own page.
-  await paper(page, 'scan_0007\\.png').locator('a.row-main').click();
-  await expect(page.locator('main h1')).toHaveText('scan_0007.png');
+  await paper(page, 'scan_0007').locator('a.row-main').click();
+  await expect(page.locator('main h1')).toHaveText('scan_0007');
 });
 
 test('a person’s Health and their old documents address open their Papers, which narrows by kind and counts pages', async ({ page }) => {

@@ -305,6 +305,8 @@ function candidates(index: PersonIndex): Candidate[] {
     const title = recordTitle(r);
     // A claim's lines are searched one by one, so a hit names the line.
     const fields = r.kind === 'claim' ? [...fieldsOf(r.fields, CLAIM_PARTS), ...claimDiagnoses(r).map((d): [string, string] => ['Diagnosis', diagnosisText(d)]), ...lineFields(r)] : fieldsOf(r.fields);
+    // A visit can be titled by its reason, and is still found by the source's own name for it.
+    if (r.kind === 'encounter') fields.push(['Name at the source', r.display ?? '']);
     out.push(candidate(r.id, r.kind, title, r.date, [title, r.code?.display ?? '', r.code?.code ?? '', KIND_LABELS[r.kind] ?? r.kind, statusText(r.status) ?? ''], fields, recordConcept(r), recordExtra(r)));
   }
   for (const d of index.documents) {
