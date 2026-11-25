@@ -50,7 +50,7 @@ export function gather(ctx: Ctx, who: string | undefined) {
     const keep = <T extends { private?: string }>(xs: T[], share: (xs: T[]) => T[]): Mine<T>[] => (who ? xs : share(xs)).map((item) => ({ person: p, item }));
     const cleared = <T extends { private?: string }>(xs: T[]) => xs.filter((x) => !x.private);
     const shared = <T extends { private?: string; event?: PersonEvent; bill?: Bill }>(xs: T[]) => forShared(idx, xs);
-    open.push(...keep(openBills(idx, mine, today), shared));
+    open.push(...keep(openBills(idx, mine, today, store.marks), shared));
     unbilled.push(...keep(unbilledShares(idx, mine, !who), cleared));
     paid.push(...keep(paidBills(idx, mine), shared));
     desk.push(...keep(deskPayments(idx, mine), shared));

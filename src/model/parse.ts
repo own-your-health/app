@@ -16,6 +16,7 @@ import {
   type Household,
   type ImagingStudy,
   type ImportRun,
+  type MarkRequest,
   type MedDocument,
   type MedRecord,
   type Person,
@@ -231,6 +232,23 @@ export function parseRequest(json: unknown): RefreshRequest | null {
   if (!isObject(json) || json.schema !== REQUEST_SCHEMA || !isStr(json.id)) return null;
   if (!isStr(json.requested_at) || !isScope(json.scope)) return null;
   return json as unknown as RefreshRequest;
+}
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const AMOUNT = /^\d{1,12}(\.\d{1,2})?$/;
+
+function isPaid(v: unknown): boolean {
+  if (!isObject(v) || !isStr(v.person) || !isStr(v.document) || !isStr(v.on) || !DAY.test(v.on)) return false;
+  const [amount, currency] = isObject(v.amount) ? [v.amount.amount, v.amount.currency] : [v.amount, 'USD'];
+  return isStr(amount) && AMOUNT.test(amount) && isStr(currency);
+}
+
+/** A request to mark a bill paid, or to undo it, from `_requests/` or `_requests/done/`. Null for any other. */
+export function parseMark(json: unknown): MarkRequest | null {
+  if (!isObject(json) || json.schema !== REQUEST_SCHEMA || !isStr(json.id) || !isStr(json.requested_at) || json.scope !== undefined) return null;
+  const { paid, unpaid } = json;
+  const one = paid !== undefined ? unpaid === undefined && isPaid(paid) : isObject(unpaid) && isStr(unpaid.person) && isStr(unpaid.payment);
+  return one ? (json as unknown as MarkRequest) : null;
 }
 
 /** A `done/` file medrec refused, which keeps no scope and maybe no id. */

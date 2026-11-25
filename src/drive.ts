@@ -117,10 +117,18 @@ export class Drive {
     return res.text();
   }
 
-  /** Creates a JSON file in a folder, in one multipart upload. */
-  async createJson(parentId: string, name: string, body: unknown): Promise<DriveFile> {
+  /** An id for a file to create: a create sent again under it never makes a second file. */
+  async newId(): Promise<string> {
+    const res = await this.call(`${DRIVE_API}/files/generateIds?count=1&space=drive&type=files&fields=ids`);
+    const id = ((await res.json()) as { ids?: string[] }).ids?.[0];
+    if (!id) throw new Error('Google Drive gave no id for the file to write.');
+    return id;
+  }
+
+  /** Creates a JSON file in a folder, in one multipart upload, under an id Drive gave (`newId`). */
+  async createJson(parentId: string, name: string, body: unknown, id?: string): Promise<DriveFile> {
     const boundary = `oyh${crypto.getRandomValues(new Uint32Array(2)).join('')}`;
-    const meta = { name, parents: [parentId], mimeType: 'application/json' };
+    const meta = { id, name, parents: [parentId], mimeType: 'application/json' };
     const payload = [
       `--${boundary}`,
       'Content-Type: application/json; charset=UTF-8',

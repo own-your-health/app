@@ -1,13 +1,16 @@
 // A stand-in for `medrec refresh` in demo mode: it answers a request the way
 // medrec's data contract says the Mac does, on the synthetic folder in
-// memory, so a visitor sees the whole Refresh flow.
+// memory, so a visitor sees the whole Refresh and Mark paid flow.
 
 import { REQUESTS_DIR, type DemoFolder } from '../folder';
-import { parseRequest, parseStatus } from '../model/parse';
+import { parseMark, parseRequest, parseStatus } from '../model/parse';
 import { covers } from '../model/requests';
-import type { RefreshRequest, SourceStatus } from '../model/types';
+import type { MarkRequest, RefreshRequest, SourceStatus } from '../model/types';
+import { applyMark } from './demo-marks';
 
 const PICKUP_MS = 3000;
+/** Long enough to undo it first. */
+const MARK_MS = 8000;
 const RUN_MS = 3000;
 
 function iso(d: Date): string {
@@ -30,9 +33,24 @@ function requestGuardFrom(s: SourceStatus): number {
 }
 
 export function startDemoMac(folder: DemoFolder, onChange: () => void): (file: string) => void {
-  return (file: string) => {
-    setTimeout(() => void handle(folder, file, onChange), PICKUP_MS);
-  };
+  return (file: string) => void start(folder, file, onChange);
+}
+
+async function start(folder: DemoFolder, file: string, onChange: () => void): Promise<void> {
+  const text = await folder.readText(`${REQUESTS_DIR}/${file}`);
+  const mark = text ? parseMark(JSON.parse(text) as unknown) : null;
+  setTimeout(() => void (mark ? handleMark(folder, file, mark, onChange) : handle(folder, file, onChange)), mark ? MARK_MS : PICKUP_MS);
+}
+
+async function handleMark(folder: DemoFolder, file: string, req: MarkRequest, onChange: () => void): Promise<void> {
+  if ((await folder.readText(`${REQUESTS_DIR}/${file}`)) === null) return; // undone
+  const at = iso(new Date());
+  const { writeViews, ...result } = await applyMark(folder, req, new Date());
+  // The answer, then the views: the order medrec writes them in.
+  folder.writeAsMac(`${REQUESTS_DIR}/done/${file}`, JSON.stringify({ ...req, handled: { picked_up_at: at, finished_at: iso(new Date()), ...result, sources: [], by: 'medrec (demo)' } }, null, 2));
+  folder.removeAsMac(`${REQUESTS_DIR}/${file}`);
+  writeViews?.();
+  onChange();
 }
 
 async function handle(folder: DemoFolder, file: string, onChange: () => void): Promise<void> {

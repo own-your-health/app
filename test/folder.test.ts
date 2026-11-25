@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { Drive, type DriveFile } from '../src/drive';
-import { DriveFolder, KEPT_TIMES, LOAD_TIMES, readJson, splitPath } from '../src/folder';
+import { Drive, DriveError, type DriveFile } from '../src/drive';
+import { DriveFolder, KEPT_TIMES, LOAD_TIMES, readJson, splitPath, Unanswered } from '../src/folder';
 import { DEMO, demoFolder, fixture, json } from './helpers';
 
 function driveWith(tree: Record<string, DriveFile[]>, contents: Record<string, string> = {}, meta: Record<string, DriveFile> = {}) {
@@ -15,6 +15,7 @@ function driveWith(tree: Record<string, DriveFile[]>, contents: Record<string, s
     const parent = url.searchParams.get('q')?.match(/^'([^']+)' in parents/)?.[1];
     if (parent) return json({ files: tree[parent] ?? [] });
     const id = url.pathname.split('/').pop()!;
+    if (id === 'generateIds') return json(fixture('drive/generated-ids.json'));
     if (init.method === 'DELETE') return new Response(null, { status: 204 });
     if (init.method === 'POST') return json(fixture('drive/created.json'));
     if (!url.searchParams.get('alt') && id in meta) return json(meta[id]);
@@ -124,10 +125,83 @@ describe('DriveFolder', () => {
     await expect(new DriveFolder(drive, 'root', 'x').createRequest('a.json', {})).rejects.toThrow('no _requests folder');
   });
 
+  it('sends a request whose answer from Drive was lost once more, under the same id, and says when it cannot tell', async () => {
+    const name = '20261122T201500Z_x_aaaaaaaaaaaaaaaaaaaa.json';
+    /** A folder whose Drive answers each create in turn, and the ids the creates gave. */
+    const answering = (...answers: (number | 'lost')[]) => {
+      const [sent, calls]: [string[], string[]] = [[], []];
+      const drive = new Drive(() => 'tok', (async (input: RequestInfo | URL, init: RequestInit = {}) => {
+        const url = new URL(String(input));
+        calls.push(`${init.method ?? 'GET'} ${url.pathname}`);
+        if (url.pathname.endsWith('/generateIds')) return json({ ...fixture<object>('drive/generated-ids.json'), ids: [`id-${calls.length}`] });
+        if (init.method !== 'POST') return json({ files: ROOT[url.searchParams.get('q')!.match(/^'([^']+)' in parents/)![1]!] ?? [] });
+        sent.push((JSON.parse(String(init.body).split('\r\n\r\n')[1]!.split('\r\n')[0]!) as { id: string }).id);
+        const status = answers.shift()!;
+        if (status === 'lost') throw new TypeError('Failed to fetch');
+        return status === 200 ? json(fixture('drive/created.json')) : json(fixture(status === 409 ? 'drive/error-409.json' : 'drive/error-403.json'), status);
+      }) as typeof fetch);
+      return { folder: new DriveFolder(drive, 'root', 'x'), sent, calls };
+    };
+    for (const first of [500, 503, 'lost'] as const)
+      for (const then of [200, 409]) {
+        const { folder, sent } = answering(first, then);
+        await folder.createRequest(name, {});
+        expect([sent.length, new Set(sent).size]).toEqual([2, 1]);
+      }
+    for (const then of ['lost', 503, 403, 429] as const) {
+      const { folder, sent } = answering('lost', then, 409);
+      await expect(folder.createRequest(name, {})).rejects.toThrow(Unanswered);
+      // Sent again by the person, also once the records were read again, it is the same file.
+      await folder.fresh().createRequest(name, {});
+      expect([sent.length, new Set(sent).size]).toEqual([3, 1]);
+    }
+    // Drive has the file already.
+    const had = answering(409);
+    await had.folder.createRequest(name, {});
+    expect(had.sent).toHaveLength(1);
+    // A refusal is one, and is not sent again. Another request is another file.
+    for (const status of [400, 403, 404, 429, 499]) {
+      const { folder, sent } = answering(status, 200);
+      await expect(folder.createRequest(name, {})).rejects.toThrow(DriveError);
+      await folder.createRequest(name.replace('aaaa', 'bbbb'), {});
+      expect(new Set(sent).size).toBe(2);
+    }
+  });
+
+  it('writes no request without an id from Drive', async () => {
+    const calls: string[] = [];
+    const drive = new Drive(() => 'tok', (async (input: RequestInfo | URL, init: RequestInit = {}) => {
+      const url = new URL(String(input));
+      calls.push(init.method ?? 'GET');
+      if (url.pathname.endsWith('/generateIds')) return json({ ...fixture<object>('drive/generated-ids.json'), ids: [] });
+      return json({ files: ROOT[url.searchParams.get('q')!.match(/^'([^']+)' in parents/)![1]!] ?? [] });
+    }) as typeof fetch);
+    await expect(new DriveFolder(drive, 'root', 'x').createRequest('a.json', {})).rejects.toThrow('gave no id');
+    expect(calls).not.toContain('POST');
+  });
+
   it('deletes a pending request by name', async () => {
     const { drive, calls } = driveWith(ROOT);
-    await new DriveFolder(drive, 'root', 'x').deleteRequest('20261122T200312Z_x_abcdefghijklmnopqrst.json');
+    expect(await new DriveFolder(drive, 'root', 'x').deleteRequest('20261122T200312Z_x_abcdefghijklmnopqrst.json')).toBe(true);
     expect(calls).toContain('DELETE /drive/v3/files/file-mine');
+  });
+
+  it('says when a request to delete is already gone, and fails when Drive refuses', async () => {
+    const name = '20261122T200312Z_x_abcdefghijklmnopqrst.json';
+    expect(await new DriveFolder(driveWith(ROOT).drive, 'root', 'x').deleteRequest('20261122T200312Z_x_zzzzzzzzzzzzzzzzzzzz.json')).toBe(false);
+    const answering = (status: number) =>
+      new Drive(() => 'tok', (async (input: RequestInfo | URL, init: RequestInit = {}) => {
+        const parent = new URL(String(input)).searchParams.get('q')?.match(/^'([^']+)' in parents/)?.[1];
+        return init.method === 'DELETE' ? json({ error: { code: status, message: 'no', errors: [{ reason: 'no' }] } }, status) : json({ files: ROOT[parent!] ?? [] });
+      }) as typeof fetch);
+    expect(await new DriveFolder(answering(404), 'root', 'x').deleteRequest(name)).toBe(false);
+    await expect(new DriveFolder(answering(403), 'root', 'x').deleteRequest(name)).rejects.toThrow('no');
+  });
+
+  it('says whether the account may add a request, as Drive’s listing has it', async () => {
+    const may = async (capabilities?: DriveFile['capabilities']) => new DriveFolder(driveWith({ ...ROOT, root: ROOT.root!.map((f) => (f.name === '_requests' ? { ...f, capabilities } : f)) }).drive, 'root', 'x').mayRequest();
+    expect([await may({ canAddChildren: true }), await may({ canAddChildren: false }), await may()]).toEqual([true, false, undefined]);
+    expect(await new DriveFolder(driveWith({ root: [] }).drive, 'root', 'x').mayRequest()).toBeUndefined();
   });
 
   it('links to Drive’s viewer', async () => {
@@ -187,7 +261,7 @@ describe('DemoFolder', () => {
     const folder = demoFolder();
     await folder.createRequest('a.json', { x: 1 });
     expect((await folder.list('_requests'))?.find((e) => e.name === 'a.json')?.deletable).toBe(true);
-    await folder.deleteRequest('a.json');
+    expect([await folder.deleteRequest('a.json'), await folder.deleteRequest('a.json'), await folder.mayRequest()]).toEqual([true, false, true]);
     expect(await folder.readText('_requests/a.json')).toBeNull();
     const done = (await folder.list('_requests/done'))!;
     expect(done.length).toBeGreaterThan(0);

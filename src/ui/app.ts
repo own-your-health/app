@@ -11,7 +11,7 @@ import { needsAttention } from '../model/sources';
 import type { RequestScope } from '../model/types';
 import { getAccount, getClientId, getFolder, setAccount, setClientId, setFolder } from '../settings';
 import { readSetupLink, setupLinkFor, withoutClient } from '../setup-link';
-import { button, sheet, type Ctx } from './components';
+import { button, sheet, type Ctx, type Mark } from './components';
 import { clear, h, icon, s } from './dom';
 import { href, isListSection, moved, parseRoute, type Route } from './router';
 import { tabBar } from './tabs';
@@ -35,6 +35,8 @@ import { eventView } from '../next/eventView';
 const UNSENT_TEXT: Record<Unsent, string> = {
   refresh: 'The refresh request was not sent: tap Refresh again.',
   cancel: 'The request was not cancelled: tap Cancel again.',
+  paid: 'The payment was not marked: open the bill and tap Mark paid again.',
+  undo: 'The payment was not undone: tap Undo again.',
 };
 
 const VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '0.0.0';
@@ -372,7 +374,7 @@ export class App {
   private stateSignature(): string {
     const st = this.store;
     if (!st) return '';
-    return JSON.stringify([st.status.kind === 'ok' ? st.status.status.updated_at : st.status.kind, st.pending.map((p) => p.file), st.done.length, st.refused.length, st.snapshot]);
+    return JSON.stringify([st.status.kind === 'ok' ? st.status.status.updated_at : st.status.kind, st.pending.map((p) => p.file), st.marks.map((m) => [m.file, m.taken]), st.answeredMarks.length, st.mayRequest, st.done.length, st.refused.length, st.snapshot]);
   }
 
   private ctx(): Ctx {
@@ -388,46 +390,62 @@ export class App {
       toast: (t, kind) => this.toast(t, kind),
       refresh: (scope, what) => this.refresh(scope, what),
       cancel: async (p) => {
-        this.writing = 'cancel';
+        const mark = 'scope' in p.request ? null : p.request;
+        this.writing = mark ? 'undo' : 'cancel';
         try {
-          await this.store!.cancel(p);
-          this.toast('Request cancelled');
+          const back = await this.store!.cancel(p);
+          this.toast(!back ? 'The Mac had already taken it' : mark ? 'The request is taken back' : 'Request cancelled');
+          if (!back) void this.pollOnce();
         } catch (e) {
           // A renewal is leaving the page; it says so when it comes back.
           if (this.renewing) return;
-          this.toast(e instanceof Error ? e.message : 'The request could not be cancelled.', 'error');
+          this.toast(e instanceof Error ? e.message : `The request could not be ${mark ? 'undone' : 'cancelled'}.`, 'error');
         } finally {
           this.writing = null;
         }
         this.renderKeepingScroll();
       },
+      mark: (mark, failed, stands) => this.mark(mark, failed, stands),
       signOut: () => this.signOut(),
     };
   }
 
   private async refresh(scope: RequestScope, what: string): Promise<void> {
+    await this.ask('refresh', (store) => store.requestRefresh(scope, this.user, VERSION), `Asked the Mac to refresh ${what}`);
+  }
+
+  private mark(mark: Mark, failed?: (text: string) => void, stands?: () => boolean): Promise<boolean> {
+    const paid = 'paid' in mark;
+    return this.ask(paid ? 'paid' : 'undo', (store) => store.requestMark(mark, this.user, VERSION, stands), paid ? 'Marked paid. The Mac files it on its next pass.' : 'Asked the Mac to undo the payment', failed);
+  }
+
+  /** Writes a request, and says whether it was sent. */
+  private async ask(writing: Unsent, send: (store: Store) => Promise<{ file: string }>, sent: string, failed = (text: string) => this.toast(text, 'error')): Promise<boolean> {
     const store = this.store;
-    if (!store) return;
-    this.writing = 'refresh';
+    if (!store) return false;
+    this.writing = writing;
+    let ok = false;
     try {
-      const p = await store.requestRefresh(scope, this.user, VERSION);
+      const p = await send(store);
+      ok = true;
       this.demoMac?.(p.file);
       this.signature = this.stateSignature();
-      this.toast(`Asked the Mac to refresh ${what}`);
+      this.toast(sent);
     } catch (e) {
       // A renewal is leaving the page; it says so when it comes back.
-      if (this.renewing) return;
+      if (this.renewing) return false;
       const text =
         e instanceof DriveError && e.status === 403
           ? 'Google did not let the app write the request into this folder. Check that this account may edit the records folder.'
           : e instanceof Error
             ? e.message
             : 'The request could not be written.';
-      this.toast(text, 'error');
+      failed(text);
     } finally {
       this.writing = null;
     }
     this.renderKeepingScroll();
+    return ok;
   }
 
   // Signing out forgets the token and does not revoke it. Google's revoke ends

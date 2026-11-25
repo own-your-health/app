@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FolderError, parseAttempts, parseHousehold, parseIndex, parseRefused, parseRequest, parseStatus, parseText } from '../src/model/parse';
+import { FolderError, parseAttempts, parseHousehold, parseIndex, parseRefused, parseMark, parseRequest, parseStatus, parseText } from '../src/model/parse';
 import { demoJson, fixture, FIXTURES } from './helpers';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -109,6 +109,29 @@ describe('requests', () => {
     expect(parseRequest({ ...base, requested_at: undefined })).toBeNull();
     expect(parseRequest({ ...base, scope: { all: false } })).toBeNull();
     expect(parseRequest({ ...base, scope: { everything: true } })).toBeNull();
+  });
+
+  it('reads a payment marked, and its undo, pending or answered', () => {
+    for (const f of ['paid', 'paid-done', 'paid-invalid', 'unpaid']) {
+      const raw = fixture<{ id: string }>(`requests/${f}.json`);
+      expect(parseMark(raw)?.id).toBe(raw.id);
+      expect(parseRequest(raw)).toBeNull();
+    }
+    expect(parseMark(demoJson(`_requests/done/${firstDone()}`))).toBeNull();
+  });
+
+  it('refuses a payment that is not whole, or a request that is two', () => {
+    const paid = fixture<{ paid: object }>('requests/paid.json');
+    const unpaid = fixture<{ unpaid: object }>('requests/unpaid.json');
+    const with_ = (change: object) => parseMark({ ...paid, paid: { ...paid.paid, ...change } });
+    expect(with_({})).not.toBeNull();
+    for (const change of [{ person: 3 }, { document: undefined }, { on: '20 Nov' }, { on: null }, { amount: '5.001' }, { amount: '-5' }, { amount: 5 }, { amount: { amount: '5.00' } }, { amount: { amount: 'x', currency: 'USD' } }]) expect(with_(change)).toBeNull();
+    expect(parseMark({ ...paid, unpaid: unpaid.unpaid })).toBeNull();
+    expect(parseMark({ ...paid, scope: { all: true } })).toBeNull();
+    expect(parseMark({ ...unpaid, unpaid: { person: 'p_a' } })).toBeNull();
+    expect(parseMark({ ...unpaid, unpaid: { payment: 'o_a' } })).toBeNull();
+    expect(parseMark({ ...paid, paid: undefined })).toBeNull();
+    for (const part of [{ schema: 'medrec-request/v2' }, { id: 3 }, { requested_at: undefined }]) expect(parseMark({ ...paid, ...part })).toBeNull();
   });
 
   it('reads a request medrec refused, which keeps no scope', () => {

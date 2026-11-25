@@ -12,7 +12,7 @@ export interface Attrs {
   [attr: string]: unknown;
 }
 
-const SAFE_URL = /^(https:\/\/|#|\.\/|\/(?!\/)|\?|mailto:)/i;
+const SAFE_URL = /^(https:\/\/|#|\.\/|\/(?!\/)|\?|mailto:|tel:\+?\d{7,15}$)/i;
 
 export function safeHref(url: string): string {
   return SAFE_URL.test(url) ? url : '#';

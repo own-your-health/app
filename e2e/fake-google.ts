@@ -63,6 +63,10 @@ export class FakeGoogle {
   readonly reads: string[] = [];
   /** A file whose content Drive fails to give, as it does now and then; `*` while it answers nothing at all. */
   failing: string | null = null;
+  /** Drive stores the next files the app writes, and its answer is lost. */
+  losing = false;
+  /** The folder is shared with the account to view only. */
+  viewer = false;
   /** What the sign-in grants, and so what the token may do; a person can untick a scope on Google's screen. */
   granted = [READ, WRITE];
   /** The client tokeninfo names: another one means a token issued to another app. */
@@ -96,7 +100,7 @@ export class FakeGoogle {
     return text.replace(/\b(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})Z\b/g, (t) => iso(Date.parse(t) + this.shiftMs));
   }
 
-  private add(n: Omit<Node, 'id' | 'modifiedTime'> & { modifiedTime?: string }): Node {
+  private add(n: Omit<Node, 'id' | 'modifiedTime'> & { id?: string; modifiedTime?: string }): Node {
     const node: Node = { id: `fake${String(++this.seq).padStart(8, '0')}x`, modifiedTime: iso(Date.now()), ...n };
     this.nodes.set(node.id, node);
     return node;
@@ -219,6 +223,7 @@ export class FakeGoogle {
     const url = new URL(req.url());
     const path = url.pathname.replace(/^\/(upload\/)?drive\/v3\//, '');
     if (path === 'about') return json(route, 200, { user: this.account });
+    if (path === 'files/generateIds') return json(route, 200, { ids: [`made${String(++this.seq).padStart(8, '0')}x`] });
     if (path === 'files' && req.method() === 'GET') return this.listFiles(route, url.searchParams.get('q') ?? '');
     if (path === 'files' && req.method() === 'POST' && url.pathname.startsWith('/upload/')) return this.create(route, req);
     const m = /^files\/([^/]+)$/.exec(path);
@@ -269,16 +274,17 @@ export class FakeGoogle {
   private create(route: Route, req: Request): Promise<void> {
     const boundary = /boundary=([^;]+)/.exec(req.headers()['content-type'] ?? '')?.[1];
     const parts = (req.postData() ?? '').split(`--${boundary}`).slice(1, -1).map((p) => p.split('\r\n\r\n').slice(1).join('\r\n\r\n').replace(/\r\n$/, ''));
-    const meta = JSON.parse(parts[0] ?? '{}') as { name?: string; parents?: string[]; mimeType?: string };
+    const meta = JSON.parse(parts[0] ?? '{}') as { id?: string; name?: string; parents?: string[]; mimeType?: string };
     const parent = this.nodes.get(meta.parents?.[0] ?? '');
     if (!meta.name || !parent || parent.mimeType !== FOLDER_MIME) return driveError(route, 400, 'badRequest', 'A file needs a name and a folder.');
     if (!this.granted.includes(WRITE)) {
       this.changes.push({ method: 'CREATE', path: `${this.pathOf(parent)}/${meta.name}`, refused: true });
       return insufficientScopes(route);
     }
-    const node = this.add({ name: meta.name, mimeType: meta.mimeType ?? 'application/octet-stream', parent: parent.id, byApp: true, content: parts[1] ?? '' });
+    if (meta.id && this.nodes.has(meta.id)) return driveError(route, 409, 'fileIdInUse', 'A file already exists with the provided ID.');
+    const node = this.add({ ...(meta.id ? { id: meta.id } : {}), name: meta.name, mimeType: meta.mimeType ?? 'application/octet-stream', parent: parent.id, byApp: true, content: parts[1] ?? '' });
     this.changes.push({ method: 'CREATE', path: this.pathOf(node) });
-    return json(route, 200, this.resource(node));
+    return this.losing ? driveError(route, 503, 'backendError', 'Backend Error') : json(route, 200, this.resource(node));
   }
 
   private resource(n: Node) {
@@ -290,7 +296,7 @@ export class FakeGoogle {
       parents: n.parent ? [n.parent] : [],
       ...(n.content !== undefined ? { size: String(n.content.length) } : {}),
       ...(n.md5 !== undefined ? { md5Checksum: n.md5 } : {}),
-      capabilities: { canEdit: n.byApp, canDelete: n.byApp, canAddChildren: n.mimeType === FOLDER_MIME },
+      capabilities: { canEdit: n.byApp, canDelete: n.byApp, canAddChildren: n.mimeType === FOLDER_MIME && !this.viewer },
     };
   }
 }

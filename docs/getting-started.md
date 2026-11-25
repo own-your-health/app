@@ -63,7 +63,7 @@ about fifteen minutes.
 
 Both clients must be in the same project. medrec asks Google for `drive.file`,
 which reaches only the files a client of its own project made, so it sees the
-app's refresh requests only when the app's client is in that project.
+app's requests only when the app's client is in that project.
 
 Google keeps one grant per account for the whole project, so a revoke ends
 both sign-ins on every device. `medrec drive logout --revoke` signs the app out

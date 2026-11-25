@@ -1,7 +1,8 @@
-// Refresh requests: the only files the app writes (`_requests/`,
-// medrec-request/v1 in medrec's data contract).
+// Requests: the only files the app writes (`_requests/`, medrec-request/v1 in
+// medrec's data contract). One asks the Mac to refresh, or to mark a bill paid.
 
-import { REQUEST_SCHEMA, type RefreshRequest, type RequestScope } from './types';
+import { toCents, type Money } from './records';
+import { REQUEST_SCHEMA, type MarkRequest, type PaidMark, type PendingMark, type PersonIndex, type RefreshRequest, type RequestHead, type RequestScope, type UnpaidMark } from './types';
 
 const ALPHABET = 'abcdefghijklmnopqrstuvwxyz234567';
 const ID_RE = /^x_[a-z2-7]{20}$/;
@@ -28,17 +29,18 @@ export function compactTime(d: Date): string {
   return d.toISOString().replace(/\.\d{3}Z$/, 'Z').replace(/[-:]/g, '');
 }
 
-export function requestFileName(req: Pick<RefreshRequest, 'id' | 'requested_at'>): string {
+export function requestFileName(req: Pick<RequestHead, 'id' | 'requested_at'>): string {
   return `${compactTime(new Date(req.requested_at))}_${req.id}.json`;
 }
 
-export function buildRequest(opts: {
-  scope: RequestScope;
+interface HeadOptions {
   now: Date;
   by: { email?: string; name?: string };
   appVersion: string;
   id?: string;
-}): RefreshRequest {
+}
+
+function requestHead(opts: HeadOptions): RequestHead {
   const requestedAt = new Date(Math.floor(opts.now.getTime() / 1000) * 1000).toISOString().replace('.000Z', 'Z');
   const by: { email?: string; name?: string } = {};
   if (opts.by.email) by.email = opts.by.email;
@@ -48,9 +50,57 @@ export function buildRequest(opts: {
     id: opts.id ?? newRequestId(),
     requested_at: requestedAt,
     requested_by: by,
-    scope: opts.scope,
     app: { name: 'own-your-health-app', version: opts.appVersion },
   };
+}
+
+export function buildRequest(opts: HeadOptions & { scope: RequestScope }): RefreshRequest {
+  return { ...requestHead(opts), scope: opts.scope };
+}
+
+/** A request to mark a bill paid, or to drop a payment marked before. */
+export function buildMark(opts: HeadOptions & { mark: { paid: PaidMark } | { unpaid: UnpaidMark } }): MarkRequest {
+  return { ...requestHead(opts), ...opts.mark };
+}
+
+/** An amount as a paid request gives it: a decimal string in US dollars, else with its currency. */
+export const paidAmount = (m: Money): PaidMark['amount'] => (m.currency === 'USD' ? m.amount : { amount: m.amount, currency: m.currency });
+
+/** What a paid request says was paid. */
+export const markedAmount = (p: PaidMark): Money => (typeof p.amount === 'string' ? { amount: p.amount, currency: 'USD' } : p.amount);
+
+/** A typed amount ("$1,204.5") as medrec takes it ("1204.50"): above zero with at most two places. Null when it is not one. */
+export function typedAmount(text: string): string | null {
+  const m = /^\$?\s*(\d{1,3}(?:,\d{3})+|\d{1,9})?(?:\.(\d{1,2})?)?$/.exec(text.trim());
+  if (!m || (!m[1] && !m[2])) return null;
+  const whole = (m[1] ?? '0').replace(/,/g, '').replace(/^0+(?=\d)/, '');
+  const amount = `${whole}.${(m[2] ?? '').padEnd(2, '0')}`;
+  return Number(amount) > 0 ? amount : null;
+}
+
+/** The waiting marks that pay a bill or one of its copies. */
+export function marksOn(marks: readonly PendingMark[], person: string, documents: ReadonlySet<string>): PendingMark[] {
+  return marks.filter((m) => m.request.paid?.person === person && documents.has(m.request.paid.document));
+}
+
+/** What some waiting marks come to in one currency. */
+export function marksTotal(marks: readonly PendingMark[], currency: string): number {
+  return marks.reduce((t, m) => {
+    const a = m.request.paid && markedAmount(m.request.paid);
+    return a?.currency === currency ? t + (toCents(a) ?? 0) : t;
+  }, 0);
+}
+
+/** Whether medrec's list of bills shows what a request did: the payment marked, or that it is gone. */
+export function markRecorded(r: MarkRequest, indexes: ReadonlyMap<string, PersonIndex>): boolean {
+  const { paid, unpaid } = r;
+  const idx = indexes.get((paid ?? unpaid)?.person ?? '');
+  const states = idx?.bills?.states;
+  if (!idx || !states) return false;
+  if (!paid) return ![...states.values()].some((s) => s.payments.some((p) => p.id === unpaid?.payment));
+  const asked = markedAmount(paid);
+  const copyOf = idx.documents.find((d) => d.id === paid.document)?.same_statement_as ?? '';
+  return !!(states.get(paid.document) ?? states.get(copyOf))?.payments.some((p) => p.from === 'household' && p.on === paid.on && p.amount?.currency === asked.currency && toCents(p.amount) === toCents(asked));
 }
 
 /** Whether a request's scope covers one source of one person. */

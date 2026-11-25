@@ -21,8 +21,8 @@ describe('reading bills.json', () => {
     expect(states.get('d_lab')).toEqual({
       payments: [
         { from: 'receipt', document: 'd_receipt', on: '2026-09-20', amount: usd('40.00') },
-        { from: 'household', on: '2026-09-28', amount: usd('10.00') },
-        { from: 'household', on: '2026-09-29', amount: { amount: '8.00', currency: 'EUR' }, apart: true },
+        { from: 'household', id: 'o_one', on: '2026-09-28', amount: usd('10.00') },
+        { from: 'household', id: 'o_two', on: '2026-09-29', amount: { amount: '8.00', currency: 'EUR' }, apart: true },
       ],
       left: usd('40.00'),
       settled: false,

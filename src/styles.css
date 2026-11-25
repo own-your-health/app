@@ -2319,6 +2319,42 @@ a.cal-day:hover .cal-date {
   gap: 12px;
 }
 
+/* Mark paid: what waits for the Mac, its undo, and the button. */
+.mark-paid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 8px;
+}
+
+.mark-paid p {
+  margin: 0;
+}
+
+.mark-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  flex-basis: 100%;
+}
+
+.mark-undo {
+  flex-basis: 100%;
+}
+
+.mark-undo summary {
+  min-height: 44px;
+  line-height: 44px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.paid-form .input[aria-invalid='true'] {
+  border-color: var(--attention);
+}
+
 .call-claim {
   margin: 0;
   font-size: 18px;

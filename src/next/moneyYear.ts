@@ -126,6 +126,7 @@ function billsCard(ctx: Ctx, who: string | undefined): HTMLElement {
   const to = (view: 'bills' | 'calls'): Route => ({ name: 'money', view, ...(who ? { who } : {}) });
   const ready = g.open.filter((m) => toPay(m.item));
   const maybe = g.open.filter((m) => mayBePaid(m.item));
+  const marked = g.open.filter((m) => m.item.marked).length;
   const matched = ready.every((m) => m.item.verdict === 'matches');
   const readyCents = ready.reduce((t, m) => t + m.item.cents, 0);
   const late = ready.filter((m) => m.item.overdue).length;
@@ -144,6 +145,7 @@ function billsCard(ctx: Ctx, who: string | undefined): HTMLElement {
         })
       : null,
     maybe.length ? row({ route: to('bills'), title: `${count(maybe.length, 'bill')} may be paid`, meta: `A receipt is on file for ${maybe.length === 1 ? 'it' : 'each'}; its amount could not be read.` }) : null,
+    marked ? row({ route: to('bills'), title: `${count(marked, 'bill')} marked paid`, meta: `The Mac files ${marked === 1 ? 'its payment' : 'their payments'} on its next pass.` }) : null,
     g.unbilled.length ? row({ route: to('bills'), title: who ? 'Not billed yet' : 'No bill listed yet', meta: `What the claims say you owe, with no bill or receipt ${who ? 'yet' : 'listed here'}.`, aside: num(unbilled) }) : null,
   ];
   return card({ title: 'Bills' }, rows.some(Boolean) ? rows : h('p', null, who ? 'No open bills.' : 'No open bills listed here.'), ...billNotes(ctx, who), h('p', { class: 'small' }, link(to('bills'), 'All bills, beside their claims')));

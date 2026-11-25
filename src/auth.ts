@@ -28,7 +28,8 @@ export function isClientId(id: string): boolean {
 }
 
 /** A request the person asked for that a renewal interrupted before it reached Drive. */
-export type Unsent = 'refresh' | 'cancel';
+export const UNSENT = ['refresh', 'cancel', 'paid', 'undo'] as const;
+export type Unsent = (typeof UNSENT)[number];
 
 export interface AuthState {
   /** The nonce. */
@@ -69,7 +70,7 @@ export function decodeState(raw: string | null): AuthState | null {
         n: s.n,
         r: s.r.startsWith('#/') ? s.r : '#/',
         ...(s.s === 1 || s.s === 2 ? { s: s.s } : {}),
-        ...(s.w === 'refresh' || s.w === 'cancel' ? { w: s.w } : {}),
+        ...(s.w !== undefined && UNSENT.includes(s.w) ? { w: s.w } : {}),
       };
     }
   } catch {

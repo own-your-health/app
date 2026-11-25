@@ -10,6 +10,7 @@ import type {
   Person,
   PersonIndex,
   RefreshRequest,
+  RequestHead,
   RefreshStatus,
   Source,
   SourceStatus,
@@ -256,7 +257,7 @@ export function macState(read: { kind: 'missing' } | { kind: 'newer_format' } | 
 }
 
 /** A pending request the Mac should have taken by now, while it is online. */
-export function isOverdue(req: RefreshRequest, mac: MacState, now: Date): boolean {
+export function isOverdue(req: Pick<RequestHead, 'requested_at'>, mac: MacState, now: Date): boolean {
   if (mac.kind !== 'online') return false;
   return now.getTime() - Date.parse(req.requested_at) > (mac.passEverySecs + 60) * 1000;
 }
@@ -273,7 +274,7 @@ export type RequestWait =
  * the Mac being busy, not late. `last_attempt.requests` names the requests
  * an import is running for.
  */
-export function requestWait(req: RefreshRequest, views: SourceView[], mac: MacState, now: Date): RequestWait {
+export function requestWait(req: Pick<RequestHead, 'id' | 'requested_at'>, views: SourceView[], mac: MacState, now: Date): RequestWait {
   if (mac.kind === 'online') {
     const running = views.filter((v) => v.lastAttempt?.outcome === 'running');
     const mine = running.find((v) => v.lastAttempt?.requests?.includes(req.id));

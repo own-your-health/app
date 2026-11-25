@@ -1,0 +1,9 @@
+{
+  "schema": "medrec-request/v1",
+  "id": "x_bbbbbbbbbbbbbbbbbbbb",
+  "requested_at": "2026-11-22T20:05:12Z",
+  "requested_by": {},
+  "paid": { "person": "p_aaaaaaaaaaaaaaaaaaaa", "document": "d_bbbbbbbbbbbbbbbbbbbb", "on": "2026-11-20", "amount": "120.00" },
+  "app": { "name": "own-your-health-app", "version": "0.1.0" },
+  "handled": { "picked_up_at": "2026-11-22T20:06:01Z", "finished_at": "2026-11-22T20:06:02Z", "outcome": "invalid", "sources": [], "message": "The document is not one of their bills.", "by": "medrec 0.9.6" }
+}
