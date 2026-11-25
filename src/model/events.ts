@@ -3,7 +3,7 @@
 // the app's events.
 
 import { FolderError } from './parse';
-import type { MedDocument } from './types';
+import type { PersonIndex } from './types';
 
 export type Sureness = 'sure' | 'likely' | 'unsure';
 
@@ -22,6 +22,9 @@ export interface MedrecMember {
   provider?: string;
 }
 
+const PLACE_FROM = ['portal', 'claims', 'alias', 'linked'] as const;
+type PlaceFrom = (typeof PLACE_FROM)[number];
+
 export interface MedrecEvent {
   id: string;
   kind: string;
@@ -30,8 +33,10 @@ export interface MedrecEvent {
   title: string;
   what?: string;
   place?: string;
-  /** Whether the place is a practice a paper says its clinician works at (N5). */
-  placeFromAlias?: true;
+  /** Where the place is from: its portal, its claims, a paper that says its clinician works there (N5), or another person's stay it is linked to (X1). Absent for one the app does not know. */
+  placeFrom?: PlaceFrom;
+  /** Other people's stays that it was during, of a newborn's events (X1): the only links the app reads. */
+  bornDuring: { event: string; person: string }[];
   confidence: Sureness;
   members: MedrecMember[];
   expected: { what: string; why: string; since?: string }[];
@@ -51,13 +56,17 @@ export interface MedrecEvents {
   pending: MedrecPending[];
   /** The practices clinicians were learned to work at, with the paper that says so (N5). */
   aliases: { organization: string; document: string }[];
-  /** The other people's papers these events name (X2), by id; the store fills it in from their indexes. */
-  papers: Map<string, { person: string; doc: MedDocument }>;
+  /** The indexes of the other people whose events (X1) and papers (X2) these name, from the load this file is of; the store fills it in. */
+  others: ReadonlyMap<string, PersonIndex>;
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const text = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined);
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const placeFrom = (v: unknown): { placeFrom?: PlaceFrom } => {
+  const known = PLACE_FROM.find((x) => x === v);
+  return known ? { placeFrom: known } : {};
+};
 const sureness = (v: unknown): Sureness => (v === 'sure' || v === 'likely' ? v : 'unsure');
 
 /**
@@ -99,7 +108,8 @@ export function parseMedrecEvents(raw: unknown, person: string): MedrecEvents {
       end: String(e.end),
       title: text(e.title) ?? '',
       ...(text(e.what) ? { what: text(e.what) } : {}),
-      ...(text(e.place) ? { place: text(e.place), ...(e.place_from === 'alias' ? { placeFromAlias: true as const } : {}) } : {}),
+      ...(text(e.place) ? { place: text(e.place), ...placeFrom(e.place_from) } : {}),
+      bornDuring: (Array.isArray(e.links) ? e.links : []).filter(isObj).flatMap((x) => (x.relation === 'born_during' && text(x.event) && text(x.person) ? [{ event: text(x.event)!, person: text(x.person)! }] : [])),
       confidence: sureness(e.confidence),
       members,
       expected,
@@ -110,5 +120,5 @@ export function parseMedrecEvents(raw: unknown, person: string): MedrecEvents {
     text(x.document) ? [{ document: text(x.document)!, could_join: (Array.isArray(x.could_join) ? x.could_join : []).filter((y): y is string => typeof y === 'string'), rule: (text(x.rule) ?? '') as MedrecRule }] : [],
   );
   const aliases = (Array.isArray(raw.aliases) ? raw.aliases : []).filter(isObj).flatMap((x) => (text(x.organization) && text(x.document) ? [{ organization: text(x.organization)!, document: text(x.document)! }] : []));
-  return { person, events, pending, aliases, papers: new Map() };
+  return { person, events, pending, aliases, others: new Map() };
 }

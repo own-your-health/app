@@ -5,11 +5,11 @@
 import { claimCategory, claimProvider } from '../model/claims';
 import type { MedrecEvent, MedrecEvents } from '../model/events';
 import type { Household, MedDocument, MedRecord, PersonIndex } from '../model/types';
-import { knownArea, paperPrivate } from '../model/private';
+import { knownArea, paperPrivate, recordPrivate } from '../model/private';
 import { practiceOf } from '../model/practices';
 import { nameKey, sameProvider } from '../model/providers';
 import { str } from '../model/records';
-import { eventPrivate, nameEvent, withoutPrivate, type CareEvent, type ClaimRole, type EventKind } from './event';
+import { eventPrivate, nameEvent, withoutPrivate, type CareEvent, type ClaimRole, type Confidence, type EventKind } from './event';
 import { tidyName } from '../model/words';
 
 const KINDS: Record<string, EventKind> = {
@@ -63,10 +63,37 @@ function placeHolds(place: string, e: CareEvent, household: Household, person: s
 }
 
 /**
+ * Whether an event's place is that of another person's stay that is private,
+ * holds a private item of theirs, or cannot be told not to: it is judged as
+ * theirs, so it is left out on this person's pages too, and nothing takes its
+ * place. medrec takes it from the claim of a stay this event was during, and
+ * does not say which, so any of several is enough. A stay whose own place is
+ * not from its portal or claims has no such claim to tell by.
+ */
+function placePrivate(m: MedrecEvent, file: MedrecEvents): boolean {
+  if (m.placeFrom !== 'linked') return false;
+  return (
+    !m.bornDuring.length ||
+    m.bornDuring.some((l) => {
+      const other = file.others.get(l.person);
+      const stay = other?.events?.events.find((e) => e.id === l.event);
+      if (!other || !stay || other.privacy?.kind !== 'known' || other.privacy.events.has(stay.id)) return true;
+      if (stay.placeFrom !== 'portal' && stay.placeFrom !== 'claims') return true;
+      return stay.members.some((x) => (x.record ? recordPrivate(other, x.record) : !x.person && paperPrivate(other, x.document!)));
+    })
+  );
+}
+
+/** The papers of another person's that these events hold (X2), private ones too, for that person's own list of them. */
+export const papersHeldFor = (file: MedrecEvents, person: string): { document: string; event: string; confidence: Confidence }[] =>
+  file.events.flatMap((e) => e.members.flatMap((x) => (x.person === person && x.document ? [{ document: x.document, event: e.id, confidence: x.confidence }] : [])));
+
+/**
  * medrec's events as the app's, newest first as medrec orders them. A
  * member whose record or paper is not in the index (events written before
- * an index the store has not checked them against) is left out; another
- * person's paper (X2) comes from the papers the store found for it.
+ * an index the store has not checked them against) is left out. Another
+ * person's paper (X2) comes from their index, and is judged as theirs: one
+ * that is private, or not known not to be, is in none of it.
  */
 export function fromMedrec(file: MedrecEvents, index: PersonIndex, household: Household): CareEvent[] {
   const records = new Map<string, MedRecord>(index.records.map((r) => [r.id, r]));
@@ -74,10 +101,15 @@ export function fromMedrec(file: MedrecEvents, index: PersonIndex, household: Ho
   return file.events.flatMap((m): CareEvent[] => {
     const e: CareEvent = { id: m.id, kind: 'service', start: m.start, end: m.end, title: '', claims: [], visits: [], recorded: [], papers: [] };
     for (const x of m.members) {
+      if (x.document && x.person) {
+        const other = file.others.get(x.person);
+        const doc = other?.documents.find((d) => d.id === x.document);
+        if (other && doc && !paperPrivate(other, doc.id)) e.papers.push({ doc, rule: x.rule, confidence: x.confidence, person: x.person });
+        continue;
+      }
       if (x.document) {
-        const other = x.person ? file.papers.get(x.document) : undefined;
-        const doc = x.person ? other?.doc : docs.get(x.document);
-        if (doc) e.papers.push({ doc, rule: x.rule, confidence: x.confidence, ...(other ? { person: other.person } : {}) });
+        const doc = docs.get(x.document);
+        if (doc) e.papers.push({ doc, rule: x.rule, confidence: x.confidence });
         continue;
       }
       const record = records.get(x.record!);
@@ -93,13 +125,14 @@ export function fromMedrec(file: MedrecEvents, index: PersonIndex, household: Ho
     // A day of vaccine claims only is a vaccine visit, as the app's own grouping makes it.
     e.kind = kind === 'service' && !title && e.claims.length && e.claims.every((c) => claimCategory(c.record) === 'vaccine') ? 'vaccine' : kind;
     if (m.kind === 'stay_no_facility' || m.kind === 'er_no_facility') e.noFacility = true;
+    const noPlace = !!m.place && placePrivate(m, file);
     if (m.place && placeHolds(m.place, e, household, index.person)) e.place = m.place;
     if (m.expected.length) e.expected = m.expected;
     if (m.confidence === 'unsure') e.doubt = m.could_join.length > 1 ? `It could be part of any of ${m.could_join.length} other visits` : m.could_join.length ? 'It could be part of another visit' : 'medrec is not sure what it belongs with';
-    const given = { ...(title ? { title } : {}), ...(m.what ? { what: m.what } : {}) };
+    const given = { ...(title ? { title } : {}), ...(m.what ? { what: m.what } : {}), noPlace };
     const area = eventPrivate(e, index);
     // A place a private paper says it is at is private, whatever other paper does: which of them gave it is not said.
-    const told = !!m.placeFromAlias && file.aliases.some((a) => a.organization === m.place && paperPrivate(index, a.document));
+    const told = m.placeFrom === 'alias' && file.aliases.some((a) => a.organization === m.place && paperPrivate(index, a.document));
     const rest = area ? undefined : (withoutPrivate(e, index) ?? (told ? { ...e } : undefined));
     nameEvent(e, household, index.person, { ...given, private: !!knownArea(area) });
     if (rest) {

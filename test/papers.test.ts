@@ -74,20 +74,28 @@ describe('where each paper belongs', () => {
     );
     const why = (doc: string) => papersOf(robin, household, TODAY, indexes).find((p) => p.doc.id === doc)!.why;
     expect(why('d_undated')).toBe('It has no date to match a visit by.');
-    expect(why('d_far')).toBe('No visit in these records is on or near Oct 14, 2016.');
+    expect(why('d_far')).toBe('No visit of this person’s is on or near Oct 14, 2016.');
     expect(why('d_card')).toBe('An insurance card is about no one visit.');
   });
 
-  it('shows a parent’s paper in a child’s visit as with that visit (X2)', () => {
+  it('shows a child’s paper in a parent’s visit as with that visit (X2)', () => {
     const drew = structuredClone(indexes.get(id('Drew Example'))!);
-    const robin = indexes.get(id('Robin Example'))!;
-    const scan = robin.documents.find((d) => d.doc_type === 'immunization_record')!;
-    const visit = drew.events!.events[0]!;
-    visit.members.push({ document: scan.id, person: robin.person, kind: 'immunization_record', role: 'paper', rule: 'X2' as MedrecRule, confidence: 'likely' });
-    drew.events!.papers.set(scan.id, { person: robin.person, doc: scan });
-    const all = new Map([...indexes, [drew.person, drew]]);
-    const p = papersOf(robin, household, TODAY, all).find((x) => x.doc.id === scan.id)!;
-    expect([p.with?.person, p.with?.event.id, p.with?.how]).toEqual([drew.person, visit.id, 'event']);
+    const robin = structuredClone(indexes.get(id('Robin Example'))!);
+    const letter = drew.documents.find((d) => d.doc_type === 'letter')!;
+    const visit = robin.events!.events[0]!;
+    visit.members.push({ document: letter.id, person: drew.person, kind: 'letter', role: 'paper', rule: 'X2' as MedrecRule, confidence: 'likely' });
+    robin.events!.others = new Map([[drew.person, drew]]);
+    const own = drew.events!.events.find((e) => e.members.some((m) => m.document === letter.id))!;
+    const all = new Map([...indexes, [robin.person, robin], [drew.person, drew]]);
+    const placed = (idx: PersonIndex) => {
+      const p = papersOf(idx, household, TODAY, new Map([...all, [idx.person, idx]])).find((x) => x.doc.id === letter.id)!;
+      return [p.with?.person, p.with?.event.id, p.with?.how];
+    };
+    // One in a visit of its own person's too is with that one.
+    expect(placed(drew)).toEqual([drew.person, own.id, 'event']);
+    const alone = structuredClone(drew);
+    for (const e of alone.events!.events) e.members = e.members.filter((m) => m.document !== letter.id);
+    expect(placed(alone)).toEqual([robin.person, visit.id, 'event']);
   });
 });
 
