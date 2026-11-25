@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { privateCase } from '../test/helpers';
-import { partsPrivate, placesPrivate, removed, renamed, rewritten } from './alter';
+import { linesPrivate, partsPrivate, placesPrivate, removed, renamed, rewritten } from './alter';
 import { lay } from './lay';
 import { ALEX, itemId, ROBIN, SAM } from '../test/sample';
 
@@ -249,6 +249,30 @@ for (const [name, base, lists] of [
     await other.close();
   });
 }
+
+const SAID = 'Unmistakable words';
+
+test('every shared screen reads the same whatever the private parts of open items say', async ({ page, browser }) => {
+  const other = await browser.newPage();
+  await other.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
+  await lay(page, linesPrivate());
+  await lay(other, linesPrivate(SAID));
+  const searches = ['visit', 'laboratory'].map((q) => `#/search?q=${q}`);
+  for (const path of [...SHARED.map(([p]) => p), ...LISTS.map(([p]) => p), '#/costs?period=all', ...searches, '#/costs?period=all&by=service', '#/calendar?month=2026-09', '#/calendar?month=2026-07', '#/money?period=plan-1', ...PROVIDERS]) {
+    const [was, is] = await Promise.all([holds(page, path), holds(other, path)]);
+    expect(was.join('').length, path).toBeGreaterThan(path.includes('/provider/') ? 100 : 400);
+    expect(is, path).toEqual(was);
+    expect(is.join(''), path).not.toContain(SAID);
+  }
+  // Those words are in that folder: everyone's search does not find them, and one person's does.
+  await go(other, `#/search?q=${encodeURIComponent(SAID)}`);
+  await expect(other.locator('main [aria-live]').filter({ hasText: 'match' })).toHaveText(/^0 matches\./);
+  await other.getByRole('group', { name: 'Filter by person' }).getByRole('button', { name: 'Robin' }).click();
+  await expect(other.locator('main .row').first()).toContainText(SAID);
+  await go(other, `#/calendar?view=list&who=${ROBIN}`);
+  await expect(other.locator('main')).toContainText(SAID);
+  await other.close();
+});
 
 test('a bill says nothing of a private claim, or of a visit by one, on the screens the household shares', async ({ page }) => {
   const bill = (of: string | RegExp) => card(page, of).locator('.row', { hasText: '$120.00' });

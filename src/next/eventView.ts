@@ -13,6 +13,7 @@ import { isOutOfRange, resultFlag } from '../model/flags';
 import { isInError } from '../model/inError';
 import { unitText } from '../model/result';
 import { recordTitle, visitTitle } from '../model/titles';
+import { partSays } from '../model/parts';
 import { areaText, knownArea, paperPrivate } from '../model/private';
 import type { MedDocument, PersonIndex } from '../model/types';
 import { paperView } from '../paper/view';
@@ -92,7 +93,14 @@ function headCard(ctx: Ctx, idx: PersonIndex, e: CareEvent, m: EventMoney): HTML
     settledLine(idx, e, m),
     errorsNote(e.inError ?? 0),
     privateNote(e, idx),
+    partNote(idx, e.id),
   );
+}
+
+/** An open item with a private part says on its own page what shared screens leave out of it. */
+export function partNote(idx: PersonIndex, id: string): HTMLElement | null {
+  const says = partSays(idx, id);
+  return says ? h('p', { class: 'small muted' }, `${says} on Home and everyone’s Calendar, Money, Papers and search results.`) : null;
 }
 
 /** A private event says so on its page: where it stays off, and that this is discretion, not security. */

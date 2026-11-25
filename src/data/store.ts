@@ -104,6 +104,14 @@ const requestPaths = (entries: Entry[] | null, done: Entry[] | null): string[] =
 const isRefresh = (p: PendingRequest | PendingMark): p is PendingRequest => 'scope' in p.request;
 const isMark = (p: PendingRequest | PendingMark): p is PendingMark => !isRefresh(p);
 
+/** A person's text.json, with its MD5 asked after the read: of this one or a newer. */
+async function readTexts(folder: RecordsFolder, path: string): Promise<PersonText | null> {
+  const text = parseText(await readJson(folder, path));
+  if (!text) return null;
+  const md5 = await folder.md5(path).catch(() => undefined);
+  return { ...text, ...(md5 ? { md5 } : {}) };
+}
+
 export class Store {
   household!: Household;
   status: StatusRead = { kind: 'missing' };
@@ -390,7 +398,9 @@ export class Store {
       const state = await this.viewState(p, view, household);
       if (state) return heldFor(state);
       const raw = await readJson(this.folder, `views/${p.id}/${view.name}`);
-      return raw === null ? heldFor({ kind: 'arriving' }) : parsePrivate(raw, p.id, this.medrec);
+      if (raw === null) return heldFor({ kind: 'arriving' });
+      const list = parsePrivate(raw, p.id, this.medrec);
+      return list.kind === 'known' && view.text !== null ? { ...list, text: view.text } : list;
     } catch (e) {
       const why: HeldWhy = e instanceof FolderError && e.kind === 'newer_format' ? 'newer_format' : 'unreadable';
       return held(why, `medrec’s list of which items are private could not be read: ${e instanceof Error ? e.message : 'unknown error'}`);
@@ -661,7 +671,7 @@ export class Store {
     let t = this.texts.get(personId);
     if (!t) {
       const p = this.person(personId);
-      t = p ? readJson(this.folder, `${p.folder}/text.json`).then(parseText) : Promise.resolve(null);
+      t = p ? readTexts(this.folder, `${p.folder}/text.json`) : Promise.resolve(null);
       t.catch(() => this.texts.delete(personId));
       this.texts.set(personId, t);
     }

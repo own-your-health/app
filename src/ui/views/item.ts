@@ -19,7 +19,7 @@ import type { ProviderField } from '../../model/providers';
 import type { ImagingStudy, Json, MedDocument, MedRecord, PersonIndex, Provenance } from '../../model/types';
 import { claimContext, visitKind, visitOf } from '../../model/visits';
 import { tidyName } from '../../model/words';
-import { partOfEvent } from '../../next/eventView';
+import { partNote, partOfEvent } from '../../next/eventView';
 import { markedPayments, paidControl, viewOnlyNote } from '../../next/markPaid';
 import { paymentText, selfPay, unreadText } from '../../next/money';
 import { labelNote } from '../../next/labelView';
@@ -737,5 +737,5 @@ export function itemView(ctx: Ctx, personId: string, id: string): HTMLElement {
   const item = findItem(idx, id);
   if (!item) return h('div', { class: 'stack' }, back, card({}, empty('This record is not in the index. It may have been merged or removed by medrec.')));
   const body = item.type === 'record' ? recordView(ctx, idx, item.record) : item.type === 'document' ? documentView(ctx, idx, item.document, !!item.inError) : studyView(ctx, idx, item.study);
-  return h('div', { class: 'stack' }, back, partOfEvent(ctx, personId, idx, id), errorCard(ctx, idx, id, item), ...body);
+  return h('div', { class: 'stack' }, back, partOfEvent(ctx, personId, idx, id), partNote(idx, id), errorCard(ctx, idx, id, item), ...body);
 }

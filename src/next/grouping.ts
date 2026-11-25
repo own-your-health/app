@@ -14,7 +14,7 @@ import type { Household, MedRecord, PersonIndex } from '../model/types';
 import { samePractice } from '../model/practices';
 import { recentVisits, visitPlaces, visitTimeline, type Visit } from '../model/visits';
 
-import { eventMoney, eventPrivate, nameEvent, type CareEvent, type ClaimRole, type Confidence, type EventKind, type Rule } from './event';
+import { eventMoney, eventPrivate, nameEvent, withoutPrivate, type CareEvent, type ClaimRole, type Confidence, type EventKind, type Rule } from './event';
 
 // ---- Claims (C) ----
 
@@ -342,7 +342,14 @@ export function careEvents(index: PersonIndex, household: Household, today: stri
     }
   }
 
-  for (const e of events) nameEvent(e, household, index.person, { private: !!knownArea(eventPrivate(e, index)) });
+  for (const e of events) {
+    const area = eventPrivate(e, index);
+    nameEvent(e, household, index.person, { private: !!knownArea(area) });
+    const rest = area ? undefined : withoutPrivate(e, index);
+    if (!rest) continue;
+    nameEvent(rest, household, index.person);
+    e.shared = rest;
+  }
   return events.sort((a, b) => b.start.localeCompare(a.start) || b.end.localeCompare(a.end) || a.id.localeCompare(b.id));
 }
 

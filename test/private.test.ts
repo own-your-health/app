@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { Store } from '../src/data/store';
 import { parseMedrecEvents, type MedrecEvent, type MedrecRule } from '../src/model/events';
 import { FolderError } from '../src/model/parse';
+import { parseParts } from '../src/model/parts';
 import { anyPrivate, atLeast, documentPrivate, HELD, isHeld, itemPrivate, paperPrivate, parsePrivate, recordPrivate, studyPrivate, takenOut, whyHeld } from '../src/model/private';
 import { documentTitle } from '../src/model/records';
 import { find } from '../src/model/search';
@@ -812,6 +813,10 @@ describe('another person’s paper in a visit (X2), and a visit linked to anothe
 
   it('a place that is a linked visit’s is left out, on its own person’s pages too, where that visit is private or not known not to be', () => {
     const AT = 'Placeholder Hospital';
+    const known = (p: PersonIndex) => {
+      if (p.privacy?.kind !== 'known') throw new Error('not known');
+      return p.privacy;
+    };
     const at = personEvents(index(SAMPLE, drew), SAMPLE.household, TODAY).find((e) => e.visits.some((v) => v.record.fields.location))!.id;
     const place = (change: (parent: PersonIndex, stay: { id: string; members: { record?: string; document?: string; person?: string }[]; placeFrom?: MedrecEvent['placeFrom'] }, e: { links?: object[]; place_from: string }) => void, from = 'linked') => {
       const [parent, child] = [structuredClone(index(SAMPLE, robin)), structuredClone(index(SAMPLE, drew))];
@@ -821,11 +826,11 @@ describe('another person’s paper in a visit (X2), and a visit linked to anothe
       change(parent, stay, e as { links?: object[]; place_from: string });
       child.events = parseMedrecEvents(raw, drew);
       child.events.others = new Map([[robin, parent]]);
-      return personEvents(child, SAMPLE.household, TODAY).find((x) => x.id === e.id)!.place;
-    };
-    const known = (p: PersonIndex) => {
-      if (p.privacy?.kind !== 'known') throw new Error('not known');
-      return p.privacy;
+      // A shared screen goes by the same, of a visit with a private part.
+      known(child).parts = parseParts({ [e.id]: { says: '1 service not shown' } })!;
+      const its = personEvents(child, SAMPLE.household, TODAY).find((x) => x.id === e.id)!;
+      expect(its.shared!.place).toBe(its.place);
+      return its.place;
     };
     const none = undefined;
     // Its own records would name one, had medrec given none.
@@ -849,6 +854,10 @@ describe('another person’s paper in a visit (X2), and a visit linked to anothe
     // Only a stay whose own place is its portal's or its claims' has a claim that gives it.
     expect([place((_, s) => (s.placeFrom = 'portal')), place((_, s) => (s.placeFrom = 'claims'))]).toEqual([AT, AT]);
     expect([place((_, s) => (s.placeFrom = 'alias')), place((_, s) => (s.placeFrom = 'linked')), place((_, s) => delete s.placeFrom)]).toEqual([none, none, none]);
+    // medrec 0.9.9 says which of theirs a place may be shown from, whatever their own places are from.
+    const clear = (ids: (s: { id: string }) => string[]) => place((p, s) => ((known(p).clear = new Set(ids(s))), (s.placeFrom = 'alias')));
+    expect([clear((s) => [s.id]), clear(() => []), place((p) => (known(p).clear = new Set()))]).toEqual([AT, none, none]);
+    expect(place((p, s) => ((known(p).clear = new Set([s.id])), known(p).events.set(s.id, 'household')))).toBe(none);
     // Any of several, as which gave it is not said.
     const another = (relation: string) =>
       place((p, s, e) => {

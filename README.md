@@ -280,7 +280,9 @@ claim line in the folder: what was billed, what the plan allowed and paid,
 and your share, with its deductible, copay and coinsurance. A claim whose
 lines do not add up to its totals keeps the difference as a line of its own,
 "Not split by line", so a period's totals are always its claims'; a line the
-totals leave out counts nothing, and leaves no such line. It narrows to:
+totals leave out counts nothing, and leaves no such line. On everyone's view the
+private lines of a claim that is listed are one line, "Not shown here". It
+narrows to:
 - a period: this or last plan year, a calendar year, or every year. A plan
   year starts on the day the plan's claims give for it (the benefit period an
   ExplanationOfBenefit prints, `fields.benefit_period` in the index, when it
@@ -664,7 +666,8 @@ dropped from the address.
   visit it is with. A place a visit has from another person's (the hospital
   stay a newborn was born in: X1, `place_from` is `linked`) is left out, with
   nothing in its place, where that visit is private, holds a private item of
-  theirs, or nothing can say it does not. A place
+  theirs, or nothing can say it does not; medrec 0.9.9 and later name the visits
+  it can be shown from (`clear_events`). A place
   whose `place_from` is `alias` is there because a paper in the file's
   `aliases` says the clinician works at it: when any paper that says so is
   private, a shared screen leaves the place out. An event's address is medrec's id
@@ -1013,6 +1016,19 @@ page count. Papers took the place of each person's list of documents. A
   is listed there, not that there is nothing. The doctor's sheet
   leaves private items off until they are included. A section it left
   something out of says "None listed here", never that nothing is known.
+
+  **An open item can have a private part.** A claim of several services, a
+  bill and a visit stay open when only part of them is private, and medrec 0.9.9
+  and later say which (`parts` in `private.json`, `src/model/parts.ts`): a
+  claim's lines, diagnoses and payer's notes by their place in its lists, a
+  paper's lines by their bytes in its text, and what a visit's other members
+  say of it. A shared screen leaves those out, names the item by the rest, and
+  says how much it left out in medrec's words ("1 service not shown"). Amounts
+  stay: in Costs a claim's private lines are one line, "Not shown here". The
+  app judges no line. A list that its places are not of shows nothing of
+  itself, and neither does a person's text where the `text.json` read is not the
+  one the list was made from. Their own pages show all of it and say where it
+  stays off. A list of before 0.9.9 has no `parts` and judged none.
 
   **Without a current list, everything of that person's stays off.** The
   list is used only when the MD5s in `views/views.json` are the folder's:

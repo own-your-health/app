@@ -5,6 +5,7 @@
 
 import { claimCents } from '../model/claims';
 import { isOutOfRange, resultFlag } from '../model/flags';
+import { sharedIndex } from '../model/parts';
 import { called } from '../model/people';
 import type { ProviderField } from '../model/providers';
 import { docTypeLabel, documentTitle, formatMoney, resultPoint, resultReading, studyTitle } from '../model/records';
@@ -131,7 +132,8 @@ export function providerView(ctx: Ctx, route: ProviderRoute): HTMLElement {
   const loading = store.household.people.filter((p) => (everyone || p.id === route.person) && !store.index(p.id) && !store.indexErrors.has(p.id)).length;
   const wait = loading ? h('p', { class: 'small muted' }, `Still loading the records of ${count(loading, 'person', 'people')}.`) : null;
   const notes = everyone ? [privateLine('Private items are never listed here. Each shows on its person’s own pages.'), ...heldNotes(ctx, 'this page')] : [];
-  const page = providerPage({ household: store.household, indexes: store.indexes, today: localDay(ctx.now()), marks: store.marks }, route, everyone);
+  const indexes = everyone ? new Map([...store.indexes].map(([id, idx]) => [id, sharedIndex(idx)])) : store.indexes;
+  const page = providerPage({ household: store.household, indexes, today: localDay(ctx.now()), marks: store.marks }, route, everyone);
   if (!page) return h('div', { class: 'stack' }, back, card({}, wait ?? empty('No provider to show here is named by this item.')), notes);
 
   const name = (id: string) => (store.person(id) ? called(store.person(id)!) : 'Someone');
@@ -142,7 +144,7 @@ export function providerView(ctx: Ctx, route: ProviderRoute): HTMLElement {
   const num = (cents: number) => h('span', { class: 'num' }, money(cents));
   const owed = (cents: number | undefined) => (cents === undefined ? null : h('span', { class: 'num' }, cents === 0 ? 'Nothing to pay' : money(cents)));
 
-  const claimRow = (x: Mine<MedRecord>) => row({ route: item(x.person, x.item.id), title: recordTitle(x.item), meta: meta(dateText(x.item.date), whose(x.person)), aside: [priv(x), owed(claimCents(x.item).youOwe)] });
+  const claimRow = (x: Mine<MedRecord>) => row({ route: item(x.person, x.item.id), title: recordTitle(x.item), meta: meta(dateText(x.item.date), whose(x.person), x.item.without?.says), aside: [priv(x), owed(claimCents(x.item).youOwe)] });
   const recordRow = (x: Mine<MedRecord>) => row({ route: item(x.person, x.item.id), title: recordTitle(x.item), meta: meta(dateText(x.item.date), whose(x.person)), aside: priv(x) });
   const testRow = (x: Mine<MedRecord>) => {
     const reading = x.item.kind === 'result' ? resultReading(x.item.fields).text : undefined;
@@ -153,7 +155,7 @@ export function providerView(ctx: Ctx, route: ProviderRoute): HTMLElement {
     const { event: x, share } = v;
     const { title, kind } = headline(x.event);
     const elsewhere = x.event.place && x.event.place !== page.named.name && !page.also.includes(x.event.place) ? x.event.place : null;
-    return row({ route: eventRoute(x.person.id, x.event.id), title, meta: meta(kind, eventWhen(x.event), elsewhere, whose(x.person.id), x.event.what), aside: [priv(v), owed(share)] });
+    return row({ route: eventRoute(x.person.id, x.event.id), title, meta: meta(kind, eventWhen(x.event), elsewhere, whose(x.person.id), x.event.what, x.event.says), aside: [priv(v), owed(share)] });
   };
   const billRow = (x: ProviderPage['bills'][number]) => {
     const { person: id, item: { bill, open } } = x;

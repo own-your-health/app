@@ -130,6 +130,23 @@ function wholeClaimCategory(r: MedRecord): Category {
   return given && given !== 'mixed' ? given : categoryOf(undefined, undefined, str(r.fields.type) ?? r.code?.code);
 }
 
+/** What a shared screen leaves out of a claim, as a line. */
+export const NOT_SHOWN = 'Not shown here';
+
+/** What a claim's lines that count come to. */
+function lineSums(r: MedRecord): Cents {
+  const sums: Cents = {};
+  for (const l of claimLines(r)) if (l.counted) for (const [k, n] of Object.entries(lineCents(l.amounts)) as [keyof Cents, number][]) sums[k] = (sums[k] ?? 0) + n;
+  return sums;
+}
+
+/** Each amount of `all` that is more or less than these of it. */
+function beyond(all: Cents, these: Cents): Cents {
+  const rest: Cents = {};
+  for (const k of AMOUNTS) if (all[k] !== undefined && all[k] !== (these[k] ?? 0)) rest[k] = all[k]! - (these[k] ?? 0);
+  return rest;
+}
+
 /** One person's claim lines, and the part of each claim's totals its lines leave out. */
 export function costLines(person: string, index: PersonIndex, opts: CostOptions = {}, claims = index.records): CostLine[] {
   const out: CostLine[] = [];
@@ -163,25 +180,13 @@ export function costLines(person: string, index: PersonIndex, opts: CostOptions 
       for (const k of AMOUNTS) if (cents[k] !== undefined) sums[k] = (sums[k] ?? 0) + cents[k]!;
       out.push({ ...line, cents });
     }
+    const inAll = { ...base, date: service, planYear: planYearOf(anniversary, service), planBasis, split: false };
+    // The lines a shared screen leaves out count all the same, in one that names none.
+    const hidden = r.without ? beyond(lineSums(r.without.whole), sums) : {};
+    if (Object.keys(hidden).length) out.push({ ...inAll, category: 'other', service: NOT_SHOWN, cents: hidden });
     // What the claim's totals hold beyond its lines.
-    const totals = claimCents(r);
-    const rest: Cents = {};
-    for (const k of AMOUNTS) {
-      const left = (totals[k] ?? 0) - (sums[k] ?? 0);
-      if (totals[k] !== undefined && left !== 0) rest[k] = left;
-    }
-    if (Object.keys(rest).length) {
-      out.push({
-        ...base,
-        date: service,
-        category: lines.length ? 'other' : wholeClaimCategory(r),
-        service: lines.length ? 'Not split by line' : base.claimTitle,
-        cents: rest,
-        planYear: planYearOf(anniversary, service),
-        planBasis,
-        split: false,
-      });
-    }
+    const rest = beyond(claimCents(r), r.without ? lineSums(r.without.whole) : sums);
+    if (Object.keys(rest).length) out.push({ ...inAll, category: lines.length ? 'other' : wholeClaimCategory(r), service: lines.length ? 'Not split by line' : base.claimTitle, cents: rest });
   }
   return out.sort((a, b) => b.date.localeCompare(a.date) || a.claim.localeCompare(b.claim));
 }

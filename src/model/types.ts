@@ -176,6 +176,8 @@ export interface MedRecord {
   fields_from?: string;
   /** medrec says it stands, whatever its status (src/model/inError.ts). */
   stands?: true;
+  /** On one a shared screen goes by, without its private part: the whole record, and how much is left out (src/model/parts.ts). */
+  without?: { whole: MedRecord; says?: string };
 }
 
 export interface ImagingSeries {
@@ -259,6 +261,8 @@ export interface PersonText {
   schema: string;
   person: string;
   texts: Record<string, string>;
+  /** Of the text.json this is, where the folder says. */
+  md5?: string;
 }
 
 // ---- _status/ (medrec-status/v1), written only by `medrec refresh` ----

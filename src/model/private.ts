@@ -11,6 +11,7 @@
 // else in the app decides what is private.
 
 import { FolderError, isObject } from './parse';
+import { parseParts, type Part } from './parts';
 import type { ImagingStudy, PersonIndex } from './types';
 
 /** Why a person's items are held back from shared screens: no current list says which are private. */
@@ -29,6 +30,11 @@ export type Privacy =
       unreported: Set<string>;
       /** medrec 0.9.6 and later, which also judges the papers tied to a private one: its copies, the statements before and after it, and its receipt. */
       ties: boolean;
+      /** What is private in an open item, by id, and the MD5 of the text.json its places in papers are of; undefined in a list of before 0.9.9. */
+      parts?: Map<string, Part>;
+      text?: string;
+      /** The events another person's place may be shown from (0.9.9 and later): open, and with no private member; undefined in an earlier list. */
+      clear?: Set<string>;
     }
   | { kind: 'held'; why: HeldWhy; text: string };
 
@@ -73,7 +79,9 @@ export function parsePrivate(raw: unknown, person: string, medrec?: string): Pri
   if (raw.marks_unreadable !== undefined && raw.marks_unreadable !== false) return held('marks', 'The household’s own private marks could not be read.');
   const unreported = raw.unreported_studies ?? [];
   if (!Array.isArray(unreported) || !unreported.every((x) => typeof x === 'string')) throw new FolderError('malformed', 'its list of imaging studies with no report does not read.');
-  return { kind: 'known', records: areas(raw.records), documents: areas(raw.documents), events: areas(raw.events), studies: raw.studies === undefined ? null : areas(raw.studies), unreported: new Set(unreported), ties: atLeast(medrec, [0, 9, 6]) };
+  const parts = parseParts(raw.parts);
+  const clear = atLeast(medrec, [0, 9, 9]) ? { clear: new Set(Array.isArray(raw.clear_events) ? raw.clear_events.filter((x): x is string => typeof x === 'string') : []) } : {};
+  return { kind: 'known', records: areas(raw.records), documents: areas(raw.documents), events: areas(raw.events), studies: raw.studies === undefined ? null : areas(raw.studies), unreported: new Set(unreported), ties: atLeast(medrec, [0, 9, 6]), ...(parts ? { parts } : {}), ...clear };
 }
 
 /** Whether a medrec version ("0.9.6") is this one or later; one that does not read is not. */
