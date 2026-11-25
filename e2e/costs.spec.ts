@@ -33,7 +33,7 @@ test('costs this plan year across everyone, broken down, and down to one month a
 
   const summary = page.locator('.card', { has: page.locator('.card-head h2', { hasText: 'This plan year, everyone' }) });
   // Everyone's costs leave Sam's private claim out, totals and all, and say so; Money's totals count it.
-  await expect(page.locator('.cost-left')).toHaveText('1 private claim is left out of this shared view, its totals too. Money’s totals count it. Choose a person to see theirs.');
+  await expect(page.locator('.private-line')).toHaveText('Private claims are left out here, totals too. Money’s totals count every claim. Choose a person to see theirs.');
   await expect(summary.locator('.glance-answer')).toHaveText('$551.46 your share');
   await expect(summary.locator('.totals')).toHaveText('Billed $7,276.00; Plan allowed $2,758.10; Plan paid $2,206.64; Your share $551.46');
   await expect(summary).toContainText('13 claims, 20 lines. Your share is deductible $233.50, copay $220.00, coinsurance $97.96.');

@@ -1,7 +1,7 @@
 // What every screen the household shares has in common: which claims it may
 // not name, and the line that says whose items are held back, and why.
 
-import { isHeld, knownArea, leavesOff, recordPrivate, whyHeld } from '../model/private';
+import { isHeld, leavesOff, recordPrivate, whyHeld } from '../model/private';
 import { called } from '../model/people';
 import type { Person } from '../model/types';
 import type { Store } from '../data/store';
@@ -23,8 +23,12 @@ export function quietClaims(store: Store, today: string): Map<string, string> {
   return quiet;
 }
 
-/** How many of these are private, leaving out any only held back. */
-export const privateCount = (areas: Iterable<string | undefined>): number => [...areas].filter(knownArea).length;
+/**
+ * The line a shared screen says of private items. It reads the same whether
+ * or not anything is private, as everything else there does: a count, or
+ * words that change when something is left off, would say that there is.
+ */
+export const privateLine = (text: string): HTMLElement => h('p', { class: 'small muted private-line' }, text);
 
 /** Everyone whose items are all held back from shared screens, with why. */
 export function heldPeople(store: Store): { person: Person; why: string }[] {

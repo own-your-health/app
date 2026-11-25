@@ -289,7 +289,7 @@ export function recentCard(ctx: Ctx, shownCount = 3): HTMLElement {
   const { events } = shown(all, undefined, false);
   return card(
     { title: 'Recently' },
-    events.length ? events.slice(0, shownCount).map((x) => eventRow(x, { person: true })) : empty(all.length ? 'Nothing to show here.' : 'Nothing recorded yet.'),
+    events.length ? events.slice(0, shownCount).map((x) => eventRow(x, { person: true })) : empty('Nothing to show here.'),
     h('p', { class: 'small' }, link({ name: 'calendar' }, 'Calendar: every visit, test and pharmacy trip, month by month')),
     h('p', { class: 'small' }, link({ name: 'papers' }, 'Papers: every file in the Drive folder, with its visit')),
   );

@@ -2401,10 +2401,6 @@ a.cal-day:hover .cal-date {
   color: var(--ink-soft);
 }
 
-.papers-private p {
-  margin: 0 0 4px;
-}
-
 /* Health. */
 .health-group {
   margin: 16px 0 4px;

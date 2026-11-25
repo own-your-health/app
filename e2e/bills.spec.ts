@@ -67,7 +67,7 @@ test('a bill the household marked paid is nowhere open, and one partly paid says
   await expect(page.locator('main')).toContainText('No bill listed here asks for more than the claims say you owe.');
   await expect(page.locator('.call')).toHaveCount(0);
   await go(page, '#/money');
-  await expect(card(page, /^Bills$/).locator('.row-title')).toHaveText(['2 bills ready to pay', 'Not billed yet']);
+  await expect(card(page, /^Bills$/).locator('.row-title')).toHaveText(['2 bills ready to pay', 'No bill listed yet']);
 });
 
 test('a visit says its bill is marked paid, or what is left of it', async ({ page }) => {
@@ -141,7 +141,7 @@ test('a bill with a receipt whose amount could not be read may be paid, and is n
   await expect(page.locator('.stand', { hasText: 'Robin' }).locator('.kv-row').first()).toHaveText('To pay$72.96 in 2 bills; 1 more may be paid');
 
   await go(page, '#/money');
-  await expect(card(page, /^Bills$/).locator('.row-title')).toHaveText(['3 bills ready to pay', '1 bill worth a call', '1 bill may be paid', 'Not billed yet']);
+  await expect(card(page, /^Bills$/).locator('.row-title')).toHaveText(['3 bills ready to pay', '1 bill worth a call', '1 bill may be paid', 'No bill listed yet']);
   await go(page, '#/money/bills');
   await expect(page.locator('.money-hero')).toContainText('3 bills, each asking what its claim says you owe. 1 more bill is worth a call first.');
   await expect(card(page, 'Check before paying')).not.toContainText('$51.18');

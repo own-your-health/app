@@ -2,8 +2,8 @@
 // open bill beside what the claims say you owe, then the shares no bill has
 // asked for yet and the bills paid. Worth a call gives each bill that asks
 // something else the facts to read out on the phone. Everyone's view is a
-// shared screen: private bills stay off it, counted, and show on their
-// person's own view.
+// shared screen: private bills stay off it, its words are the same whether or
+// not there are any, and they show on their person's own view.
 
 import { receiptDay } from '../model/billing';
 import { formatMoney } from '../model/records';
@@ -14,9 +14,9 @@ import type { Route } from '../ui/router';
 import { daysBetween } from './needs';
 import { eventRoute, eventWhen } from './eventView';
 import { callsSummary, mayBePaid, overAsked, paymentText, partText, toPay, unreadText, worthACall, type OpenBill, type PaidBill } from './money';
-import { billNotes, forBill, gather, head, keptNote, money, num, privateChip, visitText, type Mine, type MoneyRoute } from './moneyParts';
+import { billNotes, forBill, gather, head, listLine, money, num, privateChip, visitText, type Mine, type MoneyRoute } from './moneyParts';
 import { eventsPage, overviewPage } from './moneyYear';
-import { anyLeftOff, heldNotes } from './shared';
+import { heldNotes } from './shared';
 import { called } from '../model/people';
 
 const billWhen = (b: OpenBill | PaidBill) => {
@@ -73,7 +73,6 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
   const unbilledCents = g.unbilled.reduce((t, m) => t + m.item.cents, 0);
   const callsRoute = (bill?: string): Route => ({ name: 'money', view: 'calls', ...(who ? { who } : {}), ...(bill ? { bill } : {}) });
 
-  const left = !who && anyLeftOff(ctx.store);
   const hero = card(
     { class: 'money-hero' },
     h('p', { class: 'money-hero-label' }, 'Ready to pay'),
@@ -81,8 +80,8 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
     h(
       'p',
       null,
-      ready.length ? (matched === ready.length ? `${count(ready.length, 'bill')}, each asking what its claim says you owe.` : `${count(ready.length, 'bill')}, ${matched ? `${matched} of them asking what ${matched === 1 ? 'its claim says' : 'their claims say'} you owe.` : 'with no one claim to set beside.'}`) : left ? 'No bill listed here matches its claim.' : 'No bill that matches its claim is waiting.',
-      check.length ? [' ', link(callsRoute(), `${count(check.length, 'more bill')} ${check.length === 1 ? 'is' : 'are'} worth a call first.`)] : ready.length && !left ? ' None asks for more than the claims say.' : null,
+      ready.length ? (matched === ready.length ? `${count(ready.length, 'bill')}, each asking what its claim says you owe.` : `${count(ready.length, 'bill')}, ${matched ? `${matched} of them asking what ${matched === 1 ? 'its claim says' : 'their claims say'} you owe.` : 'with no one claim to set beside.'}`) : who ? 'No bill that matches its claim is waiting.' : 'No bill listed here matches its claim.',
+      check.length ? [' ', link(callsRoute(), `${count(check.length, 'more bill')} ${check.length === 1 ? 'is' : 'are'} worth a call first.`)] : ready.length && who ? ' None asks for more than the claims say.' : null,
     ),
   );
 
@@ -113,8 +112,8 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
 
   const unbilledCard = g.unbilled.length
     ? card(
-        { title: 'Not billed yet', actions: h('span', { class: 'num small' }, money(unbilledCents)) },
-        h('p', { class: 'small muted' }, 'The claims say you owe these, and no bill or receipt from the provider is in the folder yet. A copay is often paid at the desk without one.'),
+        { title: who ? 'Not billed yet' : 'No bill listed yet', actions: h('span', { class: 'num small' }, money(unbilledCents)) },
+        h('p', { class: 'small muted' }, `The claims say you owe these, and no bill or receipt from the provider is ${who ? 'in the folder yet' : 'listed here'}. A copay is often paid at the desk without one.`),
         g.unbilled.map((m) =>
           row({
             route: eventRoute(m.person.id, m.item.event.event.id),
@@ -153,7 +152,7 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
     unbilledCard,
     paidCard,
     ...billNotes(ctx, who),
-    keptNote(g.hidden.open.length + g.hidden.unbilled.length + g.hidden.paid, 'Bills'),
+    listLine(who, 'Bills'),
     ...(who ? [] : heldNotes(ctx, 'this shared view')),
     !g.open.length && !g.unbilled.length && !g.paid.length ? card({}, h('p', null, 'No bills, receipts or claim shares to show here.')) : null,
   );
@@ -207,8 +206,6 @@ function callsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
   const named = !who;
   const sum = callsSummary(g.open, (m) => m.item);
   // What this page would have shown on someone's own view: the bills that don't match, what was paid at a visit, and what the plan changed.
-  const left = callsSummary(g.hidden.open, (b) => b);
-  const kept = left.asksMore.length + left.asksLess.length + g.hidden.desk + g.hidden.explained;
 
   const hero = sum.asksMore.length
     ? card(
@@ -221,7 +218,7 @@ function callsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
           [`Across ${count(sum.providers, 'provider')}.`, sum.unbacked ? `${count(sum.unbacked, 'bill')} no claim backs ${sum.unbacked === 1 ? 'is' : 'are'} not counted in it.` : null, 'Each below has the dates and amounts to read out on the call.'].filter(Boolean).join(' '),
         ),
       )
-    : card({}, h('p', null, !who && anyLeftOff(ctx.store) ? 'No bill listed here asks for more than the claims say you owe.' : 'No bill asks for more than the claims say you owe.'));
+    : card({}, h('p', null, !who ? 'No bill listed here asks for more than the claims say you owe.' : 'No bill asks for more than the claims say you owe.'));
 
   const look = sum.asksLess.length
     ? card(
@@ -280,7 +277,7 @@ function callsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
     desk,
     explained,
     ...billNotes(ctx, who),
-    keptNote(kept, 'view'),
+    listLine(who, 'Worth a call'),
     ...(who ? [] : heldNotes(ctx, 'this shared view')),
     h('p', { class: 'small' }, link({ name: 'money', view: 'bills', ...(who ? { who } : {}) }, 'All bills')),
   );

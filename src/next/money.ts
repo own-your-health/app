@@ -191,14 +191,17 @@ export interface Unbilled {
  * The shares no paper accounts for yet, newest visit first. A pharmacy takes
  * its share at the counter, so a fill has none. A bill in the visit from a
  * provider with no claim of its own (a billing company) accounts for all of
- * the visit's shares, as does a receipt from the provider on or after it.
+ * the visit's shares, as does a receipt from the provider on or after it. On
+ * a shared screen a private paper accounts for none: a share it left out would
+ * say that there is one.
  */
-export function unbilledShares(idx: PersonIndex, events: PersonEvent[]): Unbilled[] {
-  const receipts = idx.documents.filter((d) => d.doc_type === 'receipt');
+export function unbilledShares(idx: PersonIndex, events: PersonEvent[], shared = false): Unbilled[] {
+  const counts = (d: MedDocument) => !shared || !paperPrivate(idx, d.id);
+  const receipts = idx.documents.filter((d) => d.doc_type === 'receipt' && counts(d));
   return events.flatMap((x): Unbilled[] => {
     const e = x.event;
     if (paidAtCounter(e)) return [];
-    const papers = e.papers.map((p) => p.doc).filter((d) => d.doc_type === 'bill' || d.doc_type === 'receipt');
+    const papers = e.papers.map((p) => p.doc).filter((d) => (d.doc_type === 'bill' || d.doc_type === 'receipt') && counts(d));
     if (papers.some((d) => d.doc_type === 'bill' && !x.money.charges.some((c) => sameProvider(c.provider, d.organization)))) return [];
     return x.money.charges
       .filter((c) => (c.share ?? 0) > 0)

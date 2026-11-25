@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { parseIndex } from '../src/model/parse';
 import type { MedrecRule } from '../src/model/events';
 import type { PersonIndex } from '../src/model/types';
-import { householdPapers, papersOf } from '../src/next/papers';
+import { papersOf, sharedPapers } from '../src/next/papers';
 import { demo, personNamed } from './demo-data';
 import { demoJson } from './helpers';
 
@@ -16,7 +16,7 @@ const titled = (name: string, title: string, date?: string) => papers(name).find
 
 describe('where each paper belongs', () => {
   it('lists everyone’s papers newest first, each with its visit or why it has none', () => {
-    const all = householdPapers(household, indexes, TODAY);
+    const all = sharedPapers(household, indexes, TODAY);
     expect(all).toHaveLength(16);
     expect(all.map((p) => p.doc.date)).toEqual([...all.map((p) => p.doc.date)].sort().reverse());
     expect(all.filter((p) => !p.with).map((p) => [p.doc.title, p.why])).toEqual([['Vaccination card', 'A vaccine record covers many visits.']]);

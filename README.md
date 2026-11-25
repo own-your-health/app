@@ -579,8 +579,8 @@ dropped from the address.
     (`src/next/money.ts`);
   - bills to pay, one row per visit, overdue first, until a receipt or a
     payment the household marked covers the bill. One partly paid gives what
-    is left; one past its due date says "No payment on file", or "Not all
-    paid"; one with a receipt whose amount could not be read says "May be
+    is left; one past its due date says "No payment on file, unless it was
+    paid elsewhere", or "Not all paid"; one with a receipt whose amount could not be read says "May be
     paid", after the others and without its due date;
   - vaccine doses the CDC schedule places by now that the records don't
     show, and this season's flu dose;
@@ -610,11 +610,12 @@ dropped from the address.
   network price, and only when every one of its claims gives a charge and
   the charges are not below the price: a claim without a charge would make
   the discount look smaller. The visits and fills left out are counted
-  under the list. Totals and months count
-  private care without naming it. The lists on everyone's view leave private
-  visits off and count them. Costs (`#/costs`), which names every claim it
-  adds up, leaves private claims out of its totals too on everyone's view,
-  and says so; one person's counts theirs.
+  under the list. Totals, months and limits count private care without naming
+  it: everyone's view gives no claim's day for a limit, and no row for a plan
+  that only private claims name. Its lists leave private visits off. Costs
+  (`#/costs`), which names every claim it adds up, leaves private claims out of
+  its totals too on everyone's view, and always says so; one person's counts
+  theirs.
 - **Bills** (`#/money/bills`, from Home, Money and each visit's bills): the
   open bills that ask what their claims say you owe, due date first; those
   to check before paying; the shares the claims say you owe with no bill or
@@ -625,7 +626,8 @@ dropped from the address.
   claim backs, its figures and the words to say on the phone. It then lists
   the bills that ask less, the payments at a visit above what its claims say,
   and the lines the plan left out of a claim's totals in the last year, which
-  need nothing. Everyone's view leaves private bills off and counts them. One
+  need nothing. Everyone's view leaves private bills off, and a share whose
+  only bill is private is listed there as any with no bill listed. One
   person's view lists them, marked.
 
   What is paid, what is left, which later statement stands for a bill and
@@ -697,11 +699,12 @@ dropped from the address.
 does the kind of paper (bills, lab reports and so on); each row gives its
 page count. Papers took the place of each person's list of documents. A
   person's own (`#/papers?who=`) shows their private papers, marked;
-  everyone's leaves them off and counts them. A paper is private when medrec
-  lists it, when a private record links it, when it is with no visit and
-  could be part of a private one, or when its visit is private and medrec
-  did not judge the two together (the app's own grouping). A paper the
-  household marked not private shows, without naming its private visit.
+  everyone's leaves them off, and places the others as if no private visit,
+  record or bill were there. A paper is private when medrec lists it, when a
+  private record links it, when it is a copy of a private statement, when it
+  is with no visit and could be part of a private one, or when its visit is
+  private and medrec did not judge the two together (the app's own grouping).
+  A paper the household marked not private shows.
 - **Calendar** (`#/calendar`, and Recently on Home): the household's
   events a month at a time, with a lane per person (a dot for a visit or
   tests, a ring for a pharmacy trip or vaccine, a bar across the days of an
@@ -714,25 +717,33 @@ page count. Papers took the place of each person's list of documents. A
   marks. From 0.9.5 the list has two more rules: a paper that a private
   record links is private, whatever else links it, and an imaging study is
   as private as its report (`studies`), or judged by nothing without one
-  (`unreported_studies`). The app judges both the same way where an earlier
-  medrec wrote the list. The household's own mark on a paper wins; an
-  earlier list shows one only on a paper in a private visit, so a paper it
-  took out that a private record links stays off until medrec is 0.9.5. The
-  app decides nothing else itself, but for two things no list judges:
+  (`unreported_studies`). medrec 0.9.6 also judges the papers tied to a
+  private one. The app judges the first two, and the copies of one statement,
+  the same way where an earlier medrec wrote the list (`medrec` in
+  `views.json`). The household's own mark on a paper wins; an earlier list
+  shows one only on a paper in a private visit, so a paper it took out that a
+  private record links stays off until medrec is 0.9.5, and a copy of a private
+  statement until 0.9.6. The app decides nothing else itself, but for two
+  things no list judges:
   - a fill or a vaccine is as private as the record it is named for;
   - with the app's own grouping, a visit is private when a record or paper
     in it is.
 
   A private item shows on its person's own pages, marked Private, and is
   kept off every shared screen: Home, the Everyone calendar, Money, Papers,
-  Health, Costs and everyone's search. Each says how many it left off,
-  without naming them, but search, which would say that words matched: it
-  never looks at private items, and always says so, with how many imaging
-  studies it leaves off because no report judges them. The calendar gives the
-  areas, and Show them brings the events back there until the calendar is
-  left or the page reloaded; nothing about it is stored. While anything is
-  left off, an empty list on a shared screen says that nothing is listed
-  there, not that there is nothing. The doctor's sheet
+  Health, Costs and everyone's search. Home, Money, Papers and Costs say so in
+  a line that is the same whether or not anything is private, and so is every
+  other word there: a list reads as it would with the private items not in the
+  folder, and an empty one always says that nothing is listed. Only Money's
+  totals, months and limits count them. `e2e/private.spec.ts` compares each
+  screen with the same folder's, its private items renamed and on other days
+  of the month, or gone. Search never looks at private items and always says
+  so, with how many imaging studies it leaves off because no report judges
+  them. The calendar and Health say how many they left off, without naming
+  them; the calendar gives the areas, and Show them brings the events back
+  there until the calendar is left or the page reloaded. Nothing about it is
+  stored. While anything is left off, an empty list on either says that nothing
+  is listed there, not that there is nothing. The doctor's sheet
   leaves private items off until they are included. A section it left
   something out of says "None listed here", never that nothing is known.
 

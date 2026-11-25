@@ -85,7 +85,7 @@ describe('bills that may be paid', () => {
   });
 
   it('are as if the receipt were not here on a shared screen, when it is private', () => {
-    const known = { kind: 'known' as const, records: new Map<string, string>(), documents: new Map([[receipt.id, 'household']]), events: new Map<string, string>(), studies: new Map<string, string>(), unreported: new Set<string>() };
+    const known = { kind: 'known' as const, records: new Map<string, string>(), documents: new Map([[receipt.id, 'household']]), events: new Map<string, string>(), studies: new Map<string, string>(), unreported: new Set<string>(), ties: false };
     const marked: PersonIndex = { ...withReceipt, privacy: known };
     expect(mayBePaid(open(marked))).toBe(true);
     const [shared] = forShared(marked, [open(marked)]);
@@ -97,7 +97,7 @@ describe('bills that may be paid', () => {
   });
 
   it('and any other are spoken of on a shared screen only when one is not private', () => {
-    const isPrivate = (...ids: string[]): PersonIndex => ({ ...sam, privacy: { kind: 'known', records: new Map(), documents: new Map(ids.map((id) => [id, 'household'])), events: new Map(), studies: new Map(), unreported: new Set() } });
+    const isPrivate = (...ids: string[]): PersonIndex => ({ ...sam, privacy: { kind: 'known', records: new Map(), documents: new Map(ids.map((id) => [id, 'household'])), events: new Map(), studies: new Map(), unreported: new Set(), ties: false } });
     const bills = sam.documents.filter((d) => d.doc_type === 'bill').map((d) => d.id);
     expect([anyBill(isPrivate(), events(name), true), anyBill(isPrivate(bills[0]!), events(name), true), anyBill(isPrivate(...bills), events(name), true), anyBill(isPrivate(...bills), events(name), false)]).toEqual([true, true, false, true]);
     expect(anyBill({ ...sam, documents: [] }, events(name), false)).toBe(false);

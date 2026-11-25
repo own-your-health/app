@@ -31,12 +31,12 @@ test('bills sets each open bill beside its claim, then what is not billed yet an
   await card(page, 'Check before paying').locator('a.row-main').click();
   await expect(page.locator('.call.bill-picked')).toBeFocused();
   await page.goBack();
-  await expect(card(page, 'Not billed yet').locator('.card-head')).toContainText('$289.20');
-  await expect(card(page, 'Not billed yet').locator('.row-title')).toHaveText(['Example Pediatrics', 'Example Health', 'Example Lab', 'Example Orthopedic Surgeons', 'Example Health']);
+  await expect(card(page, 'No bill listed yet').locator('.card-head')).toContainText('$289.20');
+  await expect(card(page, 'No bill listed yet').locator('.row-title')).toHaveText(['Example Pediatrics', 'Example Health', 'Example Lab', 'Example Orthopedic Surgeons', 'Example Health']);
   // The one receipt's amount could not be read, so no bill is known to be paid; a later statement has its bill's balance.
   await expect(card(page, /^(Paid|May be paid)$/)).toHaveCount(0);
-  // Sam's private counseling copay is not billed yet: off the shared view, counted.
-  await expect(page.getByText('1 private item is kept off this shared view. Each shows on its person’s own Bills.')).toBeVisible();
+  // Sam's private counseling copay is not billed yet: off the shared view, whose line is there whatever is private.
+  await expect(page.locator('.private-line')).toHaveText('Private items are never listed here. Each shows on its person’s own Bills.');
 
   // One person's bills.
   await page.getByRole('group', { name: 'Whose money' }).getByRole('link', { name: 'Robin' }).click();
@@ -93,7 +93,7 @@ test('the year: what care cost, the bills to act on, deductibles, the months and
   await expect(hero).toContainText('Example Health Plan and Example Pharmacy Benefits run by calendar year here');
 
   const bills = card(page, /^Bills$/);
-  await expect(bills.locator('.row-title')).toHaveText(['3 bills ready to pay', '1 bill worth a call', 'Not billed yet']);
+  await expect(bills.locator('.row-title')).toHaveText(['3 bills ready to pay', '1 bill worth a call', 'No bill listed yet']);
   await expect(bills.locator('.row-aside')).toHaveText(['$247.96', '$69.30', '$289.20']);
   await bills.getByRole('link', { name: /1 bill worth a call/ }).click();
   await expect(page).toHaveURL(/#\/money\/calls$/);
@@ -102,18 +102,18 @@ test('the year: what care cost, the bills to act on, deductibles, the months and
   const deductible = card(page, /^Deductible$/);
   await expect(deductible.locator('.row-title')).toHaveText(['Robin', 'Sam', 'Alex', 'Jamie']);
   await expect(deductible.locator('.row-aside')).toHaveText(['$1,120.40 of $1,500.00', '$233.50 of $750.00', '$0.00 of $750.00']);
-  await expect(deductible.locator('.row').first()).toContainText('$379.60 to go. As of the claim for Oct 1, 2026. None of it comes from claims in these records.');
-  await expect(deductible.locator('.row').last()).toContainText('No claims in this plan year yet.');
-  // Sam's plan printed its balances last on the private counseling's claim: the shared view neither dates nor links it.
+  await expect(deductible.locator('.row').first()).toContainText('$379.60 to go. As of their plan’s newest claim. None of it comes from claims in these records.');
+  await expect(deductible.locator('.row').last()).toContainText('No claims listed here for this plan year yet.');
+  // Sam's plan printed its balances last on the private counseling's claim: the shared view dates and links nobody's.
   await expect(deductible.locator('.row').nth(1)).toContainText('$516.50 to go. As of their plan’s newest claim.');
-  await expect(deductible.locator('.row').nth(1).getByRole('link')).toHaveCount(0);
+  await expect(deductible.locator('.row').getByRole('link')).toHaveCount(0);
   await expect(card(page, /^Out-of-pocket limit$/).locator('.row-aside')).toHaveText(['$1,356.10 of $4,000.00', '$438.50 of $3,000.00', '$25.00 of $3,000.00']);
 
-  // Totals count the private counseling; the biggest costs leave it off, counted.
+  // Totals count the private counseling; the biggest costs leave it off.
   const biggest = card(page, /^Biggest costs$/);
   await expect(biggest.locator('.row-title')).toHaveText(['Hospital visit · Example Surgery Center', 'Office visit · Example Health Main Clinic', 'Office visit · Example Pediatrics', 'Office visit · Example Health Main Clinic', 'Lab tests · Example Lab']);
   await expect(biggest.locator('.row-aside').first()).toHaveText('$2,015.70');
-  await expect(page.getByText('Totals and months count everyone’s care without naming any. 1 private item is kept off the lists on this shared view.')).toBeVisible();
+  await expect(page.locator('.private-line')).toHaveText('Totals, months and limits count everyone’s care without naming any. Private items are never in the lists here. Each shows on its person’s own Money.');
 
   // A month of the chart opens it in the calendar.
   await page.locator('.cost-col[aria-label^="Aug 2026"]').click();

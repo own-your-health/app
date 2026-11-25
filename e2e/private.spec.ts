@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { privateCase } from '../test/helpers';
+import { altered } from './alter';
 import { lay } from './lay';
 
 // Private items on every screen the household shares: off each with medrec's
@@ -50,7 +51,7 @@ test('someone whose private list can’t be used is left off every shared screen
     await expect(heldNote(page), path).toHaveText(`Sam’s items are left off ${where}. ${WHY} Sam’s own pages show them.`);
     await expect(page.locator('main'), path).not.toContainText(SAMS);
     // Nothing held back is counted as private, or can be turned on.
-    await expect(page.locator('main'), path).not.toContainText(/private (item|event|paper|claim)/);
+    await expect(page.locator('main'), path).not.toContainText(/\d private (item|event|paper|claim)/);
     await expect(page.getByRole('button', { name: 'Show them' }), path).toHaveCount(0);
   }
   // Everyone's search: none of Sam's, whatever is searched for.
@@ -145,10 +146,10 @@ test('what the household marked private stays off, and what it marked not privat
   // Its one paper marked not private shows, without the visit.
   await go(page, '#/papers');
   const goingHome = page.locator('.row', { hasText: 'Going home after knee surgery' });
-  await expect(goingHome.locator('.paper-place')).toHaveText('With a visit kept off this shared view.');
+  await expect(goingHome.locator('.paper-place')).toHaveText('With no visit. No visit listed here is on or near Aug 26, 2026.');
   await expect(page.locator('main')).not.toContainText('Statement from Example Surgery Center');
   await expect(page.locator('main')).not.toContainText('Statement from Example Lab');
-  await expect(page.locator('.papers-private')).toContainText('2 private papers are kept off this shared view.');
+  await expect(page.locator('.private-line')).toHaveText('Private papers are never listed here. Each shows on its person’s own Papers. This is discretion, not security: everyone the Drive folder is shared with can read every file in it.');
   // On Sam's own Papers it names its visit.
   await go(page, `#/papers?who=${SAM}`);
   await expect(page.locator('.row', { hasText: 'Going home after knee surgery' }).locator('.paper-place')).toContainText('With Hospital visit at Example Surgery Center');
@@ -165,6 +166,54 @@ test('what the household marked private stays off, and what it marked not privat
   await page.getByRole('button', { name: 'Include 1 private item' }).click();
   await expect(allergies).toContainText('Sulfa drugs');
 });
+
+/** What a screen holds, card by card, once its records are in; `without` drops one card. */
+async function holds(page: Page, path: string, without?: string): Promise<string[]> {
+  await go(page, path);
+  await page.locator('main h1, main .card').first().waitFor();
+  await page.waitForLoadState('networkidle');
+  const parts = await page.locator('main').evaluate((main, skip) => {
+    for (const c of main.querySelectorAll('.card')) if (skip && c.querySelector('.card-head h2')?.textContent === skip) c.remove();
+    return main.innerHTML;
+  }, without);
+  return parts.split(/(?=<section)/);
+}
+
+/** The pages everyone's lists are on, whose words say nothing of how many private items there are. */
+const LISTS: [string, string?][] = [['#/', 'Money'], ['#/money/bills'], ['#/money/calls'], ['#/money/events'], ['#/money/events?sort=discount'], ['#/papers'], ['#/costs'], ['#/search?q=example']];
+
+for (const [name, base] of [
+  ['the sample’s', {}],
+  ['the household’s marks', privateCase('marked')],
+] as const) {
+  test(`every shared screen reads the same whatever its private items are called and on which day: ${name}`, async ({ page, browser }) => {
+    const other = await browser.newPage();
+    await other.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
+    await lay(page, base);
+    await lay(other, altered(base, 'renamed'));
+    for (const path of [...SHARED.map(([p]) => p), ...LISTS.map(([p]) => p), '#/calendar?month=2026-08', '#/money?period=plan-1']) {
+      const was = await holds(page, path);
+      expect(was.join('').length, path).toBeGreaterThan(400);
+      expect(await holds(other, path), path).toEqual(was);
+    }
+    // The other names are in that folder: Sam's own pages say them.
+    await go(other, `#/calendar?view=list&who=${SAM}`);
+    await expect(other.locator('main')).toContainText('Something else entirely');
+    await other.close();
+  });
+
+  test(`everyone’s lists read the same without the private items there: ${name}`, async ({ page, browser }) => {
+    const other = await browser.newPage();
+    await other.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
+    await lay(page, base);
+    await lay(other, altered(base, 'removed'));
+    for (const [path, totals] of LISTS) expect(await holds(other, path, totals), path).toEqual(await holds(page, path, totals));
+    await go(other, `#/calendar?view=list&who=${SAM}`);
+    await expect(other.locator('main')).toContainText('Loratadine');
+    await expect(other.locator('main')).not.toContainText('Nicotine');
+    await other.close();
+  });
+}
 
 test('everyone’s search never finds a private item, or says whose it is', async ({ page }) => {
   await go(page, '#/search?q=nicotine');
