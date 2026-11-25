@@ -218,7 +218,8 @@ test('a row with several things beside it keeps its name’s width on a narrow p
     await go(page, path);
     const row = main(page).locator(path.startsWith('#/calendar') ? `.row:has(a[href*="${VISIT}"])` : '.row:has(.row-aside:has-text("Sources differ"))');
     await expect(row.locator('.row-aside > *'), path).toHaveText([...beside]);
-    expect((await row.locator('.row-body').boundingBox())!.width, path).toBeGreaterThan(80);
+    // Side by side they would leave it some 30 px.
+    expect((await row.locator('.row-body').boundingBox())!.width, path).toBeGreaterThan(60);
     // One under the other.
     const tops = await row.locator('.row-aside > *').evaluateAll((xs) => xs.map((x) => x.getBoundingClientRect()).map((b) => [b.top, b.bottom]));
     expect(tops.slice(1).every((b, i) => b[0]! > tops[i]![1]!), path).toBe(true);

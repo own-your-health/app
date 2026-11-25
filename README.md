@@ -895,12 +895,14 @@ dropped from the address.
   conditions, allergies and medicines (on Health and the sheet for a doctor
   too), immunizations, Papers, the claims under Costs, the calendar's list, a
   visit and search say how many they leave out ("1 entered in error, not
-  shown"), on everyone's view of those that are not private, nor of a private
-  visit: medrec's private list names those too. Bills says so of bills, with
-  how many have a payment the household marked, and which, since money may be
-  owed back. One opened by its id says that it is entered in error, what each
-  source says and when that was read, and what the household decided of it,
-  which medrec keeps and does not apply (`not_applied` in `events.json` and
+  shown"), on everyone's view of those that are not private (medrec's private
+  list names those too). Costs also leaves out a claim of a private visit, as
+  it does of those that stand, and one whose visit is not there to judge; the
+  calendar counts only visits that are not private. Bills says so of bills,
+  with how many have a payment the household marked, and which, since money may
+  be owed back. One opened by its id says that it is entered in error, what
+  each source says and when that was read, and what the household decided of
+  it, which medrec keeps and does not apply (`not_applied` in `events.json` and
   `bills.json`). So does a visit that is none without it. One that some source
   still stands by stays, with **Sources differ** and what each says. A source
   whose word is not kept is not heard, and does not say so.
