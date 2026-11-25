@@ -8,7 +8,7 @@ import { buildMark, buildRequest, markRecorded, requestFileName, sameScope } fro
 import { macState, sourceViews, type MacState, type SourceView } from '../model/sources';
 import { parseBills } from '../model/bills';
 import { parseMedrecEvents } from '../model/events';
-import { held, isHeld, noList, parsePrivate, type HeldWhy, type Privacy } from '../model/private';
+import { atLeast, held, isHeld, noList, parsePrivate, type HeldWhy, type Privacy } from '../model/private';
 import { parseCodeNames } from '../model/codeNames';
 import { parseViews, viewOf, type PersonView } from '../model/views';
 import type { AttemptLine, Household, MarkRequest, PaidMark, PendingMark, Person, PersonIndex, PersonText, RefreshRequest, RefreshStatus, RefusedRequest, RequestScope, UnpaidMark } from '../model/types';
@@ -33,7 +33,7 @@ export interface EventsNote {
 const OWN = 'The app groups them itself.';
 
 /** Why a view medrec wrote for a person is not one to read now; null when it is. */
-type ViewState = { kind: 'behind'; than: 'the household' | 'their records' } | { kind: 'arriving' } | { kind: 'unchecked' } | null;
+type ViewState = { kind: 'behind'; than: 'the household' | 'their records' | 'what a newer medrec found' } | { kind: 'arriving' } | { kind: 'unchecked' } | null;
 
 function eventsNote(s: NonNullable<ViewState>): EventsNote {
   if (s.kind === 'unchecked') return { kind: 'unchecked', text: `medrec’s grouping of these visits could not be checked against their records. ${OWN}` };
@@ -52,6 +52,7 @@ function billsNote(s: NonNullable<ViewState>): string {
 function heldFor(s: NonNullable<ViewState>): Privacy {
   if (s.kind === 'unchecked') return held('unchecked', 'medrec’s list of which items are private could not be checked against their records.');
   if (s.kind === 'arriving') return held('arriving', 'medrec is still writing its list of which items are private.');
+  if (s.than === 'what a newer medrec found') return held('older_medrec', 'An older medrec wrote which items are private, without what a newer one found of their providers. Update medrec on every computer that writes this folder.');
   return held('behind', `medrec’s list of which items are private is older than ${s.than}. medrec writes it again after its next import or refresh.`);
 }
 
@@ -434,14 +435,18 @@ export class Store {
       [this.folder.md5(`${p.folder}/overrides.json`), view.overrides],
     ];
     if (view.marks !== undefined) read.push([this.folder.md5(`${p.folder}/marks.json`), view.marks]);
-    if (view.providerState !== undefined) read.push([this.folder.md5(`${p.folder}/provider-state.json`), view.providerState]);
     for (const [id, l] of view.linked) {
       const f = folderOf(id)!;
       read.push([this.folder.md5(`${f}/index.json`), l.index], [this.folder.md5(`${f}/text.json`), l.text]);
     }
+    // Last, to tell when nothing else differs.
+    if (view.providerState !== undefined) read.push([this.folder.md5(`${p.folder}/provider-state.json`), view.providerState]);
     const [file, ...now] = await Promise.all([this.folder.md5(`views/${p.id}/${view.name}`), ...read.map(([m]) => m)]);
     if (now.some((m) => m === undefined) || file === undefined) return { kind: 'unchecked' };
-    if (now.some((m, i) => m !== read[i]![1])) return { kind: 'behind', than: 'their records' };
+    const differs = now.findIndex((m, i) => m !== read[i]![1]);
+    // medrec before 0.9.7 makes no list from provider-state.json, so its next one is behind it too.
+    if (view.providerState === null && differs === now.length - 1 && !atLeast(this.medrec, [0, 9, 7])) return { kind: 'behind', than: 'what a newer medrec found' };
+    if (differs >= 0) return { kind: 'behind', than: 'their records' };
     return file === view.md5 ? null : { kind: 'arriving' };
   }
 

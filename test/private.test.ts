@@ -195,9 +195,9 @@ describe('a person whose list can’t be used is held back', () => {
   it('when provider-state.json is not the one its list was made from, or is gone', async () => {
     const path = `${folder('Sam Example')}/provider-state.json`;
     const text = JSON.stringify({ schema: 'medrec-provider-state/v1', person: sam });
-    const views = (state: unknown) => {
+    const views = (state: unknown, medrec: string | undefined = '0.9.7') => {
       const v = demoJson<{ people: Record<string, object> }>('views/views.json');
-      return JSON.stringify({ ...v, people: { ...v.people, [sam]: { ...v.people[sam], provider_state: state } } });
+      return JSON.stringify({ ...v, medrec, people: { ...v.people, [sam]: { ...v.people[sam], provider_state: state } } });
     };
     const md5 = createHash('md5').update(text).digest('hex');
     const of = async (overlay: Overlay) => {
@@ -205,15 +205,23 @@ describe('a person whose list can’t be used is held back', () => {
       return [held(store), why(store)];
     };
     // Written, and the views not yet made from it.
-    expect(await of({ [path]: text })).toEqual([['Sam Example'], 'behind']);
+    expect(await of({ [path]: text, 'views/views.json': views(undefined) })).toEqual([['Sam Example'], 'behind']);
     expect(await of({ [path]: text, 'views/views.json': views('0'.repeat(32)) })).toEqual([['Sam Example'], 'behind']);
     // Gone since.
     expect(await of({ 'views/views.json': views(md5) })).toEqual([['Sam Example'], 'behind']);
     // The one they were made from, and none as medrec before 0.9.7 and as one without a directory has it.
     expect(await of({ [path]: text, 'views/views.json': views(md5) })).toEqual([[], 'known']);
     expect(await of({ 'views/views.json': views(null) })).toEqual([[], 'known']);
+    // Beside a list an older medrec made, its next one will be behind it too: nothing to wait for.
+    const by = async (medrec: string, overlay: Overlay = {}, state?: unknown) => {
+      const store = await load({ [path]: text, 'views/views.json': views(state, medrec), ...overlay });
+      return [why(store), store.holdMayEnd()];
+    };
+    expect([await by('0.9.6'), await by(''), await by('0.9.7'), await by('0.9.6', {}, '0'.repeat(32))]).toEqual([['older_medrec', false], ['older_medrec', false], ['behind', true], ['behind', true]]);
+    const idx = `${folder('Sam Example')}/index.json`;
+    expect(await by('0.9.6', { [idx]: `${JSON.stringify(demoJson(idx))} ` })).toEqual(['behind', true]);
     // Only what is made from it waits for it: their visits and bills are medrec's still.
-    const behind = await load({ [path]: text });
+    const behind = await load({ [path]: text, 'views/views.json': views(undefined) });
     expect([index(behind, sam).events === undefined, index(behind, sam).bills === undefined, behind.eventsNotes.size, behind.billsNotes.size]).toEqual([false, false, 0, 0]);
     expect((await load({ 'views/views.json': views(7) })).index(sam)!.privacy).toMatchObject({ kind: 'held', why: 'unreadable' });
   });
