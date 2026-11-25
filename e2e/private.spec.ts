@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { privateCase } from '../test/helpers';
+import { removed, renamed, rewritten } from './alter';
 import { lay } from './lay';
 
 // Private items on every screen the household shares: off each with medrec's
@@ -50,7 +51,7 @@ test('someone whose private list can’t be used is left off every shared screen
     await expect(heldNote(page), path).toHaveText(`Sam’s items are left off ${where}. ${WHY} Sam’s own pages show them.`);
     await expect(page.locator('main'), path).not.toContainText(SAMS);
     // Nothing held back is counted as private, or can be turned on.
-    await expect(page.locator('main'), path).not.toContainText(/private (item|event|paper|claim)/);
+    await expect(page.locator('main'), path).not.toContainText(/\d private (item|event|paper|claim)/);
     await expect(page.getByRole('button', { name: 'Show them' }), path).toHaveCount(0);
   }
   // Everyone's search: none of Sam's, whatever is searched for.
@@ -124,6 +125,12 @@ test('a folder whose medrec wrote no views leaves everyone off, in one line', as
   await expect(card(page, /^Recently$/)).toContainText('Nothing to show here.');
   await go(page, '#/money');
   await expect(card(page, /^Bills$/)).toContainText('No open bills listed here.');
+  await go(page, '#/money/bills');
+  await expect(page.locator('.money-hero')).toContainText('No bill listed here matches its claim.');
+  await go(page, '#/money/calls');
+  await expect(page.locator('main')).toContainText('No bill listed here asks for more than the claims say you owe.');
+  await go(page, '#/costs');
+  await expect(page.locator('main')).toContainText('No claims listed here yet.');
   await go(page, '#/calendar?view=list');
   await expect(page.locator('main')).toContainText('Nothing to show here.');
   await go(page, '#/calendar?month=2026-10');
@@ -145,10 +152,10 @@ test('what the household marked private stays off, and what it marked not privat
   // Its one paper marked not private shows, without the visit.
   await go(page, '#/papers');
   const goingHome = page.locator('.row', { hasText: 'Going home after knee surgery' });
-  await expect(goingHome.locator('.paper-place')).toHaveText('With a visit kept off this shared view.');
+  await expect(goingHome.locator('.paper-place')).toHaveText('With no visit. No visit listed here is on or near Aug 26, 2026.');
   await expect(page.locator('main')).not.toContainText('Statement from Example Surgery Center');
   await expect(page.locator('main')).not.toContainText('Statement from Example Lab');
-  await expect(page.locator('.papers-private')).toContainText('2 private papers are kept off this shared view.');
+  await expect(page.locator('.private-line')).toHaveText('Private papers are never listed here. Each shows on its person’s own Papers. This is discretion, not security: everyone the Drive folder is shared with can read every file in it.');
   // On Sam's own Papers it names its visit.
   await go(page, `#/papers?who=${SAM}`);
   await expect(page.locator('.row', { hasText: 'Going home after knee surgery' }).locator('.paper-place')).toContainText('With Hospital visit at Example Surgery Center');
@@ -164,6 +171,123 @@ test('what the household marked private stays off, and what it marked not privat
   await expect(allergies).not.toContainText('No known allergies');
   await page.getByRole('button', { name: 'Include 1 private item' }).click();
   await expect(allergies).toContainText('Sulfa drugs');
+});
+
+/** What a screen holds, card by card, once it has all its records; `without` drops one card. */
+async function holds(page: Page, path: string, without?: string): Promise<string[]> {
+  // The screen before this one is marked, to see it go.
+  await page.evaluate(() => document.querySelector('main')?.firstElementChild?.setAttribute('data-was', ''));
+  await go(page, path);
+  const main = page.locator('main');
+  await expect(main.locator('[data-was]')).toHaveCount(0);
+  await main.locator(path.startsWith('#/search') ? '.row' : '.card, .stack').first().waitFor();
+  let last = '';
+  const settled = async () => {
+    const now = await main.innerHTML();
+    const same = now === last && !/Loading|Reading|loading/.test(now);
+    last = now;
+    return same;
+  };
+  await expect.poll(settled, { message: path, intervals: [80] }).toBe(true);
+  const parts = await main.evaluate((el, skip) => {
+    for (const c of el.querySelectorAll('.card')) if (skip && c.querySelector('.card-head h2')?.textContent === skip) c.remove();
+    return el.innerHTML;
+  }, without);
+  return parts.split(/(?=<section)/);
+}
+
+/** The pages everyone's lists are on, whose words say nothing of how many private items there are. */
+const LISTS: [string, string?][] = [['#/', 'Money'], ['#/money/bills'], ['#/money/calls'], ['#/money/events'], ['#/money/events?sort=discount'], ['#/papers'], ['#/costs'], ['#/search?q=example']];
+
+for (const [name, base] of [
+  ['the sample’s', {}],
+  ['the household’s marks', privateCase('marked')],
+] as const) {
+  test(`every shared screen reads the same whatever its private items are called and on which day: ${name}`, async ({ page, browser }) => {
+    const other = await browser.newPage();
+    await other.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
+    await lay(page, base);
+    await lay(other, renamed(base));
+    for (const path of [...SHARED.map(([p]) => p), ...LISTS.map(([p]) => p), '#/calendar?month=2026-08', '#/money?period=plan-1']) {
+      const [was, is] = await Promise.all([holds(page, path), holds(other, path)]);
+      expect(was.join('').length, path).toBeGreaterThan(400);
+      expect(is, path).toEqual(was);
+    }
+    // The other names are in that folder: Sam's own pages say them.
+    await go(other, `#/calendar?view=list&who=${SAM}`);
+    await expect(other.locator('main')).toContainText('Something else entirely');
+    await other.close();
+  });
+
+  test(`everyone’s lists read the same without the private items there: ${name}`, async ({ page, browser }) => {
+    const other = await browser.newPage();
+    await other.clock.setFixedTime(new Date('2026-11-22T20:00:00Z'));
+    await lay(page, base);
+    await lay(other, removed(base));
+    for (const [path, totals] of LISTS) {
+      const [was, is] = await Promise.all([holds(page, path, totals), holds(other, path, totals)]);
+      expect(is, path).toEqual(was);
+    }
+    await go(other, `#/calendar?view=list&who=${SAM}`);
+    await expect(other.locator('main')).toContainText('Loratadine');
+    await expect(other.locator('main')).not.toContainText('Nicotine');
+    await other.close();
+  });
+}
+
+/** The folder with Sam's one private claim from a plan no other claim names, on this day, and with every claim of Alex's private. */
+const ownPlan = (day: string) =>
+  rewritten({}, ({ name, index, list }) => {
+    const ids = index.records.filter((r) => r.kind === 'claim').map((r) => r.id);
+    if (name === 'Alex Example') for (const id of ids) list.records[id] = { area: 'household', from: 'marks' };
+    for (const r of index.records) if (name === 'Sam Example' && r.kind === 'claim' && r.id in list.records) Object.assign(r, { date: day, fields: { ...r.fields, insurer: 'Example Mind Plan', when: day, billable_period: { start: day, end: day }, benefit_period: undefined, items: (r.fields.items as object[]).map((i) => ({ ...i, serviced: day })) } });
+  });
+
+test('a plan only a private claim names is in no words, limits or dates of everyone’s Money', async ({ page }) => {
+  await lay(page, ownPlan('2026-11-21'));
+  await go(page, '#/money');
+  const hero = page.locator('.money-hero');
+  await expect(hero).toContainText('from 14 claims for care between Jul 9, 2026 and Nov 18, 2026.');
+  await expect(hero).toContainText('Example Pharmacy Benefits');
+  await expect(page.locator('main')).not.toContainText('Example Mind Plan');
+  const deductible = card(page, /^Deductible$/);
+  await expect(deductible.locator('.row-title')).toHaveText(['Robin', 'Sam', 'Alex', 'Jamie']);
+  // Alex's claims are all private, so nothing here says there is one.
+  for (const i of [2, 3]) await expect(deductible.locator('.row').nth(i)).toContainText('No claims listed here for this plan year yet.');
+  await go(page, '#/costs');
+  await expect(page.locator('main')).not.toContainText('Example Mind Plan');
+  await expect(page.getByRole('group', { name: 'Whose costs' }).getByRole('link')).toHaveText(['Everyone', 'Robin', 'Sam']);
+  // On Alex's own address Alex is there to choose.
+  const alex = await page.evaluate(async () => ((await (await fetch('./demo/household.json')).json()) as { people: { id: string; name: string }[] }).people.find((p) => p.name === 'Alex Example')!.id);
+  await go(page, `#/costs?only=person%3A${alex}`);
+  await expect(page.getByRole('group', { name: 'Whose costs' }).getByRole('link')).toHaveText(['Everyone', 'Robin', 'Sam', 'Alex']);
+  await expect(page.locator('main .private-line')).toHaveCount(0);
+
+  // In a year whose other claims are all one plan's, it stays one plan's. Sam's own Money names the other.
+  await page.goto('about:blank');
+  await page.unrouteAll();
+  await lay(page, ownPlan('2025-12-27'));
+  await go(page, '#/money?period=2025');
+  await expect(hero).toContainText('The plan’s figures, from 4 claims for care between Mar 10, 2025 and Sep 15, 2025.');
+  await go(page, `#/costs?only=person%3A${SAM}&period=2025`);
+  await expect(page.locator('main')).toContainText('Example Mind Plan');
+});
+
+test('a deductible that is met says with which claim on its person’s Money, and no day on everyone’s', async ({ page }) => {
+  await lay(
+    page,
+    rewritten({}, ({ name, index }) => {
+      if (name !== 'Sam Example') return;
+      for (const r of index.records) r.fields = JSON.parse(JSON.stringify(r.fields).replaceAll('"750.00"', '"233.50"'));
+    }),
+  );
+  const sam = card(page, /^Deductible$/).locator('.row', { hasText: '$233.50 of $233.50' });
+  await go(page, '#/money');
+  await expect(sam.locator('.chip')).toHaveText('Met');
+  await expect(sam).toContainText('As of their plan’s newest claim.');
+  await go(page, `#/money?who=${SAM}`);
+  await expect(sam.locator('.chip')).toHaveText('Met with the claim for Oct 12, 2026');
+  await expect(sam).toContainText('As of the claim for Oct 27, 2026.');
 });
 
 test('everyone’s search never finds a private item, or says whose it is', async ({ page }) => {

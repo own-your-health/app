@@ -298,7 +298,7 @@ export class Store {
       const state = await this.viewState(p, view, household);
       if (state) return heldFor(state);
       const raw = await readJson(this.folder, `views/${p.id}/${view.name}`);
-      return raw === null ? heldFor({ kind: 'arriving' }) : parsePrivate(raw, p.id);
+      return raw === null ? heldFor({ kind: 'arriving' }) : parsePrivate(raw, p.id, typeof views?.medrec === 'string' ? views.medrec : undefined);
     } catch (e) {
       const why: HeldWhy = e instanceof FolderError && e.kind === 'newer_format' ? 'newer_format' : 'unreadable';
       return held(why, `medrec’s list of which items are private could not be read: ${e instanceof Error ? e.message : 'unknown error'}`);

@@ -18,7 +18,7 @@
 // as written instead.
 
 import { KIND_LABELS } from '../model/records';
-import { anyPrivate, HELD, isHeld, itemPrivate, studyPrivate } from '../model/private';
+import { HELD, isHeld, itemPrivate, studyPrivate } from '../model/private';
 import { conceptOf, find, matchRanges, terms, type Found, type Hit, type Searchable } from '../model/search';
 import type { Person, PersonText } from '../model/types';
 import { button, card, empty, filterChips, row, type Ctx } from './components';
@@ -183,8 +183,7 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
 
   // Says what everyone's results leave off, whatever was searched for.
   const left = h('div');
-  // With something to leave off, everyone's chip is there to choose: a chip never says whose private item matched.
-  const leaves = () => many && people.some((p) => ctx.store.index(p.id) && anyPrivate(ctx.store.index(p.id)!));
+  // Everyone's chip is there to choose whoever has a match, and the line is there whether or not anything is left off: neither says whose private item matched, or that there is one.
   const unjudged = () =>
     people.reduce((n, p) => {
       const idx = ctx.store.index(p.id);
@@ -193,7 +192,7 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
   /** Imaging no report judges, counted for everyone and never for what was searched for. */
   const imagingLeft = (n: number) => (n ? ` So ${n === 1 ? 'is' : 'are'} ${count(n, 'imaging study', 'imaging studies')} with no report in these records: nothing says whether ${n === 1 ? 'it is' : 'they are'} private.` : '');
   const leftNotes = () =>
-    many && who === 'all' && leaves()
+    many && who === 'all'
       ? [
           h('p', { class: 'small muted' }, `Private items are left off everyone’s results.${imagingLeft(unjudged())} Choose a person to search theirs.`),
           ...heldNotes(ctx, 'everyone’s results'),
@@ -205,7 +204,7 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
     const { hits, terms: ts } = who === 'all' ? found : own;
     say(who === 'all' ? found : own);
     left.replaceChildren(...leftNotes());
-    const whos = leaves() ? people.map((p) => p.id) : [...new Set(hits.map((x) => x.person))];
+    const whos = many ? people.map((p) => p.id) : [...new Set(hits.map((x) => x.person))];
     const groups = entriesByKind(hits.filter((x) => who === 'all' || x.person === who));
     // Kinds come from the chosen person's hits, so a kind they have none of falls back to All.
     if (!groups.some((g) => g.kind === kind)) kind = 'all';
@@ -311,7 +310,7 @@ export function searchPanel(ctx: Ctx, opts: SearchOptions): HTMLElement {
     });
     const untexted = scope.filter((x) => !x.text).map((x) => names.get(x.person) ?? x.person);
     const own = find(scope, q, { words });
-    const found = leaves() ? find(scope.map((s) => ({ ...s, leave: (kind: string, id: string) => !!itemPrivate(s.index, kind, id) })), q, { words }) : own;
+    const found = many ? find(scope.map((s) => ({ ...s, leave: (kind: string, id: string) => !!itemPrivate(s.index, kind, id) })), q, { words }) : own;
     draw(found, own, many ? untexted : untexted.length ? ['this person'] : []);
   };
 

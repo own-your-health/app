@@ -27,6 +27,8 @@ export type Privacy =
       studies: Map<string, string> | null;
       /** Studies no report judges (0.9.5 and later). */
       unreported: Set<string>;
+      /** medrec 0.9.6 and later, which also judges the papers tied to a private one: its copies, the statements before and after it, and its receipt. */
+      ties: boolean;
     }
   | { kind: 'held'; why: HeldWhy; text: string };
 
@@ -60,8 +62,8 @@ function areas(v: unknown): Map<string, string> {
   return new Map(Object.entries(v).map(([id, x]) => [id, isObject(x) && typeof x.area === 'string' && x.area && x.area !== HELD ? x.area : 'household']));
 }
 
-/** A person's private.json. Refused when it is not one, is a newer format, or is another person's. */
-export function parsePrivate(raw: unknown, person: string): Privacy {
+/** A person's private.json, as the medrec that wrote it (views.json's `medrec`) judged. Refused when it is not one, is a newer format, or is another person's. */
+export function parsePrivate(raw: unknown, person: string, medrec?: string): Privacy {
   if (!isObject(raw) || typeof raw.schema !== 'string' || !raw.schema.startsWith('medrec-private/')) throw new FolderError('malformed', 'it is not medrec’s list of private items.');
   if (raw.schema !== 'medrec-private/v1') throw new FolderError('newer_format', 'it is written by a newer medrec. Update the app.');
   if (raw.person !== person) throw new FolderError('malformed', 'it is another person’s.');
@@ -69,7 +71,15 @@ export function parsePrivate(raw: unknown, person: string): Privacy {
   if (raw.marks_unreadable !== undefined && raw.marks_unreadable !== false) return held('marks', 'The household’s own private marks could not be read.');
   const unreported = raw.unreported_studies ?? [];
   if (!Array.isArray(unreported) || !unreported.every((x) => typeof x === 'string')) throw new FolderError('malformed', 'its list of imaging studies with no report does not read.');
-  return { kind: 'known', records: areas(raw.records), documents: areas(raw.documents), events: areas(raw.events), studies: raw.studies === undefined ? null : areas(raw.studies), unreported: new Set(unreported) };
+  return { kind: 'known', records: areas(raw.records), documents: areas(raw.documents), events: areas(raw.events), studies: raw.studies === undefined ? null : areas(raw.studies), unreported: new Set(unreported), ties: atLeast(medrec, [0, 9, 6]) };
+}
+
+/** Whether a medrec version ("0.9.6") is this one or later; one that does not read is not. */
+export function atLeast(version: string | undefined, than: [number, number, number]): boolean {
+  const v = /^(\d+)\.(\d+)\.(\d+)/.exec(version ?? '')?.slice(1).map(Number);
+  if (!v) return false;
+  const i = v.findIndex((n, j) => n !== than[j]);
+  return i < 0 || v[i]! > than[i]!;
 }
 
 const known = (index: PersonIndex) => (index.privacy?.kind === 'known' ? index.privacy : undefined);
@@ -130,15 +140,30 @@ export function takenOut(index: PersonIndex, id: string): boolean {
   return visitsWith(index, id).some((e) => p.events.has(e.id)) || (p.studies !== null && linkPrivate(index, id) !== undefined);
 }
 
-/**
- * Why a paper is private: medrec's answer for it, else that of a record that
- * links it. medrec 0.9.5 and later judges those links itself; a list from an
- * earlier one does not, so they are judged here the same way.
- */
-export function paperPrivate(index: PersonIndex, id: string): string | undefined {
+/** Why a paper is private by itself, its copies aside. */
+function ownPrivate(index: PersonIndex, id: string): string | undefined {
   const own = documentPrivate(index, id);
   if (own || takenOut(index, id)) return own;
   return linkPrivate(index, id);
+}
+
+/**
+ * Why a paper is private: medrec's answer for it, else that of a record that
+ * links it, else that of a copy of the same statement. medrec 0.9.5 and later
+ * judges those links itself, and 0.9.6 the copies; a list from an earlier one
+ * does not, so they are judged here the same way.
+ */
+export function paperPrivate(index: PersonIndex, id: string): string | undefined {
+  const own = ownPrivate(index, id);
+  const p = known(index);
+  if (own || !p || p.ties || takenOut(index, id)) return own;
+  const first = index.documents.find((d) => d.id === id)?.same_statement_as ?? id;
+  for (const d of index.documents) {
+    if (d.id === id || (d.id !== first && d.same_statement_as !== first)) continue;
+    const area = ownPrivate(index, d.id);
+    if (area) return area;
+  }
+  return undefined;
 }
 
 /**

@@ -6,7 +6,7 @@
 // which.
 
 import { billList } from '../model/billing';
-import { HELD, inVisit, paperPrivate, takenOut } from '../model/private';
+import { HELD, inVisit, paperPrivate, recordPrivate, takenOut } from '../model/private';
 import type { Household, MedDocument, PersonIndex } from '../model/types';
 import { dateText } from '../ui/format';
 import { eventPrivate, type CareEvent, type Confidence } from './event';
@@ -36,7 +36,6 @@ export interface Paper {
 
 /** Why a paper of a kind that is about no one visit is with none. */
 const ACROSS: Record<string, string> = {
-  eob: 'An explanation of benefits covers claims, and none of this person’s visits has its claim.',
   insurance_card: 'An insurance card is about no one visit.',
   immunization_record: 'A vaccine record covers many visits.',
 };
@@ -45,28 +44,31 @@ const newestFirst = (a: Paper, b: Paper) => (b.doc.date ?? '').localeCompare(a.d
 
 /**
  * A person's papers, newest first, with where each belongs. `indexes` holds
- * everyone's, for the papers another person's visits hold (X2).
+ * everyone's, for the papers another person's visits hold (X2). `shared`
+ * places them as if no private visit, record or bill were there, whether or
+ * not any is.
  */
-export function papersOf(index: PersonIndex, household: Household, today: string, indexes: Map<string, PersonIndex>): Paper[] {
+export function papersOf(index: PersonIndex, household: Household, today: string, indexes: Map<string, PersonIndex>, shared = false): Paper[] {
   const person = index.person;
-  const events = personEvents(index, household, today);
+  const eventsOf = (idx: PersonIndex) => personEvents(idx, household, today).filter((e) => !shared || !eventPrivate(e, idx));
+  const events = eventsOf(index);
   const byDoc = new Map<string, { event: CareEvent; person: string; confidence: Confidence }>();
   for (const e of events) for (const p of e.papers) if (!p.person && !byDoc.has(p.doc.id)) byDoc.set(p.doc.id, { event: e, person, confidence: p.confidence });
   // A paper of this person's in another person's visit.
   for (const [other, idx] of indexes) {
     if (other === person) continue;
-    for (const e of personEvents(idx, household, today)) for (const p of e.papers) if (p.person === person && !byDoc.has(p.doc.id)) byDoc.set(p.doc.id, { event: e, person: other, confidence: p.confidence });
+    for (const e of eventsOf(idx)) for (const p of e.papers) if (p.person === person && !byDoc.has(p.doc.id)) byDoc.set(p.doc.id, { event: e, person: other, confidence: p.confidence });
   }
   const byRecord = new Map<string, CareEvent>();
   for (const e of events) for (const r of [...e.claims.map((c) => c.record), ...e.visits.map((v) => v.record), ...e.recorded]) if (!byRecord.has(r.id)) byRecord.set(r.id, e);
   const linking = new Map<string, { event: CareEvent; claim: boolean }>();
   for (const r of index.records) {
-    const e = byRecord.get(r.id);
+    const e = shared && recordPrivate(index, r.id) ? undefined : byRecord.get(r.id);
     if (e) for (const d of r.documents) if (!linking.has(d)) linking.set(d, { event: e, claim: r.kind === 'claim' });
   }
   // The bills a receipt pays, or can be for when its amount did not read.
   const billsOf = new Map<string, string[]>();
-  for (const b of billList(index)) for (const r of [...b.payments.flatMap((p) => p.receipt ?? []), ...b.unread]) billsOf.set(r.id, [...(billsOf.get(r.id) ?? []), b.doc.id]);
+  for (const b of billList(index).filter((x) => !shared || !paperPrivate(index, x.doc.id))) for (const r of [...b.payments.flatMap((p) => p.receipt ?? []), ...b.unread]) billsOf.set(r.id, [...(billsOf.get(r.id) ?? []), b.doc.id]);
   const byId = new Map(events.map((e) => [e.id, e]));
   const pending = new Map((index.events?.pending ?? []).map((p) => [p.document, p.could_join.flatMap((id) => byId.get(id) ?? [])]));
 
@@ -99,18 +101,22 @@ export function papersOf(index: PersonIndex, household: Household, today: string
       };
       const could = pending.get(doc.id);
       if (could?.length) return loose(`It fits ${could.length} visits, so medrec puts it with none of them.`, could);
-      const across = ACROSS[doc.doc_type ?? ''];
+      const across = doc.doc_type === 'eob' ? `An explanation of benefits covers claims, and ${shared ? 'no visit listed here' : 'none of this person’s visits'} has its claim.` : ACROSS[doc.doc_type ?? ''];
       if (across) return loose(across);
       if (!doc.date) return loose('It has no date to match a visit by.');
-      return loose(`No visit in these records is on or near ${dateText(doc.date)}.`);
+      return loose(`No visit ${shared ? 'listed here' : 'in these records'} is on or near ${dateText(doc.date)}.`);
     })
     .sort(newestFirst);
 }
 
-/** Everyone's papers, newest first. */
-export function householdPapers(household: Household, indexes: Map<string, PersonIndex>, today: string): Paper[] {
-  return household.people.flatMap((p) => {
-    const idx = indexes.get(p.id);
-    return idx ? papersOf(idx, household, today, indexes) : [];
-  }).sort(newestFirst);
+/** Everyone's papers for a shared screen, newest first: none that is private, each placed as if nothing private were there. */
+export function sharedPapers(household: Household, indexes: Map<string, PersonIndex>, today: string): Paper[] {
+  return household.people
+    .flatMap((p) => {
+      const idx = indexes.get(p.id);
+      if (!idx) return [];
+      const cleared = new Set(papersOf(idx, household, today, indexes).filter((x) => !x.private).map((x) => x.doc.id));
+      return papersOf(idx, household, today, indexes, true).filter((x) => cleared.has(x.doc.id));
+    })
+    .sort(newestFirst);
 }

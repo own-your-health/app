@@ -40,7 +40,7 @@ import { monthChart, priceStrip, stackStrip } from '../costchart';
 import { button, card, empty, link, row, type Ctx } from '../components';
 import { h } from '../dom';
 import { count, dateText, localDay } from '../format';
-import { heldNotes, privateCount, quietClaims } from '../../next/shared';
+import { heldNotes, privateLine, quietClaims } from '../../next/shared';
 import { href, type CostBy, type CostFilter, type CostFilterBy, type Route } from '../router';
 import { called } from '../../model/people';
 
@@ -181,15 +181,12 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
   const today = localDay(ctx.now());
   // One person's costs count their private claims; everyone's leave every private one out.
   const own = (route.only ?? []).some((f) => f.by === 'person');
-  const quiet = own ? new Map<string, string>() : quietClaims(store, today);
-  const all = whole.filter((l) => !quiet.has(l.claim));
-  const kept = privateCount(new Map(whole.map((l) => [l.claim, quiet.get(l.claim)])).values());
-  const leftOut = own
-    ? []
-    : [
-        kept ? h('p', { class: 'small muted cost-left' }, `${count(kept, 'private claim is', 'private claims are')} left out of this shared view, its totals too. Money’s totals count ${kept === 1 ? 'it' : 'them'}. Choose a person to see theirs.`) : null,
-        ...heldNotes(ctx, 'this shared view, its totals too'),
-      ];
+  const quiet = quietClaims(store, today);
+  const shared = whole.filter((l) => !quiet.has(l.claim));
+  const all = own ? whole : shared;
+  const leftLine = privateLine('Private claims are left out here, totals too. ');
+  leftLine.append(link({ name: 'money' }, 'Money’s totals'), ' count every claim. Choose a person to see theirs.');
+  const leftOut = own ? [] : [leftLine, ...heldNotes(ctx, 'this shared view, its totals too')];
 
   const page = h('div', { class: 'stack' });
   const head = h(
@@ -198,8 +195,8 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
     h('h1', null, 'Costs'),
     h('p', { class: 'muted small' }, 'What each visit, test and fill cost, from the claims the health plans sent: what was billed, what the plan allowed and paid, and your share.'),
   );
-  if (!whole.length) {
-    page.append(head, card({}, empty('No claims in these records yet. Once medrec imports a health plan’s claims, what each visit cost shows here.')));
+  if (!all.length) {
+    page.append(head, card({}, empty(`No claims ${own ? 'in these records' : 'listed here'} yet. Once medrec imports a health plan’s claims, what each visit cost shows here.`)), ...leftOut);
     return page;
   }
 
@@ -246,8 +243,8 @@ export function costsView(ctx: Ctx, route: CostsRoute): HTMLElement {
         items.map((i) => h('button', { type: 'button', class: ['filter', i.on ? 'filter-on' : null], 'aria-pressed': i.on ? 'true' : 'false', 'data-focus': i.id, on: { click: i.go } }, i.text)),
       );
 
-    // People with claims; choosing one is a filter like any other, kept in the address.
-    const withClaims = people.filter((p) => whole.some((l) => l.person === p.id));
+    // People with claims a shared view may list, and the one chosen; choosing one is a filter like any other, kept in the address.
+    const withClaims = people.filter((p) => p.id === personFilter?.key || shared.some((l) => l.person === p.id));
     const personChips =
       withClaims.length > 1
         ? h(

@@ -14,7 +14,7 @@ const paper = (page: Page, title: string) => page.locator('.papers .row', { has:
 
 test('Home leads to every paper, each with its visit or why it has none', async ({ page }) => {
   await open(page, '#/');
-  await page.getByRole('link', { name: 'Papers: every file in the Drive folder, with its visit' }).click();
+  await page.getByRole('link', { name: 'Papers: the files in the Drive folder, each with its visit' }).click();
   await expect(page).toHaveURL(/#\/papers$/);
   await expect(page.locator('main h1')).toHaveText('Papers');
   await expect(page.locator('.papers-count')).toHaveText('16 papers: 15 with a visit, 1 with none.');

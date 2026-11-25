@@ -3,10 +3,10 @@
 // out-of-pocket limit, the months, and the visits that cost most. Where the
 // money went lists every visit of the period, by its network price, by your
 // share or by what the network took off. Totals and months count everyone's care without naming any;
-// the lists that name visits keep private ones off the shared view, counted.
+// the lists that name visits keep private ones off the shared view. Its
+// words are the same whether or not anything is private.
 
 import { householdLines, inPeriod, monthLabel, monthsSpanned, periods, planYearsIn, type CostLine, type Period, type PlanBasis, type PlanYear } from '../model/costs';
-import { knownArea } from '../model/private';
 import type { MedRecord, Person } from '../model/types';
 import { getPlanStart } from '../settings';
 import { card, chip, link, row, type Ctx } from '../ui/components';
@@ -19,8 +19,8 @@ import { householdEvents } from './calendar';
 import { eventRoute, eventWhen } from './eventView';
 import { coverageCard } from './coverageCard';
 import { callsSummary, mayBePaid, toPay } from './money';
-import { billNotes, gather, head, money, num, privateChip, type MoneyRoute } from './moneyParts';
-import { anyLeftOff, heldNotes, quietClaims } from './shared';
+import { billNotes, gather, head, listLine, money, num, privateChip, type MoneyRoute } from './moneyParts';
+import { heldNotes, privateLine, quietClaims } from './shared';
 import { eventCosts, monthMoney, planLimits, yearMoney, type CostOrder, type EventCost, type Limit, type LimitKind } from './year';
 import { called } from '../model/people';
 
@@ -55,6 +55,8 @@ interface YearData {
   chosen?: Period;
   /** The chosen period's lines. */
   lines: CostLine[];
+  /** Those of claims the view may name: on everyone's, none that is private. */
+  named: CostLine[];
   records: Map<string, MedRecord>;
   /** On everyone's view, the claims not to name or date, each with why (quietClaims). */
   quiet: Map<string, string>;
@@ -73,7 +75,8 @@ function yearData(ctx: Ctx, route: MoneyRoute, who: string | undefined): YearDat
   const chosen = choices.find((p) => p.id === route.period) ?? choices[0];
   const records = new Map(people.flatMap((p) => (store.index(p.id)?.records ?? []).map((r) => [r.id, r] as const)));
   const quiet = who ? new Map<string, string>() : quietClaims(store, today);
-  return { today, people, choices, chosen, lines: chosen ? all.filter((l) => inPeriod(l, chosen.id, today)) : [], records, quiet };
+  const lines = chosen ? all.filter((l) => inPeriod(l, chosen.id, today)) : [];
+  return { today, people, choices, chosen, lines, named: lines.filter((l) => !quiet.has(l.claim)), records, quiet };
 }
 
 /** The periods to choose from, as links that keep the page, the person and the order. */
@@ -99,9 +102,9 @@ function heroCard(d: YearData, who: string | undefined): HTMLElement {
   const step = (swatch: string | null, label: string, cents: number | undefined) =>
     cents === undefined ? null : h('div', { class: 'kv-row' }, h('dt', null, swatch ? h('span', { class: ['swatch', swatch], 'aria-hidden': 'true' }) : null, label), h('dd', { class: 'num' }, money(cents)));
   const off = y.charged && y.discount && y.discount > 0 ? Math.round((y.discount / y.charged) * 100) : 0;
-  const plans = new Set(d.lines.map((l) => l.insurer ?? '')).size;
-  // The dates come from claims the view may name: a private claim's day is not a bound of the range.
-  const named = yearMoney(d.lines.filter((l) => !d.quiet.has(l.claim)));
+  // The plans and the dates come from claims the view may name: a plan only a private claim names is not one, nor is its day a bound of the range.
+  const plans = new Set(d.named.map((l) => l.insurer ?? '')).size;
+  const named = yearMoney(d.named);
   const span = named.first && named.last ? ` for care between ${dateText(named.first)} and ${dateText(named.last)}` : '';
   return card(
     { class: 'money-hero' },
@@ -113,12 +116,12 @@ function heroCard(d: YearData, who: string | undefined): HTMLElement {
     h('dl', { class: 'kv money-steps' }, step(null, 'Providers charged', y.charged), step('swatch-track', 'The network took off', y.discount), step('swatch-plan', 'The plans paid', y.planPaid), step('swatch-share', 'Your share', y.share)),
     off ? h('div', { class: 'chips' }, chip(`${off}% off what providers charged`, 'muted')) : null,
     y.adds ? null : h('p', { class: 'small muted' }, 'Some claims leave a figure out, so these don’t add up from one to the next; each claim’s page has its own.'),
-    planPeriod(d.chosen) ? planYearsNote(planYearsIn(d.lines)) : null,
+    planPeriod(d.chosen) ? planYearsNote(planYearsIn(d.named)) : null,
   );
 }
 
 /** What to do about bills now: those ready to pay, those worth a call, and the shares not billed yet. */
-function billsCard(ctx: Ctx, who: string | undefined): { el: HTMLElement; kept: string[] } {
+function billsCard(ctx: Ctx, who: string | undefined): HTMLElement {
   const g = gather(ctx, who);
   const to = (view: 'bills' | 'calls'): Route => ({ name: 'money', view, ...(who ? { who } : {}) });
   const ready = g.open.filter((m) => toPay(m.item));
@@ -141,13 +144,9 @@ function billsCard(ctx: Ctx, who: string | undefined): { el: HTMLElement; kept: 
         })
       : null,
     maybe.length ? row({ route: to('bills'), title: `${count(maybe.length, 'bill')} may be paid`, meta: `A receipt is on file for ${maybe.length === 1 ? 'it' : 'each'}; its amount could not be read.` }) : null,
-    g.unbilled.length ? row({ route: to('bills'), title: 'Not billed yet', meta: 'What the claims say you owe, with no bill or receipt yet.', aside: num(unbilled) }) : null,
+    g.unbilled.length ? row({ route: to('bills'), title: who ? 'Not billed yet' : 'No bill listed yet', meta: `What the claims say you owe, with no bill or receipt ${who ? 'yet' : 'listed here'}.`, aside: num(unbilled) }) : null,
   ];
-  return {
-    el: card({ title: 'Bills' }, rows.some(Boolean) ? rows : h('p', null, !who && anyLeftOff(ctx.store) ? 'No open bills listed here.' : 'No open bills.'), ...billNotes(ctx, who), h('p', { class: 'small' }, link(to('bills'), 'All bills, beside their claims'))),
-    // What the rows left off: a private visit once, however many of its bills and shares; a bill with no visit by itself.
-    kept: [...g.hidden.open.map((b) => b.event?.event.id ?? b.bill.doc.id), ...g.hidden.unbilled.map((u) => u.event.event.id)],
-  };
+  return card({ title: 'Bills' }, rows.some(Boolean) ? rows : h('p', null, who ? 'No open bills.' : 'No open bills listed here.'), ...billNotes(ctx, who), h('p', { class: 'small' }, link(to('bills'), 'All bills, beside their claims')));
 }
 
 const LIMIT_WORDS: Record<LimitKind, { title: string; what: string }> = {
@@ -155,11 +154,11 @@ const LIMIT_WORDS: Record<LimitKind, { title: string; what: string }> = {
   out_of_pocket: { title: 'Out-of-pocket limit', what: 'The most you pay for covered care in a plan year. After it, the plan pays all of it.' },
 };
 
-function limitRow(l: Limit, p: Person, who: string | undefined, scoped: boolean, quiet: Map<string, string>): HTMLElement {
+function limitRow(l: Limit, p: Person, who: string | undefined, scoped: boolean): HTMLElement {
   const met = l.used >= l.limit;
-  // A private claim is neither dated nor linked on a shared view.
-  const source = quiet.has(l.claim) ? ['As of their plan’s newest claim.'] : ['As of ', link({ name: 'item', person: l.person, id: l.claim }, `the claim for ${dateText(l.asOf)}`), '.'];
-  const metText = l.metOn && !(l.metClaim && quiet.has(l.metClaim)) ? `Met with the claim for ${dateText(l.metOn)}` : 'Met';
+  // A shared view dates and links none of these claims, so it reads the same when one is private.
+  const source = who ? ['As of ', link({ name: 'item', person: l.person, id: l.claim }, `the claim for ${dateText(l.asOf)}`), '.'] : ['As of their plan’s newest claim.'];
+  const metText = who && l.metOn ? `Met with the claim for ${dateText(l.metOn)}` : 'Met';
   const claims = l.fromClaims === undefined || l.fromClaims === l.used ? '' : l.fromClaims ? ` Claims in these records account for ${money(l.fromClaims)} of it.` : ' None of it comes from claims in these records.';
   return row({
     title: who ? capital(l.scope || 'Your plan') : called(p),
@@ -178,7 +177,8 @@ function limitRow(l: Limit, p: Person, who: string | undefined, scoped: boolean,
 /** Each person's deductible, or out-of-pocket limit, as their plan printed it; who has none in these records, and why. */
 function limitCard(kind: LimitKind, d: YearData, limits: Limit[], who: string | undefined): HTMLElement {
   const words = periodWords(d.chosen);
-  const these = limits.filter((l) => l.kind === kind);
+  // A plan that only private claims name has no row on a shared view.
+  const these = limits.filter((l) => l.kind === kind && d.named.some((x) => x.person === l.person && (x.insurer ?? '') === (l.insurer ?? '')));
   const scopes = [...new Set(these.map((l) => l.scope))];
   const shared = scopes.length === 1 && scopes[0] ? ` ${capital(scopes[0])}, as each plan printed it on its newest claim.` : ' As each plan printed it on its newest claim.';
   return card(
@@ -186,12 +186,13 @@ function limitCard(kind: LimitKind, d: YearData, limits: Limit[], who: string | 
     h('p', { class: 'small muted' }, LIMIT_WORDS[kind].what, these.length ? shared : ''),
     d.people.flatMap((p) => {
       const mine = these.filter((l) => l.person === p.id);
-      if (mine.length) return mine.map((l) => limitRow(l, p, who, scopes.length > 1, d.quiet));
+      if (mine.length) return mine.map((l) => limitRow(l, p, who, scopes.length > 1));
       const lines = d.lines.filter((l) => l.person === p.id);
+      const named = d.named.some((l) => l.person === p.id);
       const toward = kind === 'deductible' ? lines.reduce((t, l) => t + (l.cents.deductible ?? 0), 0) : 0;
-      const meta = lines.length
+      const meta = named
         ? `${who ? 'The' : 'Their'} plan’s limit isn’t in these records yet.${toward ? ` ${who ? 'The' : 'Their'} claims put ${money(toward)} toward a deductible.` : ''}`
-        : `No claims in ${words} yet.`;
+        : `No claims ${who ? 'in' : 'listed here for'} ${words} yet.`;
       return [row({ title: who ? 'Not in these records yet' : called(p), meta })];
     }),
   );
@@ -228,14 +229,12 @@ function monthsCard(d: YearData, who: string | undefined): HTMLElement | null {
   );
 }
 
-/** The period's visits by cost: everyone's leave off those that are private or whose cost is a private claim's, counted. */
-function costsOf(ctx: Ctx, d: YearData, who: string | undefined, order: CostOrder): { shown: EventCost[]; kept: string[] } {
+/** The period's visits by cost: everyone's leave off those that are private or whose cost is a private claim's. */
+function costsOf(ctx: Ctx, d: YearData, who: string | undefined, order: CostOrder): EventCost[] {
   const store = ctx.store;
   const events = householdEvents(store.household, (id) => store.index(id), d.today).filter((x) => !who || x.person.id === who);
   const all = d.chosen ? eventCosts(events, d.lines, d.chosen.id, order) : [];
-  const area = (c: EventCost) => c.event.private ?? c.event.event.claims.map((x) => d.quiet.get(x.record.id)).find(Boolean);
-  const shown = who ? all : all.filter((c) => !area(c));
-  return { shown, kept: all.filter((c) => knownArea(area(c))).map((c) => c.event.event.id) };
+  return who ? all : all.filter((c) => !c.event.private && !c.event.event.claims.some((x) => d.quiet.has(x.record.id)));
 }
 
 /** "$4,181.40 off $6,417.00 charged, 65%": what the network took off, against what was charged. */
@@ -286,22 +285,14 @@ const costLegend = () =>
     ['swatch-share', 'Your share'],
   ]);
 
-/** "Totals and months count everyone's care without naming any. 1 private item is kept off the lists on this shared view. …", each item once. */
-function privateNote(keys: string[]): HTMLElement | null {
-  const kept = new Set(keys).size;
-  return kept
-    ? h('p', { class: 'small muted' }, `Totals and months count everyone’s care without naming any. ${count(kept, 'private item')} ${kept === 1 ? 'is' : 'are'} kept off the lists on this shared view. Each shows on its person’s own Money.`)
-    : null;
-}
-
 /** Money's landing: the year. */
 export function overviewPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLElement {
   const d = yearData(ctx, route, who);
   const bills = billsCard(ctx, who);
   const limits = planPeriod(d.chosen) ? planLimits(d.lines, d.records) : [];
   const costs = costsOf(ctx, d, who, 'price');
-  const top = costs.shown.slice(0, BIGGEST);
-  const cuts = discounted(costsOf(ctx, d, who, 'discount').shown).slice(0, NETWORK);
+  const top = costs.slice(0, BIGGEST);
+  const cuts = discounted(costsOf(ctx, d, who, 'discount')).slice(0, NETWORK);
   const max = Math.max(0, ...top.map((c) => c.price));
   const eventsRoute: Route = { name: 'money', view: 'events', ...(who ? { who } : {}), ...(route.period ? { period: route.period } : {}) };
   const explorer: Route = { name: 'costs', ...(d.chosen && d.chosen.id !== 'plan' ? { period: d.chosen.id } : {}), ...(who ? { only: [{ by: 'person' as const, key: who }] } : {}) };
@@ -311,7 +302,7 @@ export function overviewPage(ctx: Ctx, route: MoneyRoute, who: string | undefine
     ...head(ctx, route, 'Money', 'What care cost, and what is left to do.', who),
     yearChips(route, d, who),
     heroCard(d, who),
-    bills.el,
+    bills,
     d.lines.length
       ? planPeriod(d.chosen)
         ? [limitCard('deductible', d, limits, who), limitCard('out_of_pocket', d, limits, who)]
@@ -324,7 +315,7 @@ export function overviewPage(ctx: Ctx, route: MoneyRoute, who: string | undefine
           costLegend(),
           top.map((c) => costRow(c, max, who, 'price')),
           h('p', { class: 'small muted' }, PRICE_NOTE),
-          h('p', { class: 'small' }, link(eventsRoute, `Where the money went: all ${costs.shown.length}, by price, by your share or by what the network took off`)),
+          h('p', { class: 'small' }, link(eventsRoute, `Where the money went: all ${costs.length}, by price, by your share or by what the network took off`)),
         )
       : null,
     cuts.length
@@ -335,7 +326,7 @@ export function overviewPage(ctx: Ctx, route: MoneyRoute, who: string | undefine
           h('p', { class: 'small' }, link({ ...eventsRoute, sort: 'discount' }, 'Every visit, by what the network took off')),
         )
       : null,
-    privateNote(who ? [] : [...bills.kept, ...costs.kept]),
+    who ? null : privateLine('Totals, months and limits count everyone’s care without naming any. Private items are never in the lists here. Each shows on its person’s own Money.'),
     ...(who ? [] : heldNotes(ctx, 'the lists on this shared view')),
     who ? coverageCard(ctx, who) : null,
     h('p', { class: 'small' }, link(explorer, 'Every claim, by provider, kind of care and month')),
@@ -347,13 +338,13 @@ export function eventsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined)
   const d = yearData(ctx, route, who);
   const order: CostOrder = route.sort ?? 'price';
   const costs = costsOf(ctx, d, who, order);
-  const all = costs.shown.filter((c) => !c.fill);
+  const all = costs.filter((c) => !c.fill);
   // By what the network took off, a visit whose claims do not say in full what was charged has no place; it is counted.
   const byDiscount = order === 'discount';
   const visits = byDiscount ? all.filter((c) => c.discount !== undefined) : all;
-  const fills = costs.shown.filter((c) => c.fill && (!byDiscount || c.discount !== undefined));
+  const fills = costs.filter((c) => c.fill && (!byDiscount || c.discount !== undefined));
   // Left off the discount order, counted: those with no charge for every claim, or charges below the price.
-  const unsaid = { visits: all.filter((c) => c.discount === undefined).length, fills: costs.shown.filter((c) => c.fill && c.discount === undefined).length };
+  const unsaid = { visits: all.filter((c) => c.discount === undefined).length, fills: costs.filter((c) => c.fill && c.discount === undefined).length };
   const sum = (k: 'price' | 'planPaid' | 'share' | 'discount' | 'charged') => fills.reduce((t, c) => t + (c[k] ?? 0), 0);
   const fillSum = { price: sum('price'), planPaid: sum('planPaid'), share: sum('share'), discount: sum('discount'), charged: sum('charged') };
   const key = (c: { price: number; share: number; discount?: number }) => (order === 'share' ? c.share : byDiscount ? (c.discount ?? 0) : c.price);
@@ -391,8 +382,8 @@ export function eventsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined)
           h('p', { class: 'small muted' }, byDiscount ? DISCOUNT_NOTE : PRICE_NOTE),
           byDiscount ? unsaidNote(unsaid.visits, unsaid.fills) : null,
         )
-      : card({}, h('p', null, `No visits with a price ${!who && anyLeftOff(ctx.store) ? 'listed here for' : 'in'} ${periodWords(d.chosen)}.`)),
-    privateNote(who ? [] : costs.kept),
+      : card({}, h('p', null, `No visits with a price ${who ? 'in' : 'listed here for'} ${periodWords(d.chosen)}.`)),
+    listLine(who, 'Money'),
     ...(who ? [] : heldNotes(ctx, 'this shared view')),
   );
 }
