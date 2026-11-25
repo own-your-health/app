@@ -13,12 +13,12 @@ import { ROBIN, SAM } from './sample';
 const raw = () => fixture<Record<string, unknown> & { person: string; bills: Record<string, Record<string, unknown>>; worth_a_call: unknown[] }>('rules/bills.json');
 const PERSON = raw().person;
 const usd = (amount: string) => ({ amount, currency: 'USD' });
-const [LAB, DENTAL, THERAPY, EARLIER] = Object.keys(raw().bills) as [string, string, string, string];
+const [LAB, DENTAL, THERAPY, WALK_IN, EARLIER] = Object.keys(raw().bills) as [string, string, string, string, string];
 
 describe('reading bills.json', () => {
   it('takes each bill’s payments, what is left, whether it is settled and what replaces it', () => {
     const { states } = parseBills(raw(), PERSON);
-    expect([...states.keys()]).toEqual([LAB, DENTAL, THERAPY, EARLIER]);
+    expect([...states.keys()]).toEqual([LAB, DENTAL, THERAPY, WALK_IN, EARLIER]);
     const id = expect.stringMatching(/^o_/) as string;
     expect(states.get(LAB)).toEqual({
       payments: [
@@ -33,6 +33,14 @@ describe('reading bills.json', () => {
     });
     expect(states.get(DENTAL)).toMatchObject({ settled: true, left: usd('0.00') });
     expect(states.get(EARLIER)).toEqual({ payments: [], settled: false, replacedBy: LAB });
+  });
+
+  it('takes that no claim is expected for a bill, whatever it charges for', () => {
+    const selfPay = (extra: object, id = WALK_IN) => parseBills({ ...raw(), bills: { ...raw().bills, [id]: { ...raw().bills[id], ...extra } } }, PERSON).states.get(id)!.selfPay;
+    expect(parseBills(raw(), PERSON).states.get(WALK_IN)).toEqual({ payments: [], settled: false, left: usd('55.00'), selfPay: true });
+    expect(selfPay({ self_pay: 'a_later_kind' })).toBe(true);
+    // One that has a claim is set beside it.
+    expect([selfPay({ self_pay: 'stated' }, LAB), selfPay({ self_pay: '' }), selfPay({ self_pay: null }), selfPay({}, THERAPY)]).toEqual([undefined, undefined, undefined, undefined]);
   });
 
   it('takes what is worth a call, never of a settled bill, nor for a reason it does not know', () => {

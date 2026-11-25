@@ -30,6 +30,8 @@ export interface BillState {
   /** The claim it bills, as medrec matched it, and that claim's share. */
   claim?: string;
   owed?: Money;
+  /** It charges for what no insurer is billed for, whatever that is: no claim is to come. */
+  selfPay?: true;
 }
 
 const REASONS = ['asks_more', 'asks_less', 'no_claim', 'desk_copay'] as const;
@@ -68,7 +70,7 @@ function payment(v: unknown): Payment {
 function state(v: unknown): BillState {
   if (!isObject(v) || typeof v.settled !== 'boolean' || !Array.isArray(v.paid)) throw new FolderError('malformed', 'a bill in it does not read.');
   const [left, claim, owed, replacedBy] = [moneyOf(v.left, v.currency), text(v.claim), moneyOf(v.claim_you_owe, v.currency), text(v.superseded_by)];
-  return { payments: v.paid.map(payment), settled: v.settled, ...(left ? { left } : {}), ...(claim ? { claim } : {}), ...(owed ? { owed } : {}), ...(replacedBy ? { replacedBy } : {}) };
+  return { payments: v.paid.map(payment), settled: v.settled, ...(left ? { left } : {}), ...(claim ? { claim } : {}), ...(owed ? { owed } : {}), ...(replacedBy ? { replacedBy } : {}), ...(text(v.self_pay) && !claim ? { selfPay: true } : {}) };
 }
 
 /** A person's bills.json. Refused when it is not one, is a newer format, or is another person's. */
