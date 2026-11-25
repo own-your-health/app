@@ -5,14 +5,14 @@
 
 import { claimCents, claimLines } from '../model/claims';
 import { billList, type Bill } from '../model/billing';
-import { isHeld, knownArea, recordPrivate, recordsPrivate, studyPrivate } from '../model/private';
+import { isHeld, itemPrivate, knownArea, recordPrivate, recordsPrivate } from '../model/private';
 import { sameProvider, type ProviderField } from '../model/providers';
 import { isWithdrawn, originNames } from '../model/records';
 import type { Household, ImagingStudy, MedDocument, MedRecord, PendingMark, PersonIndex } from '../model/types';
 import { householdEvents, type PersonEvent } from './calendar';
 import type { CareEvent } from './event';
-import { forShared, mayBePaid, openBills, unbilledShares, type OpenBill } from './money';
-import { sharedPapers } from './papers';
+import { copiesOf, forShared, mayBePaid, openBills, unbilledShares, type OpenBill } from './money';
+import { papersOf } from './papers';
 import { Providers, providersNamed, sameName, type Named } from './providerNames';
 
 /** What the page reads: the household's items, everyone's for a shared page. */
@@ -38,28 +38,35 @@ const recordsOf = (e: CareEvent): MedRecord[] => [...e.claims.map((c) => c.recor
  * everyone's page leaves off and what a person's own page marks.
  */
 class Quiet {
-  private readonly visits = new Set<string>();
-  private readonly papers: Set<string>;
+  /** Why each record of a private visit is, and each private paper. */
+  private readonly visits = new Map<string, string>();
+  private readonly papers = new Map<string, string>();
   readonly events: PersonEvent[];
 
   constructor(private readonly of: Records) {
     this.events = householdEvents(of.household, (id) => of.indexes.get(id), of.today);
     // A record of a private visit stays off with it, whatever is said of the record alone.
-    for (const x of this.events) if (x.private) for (const r of recordsOf(x.event)) this.visits.add(at(x.person.id, r.id));
-    this.papers = new Set(sharedPapers(of.household, of.indexes, of.today).map((p) => at(p.person, p.doc.id)));
+    for (const x of this.events) if (x.private) for (const r of recordsOf(x.event)) this.visits.set(at(x.person.id, r.id), x.private);
+    for (const idx of of.indexes.values()) for (const p of papersOf(idx, of.household, of.today, of.indexes)) if (p.private) this.papers.set(at(p.person, p.doc.id), p.private);
   }
 
   private index(person: string): PersonIndex {
     return this.of.indexes.get(person)!;
   }
 
-  /** Whether an item is private, by itself or with its visit. One of a person whose items are all held back is not known to be. */
-  item(kind: string, person: string, id: string): boolean {
+  /** Why an item is private, by itself or with its visit. One of a person whose items are all held back is not known to be. */
+  item(kind: string, person: string, id: string): string | undefined {
     const idx = this.index(person);
-    if (isHeld(idx)) return false;
-    if (kind === 'document') return !this.papers.has(at(person, id));
-    if (kind === 'study') return this.study(idx, id) !== undefined;
-    return recordPrivate(idx, id) !== undefined || this.visits.has(at(person, id));
+    if (isHeld(idx)) return undefined;
+    if (kind === 'document') return this.papers.get(at(person, id));
+    if (kind === 'study') return itemPrivate(idx, kind, id);
+    return recordPrivate(idx, id) ?? this.visits.get(at(person, id));
+  }
+
+  /** An item as a page lists it. */
+  mine<T extends { id: string }>(kind: string, person: string, item: T): Mine<T> {
+    const area = this.item(kind, person, item.id);
+    return { person, item, ...(area ? { private: area } : {}) };
   }
 
   /** Why an event is private: its own area, or that of a record of it, as it goes by what its records say. */
@@ -70,11 +77,6 @@ class Quiet {
   /** Whether everyone's page may hold an item. */
   shared(kind: string, person: string, id: string): boolean {
     return !isHeld(this.index(person)) && !this.item(kind, person, id);
-  }
-
-  private study(idx: PersonIndex, id: string): string | undefined {
-    const study = idx.studies.find((s) => s.id === id);
-    return study && studyPrivate(idx, study);
   }
 }
 
@@ -100,6 +102,8 @@ function scopeOf(of: Records, quiet: Quiet, who: string | undefined): Scope {
 export interface Mine<T> {
   person: string;
   item: T;
+  /** Why everyone's page leaves it off. */
+  private?: string;
 }
 
 /** Another provider a page names, and where it opens. */
@@ -134,7 +138,7 @@ export interface ProviderPage {
   from: string[];
   first?: string;
   last?: string;
-  /** Any of its items is private, on a person's own page. */
+  /** Anything listed is private, on a person's own page. */
   private: boolean;
   /** Its own claims' figures, in cents. */
   charged?: number;
@@ -199,7 +203,7 @@ export function providerPage(of: Records, anchor: { person: string; id: string; 
   const same = providers.same(named);
   const its: Its = { of, quiet, scope, providers, named, same, ids: new Set(same.map(atNamed)), billed: new Set(same.filter((n) => n.field === 'provider').map(atNamed)) };
 
-  const records = scope.people.flatMap((person) => of.indexes.get(person)!.records.filter((r) => its.ids.has(at(person, r.id))).map((item) => ({ person, item }))).sort(byDate);
+  const records = scope.people.flatMap((person) => of.indexes.get(person)!.records.filter((r) => its.ids.has(at(person, r.id))).map((r) => quiet.mine(r.kind, person, r))).sort(byDate);
   const ofKind = (kind: string) => records.filter((x) => x.item.kind === kind);
   const claims = ofKind('claim').filter((x) => its.billed.has(at(x.person, x.item.id)));
   const cents = claims.map((c) => claimCents(c.item));
@@ -207,14 +211,16 @@ export function providerPage(of: Records, anchor: { person: string; id: string; 
   const money = moneyOf(its);
   const days = [...been.visits.flatMap((v) => [v.event.event.start, v.event.event.end]), ...same.flatMap((n) => n.date ?? [])].map((d) => d.slice(0, 10)).sort();
   const shared = everyone ? [] : everyonesNames(its);
-  const isPrivate = same.some((n) => quiet.item(n.kind, n.person, n.id)) || [...been.visits, ...been.paperVisits].some((v) => knownArea(v.private)) || money.bills.some((b) => quiet.item('document', b.person, b.item.bill.doc.id));
+  const tests = [...new Map([...been.tests, ...testsPaid(its, claims)].map((t) => [at(t.person, t.item.id), t])).values()].sort(byDate);
+  const studies = scope.people.flatMap((person) => of.indexes.get(person)!.studies.filter((s) => its.ids.has(at(person, s.id))).map((s) => quiet.mine('study', person, s))).sort(byDate);
+  const listed: { private?: string }[] = [...records.filter((x) => x.item.kind !== 'encounter'), ...been.visits, ...been.paperVisits, ...money.bills, ...money.receipts, ...money.papers, ...tests, ...studies];
 
   return {
     named,
     also: [...new Set(same.map((n) => n.name))].filter((n) => n !== named.name),
     from: sourcesOf(same, of.household),
     ...(days.length ? { first: days[0], last: days.at(-1) } : {}),
-    private: !everyone && isPrivate,
+    private: listed.some((x) => knownArea(x.private)),
     charged: sum(cents.map((c) => c.billed)),
     planPaid: sum(cents.map((c) => c.planPaid)),
     share: sum(cents.map((c) => c.youOwe)),
@@ -223,8 +229,8 @@ export function providerPage(of: Records, anchor: { person: string; id: string; 
     paperVisits: been.paperVisits,
     claims,
     placeOf: ofKind('claim').filter((x) => !its.billed.has(at(x.person, x.item.id))),
-    tests: [...new Map([...been.tests, ...testsPaid(its, claims)].map((t) => [at(t.person, t.item.id), t])).values()].sort(byDate),
-    studies: scope.people.flatMap((person) => of.indexes.get(person)!.studies.filter((s) => its.ids.has(at(person, s.id))).map((item) => ({ person, item }))).sort(byDate),
+    tests,
+    studies,
     medicines: ofKind('medication'),
     vaccines: ofKind('immunization'),
     procedures: ofKind('procedure'),
@@ -260,7 +266,7 @@ function visitsOf({ quiet, scope, providers, named, same, ids, billed }: Its): {
     visits.push({ ...visit, ...(share !== undefined ? { share } : {}) });
     const there = e.visits.filter((v) => ids.has(at(person.id, v.record.id)));
     // What a visit of several providers recorded is not known to be this one's.
-    if (there.length && there.length === e.visits.length) tests.push(...e.recorded.filter((r) => isTest(scope, person.id, r)).map((item) => ({ person: person.id, item })));
+    if (there.length && there.length === e.visits.length) tests.push(...e.recorded.filter((r) => isTest(scope, person.id, r)).map((r) => quiet.mine(r.kind, person.id, r)));
     // Who was seen there, or where they were seen: each once for the visit.
     const met = new Map<string, Named>();
     for (const n of there.flatMap((v) => namesOf.get(at(person.id, v.record.id)) ?? [])) if (providers.isPerson(n) !== providers.isPerson(named)) met.set(providers.idOf(n), n);
@@ -272,10 +278,10 @@ function visitsOf({ quiet, scope, providers, named, same, ids, billed }: Its): {
 const isTest = (scope: Scope, person: string, r: MedRecord): boolean => (r.kind === 'result' || r.kind === 'report') && !isWithdrawn(r) && scope.may(r.kind, person, r.id);
 
 /** The tests its claims paid for. */
-function testsPaid({ of, scope }: Its, claims: Mine<MedRecord>[]): Mine<MedRecord>[] {
+function testsPaid({ of, quiet, scope }: Its, claims: Mine<MedRecord>[]): Mine<MedRecord>[] {
   return claims.flatMap((c) => {
     const paid = new Set(claimLines(c.item).flatMap((l) => l.records));
-    return of.indexes.get(c.person)!.records.filter((r) => paid.has(r.id) && isTest(scope, c.person, r)).map((item) => ({ person: c.person, item }));
+    return of.indexes.get(c.person)!.records.filter((r) => paid.has(r.id) && isTest(scope, c.person, r)).map((r) => quiet.mine(r.kind, c.person, r));
   });
 }
 
@@ -291,11 +297,12 @@ function moneyOf({ of, quiet, scope, ids, billed }: Its): Pick<ProviderPage, 'bi
     // As Money lists them: on everyone's, no bill says a private receipt paid it.
     const shown = <T extends { private?: string; event?: PersonEvent; bill?: Bill }>(xs: T[]): T[] => (scope.shared ? forShared(idx, xs) : xs);
     const asking = new Map(shown(openBills(idx, quiet.events.filter((x) => x.person.id === person), of.today, of.marks)).map((b) => [b.bill.doc.id, b]));
-    // Its own bills, and those medrec matched to a claim of its.
-    const mine = billList(idx).filter((b) => scope.may('document', person, b.doc.id) && (ids.has(at(person, b.doc.id)) || (b.medrec?.claim !== undefined && billed.has(at(person, b.medrec.claim)))));
+    // Its own bills, by any copy of one, and those medrec matched to a claim of its.
+    const mine = billList(idx).filter((b) => scope.may('document', person, b.doc.id) && ([...copiesOf(idx, b)].some((id) => ids.has(at(person, id))) || (b.medrec?.claim !== undefined && billed.has(at(person, b.medrec.claim)))));
     for (const bill of mine) {
       const o = asking.get(bill.doc.id);
-      bills.push({ person, item: o ? { bill: o.bill, open: o } : { bill: shown([{ bill }])[0]!.bill } });
+      const area = quiet.item('document', person, bill.doc.id);
+      bills.push({ person, item: o ? { bill: o.bill, open: o } : { bill: shown([{ bill }])[0]!.bill }, ...(area ? { private: area } : {}) });
       if (o && !o.marked && !mayBePaid(o)) open = add(open, o.cents);
     }
     // A visit's charge holds the claims of every name like its own: only this provider's count.
@@ -306,8 +313,8 @@ function moneyOf({ of, quiet, scope, ids, billed }: Its): Pick<ProviderPage, 'bi
     const paying = new Set(mine.flatMap((b) => b.payments.flatMap((p) => p.receipt?.id ?? [])));
     for (const d of idx.documents) {
       if (!ids.has(at(person, d.id)) || d.doc_type === 'bill') continue;
-      if (d.doc_type !== 'receipt') papers.push({ person, item: d });
-      else if (!paying.has(d.id)) receipts.push({ person, item: d });
+      if (d.doc_type !== 'receipt') papers.push(quiet.mine('document', person, d));
+      else if (!paying.has(d.id)) receipts.push(quiet.mine('document', person, d));
     }
   }
   return { bills: bills.sort(newest((x) => x.item.bill.date)), receipts: receipts.sort(byDate), papers: papers.sort(byDate), ...(open !== undefined ? { open } : {}), ...(unbilled ? { unbilled } : {}) };

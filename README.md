@@ -181,11 +181,12 @@ everyone's (`?all=1`, and no other value), newest first:
 
 Names are one provider when the records give one National Provider Identifier
 for them (never shown), or when one source of one person's prints the same
-name: one sign-in, or the papers filed by hand. Names that are only alike are listed under "May
-be the same" and never put together. A name that only a sign-in several
-practices share would give is no link. Everyone's page leaves private items
-off, so a provider named only by private items has none. The rules are
-`src/next/provider.ts`.
+name: one sign-in, or the papers filed by hand. Names that are only alike are
+listed under "May be the same" and never put together. A name that only a
+sign-in several practices share would give is no link. Everyone's page leaves
+private items off, so a provider named only by private items has none. The
+rules are `src/next/providerNames.ts` (which names are one provider) and
+`src/next/provider.ts` (the page, its totals and what is private on it).
 
 A portal visit's page lists what belongs to it: its documents, what was
 recorded at it (diagnoses, results, procedures, medicines, vaccines,

@@ -6,7 +6,6 @@
 import { claimCents } from '../model/claims';
 import { isOutOfRange, resultFlag } from '../model/flags';
 import { called } from '../model/people';
-import { itemPrivate } from '../model/private';
 import type { ProviderField } from '../model/providers';
 import { docTypeLabel, documentTitle, formatMoney, resultPoint, resultReading, studyTitle } from '../model/records';
 import { unitText } from '../model/result';
@@ -78,12 +77,16 @@ const ITEM: Record<string, [string, string]> = {
 };
 
 /** Medicines by name, each person's apart: the newest record of each, and how many there are. */
-function medicinesOf(all: Mine<MedRecord>[]): { person: string; item: MedRecord; n: number }[] {
-  const by = new Map<string, { person: string; item: MedRecord; n: number }>();
+function medicinesOf(all: Mine<MedRecord>[]): (Mine<MedRecord> & { n: number })[] {
+  const by = new Map<string, Mine<MedRecord> & { n: number }>();
   for (const x of all) {
     const key = `${x.person}|${recordTitle(x.item).toLowerCase()}`;
     const held = by.get(key);
-    if (held) held.n += 1;
+    if (held) {
+      held.n += 1;
+      // One row of several records is marked when any is private.
+      if (!held.private && x.private) held.private = x.private;
+    }
     else by.set(key, { ...x, n: 1 });
   }
   return [...by.values()];
@@ -123,34 +126,34 @@ export function providerView(ctx: Ctx, route: ProviderRoute): HTMLElement {
   const whose = (id: string) => (everyone ? name(id) : null);
   const meta = (...parts: (string | null | undefined | false)[]) => parts.filter(Boolean).join(' · ');
   const item = (id: string, of: string): Route => ({ name: 'item', person: id, id: of });
-  const index = (id: string) => store.index(id)!;
-  const priv = (area: string | undefined) => (everyone ? null : privateChip(area));
-  const marked = (id: string, kind: string, of: string) => priv(itemPrivate(index(id), kind, of));
-  const ofRecord = (x: Mine<MedRecord>) => marked(x.person, x.item.kind, x.item.id);
+  const priv = (x: { private?: string }) => privateChip(x.private);
   const num = (cents: number) => h('span', { class: 'num' }, money(cents));
   const owed = (cents: number | undefined) => (cents === undefined ? null : h('span', { class: 'num' }, cents === 0 ? 'Nothing to pay' : money(cents)));
 
-  const claimRow = (x: Mine<MedRecord>) => row({ route: item(x.person, x.item.id), title: recordTitle(x.item), meta: meta(dateText(x.item.date), whose(x.person)), aside: [ofRecord(x), owed(claimCents(x.item).youOwe)] });
-  const recordRow = (x: Mine<MedRecord>) => row({ route: item(x.person, x.item.id), title: recordTitle(x.item), meta: meta(dateText(x.item.date), whose(x.person)), aside: ofRecord(x) });
+  const claimRow = (x: Mine<MedRecord>) => row({ route: item(x.person, x.item.id), title: recordTitle(x.item), meta: meta(dateText(x.item.date), whose(x.person)), aside: [priv(x), owed(claimCents(x.item).youOwe)] });
+  const recordRow = (x: Mine<MedRecord>) => row({ route: item(x.person, x.item.id), title: recordTitle(x.item), meta: meta(dateText(x.item.date), whose(x.person)), aside: priv(x) });
   const testRow = (x: Mine<MedRecord>) => {
     const reading = x.item.kind === 'result' ? resultReading(x.item.fields).text : undefined;
     const flag = x.item.kind === 'result' ? resultFlag(resultPoint(x.item)) : undefined;
-    return row({ route: item(x.person, x.item.id), title: recordTitle(x.item), meta: meta(dateText(x.item.date), reading ? (unitText(reading) ?? reading) : null, whose(x.person)), aside: [ofRecord(x), isOutOfRange(flag) ? flagChip(flag) : null] });
+    return row({ route: item(x.person, x.item.id), title: recordTitle(x.item), meta: meta(dateText(x.item.date), reading ? (unitText(reading) ?? reading) : null, whose(x.person)), aside: [priv(x), isOutOfRange(flag) ? flagChip(flag) : null] });
   };
-  const visitRow = ({ event: x, share, private: area }: Visit) => {
+  const visitRow = (v: Visit) => {
+    const { event: x, share } = v;
     const { title, kind } = headline(x.event);
     const elsewhere = x.event.place && x.event.place !== page.named.name && !page.also.includes(x.event.place) ? x.event.place : null;
-    return row({ route: eventRoute(x.person.id, x.event.id), title, meta: meta(kind, eventWhen(x.event), elsewhere, whose(x.person.id), x.event.what), aside: [priv(area), owed(share)] });
+    return row({ route: eventRoute(x.person.id, x.event.id), title, meta: meta(kind, eventWhen(x.event), elsewhere, whose(x.person.id), x.event.what), aside: [priv(v), owed(share)] });
   };
-  const billRow = ({ person: id, item: { bill, open } }: ProviderPage['bills'][number]) =>
-    row({
+  const billRow = (x: ProviderPage['bills'][number]) => {
+    const { person: id, item: { bill, open } } = x;
+    return row({
       route: item(id, bill.doc.id),
       title: `Bill from ${bill.provider ?? 'a provider'}`,
       meta: meta(dateText(bill.date), whose(id), bill.settled ? paidText(bill) : null, open ? partText(open) : null, open?.overdue && bill.due ? `was due ${dateText(bill.due)}` : open && bill.due ? `due ${dateText(bill.due)}` : null, unreadText(bill.unread), open?.marked ? 'marked paid, waiting for the Mac' : null, !bill.settled && bill.replacedBy ? 'a later statement has its balance' : null),
-      aside: [marked(id, 'document', bill.doc.id), open && !open.marked && !mayBePaid(open) ? num(open.cents) : bill.amount ? h('span', { class: 'num muted' }, formatMoney(bill.amount)) : null],
+      aside: [priv(x), open && !open.marked && !mayBePaid(open) ? num(open.cents) : bill.amount ? h('span', { class: 'num muted' }, formatMoney(bill.amount)) : null],
     });
-  const paperRow = (x: ProviderPage['papers'][number]) => row({ route: item(x.person, x.item.id), title: documentTitle(x.item), meta: meta(docTypeLabel(x.item.doc_type), dateText(x.item.date), x.item.doc_type === 'receipt' && x.item.statement?.amount_paid ? `${formatMoney(x.item.statement.amount_paid)} paid` : null, whose(x.person)), aside: marked(x.person, 'document', x.item.id) });
-  const studyRow = (x: ProviderPage['studies'][number]) => row({ route: item(x.person, x.item.id), title: studyTitle(x.item), meta: meta(dateText(x.item.date), whose(x.person)), aside: marked(x.person, 'study', x.item.id) });
+  };
+  const paperRow = (x: ProviderPage['papers'][number]) => row({ route: item(x.person, x.item.id), title: documentTitle(x.item), meta: meta(docTypeLabel(x.item.doc_type), dateText(x.item.date), x.item.doc_type === 'receipt' && x.item.statement?.amount_paid ? `${formatMoney(x.item.statement.amount_paid)} paid` : null, whose(x.person)), aside: priv(x) });
+  const studyRow = (x: ProviderPage['studies'][number]) => row({ route: item(x.person, x.item.id), title: studyTitle(x.item), meta: meta(dateText(x.item.date), whose(x.person)), aside: priv(x) });
   const seenRow = (s: Seen) => row({ route: providerRoute(s.named, everyone), title: s.named.name, meta: count(s.visits, 'visit') });
   const alikeRow = (a: Alike) => row({ route: providerRoute(a.named, everyone), title: a.names.join(', '), meta: meta(everyone && a.people.map(name).join(', '), ...a.items.map(({ kind, n }) => count(n, ...(ITEM[kind] ?? ['record', 'records']))), `${a.from.length === 1 ? 'source' : 'sources'}: ${a.from.join(', ')}`) });
 
@@ -186,7 +189,7 @@ export function providerView(ctx: Ctx, route: ProviderRoute): HTMLElement {
     section('Claims others billed for care there', 'claims', page.placeOf, claimRow, 'In none of the amounts above.'),
     section('Tests', 'tests', page.tests, testRow, 'From these claims, and from visits with no other provider.'),
     section('Imaging', 'studies', page.studies, studyRow),
-    section('Medicines', 'medicines', medicinesOf(page.medicines), (x) => row({ route: item(x.person, x.item.id), title: recordTitle(x.item), meta: meta(x.n > 1 ? `${count(x.n, 'record')}, the last ${dateText(x.item.date)}` : dateText(x.item.date), whose(x.person)), aside: ofRecord(x) })),
+    section('Medicines', 'medicines', medicinesOf(page.medicines), (x) => row({ route: item(x.person, x.item.id), title: recordTitle(x.item), meta: meta(x.n > 1 ? `${count(x.n, 'record')}, the last ${dateText(x.item.date)}` : dateText(x.item.date), whose(x.person)), aside: priv(x) })),
     section('Vaccines', 'vaccines', page.vaccines, recordRow),
     section('Procedures', 'procedures', page.procedures, recordRow),
     section('Papers', 'papers', page.papers, paperRow),

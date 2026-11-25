@@ -465,6 +465,7 @@ describe('everyone’s page', () => {
 
   it('is marked private on its person’s own page where only its visit is, and the visit where only a record of it is', () => {
     const lab = anchor(SAM, 'provider', 'Example Lab');
+    const lab1 = pageOf(lab)!;
     const of = (change: (p: Extract<NonNullable<PersonIndex['privacy']>, { kind: 'known' }>) => object) =>
       pageOf(lab, false, SAMPLE, withIndex(SAM, (idx) => {
         if (idx.privacy?.kind !== 'known') throw new Error('not known');
@@ -476,13 +477,49 @@ describe('everyone’s page', () => {
     expect(marked(of((p) => ({ events: new Map([...p.events, [event.id, 'household']]) })))).toEqual([true, [event.start]]);
     const other = event.claims.find((c) => c.provider === 'Example Digestive Health')!.record;
     expect(marked(of((p) => ({ records: new Map([...p.records, [other.id, 'household']]) })))).toEqual([true, [event.start]]);
+    // Each row says why everyone's page leaves it off: the claim of a private visit too.
+    const of1 = of((p) => ({ events: new Map([...p.events, [event.id, 'household']]) }));
+    expect(of1.claims.map((c) => [c.item.date, c.private])).toEqual(lab1.claims.map((c) => [c.item.date, event.claims.some((x) => x.record.id === c.item.id) ? 'household' : undefined]));
+    expect(of1.claims.filter((c) => c.private)).toHaveLength(1);
     // A bill medrec matched to its claim, which it names by no name of its own.
     const bill = pageOf(anchor(ROBIN, 'provider', 'Example Health'))!.bills[0]!.item.bill.doc;
     const billed = pageOf(anchor(ROBIN, 'provider', 'Example Health'), false, SAMPLE, withIndex(ROBIN, (idx) => {
       if (idx.privacy?.kind !== 'known') throw new Error('not known');
       return { ...idx, privacy: { ...idx.privacy, documents: new Map([...idx.privacy.documents, [bill.id, 'household']]) } };
     }))!;
-    expect([billed.private, billed.bills.length]).toEqual([true, 2]);
+    expect([billed.private, billed.bills.map((b) => b.private)]).toEqual([true, billed.bills.map((b) => (b.item.bill.doc.id === bill.id ? 'household' : undefined))]);
+  });
+
+  it('marks a private test its claim paid for, and an imaging study and a paper, and is marked by any', () => {
+    const provider = anchor(ROBIN, 'provider', 'Example Health');
+    const plain = pageOf(provider)!;
+    const held = new Set(personEvents(index(ROBIN), SAMPLE.household, TODAY).flatMap((e) => e.recorded.map((r) => r.id)));
+    expect([plain.private, plain.tests.length]).toEqual([false, 8]);
+    const test = plain.tests[0]!.item;
+    const known = (change: (p: Extract<NonNullable<PersonIndex['privacy']>, { kind: 'known' }>) => object, person = ROBIN, more: (idx: PersonIndex) => Partial<PersonIndex> = () => ({})) =>
+      withIndex(person, (idx) => {
+        if (idx.privacy?.kind !== 'known') throw new Error('not known');
+        return { ...idx, ...more(idx), privacy: { ...idx.privacy, ...change(idx.privacy) } };
+      });
+    // No event holds the test, so its claim is all that has it here.
+    const apart = (idx: PersonIndex) => ({ events: { ...idx.events!, events: idx.events!.events.map((e) => ({ ...e, members: e.members.filter((m) => m.record !== test.id) })) } });
+    expect(held.has(test.id)).toBe(true);
+    const page = pageOf(provider, false, SAMPLE, known((p) => ({ records: new Map([...p.records, [test.id, 'household']]) }), ROBIN, apart))!;
+    expect([page.private, page.tests.filter((t) => t.private).map((t) => t.item.id)]).toEqual([true, [test.id]]);
+    // A paper of its.
+    const papers = pageOf(anchor(ROBIN, 'organization', 'Example Health'))!;
+    const doc = papers.papers[0]!.item;
+    const one = pageOf({ ...papers.named, id: papers.papers.at(-1)!.item.id }, false, SAMPLE, known((p) => ({ documents: new Map([...p.documents, [doc.id, 'household']]) })))!;
+    expect([papers.private, one.private, one.papers.filter((x) => x.private).map((x) => x.item.id)]).toEqual([false, true, [doc.id]]);
+  });
+
+  it('lists a bill that any copy of it names the provider on, once', () => {
+    const bill = pageOf(anchor(ROBIN, 'provider', 'Example Health'))!.bills[0]!.item.bill.doc;
+    const copy = { ...bill, id: 'd_aaaaaaaaaaaaaaaaaaaa', organization: 'Example Copies', same_statement_as: bill.id };
+    const page = pageOf({ person: ROBIN, id: copy.id, field: 'organization' }, false, SAMPLE, withIndex(ROBIN, (idx) => ({ ...idx, documents: [...idx.documents, copy] })))!;
+    expect([page.named.name, page.bills.map((b) => b.item.bill.doc.id), page.papers]).toEqual(['Example Copies', [bill.id], []]);
+    const both = pageOf({ person: ROBIN, id: bill.id, field: 'organization' }, false, SAMPLE, withIndex(ROBIN, (idx) => ({ ...idx, documents: [...idx.documents, { ...copy, organization: bill.organization! }] })))!;
+    expect(both.bills.filter((b) => b.item.bill.doc.id === bill.id)).toHaveLength(1);
   });
 
   it('lists no visit with a private record, whatever is said of the visit', () => {
