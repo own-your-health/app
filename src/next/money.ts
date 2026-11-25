@@ -1,16 +1,18 @@
 // Bills against what the claims say, for Home and Money.
-// A provider's newest statement with no receipt filed after it is open. It
-// is to pay when it asks what the claims say that provider is owed for the
-// visit, and worth a call when it asks something else or no claim in these
-// records backs it. Receipts carry no amount yet, so a payment above what
-// the claims say cannot be found here.
+// A bill with something left to pay is open: to pay, or worth a call when it
+// asks something else than its claim says or no claim in these records backs
+// it. medrec's list says which, when it is here. Without it, a provider's
+// newest statement with no receipt filed after it is open, and is put beside
+// what the claims say that provider is owed for the visit.
 
-import { billList, owedByProvider, type Bill } from '../model/billing';
+import { billList, openList, type Bill, type BillPayment } from '../model/billing';
+import type { BillState } from '../model/bills';
 import { sameProvider } from '../model/providers';
 import { claimLines, type ClaimLine } from '../model/claims';
 import { inVisit, paperPrivate, recordPrivate, recordsPrivate, takenOut } from '../model/private';
-import { str, toCents } from '../model/records';
+import { formatMoney, fromCents, str, toCents } from '../model/records';
 import type { MedDocument, MedRecord, PersonIndex } from '../model/types';
+import { dateText } from '../ui/format';
 import type { PersonEvent } from './calendar';
 import { eventOf, paidAtCounter } from './event';
 
@@ -20,19 +22,24 @@ export type BillVerdict =
   /** The bill asks something else. */
   | 'differs'
   /** No claim in these records is for it. */
-  | 'no_claim';
+  | 'no_claim'
+  /** No one claim is for it and medrec does not list it as worth a call: several claims are its visit's, or a later statement repeats an earlier one's balance. */
+  | 'unmatched';
 
 export interface OpenBill {
   bill: Bill;
+  /** What is left to pay. */
   cents: number;
+  /** What the bill asked: all it was due, before any payment. */
+  asked: number;
   /** The visit the bill is for, when it was tied to one. */
   event?: PersonEvent;
-  /** What the claims say you owe: the provider's own share, or the visit's when no claim is theirs (a billing company's statement). */
+  /** What the claims say you owe: the claim medrec matched, else the provider's own share, or the visit's when no claim is theirs (a billing company's statement). */
   claimSays?: number;
   /** Whether claimSays is the whole visit's share rather than this provider's. */
   claimSaysVisit: boolean;
   verdict: BillVerdict;
-  /** Past its due date with no receipt filed after it. */
+  /** Past its due date, with something left to pay. */
   overdue: boolean;
   /** Why it is private, from the bill or its visit; undefined when it is not. */
   private?: string;
@@ -65,26 +72,87 @@ export function byDue(a: OpenBill, b: OpenBill): number {
 
 /** The person's open bills, overdue first, then by due date. `events` are all of the person's, private ones too. */
 export function openBills(idx: PersonIndex, events: PersonEvent[], today: string): OpenBill[] {
-  return owedByProvider(idx)
-    .due.map(({ provider, bill }): OpenBill => {
-      const cents = toCents(bill.amount) ?? 0;
+  return openList(idx)
+    .map((bill): OpenBill => {
+      const asked = toCents(bill.amount) ?? 0;
       const event = events.find((x) => eventOf([x.event], bill.doc.id));
-      const own = event?.money.charges.find((c) => sameProvider(c.provider, provider));
-      const shares = event?.money.charges.filter((c) => (c.share ?? 0) > 0) ?? [];
-      const claimSays = own ? (own.share ?? 0) : shares.length ? shares.reduce((t, c) => t + c.share!, 0) : undefined;
       const area = billPrivate(idx, bill.doc, event);
+      const against = bill.medrec ? medrecSays(idx, bill, bill.medrec, event, asked) : claimsSay(bill, event, asked);
       return {
         bill,
-        cents,
+        cents: toCents(bill.left) ?? 0,
+        asked,
         ...(event ? { event } : {}),
-        ...(claimSays !== undefined ? { claimSays } : {}),
-        claimSaysVisit: !own && claimSays !== undefined,
-        verdict: claimSays === undefined ? 'no_claim' : claimSays === cents ? 'matches' : 'differs',
+        ...against,
         overdue: !!bill.due && bill.due < today,
         ...(area ? { private: area } : {}),
       };
     })
     .sort(byDue);
+}
+
+type Against = Pick<OpenBill, 'claimSays' | 'claimSaysVisit' | 'verdict'>;
+
+/** A bill against what its visit's claims say, without medrec's list. */
+function claimsSay(bill: Bill, event: PersonEvent | undefined, asked: number): Against {
+  const own = event?.money.charges.find((c) => sameProvider(c.provider, bill.provider));
+  const shares = event?.money.charges.filter((c) => (c.share ?? 0) > 0) ?? [];
+  const claimSays = own ? (own.share ?? 0) : shares.length ? shares.reduce((t, c) => t + c.share!, 0) : undefined;
+  return { ...(claimSays !== undefined ? { claimSays } : {}), claimSaysVisit: !own && claimSays !== undefined, verdict: claimSays === undefined ? 'no_claim' : claimSays === asked ? 'matches' : 'differs' };
+}
+
+/** A bill as medrec's list has it: worth a call for the reason it gives, and otherwise not, whatever else the claims say. */
+function medrecSays(idx: PersonIndex, bill: Bill, state: BillState, event: PersonEvent | undefined, asked: number): Against {
+  const call = idx.bills?.calls.find((c) => c.document === bill.doc.id);
+  const owed = toCents(call?.owed ?? state.owed);
+  // A claim from another provider is the visit's: the bill is a billing company's.
+  const claimSaysVisit = !!event && !event.money.charges.some((c) => sameProvider(c.provider, bill.provider));
+  if (call) return owed === undefined ? { claimSaysVisit: false, verdict: 'no_claim' } : { claimSays: owed, claimSaysVisit, verdict: 'differs' };
+  const said: Against = owed === undefined ? claimsSay(bill, event, asked) : { claimSays: owed, claimSaysVisit, verdict: owed === asked ? 'matches' : 'unmatched' };
+  return said.verdict === 'matches' ? said : { claimSaysVisit: false, verdict: 'unmatched' };
+}
+
+/** Whether a bill is worth a call before it is paid: it asks something other than its claim says, or no claim backs it. */
+export const worthACall = (b: Pick<OpenBill, 'verdict'>): boolean => b.verdict === 'differs' || b.verdict === 'no_claim';
+
+/** A payment at a visit above what its claims say you owe, as medrec's list has it. */
+export interface DeskPayment {
+  receipt: MedDocument;
+  provider: string;
+  cents: number;
+  claimSays: number;
+  event?: PersonEvent;
+  private?: string;
+}
+
+export function deskPayments(idx: PersonIndex, events: PersonEvent[]): DeskPayment[] {
+  return (idx.bills?.calls ?? []).flatMap((c): DeskPayment[] => {
+    const receipt = c.reason === 'desk_copay' ? idx.documents.find((d) => d.id === c.document) : undefined;
+    const [cents, claimSays] = [toCents(c.asked), toCents(c.owed)];
+    if (!receipt || cents === undefined || claimSays === undefined) return [];
+    const event = events.find((x) => eventOf([x.event], receipt.id));
+    const area = billPrivate(idx, receipt, event);
+    return [{ receipt, provider: receipt.organization ?? 'A provider', cents, claimSays, ...(event ? { event } : {}), ...(area ? { private: area } : {}) }];
+  });
+}
+
+/** "Marked paid, Nov 20, 2026", or "receipt Nov 20, 2026"; with `amounts`, how much each paid. */
+export function paymentText(p: BillPayment, amounts = false): string {
+  const on = p.on ? dateText(p.on) : undefined;
+  const sum = amounts || p.apart ? formatMoney(p.amount) : undefined;
+  const what = p.from === 'household' ? [sum ? `${sum} marked paid` : 'Marked paid', on].filter(Boolean).join(', ') : [sum, `receipt${on ? ` ${on}` : ''}`].filter(Boolean).join(', ');
+  return `${what}${p.from === 'receipt' && !p.amount && amounts ? ', amount not read' : ''}${p.apart ? ', in another currency' : ''}`;
+}
+
+/** How a bill with nothing left was paid: "paid, receipt Apr 20, 2025", "Marked paid, Nov 20, 2026". */
+export function paidText(b: Pick<Bill, 'payments'>): string {
+  const text = b.payments.map((p) => paymentText(p, b.payments.length > 1)).join(', ');
+  return !text ? 'nothing to pay' : b.payments.some((p) => p.from === 'receipt') ? `paid, ${text}` : text;
+}
+
+/** What a bill that is only partly paid says of it: "$20.00 of $53.68 paid". */
+export function partText(b: Pick<OpenBill, 'asked' | 'cents'>): string | undefined {
+  return b.cents < b.asked ? `${formatMoney(fromCents(b.asked - b.cents))} of ${formatMoney(fromCents(b.asked))} paid` : undefined;
 }
 
 /** A share the claims say you owe a provider for a visit, with no bill or receipt from them in the folder yet. */
@@ -119,7 +187,7 @@ export function unbilledShares(idx: PersonIndex, events: PersonEvent[]): Unbille
   });
 }
 
-/** A bill with a receipt from its provider filed after it. */
+/** A bill with nothing left to pay: by its receipts, or the household's marks. */
 export interface PaidBill {
   bill: Bill;
   cents?: number;
@@ -127,10 +195,10 @@ export interface PaidBill {
   private?: string;
 }
 
-/** Bills paid by a receipt, newest first. */
+/** Bills that are paid, newest first. One that asked for nothing is not. */
 export function paidBills(idx: PersonIndex, events: PersonEvent[]): PaidBill[] {
   return billList(idx)
-    .filter((b) => b.receipt)
+    .filter((b) => b.settled && b.payments.length)
     .map((bill): PaidBill => {
       const event = events.find((x) => eventOf([x.event], bill.doc.id));
       const area = billPrivate(idx, bill.doc, event);
@@ -152,20 +220,23 @@ export interface CallsSummary<T> {
   providers: number;
 }
 
+/** How much of what is left is more than the claims say. */
+export const overAsked = (b: OpenBill): number => Math.min(b.cents, Math.max(0, b.asked - (b.claimSays ?? b.asked)));
+
 /** Splits the open bills that don't match their claims; `bill` reads the OpenBill from an item (a person's, say). */
 export function callsSummary<T>(items: T[], bill: (x: T) => OpenBill): CallsSummary<T> {
   const asksMore = items.filter((x) => {
     const b = bill(x);
-    return b.verdict === 'no_claim' || (b.verdict === 'differs' && b.cents > b.claimSays!);
+    return b.verdict === 'no_claim' || (b.verdict === 'differs' && b.asked > b.claimSays!);
   });
   const asksLess = items.filter((x) => {
     const b = bill(x);
-    return b.verdict === 'differs' && b.cents < b.claimSays!;
+    return b.verdict === 'differs' && b.asked < b.claimSays!;
   });
   return {
     asksMore,
     asksLess,
-    overCents: asksMore.reduce((t, x) => t + Math.max(0, bill(x).cents - (bill(x).claimSays ?? bill(x).cents)), 0),
+    overCents: asksMore.reduce((t, x) => t + overAsked(bill(x)), 0),
     unbacked: asksMore.filter((x) => bill(x).verdict === 'no_claim').length,
     providers: new Set(asksMore.map((x) => bill(x).bill.provider)).size,
   };

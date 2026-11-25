@@ -9,11 +9,12 @@ import { formatMoney } from '../model/records';
 import { card, chip, driveLink, kv, link, row, type Ctx } from '../ui/components';
 import { h } from '../ui/dom';
 import { count, dateText } from '../ui/format';
+import type { Person } from '../model/types';
 import type { Route } from '../ui/router';
 import { daysBetween } from './needs';
 import { eventRoute, eventWhen } from './eventView';
-import { callsSummary, type OpenBill, type PaidBill } from './money';
-import { forBill, gather, head, keptNote, money, num, privateChip, visitText, type Mine, type MoneyRoute } from './moneyParts';
+import { callsSummary, overAsked, paymentText, partText, worthACall, type OpenBill, type PaidBill } from './money';
+import { billNotes, forBill, gather, head, keptNote, money, num, paidOn, privateChip, visitText, type Mine, type MoneyRoute } from './moneyParts';
 import { eventsPage, overviewPage } from './moneyYear';
 import { anyLeftOff, heldNotes } from './shared';
 import { called } from '../model/people';
@@ -37,7 +38,7 @@ function openRow(ctx: Ctx, m: Mine<OpenBill>, today: string, named: boolean): HT
   return row({
     route: e ? eventRoute(m.person.id, e.event.id) : { name: 'item', person: m.person.id, id: b.bill.doc.id },
     title: b.bill.provider ?? 'A provider',
-    meta: [named ? called(m.person) : null, e ? visitText(e) : null, billWhen(b)].filter(Boolean).join(' · '),
+    meta: [named ? called(m.person) : null, e ? visitText(e) : null, billWhen(b), partText(b)].filter(Boolean).join(' · '),
     aside: num(b.cents),
     extra: h(
       'div',
@@ -54,12 +55,16 @@ function saysText(b: OpenBill): string {
   return `the ${b.claimSaysVisit ? 'visit’s claims say' : 'claim says'} you owe ${money(b.claimSays)}`;
 }
 
+/** Whose money a page is about. */
+const people = (ctx: Ctx, who: string | undefined): Person[] => ctx.store.household.people.filter((p) => !who || p.id === who);
+
 /** Bills: each open bill beside its claim, then what is not billed yet, then what is paid. */
 function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLElement {
   const g = gather(ctx, who);
   const named = !who;
-  const ready = g.open.filter((m) => m.item.verdict === 'matches');
-  const check = g.open.filter((m) => m.item.verdict !== 'matches');
+  const ready = g.open.filter((m) => !worthACall(m.item));
+  const check = g.open.filter((m) => worthACall(m.item));
+  const matched = ready.filter((m) => m.item.verdict === 'matches').length;
   const readyCents = ready.reduce((t, m) => t + m.item.cents, 0);
   const unbilledCents = g.unbilled.reduce((t, m) => t + m.item.cents, 0);
   const callsRoute = (bill?: string): Route => ({ name: 'money', view: 'calls', ...(who ? { who } : {}), ...(bill ? { bill } : {}) });
@@ -72,7 +77,7 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
     h(
       'p',
       null,
-      ready.length ? `${count(ready.length, 'bill')}, each asking what its claim says you owe.` : left ? 'No bill listed here matches its claim.' : 'No bill that matches its claim is waiting.',
+      ready.length ? (matched === ready.length ? `${count(ready.length, 'bill')}, each asking what its claim says you owe.` : `${count(ready.length, 'bill')}, ${matched ? `${matched} of them asking what ${matched === 1 ? 'its claim says' : 'their claims say'} you owe.` : 'with no one claim to set beside.'}`) : left ? 'No bill listed here matches its claim.' : 'No bill that matches its claim is waiting.',
       check.length ? [' ', link(callsRoute(), `${count(check.length, 'more bill')} ${check.length === 1 ? 'is' : 'are'} worth a call first.`)] : ready.length && !left ? ' None asks for more than the claims say.' : null,
     ),
   );
@@ -87,7 +92,7 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
           row({
             route: callsRoute(m.item.bill.doc.id),
             title: m.item.bill.provider ?? 'A provider',
-            meta: [named ? called(m.person) : null, m.item.event ? visitText(m.item.event) : null, `asks ${money(m.item.cents)}; ${saysText(m.item)}`].filter(Boolean).join(' · '),
+            meta: [named ? called(m.person) : null, m.item.event ? visitText(m.item.event) : null, `asks ${money(m.item.asked)}; ${saysText(m.item)}`, partText(m.item)].filter(Boolean).join(' · '),
             aside: [privateChip(m.item.private), num(m.item.cents)],
           }),
         ),
@@ -112,12 +117,12 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
   const paidCard = g.paid.length
     ? card(
         { title: 'Paid' },
-        h('p', { class: 'small muted' }, 'A bill is paid here when a receipt from its provider is filed after it.'),
+        h('p', { class: 'small muted' }, 'Paid by a receipt in the folder, or by a payment the household marked.'),
         g.paid.map((m) =>
           row({
             route: m.item.event ? eventRoute(m.person.id, m.item.event.event.id) : { name: 'item', person: m.person.id, id: m.item.bill.doc.id },
             title: m.item.bill.provider ?? 'A provider',
-            meta: [named ? called(m.person) : null, m.item.event ? visitText(m.item.event) : billWhen(m.item), `receipt ${dateText(m.item.bill.receipt!.date)}`].filter(Boolean).join(' · '),
+            meta: [named ? called(m.person) : null, m.item.event ? visitText(m.item.event) : billWhen(m.item), ...m.item.bill.payments.map((p) => paymentText(p, m.item.bill.payments.length > 1))].filter(Boolean).join(' · '),
             aside: [privateChip(m.item.private), m.item.cents !== undefined ? num(m.item.cents) : null],
           }),
         ),
@@ -134,6 +139,7 @@ function billsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
     checkCard,
     unbilledCard,
     paidCard,
+    ...billNotes(ctx, people(ctx, who)),
     keptNote(g.hidden.open.length + g.hidden.unbilled.length + g.hidden.paid, 'Bills'),
     ...(who ? [] : heldNotes(ctx, 'this shared view')),
     !g.open.length && !g.unbilled.length && !g.paid.length ? card({}, h('p', null, 'No bills, receipts or claim shares to show here.')) : null,
@@ -145,32 +151,35 @@ function script(b: OpenBill): string {
   const s = b.bill.doc.statement;
   const dated = s?.statement_date ?? b.bill.date;
   const visit = b.event ? ` for the visit on ${dateText(b.event.event.start)}` : '';
-  const opening = `I have a statement${dated ? ` dated ${dateText(dated)}` : ''} for ${money(b.cents)}${s?.account ? `, account ${s.account}${visit ? ',' : ''}` : ''}`;
-  if (b.claimSays === undefined) return `“${opening}${visit}. I can’t find an insurance claim for it. Was it billed to my insurance, and if so, under which claim?”`;
+  const opening = `I have a statement${dated ? ` dated ${dateText(dated)}` : ''} for ${money(b.asked)}${s?.account ? `, account ${s.account}${visit ? ',' : ''}` : ''}`;
+  const paid = b.cents < b.asked ? ` I have paid ${money(b.asked - b.cents)} of it.` : '';
+  if (b.claimSays === undefined) return `“${opening}${visit}.${paid} I can’t find an insurance claim for it. Was it billed to my insurance, and if so, under which claim?”`;
   if (b.claimSaysVisit) {
     const to = (b.event?.money.charges ?? []).filter((c) => (c.share ?? 0) > 0).map((c) => c.provider);
-    return `“${opening}${visit}. My plan’s claims for that visit say I owe ${money(b.claimSays)} in all${to.length ? `, to ${to.join(' and ')}` : ''}. Which claim is this bill for, and can you check the balance?”`;
+    return `“${opening}${visit}.${paid} My plan’s claims for that visit say I owe ${money(b.claimSays)} in all${to.length ? `, to ${to.join(' and ')}` : ''}. Which claim is this bill for, and can you check the balance?”`;
   }
-  return `“${opening}${visit}. My plan’s claim for that visit says I owe ${money(b.claimSays)}. Can you check the balance, or send an itemized bill?”`;
+  return `“${opening}${visit}.${paid} My plan’s claim for that visit says I owe ${money(b.claimSays)}. Can you check the balance, or send an itemized bill?”`;
 }
 
 function callCard(ctx: Ctx, m: Mine<OpenBill>, named: boolean): HTMLElement {
   const b = m.item;
   const e = b.event;
-  const over = b.claimSays !== undefined ? b.cents - b.claimSays : undefined;
+  const over = overAsked(b);
   const s = b.bill.doc.statement;
   const shares = (e?.money.charges ?? []).filter((c) => (c.share ?? 0) > 0);
   const el = card(
     { title: b.bill.provider ?? 'A provider', class: 'call', actions: privateChip(b.private) },
-    h('p', { class: 'call-claim' }, b.claimSays === undefined ? `Asks ${money(b.cents)}. No claim in these records is for it.` : `Asks ${money(b.cents)}. The ${b.claimSaysVisit ? 'visit’s claims say' : 'claim says'} ${money(b.claimSays)}.`),
-    over !== undefined && over > 0 ? h('p', { class: 'call-number' }, num(over), h('span', null, ' may not be owed')) : null,
+    h('p', { class: 'call-claim' }, b.claimSays === undefined ? `Asks ${money(b.asked)}. No claim in these records is for it.` : `Asks ${money(b.asked)}. The ${b.claimSaysVisit ? 'visit’s claims say' : 'claim says'} ${money(b.claimSays)}.`),
+    over > 0 ? h('p', { class: 'call-number' }, num(over), h('span', null, ' may not be owed')) : null,
     b.claimSays === undefined ? h('p', { class: 'small' }, 'If it went through insurance, its claim may not be in these records yet. If it didn’t, it may not be an insurance bill.') : null,
     kv([
       ['Whose', named ? called(m.person) : null],
       ['Visit', e ? link(eventRoute(m.person.id, e.event.id), visitText(e)) : 'None in these records'],
       ['Statement', [dateText(s?.statement_date ?? b.bill.date), s?.account ? `account ${s.account}` : null, b.bill.due ? `${b.overdue ? 'was due' : 'due'} ${dateText(b.bill.due)}` : null].filter(Boolean).join(' · ')],
       ['The claims say', shares.length ? shares.map((c) => `${money(c.share!)} to ${c.provider}`).join(', ') : b.claimSays === undefined ? null : money(b.claimSays)],
-      ['The bill asks', money(b.cents)],
+      ['The bill asks', money(b.asked)],
+      ['Paid', b.bill.payments.length ? b.bill.payments.map((p) => paymentText(p, true)).join(', ') : null],
+      ['Left to pay', b.cents < b.asked ? money(b.cents) : null],
     ]),
     h('div', { class: 'call-script' }, h('p', { class: 'call-script-label' }, 'What to say'), h('p', null, script(b))),
     h('p', { class: 'small muted' }, 'The bill’s phone number isn’t in these records yet; it is on the paper.'),
@@ -184,9 +193,9 @@ function callsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
   const g = gather(ctx, who);
   const named = !who;
   const sum = callsSummary(g.open, (m) => m.item);
-  // What this page would have shown on someone's own view: the bills that don't match, and what the plan changed.
+  // What this page would have shown on someone's own view: the bills that don't match, what was paid at a visit, and what the plan changed.
   const left = callsSummary(g.hidden.open, (b) => b);
-  const kept = left.asksMore.length + left.asksLess.length + g.hidden.explained;
+  const kept = left.asksMore.length + left.asksLess.length + g.hidden.desk + g.hidden.explained;
 
   const hero = sum.asksMore.length
     ? card(
@@ -209,11 +218,26 @@ function callsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
             row({
               route: m.item.event ? eventRoute(m.person.id, m.item.event.event.id) : { name: 'item', person: m.person.id, id: m.item.bill.doc.id },
               title: m.item.bill.provider ?? 'A provider',
-              meta: [named ? called(m.person) : null, `The bill asks ${money(m.item.claimSays! - m.item.cents)} less than ${saysText(m.item)}. Ask for an itemized bill if you want to be sure.`].filter(Boolean).join(' · '),
+              meta: [named ? called(m.person) : null, `The bill asks ${money(m.item.claimSays! - m.item.asked)} less than ${saysText(m.item)}. Ask for an itemized bill if you want to be sure.`].filter(Boolean).join(' · '),
               aside: privateChip(m.item.private),
             }),
             m.item.bill.doc.id,
           ),
+        ),
+      )
+    : null;
+
+  const desk = g.desk.length
+    ? card(
+        { title: 'Paid at a visit' },
+        h('p', { class: 'small muted' }, 'More was paid than the claims say you owe. Ask whether the rest was credited or comes back.'),
+        g.desk.map(({ person, item: d }) =>
+          row({
+            route: d.event ? eventRoute(person.id, d.event.event.id) : { name: 'item', person: person.id, id: d.receipt.id },
+            title: d.provider,
+            meta: [named ? called(person) : null, d.event ? visitText(d.event) : null, `receipt ${dateText(paidOn(d.receipt))}`, `paid ${money(d.cents)}; the claims say you owe ${money(d.claimSays)}`].filter(Boolean).join(' · '),
+            aside: [privateChip(d.private), num(d.cents - d.claimSays)],
+          }),
         ),
       )
     : null;
@@ -240,7 +264,9 @@ function callsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
     hero,
     ...sum.asksMore.map((m) => callCard(ctx, m, named)),
     look,
+    desk,
     explained,
+    ...billNotes(ctx, people(ctx, who)),
     keptNote(kept, 'view'),
     ...(who ? [] : heldNotes(ctx, 'this shared view')),
     h('p', { class: 'small' }, link({ name: 'money', view: 'bills', ...(who ? { who } : {}) }, 'All bills')),

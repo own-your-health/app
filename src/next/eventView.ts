@@ -4,7 +4,7 @@
 // prices, how the price came down, what the plan changed, who charged what,
 // bills and payments, papers, how the event was put together, and details.
 
-import { billList, type Bill } from '../model/billing';
+import { billList, standsFor, type Bill } from '../model/billing';
 import { claimLines } from '../model/claims';
 import { conditionName, diagnosisNames, inDetails, nameList } from '../model/codeNames';
 import { sameProvider } from '../model/providers';
@@ -20,6 +20,7 @@ import { count, dateText, localDay } from '../ui/format';
 import { href, type Route } from '../ui/router';
 import { eventConfidence, eventMoney, eventOf, kindText, paidAtCounter, eventPrivate, ruleText, type CareEvent, type EventMoney } from './event';
 import { groupedByMedrec, personEvents } from './load';
+import { paidText } from './money';
 import { called } from '../model/people';
 import { plainWords } from '../model/words';
 
@@ -97,12 +98,19 @@ function privateNote(e: CareEvent, idx: PersonIndex): HTMLElement | null {
 }
 
 /** A pharmacy's share is paid at pickup, with no bill to follow. */
-/** Each provider this event's claims say you owe, with its bill from the event's papers and that bill's receipt, if any. */
-function owedBills(idx: PersonIndex, e: CareEvent, m: EventMoney): { provider: string; share: number; bill?: Bill }[] {
-  const bills = billList(idx).filter((b) => b.doc.doc_type === 'bill' && e.papers.some((p) => p.doc.id === b.doc.id));
+/** A billing company's bill among an event's papers: one whose sender has no claim here, for what its providers are owed. */
+const billerOf = <T,>(m: EventMoney, bills: T[], sender: (b: T) => string | undefined): T | undefined => bills.find((b) => !m.charges.some((c) => sameProvider(c.provider, sender(b))));
+
+/** Each provider this event's claims say you owe, with its bill from the event's papers, else a billing company's, and the statement that stands for it now. */
+function owedBills(idx: PersonIndex, e: CareEvent, m: EventMoney): { provider: string; share: number; bill?: Bill; now?: Bill }[] {
+  const all = billList(idx);
+  const bills = all.filter((b) => e.papers.some((p) => p.doc.id === b.doc.id));
   return m.charges
     .filter((c) => (c.share ?? 0) > 0)
-    .map((c) => ({ provider: c.provider, share: c.share!, bill: bills.find((b) => sameProvider(c.provider, b.provider)) }));
+    .map((c) => {
+      const bill = bills.find((b) => sameProvider(c.provider, b.provider)) ?? billerOf(m, bills, (b) => b.provider);
+      return { provider: c.provider, share: c.share!, ...(bill ? { bill, now: bill.settled ? bill : standsFor(bill, all) } : {}) };
+    });
 }
 
 /** Whether it is paid, in one line: paid, billed and when due, or not billed yet. */
@@ -111,17 +119,19 @@ function settledLine(idx: PersonIndex, e: CareEvent, m: EventMoney): HTMLElement
   if (!owed.length) return null;
   if (paidAtCounter(e)) return h('p', { class: 'event-settled' }, 'A pharmacy takes your share when you pick up.');
   const sum = (xs: typeof owed) => xs.reduce((t, o) => t + o.share, 0);
-  const paid = owed.filter((o) => o.bill?.receipt);
-  const billed = owed.filter((o) => o.bill && !o.bill.receipt);
+  const paid = owed.filter((o) => o.now?.settled);
+  const billed = owed.filter((o) => o.now && !o.now.settled);
   const unbilled = owed.filter((o) => !o.bill);
-  if (paid.length === owed.length) return h('p', { class: 'event-settled' }, 'Paid');
-  const dues = [...new Set(billed.map((o) => o.bill!.due).filter((d): d is string => !!d))].sort();
+  if (paid.length === owed.length) return h('p', { class: 'event-settled' }, paid.some((o) => o.now!.payments.some((p) => p.from === 'receipt')) ? 'Paid' : 'Marked paid');
+  const dues = [...new Set(billed.map((o) => o.now!.due).filter((d): d is string => !!d))].sort();
+  // What is left of those partly paid, each once however many providers it bills for.
+  const part = [...new Set(billed.map((o) => o.now!))].flatMap((b) => (b.payments.length && b.left ? [toCents(b.left) ?? 0] : []));
   return h(
     'p',
     { class: 'event-settled' },
     [
       paid.length ? `${money(sum(paid))} paid` : null,
-      billed.length ? `${money(sum(billed))} billed${dues.length === 1 ? `, due ${dateText(dues[0]!)}` : ''}` : null,
+      billed.length ? `${money(sum(billed))} billed${part.length ? `, ${money(part.reduce((t, c) => t + c, 0))} left to pay` : ''}${dues.length === 1 ? `, due ${dateText(dues[0]!)}` : ''}` : null,
       unbilled.length ? `${money(sum(unbilled))} not billed yet` : null,
     ]
       .filter(Boolean)
@@ -266,21 +276,22 @@ function billsCard(idx: PersonIndex, e: CareEvent, m: EventMoney): HTMLElement |
   const bills = e.papers.filter((p) => p.doc.doc_type === 'bill' || p.doc.doc_type === 'receipt').map((p) => p.doc);
   const owed = paidAtCounter(e) ? [] : m.charges.filter((c) => (c.share ?? 0) > 0);
   if (!bills.length && !owed.length) return null;
-  const receipts = new Map(billList(idx).map((b) => [b.doc.id, b.receipt]));
+  const all = new Map(billList(idx).map((b) => [b.doc.id, b]));
   const billRow = (d: MedDocument) => {
+    const bill = all.get(d.same_statement_as ?? d.id) ?? all.get(d.id);
     const due = toCents(d.statement?.amount_due);
-    const receipt = receipts.get(d.id);
+    const part = bill && !bill.settled && bill.payments.length > 0;
     const ch = m.charges.find((c) => sameProvider(c.provider, d.organization));
     const says = ch?.share;
-    const match = due === undefined || says === undefined ? null : due === says ? chip('Matches the claim', 'ok') : chip(`Claim says ${money(says)}`, 'attention');
+    const match = due === undefined || says === undefined ? null : due === says ? chip('Matches the claim', 'ok') : chip(`Claim says ${money(says)}`, bill?.settled ? 'muted' : 'attention');
     return row({
       route: itemRoute(idx.person, d.id),
       title: d.doc_type === 'receipt' ? `Receipt from ${d.organization ?? 'a provider'}` : `Bill from ${d.organization ?? 'a provider'}`,
-      meta: [due !== undefined ? `${money(due)} due${d.statement?.due_date ? ` by ${dateText(d.statement.due_date)}` : ''}` : dateText(d.date), receipt ? `paid, receipt ${dateText(receipt.date)}` : null].filter(Boolean).join(' · '),
+      meta: [due !== undefined ? `${money(due)} due${d.statement?.due_date ? ` by ${dateText(d.statement.due_date)}` : ''}` : null, d.statement?.amount_paid ? `${formatMoney(d.statement.amount_paid)} paid` : null, due === undefined ? dateText(d.statement?.paid_on ?? d.date) : null, bill?.settled ? paidText(bill) : null, part && bill.left ? `${formatMoney(bill.left)} left to pay` : null, bill && !bill.settled && bill.replacedBy ? 'a later statement has its balance' : null].filter(Boolean).join(' · '),
       aside: match,
     });
   };
-  const unbilled = owed.filter((c) => !bills.some((d) => sameProvider(c.provider, d.organization)));
+  const unbilled = billerOf(m, bills.filter((d) => d.doc_type === 'bill'), (d) => d.organization) ? [] : owed.filter((c) => !bills.some((d) => sameProvider(c.provider, d.organization)));
   return card(
     { title: 'Bills and payments' },
     bills.map(billRow),

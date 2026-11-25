@@ -65,7 +65,7 @@ export function papersOf(index: PersonIndex, household: Household, today: string
     if (e) for (const d of r.documents) if (!linking.has(d)) linking.set(d, { event: e, claim: r.kind === 'claim' });
   }
   const paidBill = new Map<string, string>();
-  for (const b of billList(index)) if (b.receipt && !paidBill.has(b.receipt.id)) paidBill.set(b.receipt.id, b.doc.id);
+  for (const b of billList(index)) for (const p of b.payments) if (p.receipt && !paidBill.has(p.receipt.id)) paidBill.set(p.receipt.id, b.doc.id);
   const byId = new Map(events.map((e) => [e.id, e]));
   const pending = new Map((index.events?.pending ?? []).map((p) => [p.document, p.could_join.flatMap((id) => byId.get(id) ?? [])]));
 

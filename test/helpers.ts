@@ -42,6 +42,12 @@ export function privateCase(name: 'marked' | 'unreadable'): Overlay {
   return Object.fromEntries(filesUnder(dir).map((f) => [f, readFileSync(join(dir, f), 'utf8')]));
 }
 
+/** The sample once the household has marked payments, as medrec wrote it (scripts/bill-fixtures.mjs). */
+export function paidCase(): Overlay {
+  const dir = join(FIXTURES, 'bills', 'paid');
+  return Object.fromEntries(filesUnder(dir).map((f) => [f, readFileSync(join(dir, f), 'utf8')]));
+}
+
 /** The sample's manifest with an overlay's files and MD5s, as a folder holding them would give them. */
 export function manifestWith(overlay: Overlay): string {
   const m = demoJson<{ anchor: string; files: string[]; md5: Record<string, string> }>('manifest.json');

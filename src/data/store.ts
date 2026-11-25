@@ -6,6 +6,7 @@ import { readJson, REQUESTS_DIR, type RecordsFolder } from '../folder';
 import { FolderError, parseAttempts, parseHousehold, parseIndex, parseRefused, parseRequest, parseStatus, parseText } from '../model/parse';
 import { buildRequest, requestFileName, sameScope } from '../model/requests';
 import { macState, sourceViews, type MacState, type SourceView } from '../model/sources';
+import { parseBills } from '../model/bills';
 import { parseMedrecEvents } from '../model/events';
 import { held, isHeld, noList, parsePrivate, type HeldWhy, type Privacy } from '../model/private';
 import { parseCodeNames } from '../model/codeNames';
@@ -40,6 +41,13 @@ function eventsNote(s: NonNullable<ViewState>): EventsNote {
   return { kind: 'behind', text: `medrec’s grouping of these visits is older than ${s.than}. ${OWN}${s.than === 'their records' ? ' medrec writes it again after its next import or refresh.' : ''}` };
 }
 
+/** Why a person's bills go by the receipts alone: "medrec’s list of what is paid is older than their records." */
+function billsNote(s: NonNullable<ViewState>): string {
+  if (s.kind === 'unchecked') return 'medrec’s list of what is paid could not be checked against their records.';
+  if (s.kind === 'arriving') return 'medrec is still writing its list of what is paid.';
+  return `medrec’s list of what is paid is older than ${s.than}.`;
+}
+
 /** medrec's list of private items, held back with: "medrec’s list of which items are private is older than their records." */
 function heldFor(s: NonNullable<ViewState>): Privacy {
   if (s.kind === 'unchecked') return held('unchecked', 'medrec’s list of which items are private could not be checked against their records.');
@@ -51,6 +59,12 @@ function heldFor(s: NonNullable<ViewState>): Privacy {
 const NO_VIEWS = {
   newer_format: 'medrec’s views, which say which items are private, are written by a newer medrec. Update the app.',
   unreadable: 'medrec’s views could not be read, so nothing says which items are private.',
+};
+
+/** Why every person's bills go by the receipts alone when views.json itself can't be used. */
+const NO_BILLS = {
+  newer_format: 'medrec’s views, which say what is paid, are written by a newer medrec. Update the app.',
+  unreadable: 'medrec’s views, which say what is paid, could not be read.',
 };
 
 /** Holds that end once medrec has written, or the folder answers. */
@@ -94,8 +108,10 @@ export class Store {
   private runs = 0;
   /** Whether views.json was there to read. */
   private hasViews = false;
-  /** Whose names for codes views.json lists and the folder does not give yet. */
-  private lateNames = new Set<string>();
+  /** Views, by person and file, that views.json lists and the folder does not give yet. */
+  private late = new Set<string>();
+  /** Why a person's bills go by the receipts alone although medrec's views list them, by person. */
+  billsNotes = new Map<string, string>();
   /** Who has no index.json: nothing is imported for them yet. */
   private absent = new Set<string>();
   private texts = new Map<string, Promise<PersonText | null>>();
@@ -151,7 +167,8 @@ export class Store {
     this.household = next.household;
     this.indexes = next.indexes;
     this.absent = next.absent;
-    this.lateNames = next.lateNames;
+    this.late = next.late;
+    this.billsNotes = next.billsNotes;
     this.indexErrors = next.indexErrors;
     this.hasViews = next.hasViews;
     this.viewsError = next.viewsError;
@@ -174,7 +191,7 @@ export class Store {
     const household = this.folder.md5('household.json');
     // Whoever compares with it says why it could not be read; with no view to compare, nobody does.
     household.catch(() => undefined);
-    await Promise.all([this.loadEvents(views, household), this.loadPrivate(views, household), this.loadCodeNames(views, household)]);
+    await Promise.all([this.loadEvents(views, household), this.loadPrivate(views, household), this.loadCodeNames(views, household), this.loadBills(views, household)]);
     this.loadedAt = Date.now();
     this.snapshot = JSON.stringify([
       this.household,
@@ -182,7 +199,7 @@ export class Store {
       this.viewsError,
       ...this.household.people.map((p) => {
         const index = this.indexes.get(p.id);
-        return [index?.rev, this.indexErrors.get(p.id), this.eventsNotes.get(p.id), index?.privacy?.kind === 'held' ? index.privacy.text : null, !!index?.codeNames];
+        return [index?.rev, this.indexErrors.get(p.id), this.eventsNotes.get(p.id), index?.privacy?.kind === 'held' ? index.privacy.text : null, !!index?.codeNames, this.billsNotes.get(p.id)];
       }),
     ]);
   }
@@ -303,11 +320,41 @@ export class Store {
           const view = viewOf(views, p.id, 'code-names.json');
           if (!view) return;
           const raw = (await this.viewState(p, view, household)) ? null : await readJson(this.folder, `views/${p.id}/${view.name}`);
-          if (raw === null) this.lateNames.add(p.id);
+          if (raw === null) this.late.add(`${p.id} names`);
           else index.codeNames = parseCodeNames(raw, p.id);
         } catch (e) {
           // What is refused stays so until medrec writes it again.
-          if (!(e instanceof FolderError)) this.lateNames.add(p.id);
+          if (!(e instanceof FolderError)) this.late.add(`${p.id} names`);
+        }
+      }),
+    );
+  }
+
+  /**
+   * What medrec says of each person's bills (0.9.1 and later). Without a list
+   * that reads and matches the folder, the receipts alone say what is paid,
+   * and billsNotes says why; one that may still come is read for again.
+   */
+  private async loadBills(views: Record<string, unknown> | null, household: Promise<string | null | undefined>): Promise<void> {
+    const err = this.viewsError;
+    if (err) for (const p of this.household.people) this.billsNotes.set(p.id, NO_BILLS[err.kind]);
+    if (views === null) return;
+    await Promise.all(
+      this.household.people.map(async (p) => {
+        const index = this.indexes.get(p.id);
+        if (!index) return;
+        try {
+          const view = viewOf(views, p.id, 'bills.json');
+          if (!view) return;
+          const state = await this.viewState(p, view, household);
+          const raw = state ? null : await readJson(this.folder, `views/${p.id}/${view.name}`);
+          if (raw === null) {
+            this.late.add(`${p.id} bills`);
+            this.billsNotes.set(p.id, billsNote(state ?? { kind: 'arriving' }));
+          } else index.bills = parseBills(raw, p.id);
+        } catch (e) {
+          if (!(e instanceof FolderError)) this.late.add(`${p.id} bills`);
+          this.billsNotes.set(p.id, `medrec’s list of what is paid could not be read: ${e instanceof Error ? e.message : 'unknown error'}`);
         }
       }),
     );
@@ -397,9 +444,9 @@ export class Store {
     return [...this.indexes.values()].some((i) => isHeld(i) && (i.privacy?.kind !== 'held' || MAY_END.has(i.privacy.why)));
   }
 
-  /** Whether another read may bring something soon: the end of a hold, or the names of someone's codes. */
+  /** Whether another read may bring something soon: the end of a hold, or a view medrec is writing. */
   mayBring(): boolean {
-    return this.holdMayEnd() || this.lateNames.size > 0;
+    return this.holdMayEnd() || this.late.size > 0;
   }
 
   /** Whether the Mac's answer to a request is still to come, or to be seen. */

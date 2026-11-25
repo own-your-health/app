@@ -18,8 +18,8 @@ import { legend, yearText } from '../ui/views/costs';
 import { householdEvents } from './calendar';
 import { eventRoute, eventWhen } from './eventView';
 import { coverageCard } from './coverageCard';
-import { callsSummary } from './money';
-import { gather, head, money, num, privateChip, type MoneyRoute } from './moneyParts';
+import { callsSummary, worthACall } from './money';
+import { billNotes, gather, head, money, num, privateChip, type MoneyRoute } from './moneyParts';
 import { anyLeftOff, heldNotes, quietClaims } from './shared';
 import { eventCosts, monthMoney, planLimits, yearMoney, type CostOrder, type EventCost, type Limit, type LimitKind } from './year';
 import { called } from '../model/people';
@@ -121,14 +121,15 @@ function heroCard(d: YearData, who: string | undefined): HTMLElement {
 function billsCard(ctx: Ctx, who: string | undefined): { el: HTMLElement; kept: string[] } {
   const g = gather(ctx, who);
   const to = (view: 'bills' | 'calls'): Route => ({ name: 'money', view, ...(who ? { who } : {}) });
-  const ready = g.open.filter((m) => m.item.verdict === 'matches');
+  const ready = g.open.filter((m) => !worthACall(m.item));
+  const matched = ready.every((m) => m.item.verdict === 'matches');
   const readyCents = ready.reduce((t, m) => t + m.item.cents, 0);
   const late = ready.filter((m) => m.item.overdue).length;
   const calls = callsSummary(g.open, (m) => m.item);
   const unbilled = g.unbilled.reduce((t, m) => t + m.item.cents, 0);
   const rows = [
     ready.length
-      ? row({ route: to('bills'), title: `${count(ready.length, 'bill')} ready to pay`, meta: `They match their claims.${late ? ` ${late === 1 ? (ready.length === 1 ? 'It is' : 'One is') : `${late} are`} past due.` : ''}`, aside: num(readyCents) })
+      ? row({ route: to('bills'), title: `${count(ready.length, 'bill')} ready to pay`, meta: `${matched ? 'They match their claims.' : 'Due, and nothing to ask about first.'}${late ? ` ${late === 1 ? (ready.length === 1 ? 'It is' : 'One is') : `${late} are`} past due.` : ''}`, aside: num(readyCents) })
       : null,
     calls.asksMore.length
       ? row({
@@ -141,7 +142,7 @@ function billsCard(ctx: Ctx, who: string | undefined): { el: HTMLElement; kept: 
     g.unbilled.length ? row({ route: to('bills'), title: 'Not billed yet', meta: 'What the claims say you owe, with no bill or receipt yet.', aside: num(unbilled) }) : null,
   ];
   return {
-    el: card({ title: 'Bills' }, rows.some(Boolean) ? rows : h('p', null, !who && anyLeftOff(ctx.store) ? 'No open bills listed here.' : 'No open bills.'), h('p', { class: 'small' }, link(to('bills'), 'All bills, beside their claims'))),
+    el: card({ title: 'Bills' }, rows.some(Boolean) ? rows : h('p', null, !who && anyLeftOff(ctx.store) ? 'No open bills listed here.' : 'No open bills.'), ...billNotes(ctx, ctx.store.household.people.filter((p) => g.open.some((m) => m.person.id === p.id))), h('p', { class: 'small' }, link(to('bills'), 'All bills, beside their claims'))),
     // What the rows left off: a private visit once, however many of its bills and shares; a bill with no visit by itself.
     kept: [...g.hidden.open.map((b) => b.event?.event.id ?? b.bill.doc.id), ...g.hidden.unbilled.map((u) => u.event.event.id)],
   };

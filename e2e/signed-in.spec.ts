@@ -233,6 +233,8 @@ test('a finished Refresh shows what it brought, without a reload', async ({ page
   const before = google.reads.length;
   await lookAgain(page);
   await expect.poll(() => google.reads.slice(before)).toContain('_status/status.json');
+  // The look reads the request too: the Mac takes it away only after that.
+  await expect.poll(() => google.reads.slice(before)).toContain(google.changes[0]!.path);
   expect(google.reads.slice(before).filter((f) => !f.startsWith('_'))).toEqual([]);
 
   answerAsMac(google.changes[0]!.path);

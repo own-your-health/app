@@ -1,0 +1,154 @@
+import { createHash } from 'node:crypto';
+import { expect, test, type Page } from '@playwright/test';
+import { demoJson, filesUnder, DEMO, paidCase, privateCase, type Overlay } from '../test/helpers';
+import { lay } from './lay';
+
+// Bills as medrec's bills.json has them: payments the household marked, what
+// is left of a bill partly paid, a settled bill that is never open, overdue or
+// worth a call, and what the screens say when the list can't be used. The
+// "paid" case is medrec's own (scripts/bill-fixtures.mjs).
+
+const SAM = 'p_wwezzed7kml67hnp6s7n';
+const ROBIN = 'p_xo4em46i7yj3hphlpajo';
+
+test.beforeEach(({ page }) => page.clock.setFixedTime(new Date('2026-11-22T20:00:00Z')));
+
+const go = (page: Page, path: string) => page.goto(`./?demo${path}`);
+const card = (page: Page, title: string | RegExp) => page.locator('.card', { has: page.locator('.card-head h2', { hasText: title }) });
+const kv = (page: Page, label: string) => page.locator('.kv-row', { has: page.locator('dt', { hasText: new RegExp(`^${label}$`) }) }).locator('dd');
+const docOf = (folder: string, amount: string) => demoJson<{ documents: { id: string; statement?: { amount_due?: { amount: string } } }[] }>(`${folder}/index.json`).documents.find((d) => d.statement?.amount_due?.amount === amount)!.id;
+const billsFile = (person: string) => filesUnder(DEMO).find((f) => f.startsWith(`views/${person}/bills.`))!;
+
+/** The folder with one person's bills.json changed, named and checked as medrec would. */
+function withBills(person: string, base: Overlay, change: (bills: { worth_a_call: object[] }) => void): Overlay {
+  const views = (base['views/views.json'] ? JSON.parse(base['views/views.json']) : demoJson('views/views.json')) as { people: Record<string, { files: Record<string, string> }> };
+  const bills = demoJson<{ worth_a_call: object[] }>(billsFile(person));
+  change(bills);
+  const text = JSON.stringify(bills);
+  const md5 = createHash('md5').update(text).digest('hex');
+  views.people[person]!.files['bills.json'] = md5;
+  return { ...base, 'views/views.json': JSON.stringify(views), [`views/${person}/bills.${md5.slice(0, 12)}.json`]: text };
+}
+
+test('a bill the household marked paid is nowhere open, and one partly paid says what is left', async ({ page }) => {
+  await lay(page, paidCase());
+  await go(page, '#/');
+  const needs = card(page, /^Needs you$/);
+  await expect(needs.locator('.need-kind', { hasText: 'Worth a call' })).toHaveCount(0);
+  await expect(needs).not.toContainText('Example Billing');
+  await expect(needs).not.toContainText('Example Lab');
+  await expect(needs.locator('.row', { hasText: 'Not all paid' })).toContainText('Robin · Example Health $33.68, $20.00 of $53.68 paid · matches the claim · was due Nov 19, 2026');
+  await expect(needs.locator('.row', { hasText: 'No payment on file' })).toContainText('Example Surgery Center $175.00');
+  await expect(needs).toContainText('A bill stays here until a receipt, or a payment the household marked, covers it.');
+  const stands = page.locator('.stand', { hasText: 'Sam' });
+  await expect(stands.locator('.kv-row').first()).toHaveText('To pay$175.00 in 1 bill');
+
+  await go(page, '#/money/bills');
+  const hero = page.locator('.money-hero');
+  await expect(hero.locator('.money-hero-number')).toHaveText('$208.68');
+  await expect(hero).toContainText('2 bills, each asking what its claim says you owe.');
+  await expect(hero).not.toContainText('worth a call');
+  await expect(card(page, 'Due now').locator('.row').last()).toContainText('$20.00 of $53.68 paid');
+  await expect(card(page, 'Due now').locator('.row').last().locator('.row-aside')).toHaveText('$33.68');
+  await expect(card(page, 'Check before paying')).toHaveCount(0);
+  await expect(card(page, /^Paid$/)).toContainText('Paid by a receipt in the folder, or by a payment the household marked.');
+  await expect(card(page, /^Paid$/).locator('.row-meta')).toHaveText([
+    'Robin · Lab tests, Oct 3, 2026 · $10.00 marked paid, Nov 2, 2026 · $9.28 marked paid, Nov 16, 2026',
+    'Sam · Lab tests, Jul 9, 2026 · Marked paid, Nov 20, 2026',
+    'Robin · Office visit, Mar 10, 2025 · receipt Apr 20, 2025',
+  ]);
+
+  // medrec 0.9.5 keeps the settled bill among those worth a call; the app does not.
+  await go(page, '#/money/calls');
+  await expect(page.locator('main')).toContainText('No bill listed here asks for more than the claims say you owe.');
+  await expect(page.locator('.call')).toHaveCount(0);
+  await go(page, '#/money');
+  await expect(card(page, /^Bills$/).locator('.row-title')).toHaveText(['2 bills ready to pay', 'Not billed yet']);
+});
+
+test('a visit says its bill is marked paid, or what is left of it', async ({ page }) => {
+  await lay(page, paidCase());
+  await go(page, '#/money/bills');
+  await card(page, /^Paid$/).locator('.row', { hasText: 'Example Billing' }).locator('a.row-main').click();
+  await expect(page.locator('.event h1')).toHaveText('Lab tests');
+  await expect(page.locator('.event-settled')).toHaveText('Marked paid');
+  const bills = card(page, 'Bills and payments');
+  await expect(bills.locator('.row-meta')).toHaveText('$120.00 due by Aug 31, 2026 · Marked paid, Nov 20, 2026');
+  // The billing company's bill is for what the lab is owed.
+  await expect(bills.locator('.event-gap')).toHaveCount(0);
+
+  await go(page, '#/money/bills');
+  await card(page, 'Due now').locator('.row').last().locator('a.row-main').click();
+  await expect(page.locator('.event-settled')).toHaveText('$53.68 billed, $33.68 left to pay, due Nov 19, 2026');
+  await expect(card(page, 'Bills and payments').locator('.row-meta')).toHaveText('$53.68 due by Nov 19, 2026 · $33.68 left to pay');
+});
+
+test('a bill’s own page lists its payments, what is left and the statement that has its balance', async ({ page }) => {
+  await lay(page, paidCase());
+  await go(page, `#/p/${SAM}/r/${docOf('Sam Example', '120.00')}`);
+  await expect(kv(page, 'Paid')).toHaveText('$120.00 marked paid, Nov 20, 2026');
+  await expect(kv(page, 'Left to pay')).toHaveText('Nothing');
+  await go(page, `#/p/${ROBIN}/r/${docOf('Robin Example', '53.68')}`);
+  await expect(kv(page, 'Paid')).toHaveText('$20.00 marked paid, Nov 18, 2026');
+  await expect(kv(page, 'Left to pay')).toHaveText('$33.68');
+  await expect(kv(page, 'Later statement')).toHaveCount(0);
+  await go(page, `#/p/${ROBIN}/r/${docOf('Robin Example', '51.18')}`);
+  await expect(kv(page, 'Paid')).toHaveText('receipt Apr 20, 2025, amount not read');
+  await expect(kv(page, 'Later statement')).toHaveText('Its balance includes this one: Statement from Example Health');
+  // One nothing is paid on says nothing of it.
+  await go(page, `#/p/${SAM}/r/${docOf('Sam Example', '175.00')}`);
+  await expect(kv(page, 'Amount due')).toHaveText('$175.00');
+  await expect(kv(page, 'Paid')).toHaveCount(0);
+  await expect(kv(page, 'Left to pay')).toHaveCount(0);
+});
+
+test('a list that can’t be used yet is said, and receipts alone say what is paid', async ({ page }) => {
+  const note = 'medrec is still writing its list of what is paid. Meanwhile only receipts say which of Sam’s bills are paid.';
+  await lay(page, { ...paidCase(), [Object.keys(paidCase()).find((f) => f.startsWith(`views/${SAM}/bills.`))!]: null });
+  for (const path of ['#/', '#/money', '#/money/bills', '#/money/calls', `#/money/bills?who=${SAM}`]) {
+    await go(page, path);
+    await expect(page.locator('main').getByText(note)).toHaveCount(1);
+  }
+  await go(page, `#/money/bills?who=${ROBIN}`);
+  await expect(card(page, 'Due now').locator('.row-title')).toHaveText(['Example Health']);
+  await expect(page.locator('main')).not.toContainText('list of what is paid');
+  // Sam's marked bill is open again until then.
+  await go(page, '#/');
+  await expect(card(page, /^Needs you$/).locator('.row', { hasText: 'Worth a call' })).toContainText('Example Billing asks $120.00');
+});
+
+test('marks that don’t read are said where the bills are', async ({ page }) => {
+  await lay(page, privateCase('unreadable'));
+  await go(page, `#/money/bills?who=${SAM}`);
+  await expect(page.locator('main')).toContainText('The payments marked for Sam could not be read, so none of them is counted.');
+  await go(page, `#/money/bills?who=${ROBIN}`);
+  await expect(page.locator('main')).not.toContainText('could not be read');
+});
+
+test('a payment at a visit above its claims is on Worth a call, and a private one only on its person’s', async ({ page }) => {
+  const receipt = demoJson<{ documents: { id: string; doc_type: string }[] }>('Robin Example/index.json').documents.find((d) => d.doc_type === 'receipt')!.id;
+  const desk = (document: string) => ({ reason: 'desk_copay', bill: document, claim: null, event: null, asked: '45.00', owed: '25.00', currency: 'USD' });
+  const robins = withBills(ROBIN, privateCase('marked'), (b) => b.worth_a_call.push(desk(receipt)));
+  await lay(page, withBills(SAM, robins, (b) => b.worth_a_call.push(desk(docOf('Sam Example', '175.00')))));
+  await go(page, '#/money/calls');
+  const paid = card(page, 'Paid at a visit');
+  await expect(paid.locator('.row-title')).toHaveText(['Example Health']);
+  await expect(paid.locator('.row-meta')).toHaveText('Robin · receipt Apr 20, 2025 · paid $45.00; the claims say you owe $25.00');
+  await expect(paid.locator('.row-aside')).toHaveText('$20.00');
+  await go(page, `#/money/calls?who=${SAM}`);
+  await expect(paid.locator('.row-title')).toHaveText(['Example Surgery Center']);
+  await expect(paid.locator('.chip')).toHaveText('Private');
+});
+
+test('bills fit a 360px phone, light and dark', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  await lay(page, paidCase());
+  for (const colorScheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme });
+    for (const path of ['#/', '#/money/bills', '#/money/calls', `#/p/${ROBIN}/r/${docOf('Robin Example', '51.18')}`]) {
+      await go(page, path);
+      await expect(page.locator('main .card').first()).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+    }
+  }
+});

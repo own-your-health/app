@@ -1,0 +1,16 @@
+{
+  "schema": "medrec-marks/v1",
+  "person": "p_wwezzed7kml67hnp6s7n",
+  "payments": [
+    {
+      "id": "o_viwp7juo3unqqac3xju5",
+      "document": "d_egwxdwkc3pbo3ensizj3",
+      "on": "2026-11-20",
+      "amount": {
+        "amount": "120.00",
+        "currency": "USD"
+      },
+      "at": "2026-11-25T02:39:43Z"
+    }
+  ]
+}
