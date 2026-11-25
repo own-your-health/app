@@ -22,7 +22,9 @@ describe('the privacy policy', () => {
 
   it('names both scopes and why', () => {
     expect(text).toContain('(drive.readonly): to read the records folder');
-    expect(text).toContain('(drive.file): to write a small refresh request');
+    expect(text).toContain('(drive.file): to write a small request');
+    expect(text).toContain('when you ask the Mac to refresh or mark a bill paid');
+    expect(text).toContain("A payment's request holds the ids of the person and the bill, the day and the amount.");
     expect(text).toContain('_requests/');
   });
 
