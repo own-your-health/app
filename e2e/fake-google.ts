@@ -28,6 +28,8 @@ interface Node {
   parent: string;
   modifiedTime: string;
   content?: string;
+  /** A paper's content, as it is. */
+  bytes?: Buffer;
   /** Drive's md5Checksum: the sample's are of its files as written, which medrec's views name, before their times move. */
   md5?: string;
   /** Created by the app: the only files drive.file lets it change. */
@@ -100,7 +102,10 @@ export class FakeGoogle {
       const parts = f.split('/');
       const name = parts.pop()!;
       const dir = this.folderAt(parts, true)!;
-      if (name !== '.keep') this.add({ name, mimeType: 'application/json', parent: dir.id, byApp: false, md5: manifest.md5[f], content: this.shift(readFileSync(new URL(f.split('/').map(encodeURIComponent).join('/'), DEMO), 'utf8')) });
+      if (name === '.keep') continue;
+      const bytes = readFileSync(new URL(f.split('/').map(encodeURIComponent).join('/'), DEMO));
+      const what = /\.json$/.test(name) ? { content: this.shift(bytes.toString('utf8')) } : { bytes };
+      this.add({ name, mimeType: 'application/json', parent: dir.id, byApp: false, md5: manifest.md5[f], ...what });
     }
   }
 
@@ -258,7 +263,7 @@ export class FakeGoogle {
     if (url.searchParams.get('alt') === 'media') {
       this.reads.push(this.pathOf(node));
       if (this.pathOf(node) === this.failing) return driveError(route, 503, 'backendError', 'Backend Error');
-      return route.fulfill({ status: 200, headers: { ...cors(), 'content-type': 'application/json' }, body: node.content ?? '' });
+      return route.fulfill({ status: 200, headers: { ...cors(), 'content-type': 'application/json' }, body: node.bytes ?? node.content ?? '' });
     }
     return json(route, 200, this.resource(node));
   }

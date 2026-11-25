@@ -21,8 +21,7 @@ export function demoFetch(): typeof fetch {
     const url = String(input);
     const path = decodeURIComponent(url.replace(/^\/app\/demo\//, ''));
     try {
-      const body = readFileSync(join(DEMO, path), 'utf8');
-      return new Response(body, { status: 200 });
+      return new Response(readFileSync(join(DEMO, path)), { status: 200 });
     } catch {
       return new Response('not found', { status: 404 });
     }

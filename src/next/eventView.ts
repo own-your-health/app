@@ -12,8 +12,9 @@ import { AMOUNT_LABELS, docTypeLabel, documentTitle, formatMoney, fromCents, KIN
 import { isOutOfRange, resultFlag } from '../model/flags';
 import { unitText } from '../model/result';
 import { recordTitle, visitTitle } from '../model/titles';
-import { areaText, knownArea } from '../model/private';
+import { areaText, knownArea, paperPrivate } from '../model/private';
 import type { MedDocument, PersonIndex } from '../model/types';
+import { paperView } from '../paper/view';
 import { card, chip, dotted, driveLink, empty, flagChip, link, row, type Ctx } from '../ui/components';
 import { h, icon, type Child } from '../ui/dom';
 import { count, dateText, localDay } from '../ui/format';
@@ -314,14 +315,21 @@ function papersCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
   return card(
     { title: 'Papers' },
     e.papers.length
-      ? e.papers.map((p) =>
-          row({
+      ? e.papers.map((p) => {
+          // A paper filed under someone else is shown here unless it is private: then it is seen from their own pages alone.
+          const other = p.person && p.person !== idx.person ? p.person : undefined;
+          const allowed = () => {
+            const theirs = other ? ctx.store.index(other) : idx;
+            return !!theirs && !(other && paperPrivate(theirs, p.doc.id));
+          };
+          const paper = allowed() ? paperView(ctx, p.doc, allowed) : null;
+          return row({
             route: itemRoute(p.person ?? idx.person, p.doc.id),
             title: documentTitle(p.doc),
             meta: [docTypeLabel(p.doc.doc_type), dateText(p.doc.date), p.person ? `filed under ${ctx.store.person(p.person) ? called(ctx.store.person(p.person)!) : 'someone else'}` : null].filter(Boolean).join(' · '),
-            extra: driveLink(ctx, p.doc.path, 'Open in Drive'),
-          }),
-        )
+            extra: h('div', null, h('div', { class: 'row-actions' }, paper?.button, driveLink(ctx, p.doc.path, 'Open in Drive')), paper?.panel),
+          });
+        })
       : empty('No papers in the folder for this visit.'),
   );
 }

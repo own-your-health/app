@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <!-- The same policy as the app (index.html); this page runs no script at all. -->
+    <!-- The app's policy (index.html) without what showing a paper needs; this page runs no script at all. -->
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'none'; connect-src 'self' https://www.googleapis.com https://oauth2.googleapis.com; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; require-trusted-types-for 'script'; trusted-types 'none'; upgrade-insecure-requests"
@@ -69,6 +69,12 @@
             those exact words beside the link before you tap it. It never carries your result, a date, your name or any
             id of yours or your records. The page never contacts those sites itself. A link opens only when you tap it, in a new tab,
             without telling the site which page you came from.
+          </p>
+          <p>
+            A paper's own file (a PDF, a picture, a letter) is read from your Drive when you tap View, and not before. It
+            is shown in the page, by code that is part of the app, and held in memory until you close it or leave the
+            page. Nothing inside a paper runs, and no address in it is contacted. Open in Drive opens it on Google's
+            own page instead.
           </p>
           <p>
             Download CSV, on the costs screen, makes the file in the page and saves it to your device. Nothing is

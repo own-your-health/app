@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="https://elsewhere.example/style.xsl"?>
+<ClinicalDocument xmlns="urn:hl7-org:v3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <title>Visit   summary</title>
+  <effectiveTime value="20260304"/>
+  <recordTarget><patientRole><patient><name><given>Riley</given><family>Example</family></name></patient></patientRole></recordTarget>
+  <component>
+    <structuredBody>
+      <component>
+        <section>
+          <title>Medicines</title>
+          <text>
+            <table>
+              <thead><tr><th>Medicine</th><th>How</th></tr></thead>
+              <tbody>
+                <tr><td><content styleCode="Bold">Ibuprofen</content></td><td>200 mg &amp; food</td></tr>
+                <tr><td colspan="2"><content styleCode="Italics">As needed</content></td></tr>
+              </tbody>
+            </table>
+          </text>
+          <entry><substanceAdministration><text>not narrative</text></substanceAdministration></entry>
+        </section>
+      </component>
+      <component>
+        <section>
+          <title>Plan</title>
+          <text>
+            <paragraph>Rest.</paragraph>
+            <list listType="ordered"><item>Call <linkHtml href="https://portal.example/call">us</linkHtml></item><item>Return</item></list>
+            <renderMultiMedia referencedObject="MM1"><caption>An X-ray</caption></renderMultiMedia>
+            <![CDATA[5 < 6 ]]>
+          </text>
+          <component>
+            <section>
+              <title>At home</title>
+              <text><content revised="delete">Ice</content> Heat</text>
+            </section>
+          </component>
+        </section>
+      </component>
+      <component><section><title/><text> </text></section></component>
+    </structuredBody>
+  </component>
+</ClinicalDocument>

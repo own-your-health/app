@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Care &amp; instructions</title>
+  <meta http-equiv="refresh" content="0;url=https://elsewhere.example/">
+  <base href="https://elsewhere.example/">
+  <link rel="stylesheet" href="https://elsewhere.example/a.css">
+  <style>body { background: url(https://elsewhere.example/b.png) }</style>
+  <script>alert('script')</script>
+</head>
+<body onload="alert('load')" style="background:url(https://elsewhere.example/c.png)">
+<!-- a comment <p>not shown</p> -->
+<h1 onclick="alert('click')">Care instructions</h1>
+<p>Riley Example, seen 03/04/2026 &mdash; temperature 99&nbsp;&deg;F.
+<p>Drink <b>plenty</b> of <i>water</i> &#x26; rest.<br/>Call if worse.
+<ul><li>First<li>Second <a href="https://portal.example/visit?x=1">the portal</a>
+<li><a href="javascript:alert('link')">Third</a></ul>
+<a href="tel:+12125550100">(212) 555-0100</a>, <a href="mailto:desk@example.com?subject=Hi">the desk</a>, <a href="https://www.portal.example/">portal.example</a>
+<table border="1"><caption>Doses</caption>
+<tbody><tr><th colspan="2">Medicine<td rowspan=3>Daily
+<tr><td>Ibuprofen<td>200 mg
+</table>
+<div style="display: none">unseen</div><span hidden>unseen too</span>
+<img src="https://elsewhere.example/logo.png" alt="Example Clinic">
+<img src="https://elsewhere.example/pixel.gif" width="1" height="1">
+<img src="data:image/png;base64,iVBORw0KGgo=" alt="A drawing">
+<img src="data:image/svg+xml;base64,PHN2Zy8+" alt="A shape">
+<svg onload="alert('svg')"><script>alert('in svg')</script><text>in a shape</text></svg>
+<iframe src="https://elsewhere.example/frame">in a frame</iframe>
+<object data="https://elsewhere.example/x.swf">in an object</object>
+<embed src="https://elsewhere.example/y.swf">
+<form action="https://elsewhere.example/send">
+<label><input type="checkbox" checked>Yes</label> <label><input type="radio" name="a">No</label>
+<input type="text" value="typed"> <input type="password" value="secret"> <input type="hidden" value="token">
+<select><option>One<option selected>Two</select> <textarea>Some &lt;notes&gt;</textarea> <button>Send</button>
+</form>
+<pre>  kept
+    as is</pre>
+<template><p>in a template</p></template><noscript><p>without scripts</p></noscript>
+<p>An unclosed &lt;script&gt; is only words: &lt;script&gt;alert(1)&lt;/script&gt;
+</body>
+</html>
