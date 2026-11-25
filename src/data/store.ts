@@ -330,11 +330,11 @@ export class Store {
         }
       }),
     );
-    // Another person's paper in someone's events (X2) comes from that person's index.
+    // Another person's paper (X2) or event (X1) in someone's events is of that person's index, and as private as it says.
     for (const index of this.indexes.values()) {
-      for (const m of index.events?.events.flatMap((e) => e.members) ?? []) {
-        const doc = m.person && m.document ? this.indexes.get(m.person)?.documents.find((d) => d.id === m.document) : undefined;
-        if (doc) index.events!.papers.set(doc.id, { person: m.person!, doc });
+      for (const id of (index.events?.events ?? []).flatMap((e) => [...e.members, ...e.links].flatMap((x) => x.person ?? []))) {
+        const other = id === index.person ? undefined : this.indexes.get(id);
+        if (other) index.events!.others.set(id, other);
       }
     }
   }

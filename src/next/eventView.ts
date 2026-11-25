@@ -317,18 +317,18 @@ function papersCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
     { title: 'Papers' },
     e.papers.length
       ? e.papers.map((p) => {
-          // A paper filed under someone else is shown here unless it is private: then it is seen from their own pages alone.
+          // One filed under someone else is here only while it is not private (medrecEvents.ts): marked so since, its View opens nothing.
           const other = p.person && p.person !== idx.person ? p.person : undefined;
           const allowed = () => {
             const theirs = other ? ctx.store.index(other) : idx;
             return !!theirs && !(other && paperPrivate(theirs, p.doc.id));
           };
-          const paper = allowed() ? paperView(ctx, p.doc, allowed) : null;
+          const paper = paperView(ctx, p.doc, allowed);
           return row({
             route: itemRoute(p.person ?? idx.person, p.doc.id),
             title: documentTitle(p.doc),
             meta: [docTypeLabel(p.doc.doc_type), dateText(p.doc.date), p.person ? `filed under ${ctx.store.person(p.person) ? called(ctx.store.person(p.person)!) : 'someone else'}` : null].filter(Boolean).join(' · '),
-            extra: h('div', null, h('div', { class: 'row-actions' }, paper?.button, driveLink(ctx, p.doc.path, 'Open in Drive')), paper?.panel),
+            extra: h('div', null, h('div', { class: 'row-actions' }, paper.button, driveLink(ctx, p.doc.path, 'Open in Drive')), paper.panel),
           });
         })
       : empty('No papers in the folder for this visit.'),

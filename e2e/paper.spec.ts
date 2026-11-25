@@ -579,13 +579,31 @@ test('a visit shows another person’s paper filed under them, and not one that 
     await lay(page, isPrivate ? filed(PICTURE) : filed());
     await page.goto('about:blank');
     await page.goto(`./?demo#/p/${DREW}/e/${visit}`);
-    const paper = page.locator('.row', { hasText: 'filed under Robin' }).filter({ hasText: PICTURE.title ?? '' }).filter({ hasNotText: 'After visit summary' });
-    await expect(paper).toBeVisible();
-    await expect(paper.getByRole('button', { name: /^View: / })).toHaveCount(isPrivate ? 0 : 1);
+    const papers = page.locator('.row', { hasText: 'filed under Robin' });
+    const paper = papers.filter({ hasNotText: 'After visit summary' });
+    await expect(papers.getByRole('button', { name: /^View: / })).toHaveCount(isPrivate ? 1 : 2);
+    await expect(paper).toHaveCount(isPrivate ? 0 : 1);
+    // Nowhere on it: not its title, and no link to it.
+    await expect(page.locator(`main a[href*="${PICTURE.id}"]`)).toHaveCount(isPrivate ? 0 : 2);
   }
-  // On its own person's page it is there.
+  // Its own person's pages have it, with that visit.
+  await page.goto(`./?demo#/papers?who=${ROBIN}`);
+  await expect(page.locator('.row', { has: page.locator(`a[href*="${PICTURE.id}"]`) })).toContainText('(Drew’s visit)');
   await page.goto('about:blank');
   await open(page, ROBIN, PICTURE);
+});
+
+test('a paper is not shown with another person’s private visit', async ({ page }) => {
+  for (const isPrivate of [false, true]) {
+    await page.unrouteAll();
+    const files = filed();
+    await lay(page, isPrivate ? rewritten(files, (f) => f.name === 'Drew Example' && (f.list.events[visit] = 'household')) : files);
+    await page.goto('about:blank');
+    await page.goto(`./?demo#/papers?who=${ROBIN}`);
+    const paper = page.locator('.row', { has: page.locator(`a[href*="${PICTURE.id}"]`) });
+    await expect(paper.locator('.paper-place')).toContainText(isPrivate ? 'With no visit.' : '(Drew’s visit)');
+    await expect(page.locator(`main a[href*="${visit}"]`)).toHaveCount(isPrivate ? 0 : 1);
+  }
 });
 
 test('360 px, light and dark: the paper fits, and its buttons are large enough to tap', async ({ page }) => {
@@ -701,8 +719,7 @@ test.describe('signed in', () => {
     // The one that is open becomes private: it closes, and the page is drawn without it.
     await writes(page, filed(PICTURE, PDF), 2);
     await expect(page.locator('canvas, .paper-box')).toHaveCount(0);
-    await expect(rows).toHaveCount(2);
-    await expect(rows.getByRole('button', { name: /^(View|Hide)\b/ })).toHaveCount(0);
+    await expect(rows).toHaveCount(0);
     expect(page.workers()).toHaveLength(0);
   });
 });

@@ -5,7 +5,7 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { Store } from '../src/data/store';
-import { parseMedrecEvents } from '../src/model/events';
+import { parseMedrecEvents, type MedrecRule } from '../src/model/events';
 import { FolderError } from '../src/model/parse';
 import { anyPrivate, atLeast, documentPrivate, HELD, isHeld, itemPrivate, paperPrivate, parsePrivate, recordPrivate, studyPrivate, takenOut, whyHeld } from '../src/model/private';
 import { documentTitle } from '../src/model/records';
@@ -13,7 +13,7 @@ import { find } from '../src/model/search';
 import type { PersonIndex } from '../src/model/types';
 import { viewOf } from '../src/model/views';
 import { asShared, householdEvents, shown } from '../src/next/calendar';
-import { eventPrivate, type CareEvent } from '../src/next/event';
+import { eventOf, eventPrivate, sharedForm, type CareEvent } from '../src/next/event';
 import { careTeam, doctorSheet } from '../src/next/health';
 import { personEvents } from '../src/next/load';
 import { billPrivate, openBills, sharedDesk, sharedOpen, unbilledShares, type OpenBill } from '../src/next/money';
@@ -711,19 +711,136 @@ describe('an imaging study', () => {
   });
 });
 
-describe('what medrec’s list does not judge', () => {
-  it('another person’s paper in a visit (X2) is judged as its own person’s, and its private visit is not named', () => {
-    const drew = structuredClone(index(SAMPLE, id('Drew Example')));
-    const scan = paper(SAMPLE, robin, 'scan_0007.png');
-    const visit = drew.events!.events[0]!;
-    visit.members.push({ ...visit.members[0]!, record: undefined, document: scan.id, person: robin });
-    drew.events!.papers.set(scan.id, { person: robin, doc: scan });
-    const all = new Map([...SAMPLE.indexes, [drew.person, drew]]);
-    const shownAs = () => papersOf(index(SAMPLE, robin), SAMPLE.household, TODAY, all).find((x) => x.doc.id === scan.id)!;
-    expect([shownAs().private, shownAs().with?.private]).toEqual([undefined, undefined]);
-    // Nothing says which of Drew's items are private.
-    delete drew.privacy;
-    expect([shownAs().private, shownAs().with?.private]).toEqual([undefined, HELD]);
+describe('another person’s paper in a visit (X2), and a visit linked to another’s (X1)', () => {
+  const drew = id('Drew Example');
+  /** Drew's paper in Robin's newest visit with a claim and a paper, and what can be changed of each. */
+  function shared(type = 'letter') {
+    const [parent, child] = [structuredClone(index(SAMPLE, robin)), structuredClone(index(SAMPLE, drew))];
+    const doc = child.documents.find((d) => d.doc_type === 'letter')!;
+    doc.doc_type = type;
+    for (const e of child.events!.events) e.members = e.members.filter((m) => m.document !== doc.id);
+    const visit = parent.events!.events.find((e) => e.members.some((m) => m.kind === 'claim') && e.members.some((m) => m.document))!;
+    visit.members.push({ ...visit.members.find((m) => m.document)!, document: doc.id, person: drew, rule: 'X2' as MedrecRule });
+    parent.events!.others.set(drew, child);
+    const all = new Map([...SAMPLE.indexes, [robin, parent], [drew, child]]);
+    if (child.privacy?.kind !== 'known' || parent.privacy?.kind !== 'known') throw new Error('not known');
+    return {
+      parent,
+      child,
+      doc,
+      visit,
+      all,
+      privacy: { parent: parent.privacy, child: child.privacy },
+      event: () => personEvents(parent, SAMPLE.household, TODAY).find((e) => e.id === visit.id)!,
+      listed: () => papersOf(child, SAMPLE.household, TODAY, all).find((x) => x.doc.id === doc.id)!,
+      everyone: () => sharedPapers(SAMPLE.household, all, TODAY).find((x) => x.doc.id === doc.id),
+    };
+  }
+  const ids = (e: CareEvent) => e.papers.map((p) => p.doc.id);
+
+  it('the paper is in the visit, and with it, while it is not private', () => {
+    const s = shared();
+    expect(s.event().papers.find((p) => p.doc.id === s.doc.id)).toMatchObject({ person: drew });
+    expect([s.listed().private, s.listed().with?.event.id, s.everyone()?.with?.event.id]).toEqual([undefined, s.visit.id, s.visit.id]);
+  });
+
+  it('a private one is in none of the visit, on the visit’s own person’s pages too, and stays with it on its own person’s', () => {
+    for (const held of [false, true]) {
+      const s = shared('bill');
+      const was = s.event();
+      expect(ids(was)).toContain(s.doc.id);
+      expect(eventOf(personEvents(s.parent, SAMPLE.household, TODAY), s.doc.id)?.id).toBe(s.visit.id);
+      const marked = { ...s.privacy.child, documents: new Map([[s.doc.id, 'household']]) };
+      if (held) delete s.child.privacy;
+      else s.child.privacy = marked;
+      const e = s.event();
+      expect(ids(e)).toEqual(ids(was).filter((x) => x !== s.doc.id));
+      expect(JSON.stringify({ ...e, closed: undefined })).not.toContain(s.doc.id);
+      expect(ids(sharedForm(e))).not.toContain(s.doc.id);
+      expect(eventOf(personEvents(s.parent, SAMPLE.household, TODAY), s.doc.id)).toBeUndefined();
+      expect([s.listed().with?.event.id, s.listed().with?.person, s.listed().with?.private, s.everyone()]).toEqual([s.visit.id, robin, undefined, undefined]);
+      // With the list there again, or the mark gone, it is back.
+      s.child.privacy = s.privacy.child;
+      expect(ids(s.event())).toEqual(ids(was));
+    }
+  });
+
+  it('one of a person whose index is not here, or that their index does not have, is not shown', () => {
+    const gone = shared();
+    gone.parent.events!.others.clear();
+    expect([ids(gone.event()).includes(gone.doc.id), gone.event().closed]).toEqual([false, undefined]);
+    const missing = shared();
+    missing.child.documents = missing.child.documents.filter((d) => d.id !== missing.doc.id);
+    expect([ids(missing.event()).includes(missing.doc.id), missing.event().closed]).toEqual([false, undefined]);
+  });
+
+  it('a visit with nothing else is not there', () => {
+    const s = shared();
+    s.visit.members = s.visit.members.filter((m) => m.person);
+    expect(s.event().papers).toHaveLength(1);
+    s.child.privacy = { ...s.privacy.child, documents: new Map([[s.doc.id, 'household']]) };
+    expect(s.event()).toBeUndefined();
+  });
+
+  it('another person’s private visit is not named with a paper of this person’s, whose line says no more than with none', () => {
+    const s = shared();
+    const none = (() => {
+      const without = shared();
+      without.visit.members = without.visit.members.filter((m) => !m.person);
+      return without.listed();
+    })();
+    expect(none).toMatchObject({ why: 'No visit of this person’s is on or near Dec 16, 2025.' });
+    s.privacy.parent.events.set(s.visit.id, 'household');
+    expect([s.listed().with, s.listed().why, s.listed().private]).toEqual([undefined, none.why, undefined]);
+    // Nor one of a person whose items nothing judges.
+    const held = shared();
+    delete held.parent.privacy;
+    expect([held.listed().with, held.listed().why]).toEqual([undefined, none.why]);
+  });
+
+  it('another person’s open visit is named as a shared screen names it', () => {
+    const s = shared();
+    const claim = s.visit.members.find((m) => m.kind === 'claim')!.record!;
+    expect(s.event().shared).toBeUndefined();
+    s.privacy.parent.records.set(claim, 'household');
+    s.parent.privacy = { ...s.privacy.parent };
+    const own = s.event();
+    expect(own.shared).toBeDefined();
+    expect(s.listed().with?.event).toBe(own.shared);
+    expect(papersOf(s.parent, SAMPLE.household, TODAY, s.all).find((x) => x.with?.event.id === s.visit.id)!.with!.event).toBe(own);
+  });
+
+  it('a place that is a linked visit’s is left out, on its own person’s pages too, where that visit is private or not known not to be', () => {
+    const AT = 'Placeholder Hospital';
+    const place = (change: (parent: PersonIndex, stay: { id: string; members: { record?: string }[] }, e: { links?: object[]; place_from: string }) => void, from = 'linked') => {
+      const [parent, child] = [structuredClone(index(SAMPLE, robin)), structuredClone(index(SAMPLE, drew))];
+      const stay = parent.events!.events.find((e) => e.members.some((m) => m.kind === 'claim'))!;
+      const raw = demoJson<{ events: { id: string; members: { kind: string }[] }[] }>(eventsPath(drew));
+      const e = Object.assign(raw.events[0]!, { place: AT, place_from: from, links: [{ event: stay.id, person: robin, relation: 'born_during' }] as object[] | undefined });
+      change(parent, stay, e as { links?: object[]; place_from: string });
+      child.events = parseMedrecEvents(raw, drew);
+      child.events.others.set(robin, parent);
+      return personEvents(child, SAMPLE.household, TODAY).find((x) => x.id === e.id)!.place;
+    };
+    const known = (p: PersonIndex) => {
+      if (p.privacy?.kind !== 'known') throw new Error('not known');
+      return p.privacy;
+    };
+    const none = place((_, __, e) => Object.assign(e, { place: undefined }));
+    expect(none).not.toBe(AT);
+    expect(place(() => {})).toBe(AT);
+    expect(place((p, s) => known(p).events.set(s.id, 'household'))).toBe(none);
+    expect(place((p, s) => known(p).records.set(s.members.find((m) => m.record)!.record!, 'household'))).toBe(none);
+    expect(place((p) => delete p.privacy)).toBe(none);
+    expect(place((p, s) => ((s.members = []), delete p.privacy))).toBe(none);
+    expect(place((p, s) => (p.events!.events = p.events!.events.filter((x) => x.id !== s.id)))).toBe(none);
+    expect(place((p) => delete p.events)).toBe(none);
+    expect(place((_, __, e) => delete e.links)).toBe(none);
+    expect(place((_, s, e) => (e.links = [{ event: s.id, person: 'p_aaaaaaaaaaaaaaaaaaaa' }]))).toBe(none);
+    // Any of several, as which gave it is not said.
+    expect(place((p, s, e) => (e.links!.push({ event: p.events!.events.find((x) => x.id !== s.id)!.id, person: robin }), known(p).events.set(p.events!.events.find((x) => x.id !== s.id)!.id, 'household')))).toBe(none);
+    // One its own records give is its own.
+    expect(place((p, s) => known(p).events.set(s.id, 'household'), 'portal')).toBe(AT);
   });
 });
 

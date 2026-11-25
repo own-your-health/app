@@ -49,6 +49,8 @@ export interface CareEvent {
   /** What the portal recorded at those visits: results, reports, diagnoses, medicines. */
   recorded: MedRecord[];
   papers: EventPaper[];
+  /** Other people's private papers it holds (X2): only their own person's pages name them. */
+  closed?: { document: string; person: string; confidence: Confidence }[];
   /** A hospital visit known only from its doctors' claims. */
   noFacility?: boolean;
   /** Why it is not as sure as the rest: other events of the day that could own a part of it. */

@@ -635,7 +635,13 @@ dropped from the address.
   `src/next/medrecEvents.ts` makes each member one of the visit's claims,
   portal visits, records or papers, with the rule that placed it and how
   sure that is. What medrec still expects (a bill, the doctors' claims)
-  comes along, and another person's paper (X2) opens under them. A place
+  comes along. Another person's paper (a child's from before their birth, in
+  the parent's visit: X2) opens under them. It is judged as theirs: one that
+  is private, or that nothing can say is not, is in none of the visit, on the
+  pages of the visit's own person too, and its own person's Papers says which
+  visit it is with. A place a visit has from another person's (the hospital
+  stay a newborn was born in: X1, `place_from` is `linked`) is judged the same
+  way. A place
   whose `place_from` is `alias` is there because a paper in the file's
   `aliases` says the clinician works at it: when any paper that says so is
   private, a shared screen leaves the place out. An event's address is medrec's id
@@ -823,8 +829,9 @@ dropped from the address.
   link. A paper is with a visit when the visit holds it, when a record of
   the visit links it (an explanation of benefits names its claim), or when
   it is the receipt for a bill the visit holds (or the only one it can be
-  for); a parent's paper in a
-  newborn's visit (medrec's X2) is with that visit. A paper with none says
+  for); a child's paper in a parent's visit (medrec's X2) is with that
+  visit, unless that visit is private or nothing can say it is not. A paper
+  with none says
   why: it fits several visits, which it names (medrec's `pending`), it is a
   kind about no one visit (an explanation of benefits whose claim is in no
   visit, an insurance card, a vaccine record), it has no date, or no visit

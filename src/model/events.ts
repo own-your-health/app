@@ -3,7 +3,7 @@
 // the app's events.
 
 import { FolderError } from './parse';
-import type { MedDocument } from './types';
+import type { PersonIndex } from './types';
 
 export type Sureness = 'sure' | 'likely' | 'unsure';
 
@@ -30,8 +30,10 @@ export interface MedrecEvent {
   title: string;
   what?: string;
   place?: string;
-  /** Whether the place is a practice a paper says its clinician works at (N5). */
-  placeFromAlias?: true;
+  /** Whether the place is a practice a paper says its clinician works at (N5), or that of another person's event it is linked to (X1). */
+  placeFrom?: 'alias' | 'linked';
+  /** Other people's events it is linked to (X1): a newborn's, and the stay they were born in. */
+  links: { event: string; person: string }[];
   confidence: Sureness;
   members: MedrecMember[];
   expected: { what: string; why: string; since?: string }[];
@@ -51,8 +53,8 @@ export interface MedrecEvents {
   pending: MedrecPending[];
   /** The practices clinicians were learned to work at, with the paper that says so (N5). */
   aliases: { organization: string; document: string }[];
-  /** The other people's papers these events name (X2), by id; the store fills it in from their indexes. */
-  papers: Map<string, { person: string; doc: MedDocument }>;
+  /** The indexes of the other people whose events (X1) and papers (X2) these name; the store fills it in. */
+  others: Map<string, PersonIndex>;
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -99,7 +101,8 @@ export function parseMedrecEvents(raw: unknown, person: string): MedrecEvents {
       end: String(e.end),
       title: text(e.title) ?? '',
       ...(text(e.what) ? { what: text(e.what) } : {}),
-      ...(text(e.place) ? { place: text(e.place), ...(e.place_from === 'alias' ? { placeFromAlias: true as const } : {}) } : {}),
+      ...(text(e.place) ? { place: text(e.place), ...(e.place_from === 'alias' || e.place_from === 'linked' ? { placeFrom: e.place_from } : {}) } : {}),
+      links: (Array.isArray(e.links) ? e.links : []).filter(isObj).flatMap((x) => (text(x.event) && text(x.person) ? [{ event: text(x.event)!, person: text(x.person)! }] : [])),
       confidence: sureness(e.confidence),
       members,
       expected,
@@ -110,5 +113,5 @@ export function parseMedrecEvents(raw: unknown, person: string): MedrecEvents {
     text(x.document) ? [{ document: text(x.document)!, could_join: (Array.isArray(x.could_join) ? x.could_join : []).filter((y): y is string => typeof y === 'string'), rule: (text(x.rule) ?? '') as MedrecRule }] : [],
   );
   const aliases = (Array.isArray(raw.aliases) ? raw.aliases : []).filter(isObj).flatMap((x) => (text(x.organization) && text(x.document) ? [{ organization: text(x.organization)!, document: text(x.document)! }] : []));
-  return { person, events, pending, aliases, papers: new Map() };
+  return { person, events, pending, aliases, others: new Map() };
 }

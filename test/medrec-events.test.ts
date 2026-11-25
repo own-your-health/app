@@ -164,6 +164,19 @@ describe('when the store uses medrec’s events', () => {
     expect([odd.viewsError, [...odd.eventsNotes]]).toEqual([null, [[sam, { kind: 'unreadable', text: 'medrec’s grouping of these visits could not be read: views/views.json does not say which files it was made from. The app groups them itself.' }]]]);
   });
 
+  it('knows the indexes of the other people its events are linked to (X1), and no others', async () => {
+    const [drew, robin] = [id('Drew Example'), id('Robin Example')];
+    const store = await loadWith((path, text) => {
+      if (path !== eventsPath(drew)) return text;
+      const file = JSON.parse(text) as { events: { links?: object[] }[] };
+      file.events[0]!.links = [{ event: 'e_stay', person: robin, relation: 'born_during' }, { event: 'e_own', person: drew }, { event: 'e_gone', person: 'p_gone' }, { person: robin }];
+      return JSON.stringify(file);
+    });
+    expect([...store.index(drew)!.events!.others].map(([p, idx]) => [p, idx === store.index(robin)])).toEqual([[robin, true]]);
+    expect(store.index(drew)!.events!.events[0]!.links).toEqual([{ event: 'e_stay', person: robin }, { event: 'e_own', person: drew }, { event: 'e_gone', person: 'p_gone' }]);
+    expect(store.index(robin)!.events!.others.size).toBe(0);
+  });
+
   it('shows another person’s paper in an event, from their index (X2)', async () => {
     const drew = id('Drew Example');
     const robinPaper = indexes.get(id('Robin Example'))!.documents[0]!;
@@ -222,7 +235,7 @@ describe('medrec’s events as the app’s', () => {
       documents: [{ ...doc, id: 'd_known' }, { ...doc, id: 'd_paper' }],
     };
     const file = parseMedrecEvents(fixture('events/odd.json'), ODD);
-    file.papers.set('d_other', { person: 'p_bbbbbbbbbbbbbbbbbbbb', doc: { ...other, id: 'd_other' } });
+    file.others.set('p_bbbbbbbbbbbbbbbbbbbb', { ...sam, person: 'p_bbbbbbbbbbbbbbbbbbbb', documents: [{ ...other, id: 'd_other' }] });
     const [withVisit, papersOnly] = fromMedrec(file, index, household);
     // medrec's title names a kind the app does not know, and its `what` says what it was.
     expect([withVisit!.kind, withVisit!.title, withVisit!.what, withVisit!.place, withVisit!.visits.length, withVisit!.recorded.length]).toEqual(['service', 'Video visit', 'Follow-up', 'Example Clinic', 1, 0]);
