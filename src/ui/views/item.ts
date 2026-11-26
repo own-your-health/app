@@ -13,7 +13,7 @@ import { learnMore } from '../../model/learn';
 import { allergyList, conditionList, CRITICALITY_TEXT, isFill, medicineList, saidOf, statusText, type ItemStanding } from '../../model/lists';
 import { isObject } from '../../model/parse';
 import { AMOUNT_LABELS, asMoney, docTypeLabel, documentTitle, findItem, formatMoney, importFor, isDoseGiven, isHeading, isQuantity, KIND_LABELS, LINE_AMOUNT_ORDER, memberIds, originNames, partSeries, readingOf, resultPoint, str, studyTitle, toCents, UNSAID, valueText, type ResultSeries } from '../../model/records';
-import { resultContext, unitText, verdict } from '../../model/result';
+import { rangeWords, resultContext, unitText, verdict } from '../../model/result';
 import { leftOff, ownText, partSays } from '../../model/parts';
 import { recordTitle, visitTitle } from '../../model/titles';
 import type { ProviderField } from '../../model/providers';
@@ -26,7 +26,7 @@ import { paymentText, selfPay, unreadText } from '../../next/money';
 import { labelNote } from '../../next/labelView';
 import { providerLink } from '../../next/providerView';
 import { paperView } from '../../paper/view';
-import { rangeBar, resultChart } from '../chart';
+import { drawable, otherUnit, rangeBar, resultChart } from '../chart';
 import { button, card, chip, command, dotted, driveLink, empty, flagChip, jsonBlock, kv, link, outLink, phoneLink, row, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, dateTime, localDay } from '../format';
@@ -290,7 +290,7 @@ function resultView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   const series = c.series;
   const drawn = (s: ResultSeries, title?: string) => {
     const chart = resultChart(s.points, s.unit, s.name);
-    return chart ? [{ name: title, points: s.points, unit: s.unit, chart }] : [];
+    return chart ? [{ name: title, ...drawable(s.points, s.unit), chart }] : [];
   };
   // A result of several parts has a line for each part, where the whole has none.
   const whole = series ? drawn(series) : [];
@@ -331,7 +331,8 @@ function resultView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
               null,
               parts.map(({ name: part, point: p }) => {
                 const f = resultFlag(p);
-                return h('tr', null, h('td', null, part), h('td', { class: 'num' }, unitText(p.text) ?? p.text, isOutOfRange(f) ? [' ', flagChip(f)] : null), h('td', null, p.range ? (unitText(p.range) ?? p.range) : ''));
+                const range = rangeFor(p.range, p.unit);
+                return h('tr', null, h('td', null, part), h('td', { class: 'num' }, unitText(p.text) ?? p.text, isOutOfRange(f) ? [' ', flagChip(f)] : null), h('td', null, range ? rangeWords(range, p.unit) : p.range ? (unitText(p.range) ?? p.range) : ''));
               }),
             ),
           ),
@@ -341,7 +342,7 @@ function resultView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
     series && series.points.length > 1
       ? card(
           { title: 'Over time' },
-          charts.map((x) => [x.name ? h('h3', { class: 'group-head' }, x.unit ? `${x.name} (${unitText(x.unit)})` : x.name) : null, h('div', { class: 'chart-box' }, x.chart)]),
+          charts.map((x) => [x.name ? h('h3', { class: 'group-head' }, x.unit ? `${x.name} (${unitText(x.unit)})` : x.name) : null, h('div', { class: 'chart-box' }, x.chart), otherUnit(x.other)]),
           charts.some((x) => x.points.some((p) => rangeFor(p.range, p.unit ?? x.unit))) ? h('p', { class: 'small muted' }, 'The shaded band is the lab’s range at each result.') : null,
           h(
             'table',

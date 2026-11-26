@@ -5,7 +5,7 @@
 import { isOutOfRange, rangeFor, resultFlag, type FlagLevel, type Range } from '../model/flags';
 import type { ResultPoint } from '../model/records';
 import { h, s } from './dom';
-import { dateText } from './format';
+import { count, dateText } from './format';
 
 /** The size of a chart's text (`.chart-label`), in CSS pixels. */
 export const LABEL_PX = 12;
@@ -81,8 +81,16 @@ function fmt(n: number): string {
 }
 
 /** Points with a number and a date, oldest first (as the series keeps them). */
-function plottable(points: ResultPoint[]): Dated[] {
-  return points.filter((p): p is Dated => p.value !== undefined && !!p.date && !Number.isNaN(Date.parse(p.date.slice(0, 10))));
+/**
+ * What a chart of these points (oldest first) draws, as one axis has one
+ * unit: the dated numbers in the newest one's unit, that unit, and how many
+ * dated numbers it leaves out for being in another.
+ */
+export function drawable(points: ResultPoint[], unit: string | undefined): { points: Dated[]; unit: string | undefined; other: number } {
+  const dated = points.filter((p): p is Dated => p.value !== undefined && !!p.date && !Number.isNaN(Date.parse(p.date.slice(0, 10))));
+  const drawn = dated[dated.length - 1]?.unit ?? unit;
+  const same = dated.filter((p) => (p.unit ?? unit) === drawn);
+  return { points: same, unit: drawn, other: dated.length - same.length };
 }
 
 /**
@@ -142,19 +150,24 @@ function bands(pts: Dated[], ranges: (Range | undefined)[], x: (i: number) => nu
 
 /** The shaded ranges of the full chart, in its 640 by 220 coordinates (for tests). */
 export function chartBands(points: ResultPoint[], unit: string | undefined): Rect[] {
-  const pts = plottable(points);
+  const { points: pts, unit: drawn } = drawable(points, unit);
   if (pts.length < 2) return [];
-  const { ranges, x, y } = layout(pts, unit, CHART);
+  const { ranges, x, y } = layout(pts, drawn, CHART);
   return bandRects(pts, ranges, x, y, CHART);
 }
 
 const dotClass = (p: ResultPoint) => (isOutOfRange(resultFlag(p)) ? 'chart-dot chart-dot-flag' : 'chart-dot');
 
-/** Null when fewer than two dated numeric points. Drawn at its box's width. */
+/** What a chart says of the results it leaves out for being in another unit than the newest. */
+export function otherUnit(n: number): HTMLElement | null {
+  return n ? h('p', { class: 'small muted' }, `${count(n, 'result')} in another unit ${n === 1 ? 'is' : 'are'} not in the chart.`) : null;
+}
+
+/** Null when fewer than two dated numeric points in one unit. Drawn at its box's width. */
 export function resultChart(points: ResultPoint[], unit: string | undefined, name: string): HTMLElement | null {
-  const pts = plottable(points);
+  const { points: pts, unit: drawn } = drawable(points, unit);
   if (pts.length < 2) return null;
-  return fitted((width) => resultSvg(pts, unit, name, width), CHART.w);
+  return fitted((width) => resultSvg(pts, drawn, name, width), CHART.w);
 }
 
 function resultSvg(pts: Dated[], unit: string | undefined, name: string, width: number): SVGSVGElement {
@@ -181,9 +194,9 @@ function resultSvg(pts: Dated[], unit: string | undefined, name: string, width: 
 
 /** A row's small picture of the same: hidden from screen readers, since the row's text says it. Null under two points. */
 export function resultSparkline(points: ResultPoint[], unit: string | undefined): SVGSVGElement | null {
-  const pts = plottable(points);
+  const { points: pts, unit: drawn } = drawable(points, unit);
   if (pts.length < 2) return null;
-  const { ranges, x, y } = layout(pts, unit, SPARK);
+  const { ranges, x, y } = layout(pts, drawn, SPARK);
   const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
   return s(
     'svg',

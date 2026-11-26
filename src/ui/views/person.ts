@@ -11,7 +11,7 @@ import { allergyList, conditionList, CRITICALITY_TEXT, medicineList, statusText,
 import { resultGroups } from '../../model/panels';
 import { COMING_UP_DAYS, FLU, fluSeason, SCHEDULE_SOURCE, scheduleDigest, scheduleFor, type DoseState, type FluSeason, type ScheduleRow } from '../../model/schedule';
 import type { MedRecord, Person, PersonIndex, Provenance } from '../../model/types';
-import { resultChart, resultSparkline } from '../chart';
+import { drawable, otherUnit, resultChart, resultSparkline } from '../chart';
 import { aboutNote, unsureNote } from '../about';
 import { button, card, chip, command, empty, flagChip, link, row, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
@@ -160,7 +160,8 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
         h('div', { class: 'card-head' }, h('h1', null, s.name), flagChip(t.flag)),
         h('p', { class: 'muted small' }, [group.name, count(s.points.length, 'result'), s.unit, t.latest.range ? `range ${t.latest.range}` : null].filter(Boolean).join(' · ')),
         chart ? h('div', { class: 'chart-box' }, chart) : null,
-        chart && s.points.some((p) => rangeFor(p.range, p.unit ?? s.unit)) ? h('p', { class: 'small muted' }, 'The shaded band is the reference range each result came with.') : null,
+        chart ? otherUnit(drawable(s.points, s.unit).other) : null,
+        chart && drawable(s.points, s.unit).points.some((p) => rangeFor(p.range, p.unit ?? s.unit)) ? h('p', { class: 'small muted' }, 'The shaded band is the reference range each result came with.') : null,
         h(
           'table',
           { class: 'table' },

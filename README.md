@@ -341,7 +341,8 @@ Every record's page leads with the plain answer. A result shows:
 - its parts, for a result of several (a blood pressure's two numbers), each
   with its own range;
 - its history, with the range band, or each part's where the whole is no
-  number; a part its source names twice has no line;
+  number; a part its source names twice has no line, and a line draws the
+  results in its newest one's unit and says how many in another it leaves out;
 - the other tests from the same draw, and the visit and lab report it came
   with.
 
@@ -619,7 +620,7 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   labels, as it is. Every National Provider Identifier in the sample and these
   begins with 0, which CMS never issues. The scripts
   delete nothing: medrec works in a new temporary folder, and a file no longer
-  part of a case is named for a person to remove. CI runs all six scripts.
+  part of a case is named for a person to remove. CI runs all seven scripts.
   `test/fixtures/standing/medrec/` is medrec's own fixture for readers of
   `standing.json`, as `tests/fixtures/standing/` of its 0.9.9 has it, and
   `test/fixtures/errors/medrec/` is its fixture of what is entered in error
@@ -629,6 +630,12 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   medrec's change.
   `test/fixtures/errors/views/` is what medrec 0.9.9 writes of `errors/medrec/`, by
   `node scripts/error-fixtures.mjs` with `MEDREC` set to that release.
+  `test/fixtures/results/medrec/readings.json` is medrec's own fixture of a
+  result's shapes (`tests/fixtures/fhir/readings.json` of its 0.9.10), and
+  `test/fixtures/results/views/` the folder medrec 0.9.10 writes of it, with a
+  heading and a report as medrec's own test lists them, and a visit's results
+  and headings and a test sent in two units invented beside them, by
+  `node scripts/result-fixtures.mjs` with `MEDREC` set to that release.
   Written by hand are only Drive's answers, the app's own requests, and files
   medrec never writes: malformed ones, and ones of a later format.
 - The PNG icons in `public/` (for the manifest and the iPhone Home Screen) are

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ResultPoint } from '../src/model/records';
-import { chartBands, niceTicks } from '../src/ui/chart';
+import { chartBands, drawable, niceTicks } from '../src/ui/chart';
 
 // The full chart is 640 by 220, with 48 to the left, 16 to the right and top, and 28 below.
 const LEFT = 48;
@@ -50,5 +50,25 @@ describe('the reference range behind a chart', () => {
   it('draws no range it cannot read in the result’s unit', () => {
     expect(chartBands([p('2025-02-11', 15, '1.5-2.8 kPa', 'mm Hg'), p('2025-05-06', 18, 'Not detected', 'mm Hg')], 'mm Hg')).toEqual([]);
     expect(chartBands([p('2025-02-11', 15, '1.5-2.8 kPa')], 'mm Hg')).toEqual([]);
+  });
+});
+
+describe('what a chart draws', () => {
+  const dates = (pts: ResultPoint[]) => pts.map((x) => x.date);
+
+  it('is the results in the newest one’s unit, as one axis has one', () => {
+    const kpa = p('2025-03-01', 16, undefined, 'kPa');
+    const all = [p('2025-01-01', 120), kpa, p('2025-05-01', 118)];
+    expect([dates(drawable(all, undefined).points), drawable(all, undefined).unit, drawable(all, undefined).other]).toEqual([['2025-01-01', '2025-05-01'], 'mm Hg', 1]);
+    const newest = drawable([...all, { ...kpa, date: '2025-06-01' }], undefined);
+    expect([dates(newest.points), newest.unit, newest.other]).toEqual([['2025-03-01', '2025-06-01'], 'kPa', 2]);
+    expect(chartBands([p('2025-01-01', 8, '11-21 mm Hg'), { ...kpa, range: '1-3 kPa' }, p('2025-05-01', 25, '11-21 mm Hg')], undefined)).toHaveLength(1);
+  });
+
+  it('takes a result with no unit as in the series’ own, and leaves out what is no dated number', () => {
+    const bare = { ...p('2025-03-01', 119), unit: undefined };
+    const d = drawable([p('2025-01-01', 120), bare, { ...p('2025-04-01', 1), value: undefined }, { ...p('2025-05-01', 118), date: undefined }], 'mm Hg');
+    expect([dates(d.points), d.unit, d.other]).toEqual([['2025-01-01', '2025-03-01'], 'mm Hg', 0]);
+    expect(drawable([], 'mm Hg')).toEqual({ points: [], unit: 'mm Hg', other: 0 });
   });
 });

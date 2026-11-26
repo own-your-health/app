@@ -2,12 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { withoutAbout } from '../src/model/aboutAnother';
 import { isOutOfRange, resultFlag } from '../src/model/flags';
 import { resultGroups } from '../src/model/panels';
-import { isHeading, isQuantity, memberIds, partSeries, readingOf, recordDetail, resultParts, resultPoint, resultReading, resultSeries } from '../src/model/records';
+import { isHeading, isQuantity, isWithdrawn, memberIds, partSeries, readingOf, recordDetail, resultParts, resultPoint, resultReading, resultSeries } from '../src/model/records';
 import { resultContext, verdict } from '../src/model/result';
+import { parseHousehold, parseIndex } from '../src/model/parse';
 import { find } from '../src/model/search';
 import type { Json, JsonObject, MedRecord, PersonIndex } from '../src/model/types';
+import { drawable } from '../src/ui/chart';
 import { entriesByKind } from '../src/ui/search';
 import { demo } from './demo-data';
+import { fixture } from './helpers';
 import { ROBIN } from './sample';
 
 // What medrec 0.9.10 and later keeps of a result: a bound, its parts, and the
@@ -199,5 +202,87 @@ describe('a panel', () => {
     expect([left.records.map((r) => r.display), memberIds(left.records[1]!.fields)]).toEqual([['Birch', 'Sample pollen panel'], ['r_gone', a.id]]);
     const none = withoutAbout(idx(a, b, { ...panel, fields: { members: [b.id] } }), { ids: new Set([b.id]) }).records[1]!;
     expect([none.fields.members, isHeading(none)]).toEqual([[], true]);
+  });
+});
+
+describe('as medrec 0.9.10 writes them', () => {
+  // Its own fixture of a result's shapes, each on a day of its own, and a visit's results and headings (scripts/result-fixtures.mjs).
+  const pat = parseIndex(fixture('results/views/Pat Example/index.json'), parseHousehold(fixture('results/views/household.json')).people[0]!.id);
+  const on = (day: string, display?: string) => pat.records.filter((r) => r.date?.startsWith(day) && (!display || r.display === display));
+  const one = (day: string, display?: string) => {
+    const [r, ...more] = on(day, display);
+    expect(more).toEqual([]);
+    return r!;
+  };
+  const read = (r: MedRecord) => [readingOf(r).text, resultParts(r).map((x) => `${x.name}: ${x.point.text}`)];
+
+  it('reads a reading of several parts as its text, with its parts in the source’s order', () => {
+    expect(['01', '02', '03', '04', '05', '06', '07'].map((d) => read(one(`2024-04-${d}`)))).toEqual([
+      ['128/76 mmHg', ['Blood pressure, top number: 128 mmHg', 'Blood pressure, bottom number: 76 mmHg']],
+      ['110/70 mmHg', ['Blood pressure, bottom number: 70 mmHg', 'Blood pressure, top number: 110 mmHg']],
+      ['Systolic blood pressure 120 mmHg; Diastolic blood pressure 80 mmHg', ['Systolic blood pressure: 120 mmHg', 'Diastolic blood pressure: 80 mmHg']],
+      ['Systolic blood pressure 16 kPa; Diastolic blood pressure 80 mmHg', ['Blood pressure, top number: 16 kPa', 'Blood pressure, bottom number: 80 mmHg']],
+      ['Systolic blood pressure 122 mmHg', ['Blood pressure, top number: 122 mmHg']],
+      ['122/78 mmHg; Mean blood pressure 93 mmHg', ['Blood pressure, top number: 122 mmHg', 'Mean blood pressure: 93 mmHg', 'Blood pressure, bottom number: 78 mmHg']],
+      ['Systolic blood pressure 122 mmHg; Systolic blood pressure 124 mmHg; Diastolic blood pressure 78 mmHg', ['Blood pressure, top number: 122 mmHg', 'Blood pressure, top number: 124 mmHg', 'Blood pressure, bottom number: 78 mmHg']],
+    ]);
+    expect([read(one('2024-04-08')), read(one('2024-04-17'))]).toEqual([
+      ['7', ['First part: 3', 'Second part: 4']],
+      ['118/74 mmHg', ['Blood pressure, top number: 118 mmHg', 'Blood pressure, bottom number: 74 mmHg']],
+    ]);
+    expect(resultPoint(one('2024-04-01')).value).toBeUndefined();
+  });
+
+  it('flags one by the part out of its range', () => {
+    const p = resultPoint(one('2024-04-01'));
+    expect([resultFlag(p)?.label, verdict(p).text]).toEqual(['High', 'Blood pressure, top number: Above the lab’s range of 90–120 mmHg.']);
+  });
+
+  it('reads a bound, a ratio, a range and a time as medrec gives them', () => {
+    const bound = resultPoint(one('2024-04-10'));
+    expect([bound.text, bound.bound, bound.value]).toEqual(['<0.5 IU/mL', { op: '<', n: 0.5 }, undefined]);
+    expect(resultParts(one('2024-04-11'))[0]!.point).toMatchObject({ text: '>260 mmHg', bound: { op: '>', n: 260 } });
+    expect(['12', '13', '14', '15'].map((d) => [resultPoint(one(`2024-04-${d}`)).text, resultPoint(one(`2024-04-${d}`)).value])).toEqual([
+      ['1:40', undefined],
+      ['0 /HPF – 5 /HPF', undefined],
+      ['1:>1280', undefined],
+      ['07:30:00', undefined],
+    ]);
+  });
+
+  it('draws each part its test names once, in one unit', () => {
+    const lines = partSeries(pat, one('2024-04-01')).map((x) => [x.name, x.points.length, drawable(x.points, x.unit).points.length, drawable(x.points, x.unit).unit, drawable(x.points, x.unit).other]);
+    expect(lines).toEqual([
+      ['Blood pressure, top number', 7, 5, 'mmHg', 1],
+      ['Blood pressure, bottom number', 7, 7, 'mmHg', 0],
+    ]);
+  });
+
+  it('draws a test sent in two units in the newest one’s', () => {
+    const s = resultSeries(pat).find((x) => x.name === 'Example glucose')!;
+    const d = drawable(s.points, s.unit);
+    expect([s.points.length, s.unit, d.points.map((p) => p.date), d.unit, d.other]).toEqual([3, undefined, ['2024-02-01', '2024-06-01'], 'mg/dL', 1]);
+  });
+
+  it('heads a group with a heading, and lists a report’s and a heading’s results in their order', () => {
+    const [heading, report] = [one('2024-04-21'), one('2024-04-30')];
+    const names = (r: MedRecord) => memberIds(r.fields).map((id) => pat.records.find((x) => x.id === id)!.display);
+    expect([isHeading(heading), names(heading), isHeading(report), names(report)]).toEqual([true, ['Example antibody', 'Example cell count'], false, ['Example score']]);
+    const [salts, metals, withdrawn] = ['Example salts panel', 'Example metals panel', 'Example withdrawn panel'].map((n) => one('2024-05-14', n));
+    expect([salts, metals, withdrawn].map((r) => [isHeading(r!), names(r!), isWithdrawn(r!)])).toEqual([
+      [true, ['Sodium', 'Potassium'], false],
+      [true, [], false],
+      [true, ['Sodium', 'Potassium'], true],
+    ]);
+    const groups = resultGroups(pat).map((g) => [g.name, g.tests.map((t) => t.series.name)]);
+    expect(groups).toContainEqual(['Example heading', ['Example antibody', 'Example cell count']]);
+    expect(groups.flatMap(([, tests]) => tests)).not.toContain('Example salts panel');
+    expect(resultSeries(pat).filter((x) => x.points.some((p) => isHeading(pat.records.find((r) => r.id === p.id)!)))).toEqual([]);
+  });
+
+  it('leaves a heading and what it lists out of what was drawn with a result that day', () => {
+    const drawnWith = (r: MedRecord) => resultContext(pat, parseHousehold(fixture('results/views/household.json')), pat.person, '2026-11-22', r).sameDraw.flatMap((g) => g.records.map((x) => x.display));
+    const [sodium, salts] = [one('2024-05-14', 'Sodium'), one('2024-05-14', 'Example salts panel')];
+    expect([drawnWith(sodium), drawnWith(salts)]).toEqual([['Potassium'], []]);
   });
 });
