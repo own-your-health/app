@@ -141,22 +141,62 @@ export function sharedIndex(index: PersonIndex): PersonIndex {
   return twin;
 }
 
-/** A paper's text without its private lines; none of it where they are not places of it. */
-export function sharedText(text: string, gone: [number, number][]): string | undefined {
-  if (!gone.length) return text;
+/** A piece of a paper's text, and whether shared screens leave it out. */
+export interface TextPiece {
+  text: string;
+  off: boolean;
+}
+
+/** A paper's text in pieces, by its private lines; undefined where they are not places of it. */
+function textPieces(text: string, gone: [number, number][]): TextPiece[] | undefined {
   const bytes = new TextEncoder().encode(text);
   // A place is the start of a character, or the end of the text.
   const starts = (i: number) => i <= bytes.length && (i === bytes.length || (bytes[i]! & 0xc0) !== 0x80);
   const order = [...gone].sort((a, b) => a[0] - b[0]);
   const decoder = new TextDecoder();
-  let out = '';
+  const out: TextPiece[] = [];
+  const put = (from: number, to: number, off: boolean) => from < to && out.push({ text: decoder.decode(bytes.subarray(from, to)), off });
   let at = 0;
   for (const [from, length] of order) {
     if (from < at || !starts(from) || !starts(from + length)) return undefined;
-    out += decoder.decode(bytes.subarray(at, from));
+    put(at, from, false);
+    put(from, from + length, true);
     at = from + length;
   }
-  return out + decoder.decode(bytes.subarray(at));
+  put(at, bytes.length, false);
+  return out;
+}
+
+/** A paper's text without its private lines; none of it where they are not places of it. */
+export function sharedText(text: string, gone: [number, number][]): string | undefined {
+  return textPieces(text, gone)?.flatMap((p) => (p.off ? [] : [p.text])).join('');
+}
+
+/**
+ * A paper's text on its person's own pages, with each line shared screens
+ * leave out said; one piece where medrec said them of another text.
+ */
+export function ownText(index: PersonIndex, text: PersonText, id: string): TextPiece[] {
+  const body = text.texts[id] ?? '';
+  const gone = partOf(index, id)?.text ?? [];
+  const fits = index.privacy?.kind === 'known' && text.md5 !== undefined && text.md5 === index.privacy.text;
+  return (fits && gone.length && textPieces(body, gone)) || [{ text: body, off: false }];
+}
+
+/** Names once each, in their order: one of several claims is left out of shared screens where it is left out of each. */
+export function offInEach(pairs: [string, boolean][]): { text: string; off: boolean }[] {
+  const off = new Map<string, boolean>();
+  for (const [text, gone] of pairs) off.set(text, (off.get(text) ?? true) && gone);
+  return [...off].map(([text, gone]) => ({ text, off: gone }));
+}
+
+/**
+ * On its person's own pages, whether shared screens leave out what is at this
+ * place of a claim's `items`, `diagnoses` or `payer_notes`. A record already
+ * cut for them has none.
+ */
+export function leftOff(index: PersonIndex, r: MedRecord, list: 'lines' | 'diagnoses' | 'payerNotes', at: number | undefined): boolean {
+  return !r.without && at !== undefined && !!partOf(index, r.id)?.[list].includes(at);
 }
 
 const texts = new WeakMap<PersonIndex, { of: PersonText; twin: PersonText }>();

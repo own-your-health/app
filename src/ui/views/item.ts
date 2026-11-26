@@ -5,8 +5,8 @@
 
 import { readJson } from '../../folder';
 import { billList } from '../../model/billing';
-import { CATEGORY_LABELS, claimAmounts, type ClaimLine, claimLines, claimNotes, claimProvider, revenueText } from '../../model/claims';
-import { conditionName, diagnosisNames, nameList, secondTitle } from '../../model/codeNames';
+import { CATEGORY_LABELS, claimAmounts, claimDiagnoses, type ClaimLine, claimLines, claimProvider, placedNotes, revenueText } from '../../model/claims';
+import { conditionName, diagnosisNames, secondTitle } from '../../model/codeNames';
 import { isOutOfRange, rangeFor, resultFlag } from '../../model/flags';
 import { labTest } from '../../model/labtests';
 import { learnMore } from '../../model/learn';
@@ -14,13 +14,13 @@ import { allergyList, conditionList, CRITICALITY_TEXT, isFill, medicineList, sai
 import { isObject } from '../../model/parse';
 import { AMOUNT_LABELS, asMoney, docTypeLabel, documentTitle, findItem, formatMoney, importFor, isDoseGiven, isHeading, isQuantity, KIND_LABELS, LINE_AMOUNT_ORDER, memberIds, originNames, partSeries, readingOf, resultPoint, str, studyTitle, toCents, UNSAID, valueText, type ResultSeries } from '../../model/records';
 import { resultContext, unitText, verdict } from '../../model/result';
-import { partSays } from '../../model/parts';
+import { leftOff, ownText, partSays } from '../../model/parts';
 import { recordTitle, visitTitle } from '../../model/titles';
 import type { ProviderField } from '../../model/providers';
 import type { ImagingStudy, Json, MedDocument, MedRecord, PersonIndex, Provenance } from '../../model/types';
 import { claimContext, visitKind, visitOf } from '../../model/visits';
 import { tidyName } from '../../model/words';
-import { partNote, partOfEvent } from '../../next/eventView';
+import { markedList, notShared, partNote, partOfEvent } from '../../next/eventView';
 import { markedPayments, paidControl, viewOnlyNote } from '../../next/markPaid';
 import { paymentText, selfPay, unreadText } from '../../next/money';
 import { labelNote } from '../../next/labelView';
@@ -147,8 +147,8 @@ function recordLinks(person: string, rs: MedRecord[]): Child[] {
   return rs.flatMap((x, i) => [i === 0 ? null : i === rs.length - 1 ? ' and ' : ', ', link(itemRoute(person, x.id), recordTitle(x))]);
 }
 
-/** A claim's lines: what each paid for, its code, the amounts, and the records medrec linked to it. */
-function linesCard(person: string, lines: readonly Readonly<ClaimLine>[], lineRecords: MedRecord[][]): HTMLElement {
+/** A claim's lines: what each paid for, its code, the amounts, and the records medrec linked to it; and each that shared screens leave out. */
+function linesCard(person: string, lines: readonly Readonly<ClaimLine>[], lineRecords: MedRecord[][], off: (l: Readonly<ClaimLine>) => boolean): HTMLElement {
   // medrec links every lab line to all of its day's results, so lines that
   // all link the same records say nothing the Paid for card does not. A line
   // the totals leave out paid for nothing.
@@ -164,22 +164,18 @@ function linesCard(person: string, lines: readonly Readonly<ClaimLine>[], lineRe
       const lineMeta = [l.code, CATEGORY_LABELS[l.category].one, revenue, l.date ? dateText(l.date) : null].filter(Boolean).join(' · ');
       const notes = l.payerNotes.length ? h('p', { class: 'small muted claim-notes' }, `The plan’s ${l.payerNotes.length === 1 ? 'note' : 'notes'}: ${l.payerNotes.join(' · ')}`) : null;
       // A line the plan replaced or wrote off: what was billed, never what it marked not covered, as none of it is owed.
-      if (!l.counted) {
-        return row({
-          title: l.label,
-          meta: lineMeta,
-          aside: chip('Left out'),
-          extra: [h('p', { class: 'small claim-amounts' }, `Left out by the plan, not owed: the claim’s totals do not count this line.${l.amounts.billed ? ` Billed ${formatMoney(l.amounts.billed)}.` : ''}`), notes],
-        });
-      }
+      const said = l.counted
+        ? [
+            h('p', { class: ['small', 'claim-amounts', amounts.length ? null : 'muted'] }, amounts.length ? amounts.join(' · ') : 'The claim gives no amounts for this line.'),
+            notes,
+            paidFor.length ? h('p', { class: 'small claim-paid-for' }, 'Paid for: ', ...recordLinks(person, paidFor)) : null,
+          ]
+        : [h('p', { class: 'small claim-amounts' }, `Left out by the plan, not owed: the claim’s totals do not count this line.${l.amounts.billed ? ` Billed ${formatMoney(l.amounts.billed)}.` : ''}`), notes];
       return row({
         title: l.label,
         meta: lineMeta,
-        extra: [
-          h('p', { class: ['small', 'claim-amounts', amounts.length ? null : 'muted'] }, amounts.length ? amounts.join(' · ') : 'The claim gives no amounts for this line.'),
-          notes,
-          paidFor.length ? h('p', { class: 'small claim-paid-for' }, 'Paid for: ', ...recordLinks(person, paidFor)) : null,
-        ],
+        aside: l.counted ? null : chip('Left out'),
+        extra: [off(l) ? h('p', { class: 'part-mark' }, notShared()) : null, ...said],
       });
     }),
   );
@@ -560,9 +556,11 @@ function claimView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   const lines = claimLines(r);
   const a = claimAmounts(r);
   const c = claimContext(idx, ctx.store.household, idx.person, localDay(ctx.now()), r);
-  const diagnoses = diagnosisNames(idx, r);
-  const titles = diagnoses.flatMap((d) => secondTitle(d) ?? []);
-  const words = diagnoses.flatMap((d) => d.source ?? []);
+  const placed = claimDiagnoses(r);
+  const diagnoses = diagnosisNames(idx, r).map((d, i) => ({ ...d, off: leftOff(idx, r, 'diagnoses', placed[i]?.at) }));
+  const titles = diagnoses.flatMap((d) => (secondTitle(d) ? [{ text: secondTitle(d)!, off: d.off }] : []));
+  const words = diagnoses.flatMap((d) => (d.source ? [{ text: d.source, off: d.off }] : []));
+  const notes = placedNotes(r).map((n) => ({ text: n.text, off: leftOff(idx, r, 'payerNotes', n.at) }));
   const docs = r.documents.map((id) => idx.documents.find((d) => d.id === id)).filter((d): d is MedDocument => !!d);
   const start = isObject(r.fields.billable_period) ? str(r.fields.billable_period.start) : undefined;
   return [
@@ -579,9 +577,9 @@ function claimView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
         ['Plan allowed', formatMoney(a.allowed)],
         ['Plan paid', formatMoney(a.planPaid)],
         ['Your share comes from', a.parts.length ? sentence(a.parts.map((p) => `${p.label.toLowerCase()} ${formatMoney(p.amount)}`).join(', ')) : undefined],
-        [diagnoses.length > 1 ? 'Diagnoses' : 'Diagnosis', diagnoses.length ? nameList(diagnoses.map((d) => d.name)) : undefined],
+        [diagnoses.length > 1 ? 'Diagnoses' : 'Diagnosis', diagnoses.length ? markedList(diagnoses.map((d) => ({ text: d.name, off: d.off }))) : undefined],
         ['Outcome', str(r.fields.outcome) && r.fields.outcome !== 'complete' ? str(r.fields.outcome) : undefined],
-        ['The plan’s notes', claimNotes(r).join(' · ') || undefined],
+        ['The plan’s notes', notes.length ? markedList(notes, ' · ') : undefined],
       ]),
     ),
     c.visit || c.results.length
@@ -594,11 +592,11 @@ function claimView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
           }),
         )
       : null,
-    lines.length ? linesCard(idx.person, lines, c.lineRecords) : null,
+    lines.length ? linesCard(idx.person, lines, c.lineRecords, (l) => leftOff(idx, r, 'lines', l.at)) : null,
     docs.length ? card({ title: 'Documents' }, docs.map((d) => row({ route: itemRoute(idx.person, d.id), title: documentTitle(d), meta: [docTypeLabel(d.doc_type), dateText(d.date)].filter(Boolean).join(' · ') }))) : null,
     recordTechnical(ctx, idx, r, lines.length ? ['items'] : [], [
-      [titles.length > 1 ? 'Diagnoses, by published title' : 'Diagnosis, by published title', titles.length ? nameList(titles) : undefined],
-      [words.length > 1 ? 'Diagnoses, in the claim’s words' : 'Diagnosis, in the claim’s words', words.length ? nameList(words) : undefined],
+      [titles.length > 1 ? 'Diagnoses, by published title' : 'Diagnosis, by published title', titles.length ? markedList(titles) : undefined],
+      [words.length > 1 ? 'Diagnoses, in the claim’s words' : 'Diagnosis, in the claim’s words', words.length ? markedList(words) : undefined],
     ]),
   ];
 }
@@ -656,7 +654,8 @@ function documentView(ctx: Ctx, idx: PersonIndex, d: MedDocument, inError: boole
       textBox.replaceChildren(h('p', { class: 'muted small' }, 'Reading…'));
       void ctx.store.text(idx.person).then((t) => {
         const body = t?.texts[d.id];
-        textBox.replaceChildren(body ? h('pre', { class: 'text' }, body) : empty('No extracted text for this document.'));
+        const pieces = t && body ? ownText(idx, t, d.id) : [];
+        textBox.replaceChildren(body ? h('pre', { class: 'text' }, pieces.map((p) => (p.off ? [h('mark', { class: 'not-shared' }, p.text), ' ', notShared()] : p.text))) : empty('No extracted text for this document.'));
       });
     },
     { small: true },
