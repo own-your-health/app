@@ -1499,6 +1499,32 @@ body:has(.bottom-nav) {
   white-space: nowrap;
 }
 
+.claim-line-what {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* What shared screens leave out of an open item, on its person's own pages (private.json `parts`). */
+.part-note .chip,
+.marked-name .chip,
+.claim-line-what .chip {
+  vertical-align: baseline;
+}
+
+.part-mark {
+  margin: 0;
+}
+
+mark.not-shared {
+  background: var(--attention-tint);
+  color: inherit;
+  border-radius: 3px;
+}
+
+pre.text .chip-muted {
+  background: var(--surface);
+}
+
 /* A visit's documents and what was recorded at it. */
 a.filter {
   display: inline-flex;

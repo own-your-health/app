@@ -3,7 +3,7 @@ import { linesPrivate, rewritten } from './alter';
 import { lay } from './lay';
 import { macWrites } from './mac';
 import { CLIENT, FakeGoogle, FOLDER_NAME } from './fake-google';
-import { eventId, itemId, ROBIN } from '../test/sample';
+import { eventId, itemId, ROBIN, SAM } from '../test/sample';
 
 // Open items with a private part (medrec 0.9.9 and later): a shared screen
 // shows the item without it and says how much it leaves out; its person's own
@@ -14,6 +14,8 @@ const SAID = 'Unmistakable words';
 const CLAIM = itemId(ROBIN, 'records', (r) => r.kind === 'claim' && r.date === '2026-10-01');
 const BILL = itemId(ROBIN, 'documents', (d) => d.doc_type === 'eob');
 const CLAIM_SAYS = '1 service, 1 diagnosis and 1 payer note not shown';
+const SAM_CLAIM = itemId(SAM, 'records', (r) => r.kind === 'claim' && r.date === '2026-10-12');
+const NOT_SHARED = 'Not on shared screens';
 
 let problems: string[] = [];
 
@@ -32,22 +34,30 @@ const go = (page: Page, path: string) => page.goto(`./?demo${path}`);
 const main = (page: Page) => page.locator('main');
 
 test('a shared screen says how much it leaves out of a visit, a claim and a paper', async ({ page }) => {
+  // Each says it, and none marks what it leaves out as left out.
+  const none = async () => {
+    await expect(main(page)).not.toContainText(SAID);
+    await expect(main(page)).not.toContainText(NOT_SHARED);
+  };
   await go(page, '#/calendar?view=list');
   const visit = main(page).locator('.cal-row', { hasText: '1 service not shown' }).first();
   await expect(visit).toBeVisible();
-  await expect(main(page)).not.toContainText(SAID);
+  await none();
   await go(page, '#/');
   await expect(main(page)).toContainText('Recently');
-  await expect(main(page)).not.toContainText(SAID);
+  await none();
   await go(page, '#/money/events');
   await expect(main(page).locator('.row', { hasText: '1 service not shown' }).first()).toBeVisible();
+  await none();
   await go(page, '#/costs?period=all');
   await expect(main(page).locator('.row', { hasText: CLAIM_SAYS }).first()).toBeVisible();
+  await none();
   await go(page, '#/search?q=billing');
   await expect(main(page).locator('.row', { hasText: '1 line not shown' }).first()).toBeVisible();
+  await none();
   await go(page, `#/p/${ROBIN}/provider/${CLAIM}/provider?all=1`);
   await expect(main(page).locator('.row', { hasText: CLAIM_SAYS }).first()).toBeVisible();
-  await expect(main(page)).not.toContainText(SAID);
+  await none();
 });
 
 test('a claim in error is counted in everyone’s costs by what is left of it', async ({ page }) => {
@@ -70,15 +80,16 @@ test('a claim in error is counted in everyone’s costs by what is left of it', 
 });
 
 test('its person’s own pages show all of it, and say where it stays off', async ({ page }) => {
-  const off = 'on Home and everyone’s Calendar, Money, Papers and search results.';
+  const off = 'Shared screens are Home and everyone’s Calendar, Money, Papers and search results.';
+  const note = main(page).locator('.part-note');
   await go(page, `#/p/${ROBIN}/r/${CLAIM}`);
   await expect(main(page)).toContainText(SAID);
-  await expect(main(page)).toContainText(`${CLAIM_SAYS} ${off}`);
+  await expect(note).toHaveText(`${NOT_SHARED} 1 service, 1 diagnosis and 1 payer note. ${off}`);
   await go(page, `#/p/${ROBIN}/e/${eventId(ROBIN, '2026-10-01')}`);
   await expect(main(page)).toContainText(SAID);
-  await expect(main(page)).toContainText(`1 service not shown ${off}`);
+  await expect(note).toHaveText(`${NOT_SHARED} 1 service. ${off}`);
   await go(page, `#/p/${ROBIN}/r/${BILL}`);
-  await expect(main(page)).toContainText(`1 line not shown ${off}`);
+  await expect(note).toHaveText(`${NOT_SHARED} 1 line. ${off}`);
   await go(page, `#/calendar?view=list&who=${ROBIN}`);
   await expect(main(page)).toContainText(SAID);
   await expect(main(page)).not.toContainText('not shown');
@@ -91,11 +102,80 @@ test('its person’s own pages show all of it, and say where it stays off', asyn
   await expect(main(page).locator('.row', { hasText: 'not shown' })).toHaveCount(0);
 });
 
+test('its person’s own pages mark each part shared screens leave out, in the words they begin with', async ({ page }) => {
+  const marked = (where: ReturnType<typeof main>) => where.locator('.chip', { hasText: NOT_SHARED });
+  const named = (where: ReturnType<typeof main>, words: string) => where.locator('.marked-name', { hasText: words });
+  // A claim: its line and its payer's note, and no other.
+  await go(page, `#/p/${ROBIN}/r/${CLAIM}`);
+  await expect(marked(main(page).locator('.part-note'))).toHaveCount(1);
+  const lines = main(page).locator('.card', { has: page.getByRole('heading', { name: '3 lines' }) }).locator('.row');
+  await expect(lines).toHaveCount(3);
+  await expect(lines.filter({ has: page.locator('.chip', { hasText: NOT_SHARED }) })).toHaveCount(1);
+  await expect(lines.filter({ has: page.locator('.chip', { hasText: NOT_SHARED }) })).toContainText(SAID);
+  const notes = main(page).locator('.kv-row', { hasText: 'The plan’s notes' });
+  await expect(notes.locator('dd')).toHaveText(`${SAID} ${NOT_SHARED} · Placeholder note`);
+  await expect(marked(named(notes, SAID))).toHaveCount(1);
+  await expect(marked(named(notes, 'Placeholder note'))).toHaveCount(0);
+  await expect(marked(main(page))).toHaveCount(3);
+  // A claim's diagnosis, where its names are and in its details.
+  await go(page, `#/p/${SAM}/r/${SAM_CLAIM}`);
+  await expect(marked(main(page).locator('.kv-row', { hasText: /^Diagnosis/ }).first())).toHaveCount(1);
+  // A visit of claims alone: what it was billed for and its diagnosis.
+  await go(page, `#/p/${SAM}/e/${eventId(SAM, '2026-10-12')}`);
+  const billed = main(page).locator('p', { hasText: 'Billed for:' });
+  await expect(marked(named(billed, SAID))).toHaveCount(1);
+  await expect(billed.locator('.marked-name')).toHaveCount(2);
+  await expect(marked(billed)).toHaveCount(1);
+  await expect(marked(main(page).locator('p', { hasText: /^Diagnos[ie]s?:/ }))).toHaveCount(1);
+  // A paper's text, once shown.
+  await go(page, `#/p/${ROBIN}/r/${BILL}`);
+  await main(page).getByRole('button', { name: 'Show extracted text' }).click();
+  await expect(main(page).locator('pre.text mark.not-shared')).toHaveText([SAID]);
+  await expect(marked(main(page).locator('pre.text'))).toHaveCount(1);
+  // Costs: on its person's own, each line, and on everyone's, none.
+  await go(page, `#/costs?period=all&only=person:${ROBIN}`);
+  const costLines = main(page).locator('.claim-lines li');
+  await expect(costLines.filter({ has: page.locator('.chip', { hasText: NOT_SHARED }) })).toHaveCount(3);
+  for (const line of await costLines.filter({ has: page.locator('.chip', { hasText: NOT_SHARED }) }).all()) await expect(line).toContainText(SAID);
+  await expect(costLines.filter({ hasText: SAID })).toHaveCount(3);
+});
+
+test('a diagnosis is marked in its claim’s details too, by its published title and in the claim’s words', async ({ page }) => {
+  // The private diagnosis in one word in capitals, the claim's own, for a code medrec names otherwise.
+  const titled = rewritten(linesPrivate(SAID), ({ name, index }) => {
+    if (name !== 'Sam Example') return;
+    const diagnoses = index.records.find((r) => r.id === SAM_CLAIM)!.fields.diagnoses as { code: { code: string; display: string } }[];
+    Object.assign(diagnoses[0]!.code, { code: 'E55.9', display: 'UNMISTAKABLE' });
+  });
+  await lay(page, titled);
+  await go(page, `#/p/${SAM}/r/${SAM_CLAIM}`);
+  await main(page).locator('details.tech summary').click();
+  const told = main(page).locator('details.tech .kv-row', { hasText: /^Diagnosis, / });
+  await expect(told).toHaveCount(2);
+  for (const row of await told.all()) await expect(row.locator('.chip', { hasText: NOT_SHARED })).toHaveCount(1);
+});
+
 test('what is left out fits a phone', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 780 });
   for (const path of ['#/calendar?view=list', '#/costs?period=all', '#/money/events', '#/search?q=billing', `#/p/${ROBIN}/r/${CLAIM}`]) {
     await go(page, path);
-    await expect(main(page)).toContainText('not shown');
+    await expect(main(page)).toContainText(/not shown|Not on shared screens/);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), path).toBe(0);
+  }
+});
+
+test('what is marked fits a 320 px phone, with a long word in each part', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  const long = 'Pneumonoultramicroscopicsilicovolcanoconiosis';
+  await lay(page, linesPrivate(long));
+  for (const path of [`#/p/${ROBIN}/r/${CLAIM}`, `#/p/${SAM}/r/${SAM_CLAIM}`, `#/p/${SAM}/e/${eventId(SAM, '2026-10-12')}`, `#/costs?period=all&only=person:${ROBIN}`, `#/p/${ROBIN}/r/${BILL}`]) {
+    await go(page, path);
+    await expect(main(page)).toContainText(NOT_SHARED);
+    if (path.includes(BILL)) await main(page).getByRole('button', { name: 'Show extracted text' }).click();
+    if (path.includes(SAM_CLAIM)) await main(page).locator('details.tech summary').click();
+    await expect(main(page)).toContainText(long);
+    const past = await page.evaluate(() => [...document.querySelectorAll('main *')].filter((el) => el.getBoundingClientRect().right > document.documentElement.clientWidth + 0.5 && !el.closest('pre')).map((el) => `${el.tagName}.${el.className}`));
+    expect(past, path).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), path).toBe(0);
   }
 });

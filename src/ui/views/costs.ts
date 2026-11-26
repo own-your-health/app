@@ -43,6 +43,7 @@ import { button, card, empty, link, row, type Ctx } from '../components';
 import { h } from '../dom';
 import { count, dateText, localDay } from '../format';
 import { heldNotes, privateLine, quietClaims } from '../../next/shared';
+import { notShared } from '../../next/eventView';
 import { errorsNote } from '../inError';
 import { href, type CostBy, type CostFilter, type CostFilterBy, type Route } from '../router';
 import { sharedIndex } from '../../model/parts';
@@ -141,7 +142,7 @@ export function legend(items: [string, string][]): HTMLElement {
 /** One of a claim's lines: what was done and your share of it; a line the totals leave out, that it is not owed. */
 function claimLine(l: CostLine): HTMLElement {
   const code = l.code ? `${systemName(l.system)} ${l.code}`.trim() : null;
-  const what = h('span', { class: 'claim-line-what' }, l.service, code ? h('span', { class: 'muted' }, ` · ${code}`) : null);
+  const what = h('span', { class: 'claim-line-what' }, l.service, code ? h('span', { class: 'muted' }, ` · ${code}`) : null, l.notShared ? [' ', notShared()] : null);
   if (l.uncounted) return h('li', null, what, h('span', { class: 'muted' }, 'Left out by the plan, not owed'));
   const share = l.cents.youOwe;
   return h('li', null, what, share !== undefined ? h('span', { class: 'num' }, h('span', { class: 'sr-only' }, 'your share '), money(share)) : null);
