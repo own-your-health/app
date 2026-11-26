@@ -6,6 +6,7 @@
 
 import { isOutOfRange } from './flags';
 import { latestResults, type LatestResult } from './overview';
+import { recordPrivate } from './private';
 import { isHeading, isWithdrawn, memberIds, seriesKey } from './records';
 import { recordTitle } from './titles';
 import type { MedRecord, PersonIndex } from './types';
@@ -44,15 +45,22 @@ function loincOf(key: string): string | undefined {
   return system && /loinc/i.test(system) ? code : undefined;
 }
 
-/** The panel each test is listed by, by its series key, and its place in it: the newest panel that lists a result of it. */
-const headings = new WeakMap<PersonIndex, Map<string, { heading: MedRecord; order: number }>>();
+type Listed = Map<string, { heading: MedRecord; order: number }>;
+const headings = { own: new WeakMap<PersonIndex, Listed>(), shared: new WeakMap<PersonIndex, Listed>() };
 
-function headingsOf(index: PersonIndex): Map<string, { heading: MedRecord; order: number }> {
-  let out = headings.get(index);
+/**
+ * The panel each test is listed by, by its series key, and its place in it:
+ * the newest panel that lists a result of it. On a screen the household
+ * shares, a panel that is private, or not yet known not to be, names nothing:
+ * its title would show there.
+ */
+function headingsOf(index: PersonIndex, shared: boolean): Listed {
+  const cache = shared ? headings.shared : headings.own;
+  let out = cache.get(index);
   if (!out) {
-    headings.set(index, (out = new Map()));
+    cache.set(index, (out = new Map()));
     const byId = new Map(index.records.map((r) => [r.id, r]));
-    const panels = index.records.filter((r) => isHeading(r) && !isWithdrawn(r)).sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+    const panels = index.records.filter((r) => isHeading(r) && !isWithdrawn(r) && !(shared && recordPrivate(index, r.id))).sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
     for (const heading of panels)
       for (const [order, id] of memberIds(heading.fields).entries()) {
         const x = byId.get(id);
@@ -62,10 +70,10 @@ function headingsOf(index: PersonIndex): Map<string, { heading: MedRecord; order
   return out;
 }
 
-/** The group a test falls in, and its place there. */
-export function panelOf(index: PersonIndex, key: string, category?: string): { id: string; name: string; order: number } {
+/** The group a test falls in, and its place there; on a screen the household shares where `shared`. */
+export function panelOf(index: PersonIndex, key: string, category?: string, shared = false): { id: string; name: string; order: number } {
   const by = panelFor(key, category);
-  const listed = by.id === 'other-lab' ? headingsOf(index).get(key) : undefined;
+  const listed = by.id === 'other-lab' ? headingsOf(index, shared).get(key) : undefined;
   return listed ? { id: `panel:${seriesKey(listed.heading)}`, name: recordTitle(listed.heading), order: listed.order } : by;
 }
 

@@ -20,7 +20,7 @@ const BELOW = new RegExp(`^\\s*(<=|≤|<|less than|under)\\s*${NUM}\\s*(.*)$`, '
 const ABOVE = new RegExp(`^\\s*(>=|≥|>|greater than|over)\\s*${NUM}\\s*(.*)$`, 'i');
 
 /** A unit as its spellings read alike: case, spaces and µ for u aside. */
-export const unitKey = (unit: string | undefined): string => (unit ?? '').trim().toLowerCase().replace(/[µμ]/g, 'u');
+export const unitKey = (unit: string | undefined): string => (unit ?? '').toLowerCase().replace(/\s+/g, '').replace(/[µμ]/g, 'u');
 
 function sameUnit(rangeUnit: string | undefined, unit: string | undefined): boolean {
   const [a, b] = [unitKey(rangeUnit), unitKey(unit)];

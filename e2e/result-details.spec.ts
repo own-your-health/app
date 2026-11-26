@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { expect, test, type Page } from '@playwright/test';
 import { lay } from './lay';
 import { fixture, resultsFiles } from '../test/helpers';
@@ -20,6 +21,20 @@ const METALS = at('Example metals panel', '2024-05-14');
 const OFFICE = at('Office visit', '2024-05-14', 'encounter');
 const PRESSURE_PANEL = at('Blood pressure panel', '2024-06-10');
 const VISIT = 'e_fus5gd54pzaapafx7tso';
+
+/**
+ * The folder with those of Pat's records `keep` keeps, and views.json's MD5 of
+ * their index made to match: a variant of what medrec wrote, built here.
+ */
+function patWith(keep: (r: { date?: string; code?: { code?: string } }) => boolean): Record<string, string> {
+  const files = resultsFiles();
+  const index = JSON.parse(files['Pat Example/index.json']!) as { records: { date?: string; code?: { code?: string } }[] };
+  const text = JSON.stringify({ ...index, records: index.records.filter(keep) });
+  const views = JSON.parse(files['views/views.json']!) as { people: Record<string, { index: string }> };
+  views.people[PAT]!.index = createHash('md5').update(text).digest('hex');
+  return { ...files, 'Pat Example/index.json': text, 'views/views.json': JSON.stringify(views) };
+}
+const pressureUpTo = (day: string) => patWith((r) => r.code?.code !== '85354-9' || (r.date ?? '') < day);
 
 let problems: string[] = [];
 
@@ -50,7 +65,7 @@ test('a reading of two parts shows both, each against its range, and each over t
   // The top number in kPa is left out of its line, and the line says so; the one that gives the same part twice is in neither.
   await expect(over.locator('svg.chart').first()).toHaveAttribute('aria-label', /^Blood pressure, top number in mmHg, 5 results from Apr 1, 2024 to Apr 17, 2024/);
   await expect(over.locator('svg.chart').nth(1)).toHaveAttribute('aria-label', /^Blood pressure, bottom number in mmHg, 7 results from Apr 1, 2024 to Apr 17, 2024/);
-  await expect(over.locator('p', { hasText: 'another unit' })).toHaveText(['1 result in another unit is not in the chart.']);
+  await expect(over.locator('p', { hasText: 'another unit' })).toHaveText(['The chart is in mmHg; 1 result in another unit is not in it.']);
   await expect(over).toContainText('The shaded band is the lab’s range at each result.');
   await expect(over.locator('tr.current')).toContainText('top number: 90–120 mmHg');
   await go(page, `#/p/${PAT}/results`);
@@ -70,7 +85,7 @@ test('a reading of two parts shows both, each against its range, and each over t
 test('a reading whose part is in another unit shows it as given', async ({ page }) => {
   await go(page, `#/p/${PAT}/r/${KPA}`);
   await expect(card(page, 'Its parts').locator('tbody tr')).toHaveText([/^Blood pressure, top number16 kPa$/, /^Blood pressure, bottom number80 mmHg$/]);
-  await expect(card(page, 'Over time').locator('p', { hasText: 'another unit' })).toHaveText(['1 result in another unit is not in the chart.']);
+  await expect(card(page, 'Over time').locator('p', { hasText: 'another unit' })).toHaveText(['The chart is in mmHg; 1 result in another unit is not in it.']);
 });
 
 test('a test sent in two units is drawn in the newest one’s, and says how many it leaves out', async ({ page }) => {
@@ -78,8 +93,24 @@ test('a test sent in two units is drawn in the newest one’s, and says how many
   await main(page).locator('.row', { hasText: 'Example glucose' }).click();
   await expect(main(page).locator('.card-head h1')).toHaveText('Example glucose');
   await expect(main(page).locator('svg.chart')).toHaveAttribute('aria-label', /^Example glucose in mg\/dL, 2 results from Feb 1, 2024 to Jun 1, 2024/);
-  await expect(main(page).locator('p', { hasText: 'another unit' })).toHaveText(['1 result in another unit is not in the chart.']);
+  await expect(main(page).locator('p', { hasText: 'another unit' })).toHaveText(['The chart is in mg/dL; 1 result in another unit is not in it.']);
   await expect(main(page).locator('tbody tr')).toHaveCount(3);
+});
+
+test('a test whose newest result has no parts draws each part its results give', async ({ page }) => {
+  await lay(page, pressureUpTo('2024-04-10'));
+  await go(page, `#/p/${PAT}/results/${encodeURIComponent(fixture<{ records: { id: string; code?: { system?: string; code?: string } }[] }>('results/views/Pat Example/index.json').records.find((r) => r.id === PRESSURE)!.code!.system + '|85354-9')}`);
+  await expect(main(page).locator('.card-head h1')).toHaveText('Blood pressure');
+  await expect(main(page).locator('h3')).toHaveText(['Blood pressure, top number (mmHg)', 'Blood pressure, bottom number (mmHg)']);
+  await expect(main(page).locator('svg.chart')).toHaveCount(2);
+});
+
+test('the doctor’s sheet gives the range of the part that flags a result', async ({ page }) => {
+  // It lists the last two years' results.
+  await page.clock.setFixedTime(new Date('2024-07-01T12:00:00Z'));
+  await lay(page, pressureUpTo('2024-04-02'));
+  await go(page, `#/health/doctor?who=${PAT}`);
+  await expect(main(page).locator('.sheet-table tr', { hasText: '128/76' })).toHaveText([/^Blood pressure128\/76 mmHg \(high\)top number: 90–120 mmHgApr 1, 2024$/]);
 });
 
 test('a test with no two results in one unit has no chart, and says why', async ({ page }) => {

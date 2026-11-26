@@ -343,7 +343,10 @@ Every record's page leads with the plain answer. A result shows:
   with its own range;
 - its history, with the range band, or each part's where the whole is no
   number; a part its source names twice has no line, and a line draws the
-  results in its newest one's unit and says how many in another it leaves out;
+  results in one unit, that of the newest result that shares its unit with
+  another (case, spaces and µ for u aside), and says which unit it is and how
+  many results in another it leaves out, or that there is no chart where no
+  two share one;
 - the other tests from the same draw, and the visit and lab report it came
   with.
 
@@ -634,8 +637,9 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   `test/fixtures/results/medrec/readings.json` is medrec's own fixture of a
   result's shapes (`tests/fixtures/fhir/readings.json` of its 0.9.10), and
   `test/fixtures/results/views/` the folder medrec 0.9.10 writes of it, with a
-  heading and a report as medrec's own test lists them, and a visit's results
-  and headings and a test sent in two units invented beside them, by
+  heading and a report as medrec's own test lists them, and invented beside
+  them a visit's results and headings, a blood pressure sent as a panel of its
+  two numbers, and two tests sent in two units, by
   `node scripts/result-fixtures.mjs` with `MEDREC` set to that release.
   Written by hand are only Drive's answers, the app's own requests, and files
   medrec never writes: malformed ones, and ones of a later format.

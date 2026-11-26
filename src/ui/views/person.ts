@@ -4,7 +4,7 @@
 
 import { errorsOf } from '../../model/inError';
 import { conditionName } from '../../model/codeNames';
-import { isHeading, originNames, partSeries, seriesKey, sortByDateDesc, str, studyTitle } from '../../model/records';
+import { isHeading, originNames, seriesKey, sortByDateDesc, str, studyTitle, testPartSeries } from '../../model/records';
 import { isOutOfRange, resultFlag } from '../../model/flags';
 import { rangeText } from '../../model/result';
 import type { LatestResult } from '../../model/overview';
@@ -149,8 +149,7 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
     const wrong = errorsNote(errorsOf(idx, { record: (r) => isTest(r) && seriesKey(r) === sub }));
     if (!group || !t) return card({}, empty('This test is not in the records.'), wrong);
     const s = t.series;
-    const newest = idx.records.find((r) => r.id === t.latest.id);
-    const lines = linesOf(s, () => (newest ? partSeries(idx, newest) : []));
+    const lines = linesOf(s, () => testPartSeries(idx, s.key));
     const others = group.tests.filter((x) => x !== t);
     return h(
       'div',

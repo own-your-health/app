@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { withoutAbout } from '../src/model/aboutAnother';
 import { isOutOfRange, resultFlag } from '../src/model/flags';
-import { resultGroups } from '../src/model/panels';
-import { isHeading, isQuantity, isWithdrawn, memberIds, partSeries, readingOf, recordDetail, resultParts, resultPoint, resultReading, resultSeries } from '../src/model/records';
+import { panelFor, panelOf, resultGroups } from '../src/model/panels';
+import { itemPrivate } from '../src/model/private';
+import { isHeading, isQuantity, isWithdrawn, memberIds, partSeries, readingOf, recordDetail, resultParts, resultPoint, resultReading, resultSeries, seriesKey, str, testPartSeries } from '../src/model/records';
 import { rangeText, resultContext, verdict } from '../src/model/result';
 import { parseHousehold, parseIndex } from '../src/model/parse';
 import { find } from '../src/model/search';
@@ -66,6 +67,25 @@ describe('a quantity with a comparator', () => {
 const part = (code: string | null, display: string | null, value: Json, more: Record<string, Json> = {}) => ({ code: { ...(code ? { system: 'http://loinc.org', code } : {}), ...(display ? { display } : {}) }, value, ...more });
 const pressure = (n: number, date: string, top: number, low: number, more: Record<string, Json> = {}) =>
   result(n, 'Blood pressure', date, { value: { value: `${top}/${low}`, unit: 'mmHg' }, components: [part('8480-6', 'Systolic', { value: top, unit: 'mmHg' }, more), part('8462-4', 'Diastolic', { value: low, unit: 'mmHg' })], category: 'Vital signs' }, '85354-9');
+
+describe('a test’s parts over time', () => {
+  const reading = (n: number, date: string, parts: ReturnType<typeof part>[]) => result(n, 'Example reading', date, { value: 'Example', components: parts }, '00000-1');
+  const lines = (...records: MedRecord[]) => testPartSeries(idx(...records), seriesKey(records[0]!)).map((s) => [s.name, s.points.map((x) => x.date)]);
+
+  it('are named and placed as the newest result that names each', () => {
+    const older = reading(0, '2026-01-02', [part('00000-2', 'Alpha, as first named', { value: 1, unit: 'U' }), part('00000-3', 'Beta', { value: 2, unit: 'U' })]);
+    const newer = reading(1, '2026-03-04', [part('00000-3', 'Beta', { value: 3, unit: 'U' }), part('00000-2', 'Alpha', { value: 4, unit: 'U' })]);
+    expect(lines(older, newer)).toEqual([
+      ['Beta', ['2026-01-02', '2026-03-04']],
+      ['Alpha', ['2026-01-02', '2026-03-04']],
+    ]);
+  });
+
+  it('leave out a part that each result names twice', () => {
+    const twice = reading(0, '2026-01-02', [part('00000-2', 'Alpha', { value: 1, unit: 'U' }), part('00000-2', 'Alpha', { value: 2, unit: 'U' }), part('00000-3', 'Beta', { value: 3, unit: 'U' })]);
+    expect(lines(twice)).toEqual([['Beta', ['2026-01-02']]]);
+  });
+});
 
 describe('a result of several parts', () => {
   const [first, second] = [pressure(0, '2026-01-02', 118, 76), pressure(1, '2026-03-04', 124, 80)];
@@ -259,6 +279,9 @@ describe('as medrec 0.9.10 writes them', () => {
     const p = resultPoint(one('2024-04-01'));
     expect([resultFlag(p)?.label, verdict(p).text, rangeText(p, 'Blood pressure')]).toEqual(['High', 'Blood pressure, top number: Above the lab’s range of 90–120 mmHg.', 'top number: 90–120 mmHg']);
     expect([rangeText(resultPoint(one('2024-04-02')), 'Blood pressure'), rangeText(resultPoint(one('2024-05-14', 'Potassium')), 'Potassium')]).toEqual(['', '3.5-5.1 mmol/L']);
+    // Where the whole says of itself, no part flags it, and none's range is given.
+    const said = one('2024-04-01');
+    expect(rangeText(resultPoint({ ...said, fields: { ...said.fields, interpretation: 'Normal' } }), 'Blood pressure')).toBe('');
   });
 
   it('reads a bound, a ratio, a range and a time as medrec gives them', () => {
@@ -303,11 +326,32 @@ describe('as medrec 0.9.10 writes them', () => {
     expect(resultSeries(pat).filter((x) => x.points.some((p) => isHeading(pat.records.find((r) => r.id === p.id)!)))).toEqual([]);
   });
 
+  it('gives a test’s parts over time from each of its results, also where its newest has none', () => {
+    const lines = (index: PersonIndex) => testPartSeries(index, seriesKey(one('2024-04-01'))).map((s) => `${s.name}: ${s.points.length}`);
+    const upTo = (day: string) => ({ ...pat, records: pat.records.filter((r) => seriesKey(r) !== seriesKey(one('2024-04-01')) || (r.date ?? '') < day) });
+    expect(lines(upTo('2024-04-10'))).toEqual(lines(upTo('2024-04-09')));
+    expect(lines(upTo('2024-04-10'))).toEqual(['Blood pressure, top number: 5', 'Blood pressure, bottom number: 5', 'Mean blood pressure: 1']);
+    expect(partSeries(upTo('2024-04-10'), one('2024-04-09'))).toEqual([]);
+  });
+
   it('is no test where it shares a code with one, and has none of its history', () => {
     const panel = one('2024-06-10', 'Blood pressure panel');
     const household = parseHousehold(fixture('results/views/household.json'));
     expect([isHeading(panel), memberIds(panel.fields).length, resultContext(pat, household, pat.person, '2026-11-22', panel).series]).toEqual([true, 2, undefined]);
     expect(resultSeries(pat).find((s) => s.name === 'Blood pressure' && s.points.length > 1)!.points.map((p) => p.id)).not.toContain(panel.id);
+  });
+
+  it('names no group by a panel on a shared screen where it is private, or not yet known not to be', () => {
+    const [heading, antibody] = [one('2024-04-21'), one('2024-04-10')];
+    const known = (ids: string[]) => ({ kind: 'known', records: new Map(ids.map((id) => [id, 'mental_health'])), documents: new Map(), events: new Map(), studies: new Map(), unreported: new Set(), ties: true }) as PersonIndex['privacy'];
+    const panelIn = (index: PersonIndex, shared: boolean) =>
+      find([{ person: pat.person, index, text: null, ...(shared ? { leave: (kind: string, id: string) => !!itemPrivate(index, kind, id) } : {}) }], 'antibody').hits.map((h) => h.test?.panel);
+    const [marked, open] = [{ ...pat, privacy: known([heading.id]) }, { ...pat, privacy: known([]) }];
+    const plain = panelFor(seriesKey(antibody), str(antibody.fields.category)).name;
+    expect([panelIn(marked, false), panelIn(open, true), panelIn(marked, true)]).toEqual([['Example heading'], ['Example heading'], [plain]]);
+    // Not yet known: the shared search shows none of the person's hits, and no panel would name one.
+    expect([panelIn(pat, true), panelOf(pat, seriesKey(antibody), str(antibody.fields.category), true).name, panelOf(pat, seriesKey(antibody), str(antibody.fields.category)).name]).toEqual([[], plain, 'Example heading']);
+    expect(plain).not.toBe('Example heading');
   });
 
   it('names a test by the heading that lists it, in the list, on its page and in search', () => {

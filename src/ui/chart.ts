@@ -89,13 +89,14 @@ function fmt(n: number): string {
  * spells it, and how many dated numbers it leaves out for being in another.
  * Units are compared as a range's is (unitKey).
  */
-export function drawable(points: ResultPoint[], unit: string | undefined): { points: Dated[]; unit: string | undefined; other: number } {
+export function drawable(points: ResultPoint[], unit: string | undefined): { points: Dated[]; unit: string | undefined; other: number; newestLeft: boolean } {
   const dated = points.filter((p): p is Dated => p.value !== undefined && !!p.date && !Number.isNaN(Date.parse(p.date.slice(0, 10))));
   const key = (p: ResultPoint) => unitKey(p.unit ?? unit);
   const many = (p: ResultPoint) => dated.filter((q) => key(q) === key(p)).length > 1;
   const pick = [...dated].reverse().find(many) ?? dated[dated.length - 1];
   const same = pick ? dated.filter((p) => key(p) === key(pick)) : [];
-  return { points: same, unit: same[same.length - 1]?.unit ?? unit, other: dated.length - same.length };
+  const newest = dated[dated.length - 1];
+  return { points: same, unit: same[same.length - 1]?.unit ?? unit, other: dated.length - same.length, newestLeft: !!newest && !same.includes(newest) };
 }
 
 /**
@@ -163,10 +164,13 @@ export function chartBands(points: ResultPoint[], unit: string | undefined): Rec
 
 const dotClass = (p: ResultPoint) => (isOutOfRange(resultFlag(p)) ? 'chart-dot chart-dot-flag' : 'chart-dot');
 
-/** What a chart says of the results it leaves out for being in another unit, or where there is none for that. */
-export function otherUnit(n: number, charted: boolean): HTMLElement | null {
-  if (!n) return null;
-  return h('p', { class: 'small muted' }, charted ? `${count(n, 'result')} in another unit ${n === 1 ? 'is' : 'are'} not in the chart.` : 'Its results are in more than one unit, so there is no chart.');
+/** What a line says of the results it leaves out for being in another unit, and of the unit it is in; or that there is no chart for that. */
+export function otherUnitText(x: { other: number; unit?: string; newestLeft: boolean; charted: boolean }): string | undefined {
+  if (!x.other) return undefined;
+  if (!x.charted) return 'Its results are in more than one unit, so there is no chart.';
+  const which = x.newestLeft ? (x.other === 1 ? ', the newest,' : ', the newest among them,') : '';
+  const left = `${count(x.other, 'result')} in another unit${which} ${x.other === 1 ? 'is' : 'are'} not in ${x.unit ? 'it' : 'the chart'}.`;
+  return x.unit ? `The chart is in ${unitText(x.unit) ?? x.unit}; ${left}` : left;
 }
 
 /** A line over time: a test's, or a part's, named, with what it leaves out. */
@@ -175,6 +179,7 @@ export interface Line {
   unit?: string;
   points: ResultPoint[];
   other: number;
+  newestLeft: boolean;
   chart: HTMLElement | null;
 }
 
@@ -192,7 +197,10 @@ export function linesOf(whole: ResultSeries | undefined, parts: () => ResultSeri
 /** The lines, each under its name and with what it leaves out, and what the shaded band is where one has it. */
 export function linesView(lines: Line[], band: string): (HTMLElement | null)[] {
   return [
-    ...lines.flatMap((x) => [x.name ? h('h3', { class: 'group-head' }, x.unit ? `${x.name} (${unitText(x.unit)})` : x.name) : null, x.chart ? h('div', { class: 'chart-box' }, x.chart) : null, otherUnit(x.other, !!x.chart)]),
+    ...lines.flatMap((x) => {
+      const note = otherUnitText({ ...x, charted: !!x.chart });
+      return [x.name ? h('h3', { class: 'group-head' }, x.unit ? `${x.name} (${unitText(x.unit)})` : x.name) : null, x.chart ? h('div', { class: 'chart-box' }, x.chart) : null, note ? h('p', { class: 'small muted' }, note) : null];
+    }),
     lines.some((x) => x.chart && x.points.some((p) => rangeFor(p.range, p.unit ?? x.unit))) ? h('p', { class: 'small muted' }, band) : null,
   ];
 }

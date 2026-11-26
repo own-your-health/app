@@ -30,7 +30,8 @@ export function rangeWords(r: Range, unit: string | undefined): string {
 /** What a row says of a result's range: its own, or that of the part out of its range that flags it, by name. */
 export function rangeText(p: ResultPoint, test: string): string {
   if (p.range) return unitText(p.range) ?? p.range;
-  const part = outsidePart(p.parts);
+  // A part flags the row only where the whole says nothing of itself.
+  const part = resultFlag({ ...p, parts: undefined }) ? undefined : outsidePart(p.parts);
   if (!part?.point.range) return '';
   const range = rangeFor(part.point.range, part.point.unit);
   const name = part.name.startsWith(`${test}, `) ? part.name.slice(test.length + 2) : part.name;

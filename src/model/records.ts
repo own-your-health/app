@@ -260,15 +260,24 @@ export function resultPoint(r: MedRecord): ResultPoint {
   return { ...pointOf(r, r.fields, readingOf(r)), ...(parts.length ? { parts } : {}) };
 }
 
+const resultsOf = (index: PersonIndex, key: string): MedRecord[] => index.records.filter((x) => x.kind === 'result' && seriesKey(x) === key);
+
+/** One part of these results over time, oldest first. */
+const partPoints = (all: MedRecord[], key: string): ResultPoint[] =>
+  all.flatMap((x) => oncePerKey(resultParts(x)).filter((p) => p.key === key).map((p) => p.point)).sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+
 /** Each part of a result over time: the same part of each result of its test. */
 export function partSeries(index: PersonIndex, r: MedRecord): ResultSeries[] {
-  const all = index.records.filter((x) => x.kind === 'result' && seriesKey(x) === seriesKey(r));
-  return oncePerKey(resultParts(r)).map((part) => {
-    const points = all
-      .flatMap((x) => oncePerKey(resultParts(x)).filter((p) => p.key === part.key).map((p) => p.point))
-      .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
-    return seriesOf(part.key, part.name, points);
-  });
+  const all = resultsOf(index, seriesKey(r));
+  return oncePerKey(resultParts(r)).map((part) => seriesOf(part.key, part.name, partPoints(all, part.key)));
+}
+
+/** Each part any result of a test gives, over time: named and placed as the newest result that names it. */
+export function testPartSeries(index: PersonIndex, key: string): ResultSeries[] {
+  const all = resultsOf(index, key);
+  const named = new Map<string, string>();
+  for (const x of [...all].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))) for (const p of resultParts(x)) if (!named.has(p.key)) named.set(p.key, p.name);
+  return [...named].map(([part, name]) => seriesOf(part, name, partPoints(all, part))).filter((s) => s.points.length);
 }
 
 export function numericValue(v: Json | undefined): number | undefined {

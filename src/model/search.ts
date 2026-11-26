@@ -262,10 +262,10 @@ function lineFields(r: MedRecord): [string, string, true][] {
   });
 }
 
-function recordExtra(index: PersonIndex, r: MedRecord): Candidate['extra'] {
+function recordExtra(index: PersonIndex, r: MedRecord, shared: boolean): Candidate['extra'] {
   if (r.kind === 'result') {
     const series = seriesKey(r);
-    const panel = panelOf(index, series, str(r.fields.category));
+    const panel = panelOf(index, series, str(r.fields.category), shared);
     const v = readingOf(r).text;
     // A heading is no result of the test it shares a code with: each is its own.
     const key = isHeading(r) ? `heading|${r.id}` : series;
@@ -280,8 +280,8 @@ function recordExtra(index: PersonIndex, r: MedRecord): Candidate['extra'] {
   return {};
 }
 
-/** Each index's candidates, folded once: typing searches them again without folding. */
-const prepared = new WeakMap<PersonIndex, Candidate[]>();
+/** Each index's candidates, folded once: typing searches them again without folding. A shared screen's name no private panel. */
+const prepared = { own: new WeakMap<PersonIndex, Candidate[]>(), shared: new WeakMap<PersonIndex, Candidate[]>() };
 
 /** Folded document texts, kept per loaded text.json so typing does not fold them again. */
 const foldedTexts = new WeakMap<PersonText, Map<string, string>>();
@@ -300,8 +300,9 @@ function foldedBody(text: PersonText | null, id: string): string | undefined {
   return f;
 }
 
-function candidates(index: PersonIndex): Candidate[] {
-  const cached = prepared.get(index);
+function candidates(index: PersonIndex, shared: boolean): Candidate[] {
+  const cache = shared ? prepared.shared : prepared.own;
+  const cached = cache.get(index);
   if (cached) return cached;
   const out: Candidate[] = [];
   for (const r of index.records) {
@@ -310,7 +311,7 @@ function candidates(index: PersonIndex): Candidate[] {
     const fields = r.kind === 'claim' ? [...fieldsOf(r.fields, CLAIM_PARTS), ...claimDiagnoses(r).map((d): [string, string] => ['Diagnosis', diagnosisText(d)]), ...lineFields(r)] : fieldsOf(r.fields);
     // A visit can be titled by its reason, and is still found by the source's own name for it.
     if (r.kind === 'encounter') fields.push(['Name at the source', r.display ?? '']);
-    out.push(candidate(r.id, r.kind, title, r.date, [title, r.code?.display ?? '', r.code?.code ?? '', KIND_LABELS[r.kind] ?? r.kind, statusText(r.status) ?? ''], fields, recordConcept(r), recordExtra(index, r)));
+    out.push(candidate(r.id, r.kind, title, r.date, [title, r.code?.display ?? '', r.code?.code ?? '', KIND_LABELS[r.kind] ?? r.kind, statusText(r.status) ?? ''], fields, recordConcept(r), recordExtra(index, r, shared)));
   }
   for (const d of index.documents) {
     const fields: [string, string][] = [
@@ -327,7 +328,7 @@ function candidates(index: PersonIndex): Candidate[] {
     ];
     out.push(candidate(st.id, 'study', studyTitle(st), st.date, [studyTitle(st), st.body_part ?? '', st.modalities.join(' '), KIND_LABELS.study ?? 'Imaging'], fields));
   }
-  prepared.set(index, out);
+  cache.set(index, out);
   return out;
 }
 
@@ -361,7 +362,7 @@ export function searchAll(people: Searchable[], query: string): Hit[] {
   if (ts.length === 0) return [];
   const hits: Hit[] = [];
   for (const p of people) {
-    for (const c of candidates(p.index)) {
+    for (const c of candidates(p.index, !!p.leave)) {
       const hit = match(c, ts, p.text, p.person);
       if (hit && !p.leave?.(c.kind, c.id)) hits.push(hit);
     }
@@ -437,7 +438,7 @@ export function find(people: Searchable[], query: string, opts: { words?: boolea
   const { concept, rest } = named;
   const hits: Hit[] = [];
   for (const p of people) {
-    for (const c of candidates(p.index)) {
+    for (const c of candidates(p.index, !!p.leave)) {
       if (c.concept !== concept.id) continue;
       const hit = rest.length ? match(c, rest, p.text, p.person) : { person: p.person, id: c.id, kind: c.kind, title: c.title, date: c.date, where: 'title' as const, ...c.extra };
       if (hit && !p.leave?.(c.kind, c.id)) hits.push(hit);
