@@ -79,6 +79,13 @@ const vitaminD: LabTest = {
   about: 'This measures 25-hydroxy vitamin D, the form that shows how much vitamin D the body has. A low level can weaken the bones; a very high level, usually from too many supplements, can cause serious health problems.',
   page: `${MP}vitamin-d-test/`,
 };
+/** A reading of both numbers, under either of its two codes. */
+const pressure: LabTest = {
+  name: 'Blood pressure',
+  about: 'The top number is the pressure in the arteries when the heart beats, and the bottom number is the pressure when it rests between beats.',
+  page: `${MP}measuring-blood-pressure/`,
+};
+
 const oxygen: LabTest = {
   name: 'Oxygen level',
   about: 'Oxygen saturation shows how much oxygen the red blood cells are carrying. A low level can be a sign of a lung or heart problem.',
@@ -325,6 +332,8 @@ export const LAB_TESTS: Record<string, LabTest> = {
     page: 'https://medlineplus.gov/ency/article/003583.htm',
   },
   // Vital signs
+  '85354-9': pressure,
+  '55284-4': pressure,
   '8480-6': {
     name: 'Blood pressure, top number',
     about: 'Systolic pressure is the pressure in the arteries when the heart beats. Blood pressure that is high on several different days can be a sign of high blood pressure, which raises the risk of heart attack and stroke.',
