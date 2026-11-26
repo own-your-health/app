@@ -14,8 +14,8 @@ import { isOutOfRange, resultFlag } from '../model/flags';
 import { isInError } from '../model/inError';
 import { unitText } from '../model/result';
 import { recordTitle, visitTitle } from '../model/titles';
-import { areaText, knownArea, paperPrivate } from '../model/private';
-import type { MedDocument, PersonIndex } from '../model/types';
+import { areaText, knownArea, paperPrivate, recordPrivate } from '../model/private';
+import type { MedDocument, MedRecord, PersonIndex } from '../model/types';
 import { paperView } from '../paper/view';
 import { card, chip, dotted, driveLink, empty, flagChip, link, row, type Ctx } from '../ui/components';
 import { h, icon, type Child } from '../ui/dom';
@@ -173,6 +173,16 @@ function settledLine(idx: PersonIndex, e: CareEvent, m: EventMoney): HTMLElement
   );
 }
 
+/**
+ * On a visit's own page, whether shared screens leave out a part of one of its
+ * claims while they show the visit: the claim is private, or that part of it.
+ * Of a private visit, whose page says it stays off, nothing is marked.
+ */
+function offOpen(idx: PersonIndex, e: CareEvent): (c: { record: MedRecord }, list: 'lines' | 'diagnoses', at: number | undefined) => boolean {
+  const open = !eventPrivate(e, idx);
+  return (c, list, at) => open && (!!recordPrivate(idx, c.record.id) || leftOff(idx, c.record, list, at));
+}
+
 /** What happened: the portal's visits when there are any, else its doses, medicines and procedures with what the claims billed, else the papers'. */
 function happenedCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
   if (e.visits.length) {
@@ -197,11 +207,12 @@ function happenedCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
   // A fill or a vaccine the portal knows with no visit (medrec makes one of each, and of a day's doses).
   const recorded = e.recorded.filter((r) => r.kind === 'procedure' || r.kind === 'immunization' || r.kind === 'medication');
   const summaries = e.papers.filter((p) => p.doc.doc_type === 'discharge_summary' || p.doc.doc_type === 'visit_summary');
-  const services = offInEach(e.claims.flatMap((c) => claimLines(c.record).filter((l) => l.counted && plainWords(l.label)).map((l): [string, boolean] => [l.label, leftOff(idx, c.record, 'lines', l.at)])));
+  const off = offOpen(idx, e);
+  const services = offInEach(e.claims.flatMap((c) => claimLines(c.record).filter((l) => l.counted && plainWords(l.label)).map((l): [string, boolean] => [l.label, off(c, 'lines', l.at)])));
   const diagnoses = offInEach(
     e.claims.flatMap((c) => {
       const placed = claimDiagnoses(c.record);
-      return diagnosisNames(idx, c.record).map((d, i): [string, boolean] => [d.name, leftOff(idx, c.record, 'diagnoses', placed[i]?.at)]);
+      return diagnosisNames(idx, c.record).map((d, i): [string, boolean] => [d.name, off(c, 'diagnoses', placed[i]?.at)]);
     }),
   );
   const from = recorded.length
@@ -280,16 +291,18 @@ function costCard(e: CareEvent, m: EventMoney): HTMLElement | null {
 }
 
 /** Lines a claim lists and its totals leave out, in plain words: none of it is owed. */
-function changedCard(e: CareEvent): HTMLElement | null {
+function changedCard(idx: PersonIndex, e: CareEvent): HTMLElement | null {
   const left = e.claims.flatMap((c) => claimLines(c.record).filter((l) => !l.counted).map((l) => ({ c, l })));
   if (!left.length) return null;
   const insurer = str(e.claims[0]?.record.fields.insurer) ?? 'The plan';
+  const off = offOpen(idx, e);
   return card(
     { title: `What ${insurer} changed` },
     left.map(({ c, l }) =>
       h(
         'div',
         { class: 'event-changed' },
+        off(c, 'lines', l.at) ? h('p', { class: 'part-mark' }, notShared()) : null,
         h('p', null, `${c.provider ?? 'The provider'} billed “${l.label}”${l.amounts.billed ? ` at ${formatMoney(l.amounts.billed)}` : ''}. ${insurer} left that line out of the claim’s totals, so none of it is owed: the amounts on this page are the ones it counted.`),
         l.payerNotes.length ? h('p', { class: 'small muted' }, `${insurer}’s ${l.payerNotes.length === 1 ? 'note' : 'notes'}: ${l.payerNotes.join(' · ')}`) : null,
       ),
@@ -465,7 +478,7 @@ export function eventView(ctx: Ctx, personId: string, id: string): HTMLElement {
     happenedCard(ctx, idx, e),
     resultsCard(idx, e),
     costCard(e, m),
-    changedCard(e),
+    changedCard(idx, e),
     chargesCard(ctx, idx, e, m),
     billsCard(ctx, idx, e, m),
     papersCard(ctx, idx, e),

@@ -1515,10 +1515,13 @@ body:has(.bottom-nav) {
   margin: 0;
 }
 
+/* Underlined too, so where it starts shows without its tint, in forced colours as well. */
 mark.not-shared {
   background: var(--attention-tint);
   color: inherit;
   border-radius: 3px;
+  text-decoration: underline dashed 2px var(--attention-text);
+  text-underline-offset: 3px;
 }
 
 pre.text .chip-muted {

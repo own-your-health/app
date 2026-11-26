@@ -14,7 +14,7 @@ import { differChip } from '../ui/inError';
 import type { Route } from '../ui/router';
 import { paidControl } from './markPaid';
 import { daysBetween } from './needs';
-import { eventRoute, eventWhen } from './eventView';
+import { eventRoute, eventWhen, notShared } from './eventView';
 import { callsSummary, mayBePaid, NO_CLAIM_EXPECTED, overAsked, overdueLabel, PAID_ELSEWHERE, paymentText, partText, toPay, unreadText, worthACall, type OpenBill, type PaidBill } from './money';
 import { billErrors, billNotes, forBill, gather, head, listLine, money, num, privateChip, visitText, type Mine, type MoneyRoute } from './moneyParts';
 import { eventsPage, overviewPage } from './moneyYear';
@@ -302,6 +302,7 @@ function callsPage(ctx: Ctx, route: MoneyRoute, who: string | undefined): HTMLEl
             title: `${x.provider ?? 'A provider'}, ${eventWhen(x.event.event)}`,
             meta: [named ? called(person) : null, `${x.insurer} left “${x.line.label}”${x.line.amounts.billed ? ` (${formatMoney(x.line.amounts.billed)})` : ''} out of the claim’s totals${x.share !== undefined ? `; you owe ${money(x.share)} for it all` : ''}.`].filter(Boolean).join(' · '),
             aside: privateChip(x.private),
+            extra: x.notShared ? h('p', { class: 'part-mark' }, notShared()) : null,
           }),
         ),
       )

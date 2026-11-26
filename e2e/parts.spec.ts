@@ -140,6 +140,67 @@ test('its person’s own pages mark each part shared screens leave out, in the w
   await expect(costLines.filter({ hasText: SAID })).toHaveCount(3);
 });
 
+/** The sample with private parts, and Sam's claim of a visit of claims alone as the change has it. */
+const samsClaim = (change: (files: { claim: { fields: { items?: unknown } }; list: { records: Record<string, unknown>; events: Record<string, unknown>; parts?: unknown } }) => void) =>
+  rewritten(linesPrivate(SAID), ({ name, index, list }) => {
+    if (name === 'Sam Example') change({ claim: index.records.find((r) => r.id === SAM_CLAIM)!, list: list as never });
+  });
+const MARK = { area: 'mental_health', from: 'records' };
+
+test('a private line the plan left out is marked on each of its person’s pages that show it, and on no shared one', async ({ page }) => {
+  await lay(page, samsClaim(({ claim }) => ((claim.fields.items as { counted?: boolean }[])[0]!.counted = false)));
+  const marks = (where: ReturnType<typeof main>) => where.locator('.chip', { hasText: NOT_SHARED });
+  await go(page, `#/p/${SAM}/e/${eventId(SAM, '2026-10-12')}`);
+  const changed = main(page).locator('.event-changed');
+  await expect(changed).toHaveCount(1);
+  await expect(changed).toContainText(SAID);
+  await expect(marks(changed)).toHaveCount(1);
+  await go(page, `#/p/${SAM}/r/${SAM_CLAIM}`);
+  const line = main(page).locator('.row', { hasText: 'Left out' });
+  await expect(line).toContainText(SAID);
+  await expect(marks(line)).toHaveCount(1);
+  await go(page, `#/money/calls?who=${SAM}`);
+  const explained = main(page).locator('.card', { has: page.locator('.card-head h2', { hasText: 'Explained, nothing to do' }) }).locator('.row', { hasText: SAID });
+  await expect(explained).toHaveCount(1);
+  await expect(marks(explained)).toHaveCount(1);
+  await go(page, '#/money/calls');
+  await expect(main(page)).toContainText('Worth a call');
+  await expect(main(page)).not.toContainText(SAID);
+  await expect(marks(main(page))).toHaveCount(0);
+});
+
+test('on an open visit, what only a private claim of it names is marked too', async ({ page }) => {
+  // An item that is private has no part.
+  await lay(page, samsClaim(({ list }) => {
+    list.records[SAM_CLAIM] = MARK;
+    list.parts = Object.fromEntries(Object.entries(list.parts as object).filter(([id]) => id !== SAM_CLAIM));
+  }));
+  await go(page, `#/p/${SAM}/e/${eventId(SAM, '2026-10-12')}`);
+  const billed = main(page).locator('p', { hasText: 'Billed for:' });
+  await expect(billed.locator('.marked-name')).toHaveCount(2);
+  await expect(billed.locator('.chip', { hasText: NOT_SHARED })).toHaveCount(2);
+  await expect(main(page).locator('p', { hasText: /^Diagnos[ie]s?:/ }).locator('.chip', { hasText: NOT_SHARED })).toHaveCount(1);
+});
+
+test('of a private visit, which says it stays off, no part is marked', async ({ page }) => {
+  await lay(
+    page,
+    samsClaim(({ claim, list }) => {
+      list.events[eventId(SAM, '2026-10-12')] = MARK;
+      (claim.fields.items as { counted?: boolean }[])[0]!.counted = false;
+    }),
+  );
+  await go(page, `#/p/${SAM}/e/${eventId(SAM, '2026-10-12')}`);
+  await expect(main(page)).toContainText('This is discretion, not security');
+  await expect(main(page).locator('.event-changed')).toContainText(SAID);
+  await expect(main(page).locator(':not(.part-note) > .chip', { hasText: NOT_SHARED })).toHaveCount(0);
+  // Its line the plan left out is said to be private on Worth a call, and not marked besides.
+  await go(page, `#/money/calls?who=${SAM}`);
+  const explained = main(page).locator('.card', { has: page.locator('.card-head h2', { hasText: 'Explained, nothing to do' }) }).locator('.row');
+  await expect(explained.locator('.chip', { hasText: 'Private' })).toHaveCount(1);
+  await expect(explained.locator('.chip', { hasText: NOT_SHARED })).toHaveCount(0);
+});
+
 test('a diagnosis is marked in its claim’s details too, by its published title and in the claim’s words', async ({ page }) => {
   // The private diagnosis in one word in capitals, the claim's own, for a code medrec names otherwise.
   const titled = rewritten(linesPrivate(SAID), ({ name, index }) => {
