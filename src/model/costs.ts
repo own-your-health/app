@@ -15,6 +15,7 @@
 import { AMOUNTS, type Category, CATEGORY_LABELS, categoryOf, type Cents, claimCategory, claimCents, claimLines, claimProvider, claimTitle, lineCents, REVENUE_SYSTEM } from './claims';
 import { providerKey, sameProvider } from './providers';
 import { asMoney, isWithdrawn, str, toCents, type AmountName } from './records';
+import { leftOff } from './parts';
 import type { Json, MedRecord, PersonIndex } from './types';
 
 export type Amount = AmountName;
@@ -56,6 +57,8 @@ export interface CostLine {
    * off): what it carried. Its `cents` are empty, so it counts nothing.
    */
   uncounted?: Cents;
+  /** A line of a claim's own that shared screens leave out (private.json `parts`), on its person's own. */
+  notShared?: true;
 }
 
 const UNKNOWN_PROVIDER = 'Provider not named';
@@ -177,7 +180,7 @@ export function costLines(person: string, index: PersonIndex, opts: CostOptions 
     for (const l of lines) {
       const cents = lineCents(l.amounts);
       const date = l.date ?? service;
-      const line = { ...base, date, category: l.category, service: l.label, code: l.code, system: l.system, revenue: l.revenue?.code, planYear: planYearOf(anniversary, date), planBasis, split: true };
+      const line = { ...base, date, category: l.category, service: l.label, code: l.code, system: l.system, revenue: l.revenue?.code, planYear: planYearOf(anniversary, date), planBasis, split: true, ...(leftOff(index, r, 'lines', l.at) ? { notShared: true as const } : {}) };
       if (!l.counted) {
         out.push({ ...line, cents: {}, uncounted: cents });
         continue;

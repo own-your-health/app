@@ -114,5 +114,8 @@ export function diagnosisName(index: PersonIndex, claim: MedRecord, d: Diagnosis
 /** A claim's diagnoses in the payer's order. */
 export const diagnosisNames = (index: PersonIndex, claim: MedRecord): Named[] => claimDiagnoses(claim).map((d) => diagnosisName(index, claim, d));
 
-/** Names in one sentence. Words for a diagnosis may hold commas. */
-export const nameList = (all: string[]): string => all.join(all.some((x) => x.includes(',')) ? '; ' : ', ');
+/** What goes between names in one sentence. Words for a diagnosis may hold commas. */
+export const nameSep = (all: string[]): string => (all.some((x) => x.includes(',')) ? '; ' : ', ');
+
+/** Names in one sentence. */
+export const nameList = (all: string[]): string => all.join(nameSep(all));

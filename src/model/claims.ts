@@ -94,6 +94,8 @@ export interface LineCode {
 }
 
 export interface ClaimLine {
+  /** Its place in the claim's `items`, from 0. */
+  at: number;
   sequence?: number;
   /** What was done, as the payer wrote it, or its code when it gave no words. */
   label: string;
@@ -326,7 +328,7 @@ function readLines(r: MedRecord): ClaimLine[] {
   if (!Array.isArray(items)) return [];
   const type = str(r.fields.type) ?? r.code?.code;
   const out: ClaimLine[] = [];
-  for (const it of items) {
+  for (const [at, it] of items.entries()) {
     if (!isObject(it)) continue;
     const service = isObject(it.service) ? it.service : undefined;
     const named = str(service?.display) ?? str(service?.text) ?? str(service?.code);
@@ -341,6 +343,7 @@ function readLines(r: MedRecord): ClaimLine[] {
     const amounts = { ...adjudicated(it.adjudication), ...namedAmounts(it.amounts) };
     amounts.billed ??= asMoney(it.net);
     out.push({
+      at,
       sequence: typeof it.sequence === 'number' ? it.sequence : undefined,
       label,
       code,
@@ -366,7 +369,13 @@ export function countedLines(r: MedRecord): readonly Readonly<ClaimLine>[] {
 
 /** The payer's notes on the claim that no line points at, as medrec gives them (`payer_notes`). */
 export function claimNotes(r: MedRecord): string[] {
-  return texts(r.fields.payer_notes);
+  return placedNotes(r).map((n) => n.text);
+}
+
+/** The same, each with its place in `payer_notes`, from 0. */
+export function placedNotes(r: MedRecord): { text: string; at: number }[] {
+  const list = r.fields.payer_notes;
+  return Array.isArray(list) ? list.flatMap((x, at) => (typeof x === 'string' && x.trim() !== '' ? [{ text: x, at }] : [])) : [];
 }
 
 /** Who billed a claim, as the screens name them (`tidyName`). */
@@ -439,6 +448,8 @@ export interface Diagnosis {
   code?: string;
   system?: string;
   display?: string;
+  /** Its place in the claim's `diagnoses`, from 0. */
+  at?: number;
 }
 
 /** The diagnoses a claim names, in the payer's order. */
@@ -449,7 +460,7 @@ export function claimDiagnoses(r: MedRecord): Diagnosis[] {
   list.forEach((x, i) => {
     if (!isObject(x)) return;
     const c = isObject(x.code) ? x.code : undefined;
-    const d: Diagnosis = { code: str(c?.code), system: str(c?.system), display: str(c?.display) };
+    const d: Diagnosis = { code: str(c?.code), system: str(c?.system), display: str(c?.display), at: i };
     if (d.code || d.display) out.push({ sequence: typeof x.sequence === 'number' ? x.sequence : i + 1, d });
   });
   return out.sort((a, b) => a.sequence - b.sequence).map((x) => x.d);

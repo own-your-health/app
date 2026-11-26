@@ -13,6 +13,7 @@ import type { BillState } from '../model/bills';
 import { sameProvider } from '../model/providers';
 import { claimLines, type ClaimLine } from '../model/claims';
 import { inVisit, paperPrivate, recordPrivate, recordsPrivate, takenOut } from '../model/private';
+import { leftOff } from '../model/parts';
 import { formatMoney, fromCents, str, toCents } from '../model/records';
 import { marksOn, marksTotal } from '../model/requests';
 import type { MedDocument, MedRecord, PendingMark, PersonIndex } from '../model/types';
@@ -349,6 +350,8 @@ export interface Explained {
   /** What the claims say you owe that provider for the visit, in all. */
   share?: number;
   private?: string;
+  /** A line of a claim's own that shared screens leave out (private.json `parts`), on its person's own. */
+  notShared?: true;
 }
 
 /** How far back Worth a call explains what the plan changed. */
@@ -374,6 +377,7 @@ export function explainedLines(idx: PersonIndex, events: PersonEvent[], today: s
               line,
               ...(share !== undefined ? { share } : {}),
               ...(area ? { private: area } : {}),
+              ...(!area && leftOff(idx, c.record, 'lines', line.at) ? { notShared: true as const } : {}),
             };
           }),
       ),

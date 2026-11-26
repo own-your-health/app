@@ -5,16 +5,17 @@
 // bills and payments, papers, how the event was put together, and details.
 
 import { billList, standsFor, type Bill } from '../model/billing';
-import { claimLines } from '../model/claims';
-import { conditionName, diagnosisNames, inDetails, nameList } from '../model/codeNames';
+import { claimDiagnoses, claimLines } from '../model/claims';
+import { conditionName, diagnosisNames, inDetails, nameList, nameSep } from '../model/codeNames';
+import { leftOff, offInEach } from '../model/parts';
 import { sameProvider } from '../model/providers';
 import { AMOUNT_LABELS, docTypeLabel, documentTitle, formatMoney, fromCents, KIND_LABELS, portalCounts, resultPoint, resultReading, str, toCents } from '../model/records';
 import { isOutOfRange, resultFlag } from '../model/flags';
 import { isInError } from '../model/inError';
 import { unitText } from '../model/result';
 import { recordTitle, visitTitle } from '../model/titles';
-import { areaText, knownArea, paperPrivate } from '../model/private';
-import type { MedDocument, PersonIndex } from '../model/types';
+import { areaText, knownArea, paperPrivate, recordPrivate } from '../model/private';
+import type { MedDocument, MedRecord, PersonIndex } from '../model/types';
 import { paperView } from '../paper/view';
 import { card, chip, dotted, driveLink, empty, flagChip, link, row, type Ctx } from '../ui/components';
 import { h, icon, type Child } from '../ui/dom';
@@ -96,10 +97,24 @@ function headCard(ctx: Ctx, idx: PersonIndex, e: CareEvent, m: EventMoney): HTML
   );
 }
 
-/** An open item with a private part says on its own page what shared screens leave out of it. */
+const NOT_SHARED = 'Not on shared screens';
+
+/** Beside each part of an open item that shared screens leave out, on its person's own pages: the words partNote begins with. */
+export const notShared = (): HTMLElement => chip(NOT_SHARED, 'muted');
+
+/** An open item with a private part says on its own page what shared screens leave out of it, by medrec's count ("1 service not shown"). */
 export function partNote(says: string | undefined): HTMLElement | null {
-  return says ? h('p', { class: 'small muted' }, `${says} on Home and everyone’s Calendar, Money, Papers and search results.`) : null;
+  if (!says) return null;
+  const what = says.endsWith(' not shown') ? says.slice(0, -' not shown'.length) : says;
+  return h('p', { class: 'small muted part-note' }, notShared(), ` ${what}. Shared screens are Home and everyone’s Calendar, Money, Papers and search results.`);
 }
+
+/** Names in one sentence, each that shared screens leave out marked so. */
+export function markedList(items: { text: string; off: boolean }[], sep = nameSep(items.map((x) => x.text))): Child {
+  if (!items.some((x) => x.off)) return items.map((x) => x.text).join(sep);
+  return items.map((x, i) => h('span', { class: 'marked-name' }, x.text, x.off ? [' ', notShared()] : null, i < items.length - 1 ? sep : null));
+}
+
 
 /** A private event says so on its page: where it stays off, and that this is discretion, not security. */
 function privateNote(e: CareEvent, idx: PersonIndex, off = 'Kept off Home and everyone’s Calendar, Money, Papers and search results.'): HTMLElement | null {
@@ -158,6 +173,16 @@ function settledLine(idx: PersonIndex, e: CareEvent, m: EventMoney): HTMLElement
   );
 }
 
+/**
+ * On a visit's own page, whether shared screens leave out a part of one of its
+ * claims while they show the visit: the claim is private, or that part of it.
+ * Of a private visit, whose page says it stays off, nothing is marked.
+ */
+function offOpen(idx: PersonIndex, e: CareEvent): (c: { record: MedRecord }, list: 'lines' | 'diagnoses', at: number | undefined) => boolean {
+  const open = !eventPrivate(e, idx);
+  return (c, list, at) => open && (!!recordPrivate(idx, c.record.id) || leftOff(idx, c.record, list, at));
+}
+
 /** What happened: the portal's visits when there are any, else its doses, medicines and procedures with what the claims billed, else the papers'. */
 function happenedCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
   if (e.visits.length) {
@@ -182,8 +207,14 @@ function happenedCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
   // A fill or a vaccine the portal knows with no visit (medrec makes one of each, and of a day's doses).
   const recorded = e.recorded.filter((r) => r.kind === 'procedure' || r.kind === 'immunization' || r.kind === 'medication');
   const summaries = e.papers.filter((p) => p.doc.doc_type === 'discharge_summary' || p.doc.doc_type === 'visit_summary');
-  const services = [...new Set(e.claims.flatMap((c) => claimLines(c.record).filter((l) => l.counted && plainWords(l.label)).map((l) => l.label)))];
-  const diagnoses = [...new Set(e.claims.flatMap((c) => diagnosisNames(idx, c.record).map((d) => d.name)))];
+  const off = offOpen(idx, e);
+  const services = offInEach(e.claims.flatMap((c) => claimLines(c.record).filter((l) => l.counted && plainWords(l.label)).map((l): [string, boolean] => [l.label, off(c, 'lines', l.at)])));
+  const diagnoses = offInEach(
+    e.claims.flatMap((c) => {
+      const placed = claimDiagnoses(c.record);
+      return diagnosisNames(idx, c.record).map((d, i): [string, boolean] => [d.name, off(c, 'diagnoses', placed[i]?.at)]);
+    }),
+  );
   const from = recorded.length
     ? e.claims.length
       ? 'From the provider’s own records and the claims.'
@@ -194,8 +225,8 @@ function happenedCard(ctx: Ctx, idx: PersonIndex, e: CareEvent): HTMLElement {
   return card(
     { title: 'What happened' },
     recorded.map((r) => row({ route: itemRoute(idx.person, r.id), title: plainWords(recordTitle(r)) ?? (KIND_LABELS[r.kind] ?? r.kind), meta: [KIND_LABELS[r.kind] ?? r.kind, str(r.fields.dosage)].filter(Boolean).join(' · ') })),
-    services.length ? h('p', null, h('span', { class: 'muted' }, 'Billed for: '), services.join(', ')) : null,
-    diagnoses.length ? h('p', null, h('span', { class: 'muted' }, diagnoses.length === 1 ? 'Diagnosis: ' : 'Diagnoses: '), nameList(diagnoses)) : null,
+    services.length ? h('p', null, h('span', { class: 'muted' }, 'Billed for: '), markedList(services, ', ')) : null,
+    diagnoses.length ? h('p', null, h('span', { class: 'muted' }, diagnoses.length === 1 ? 'Diagnosis: ' : 'Diagnoses: '), markedList(diagnoses)) : null,
     summaries.length ? h('p', null, h('span', { class: 'muted' }, 'Read more in: '), ...summaries.flatMap((p, i) => [i ? ', ' : null, link(itemRoute(p.person ?? idx.person, p.doc.id), documentTitle(p.doc))])) : null,
     h('p', { class: 'small muted' }, from),
   );
@@ -260,16 +291,18 @@ function costCard(e: CareEvent, m: EventMoney): HTMLElement | null {
 }
 
 /** Lines a claim lists and its totals leave out, in plain words: none of it is owed. */
-function changedCard(e: CareEvent): HTMLElement | null {
+function changedCard(idx: PersonIndex, e: CareEvent): HTMLElement | null {
   const left = e.claims.flatMap((c) => claimLines(c.record).filter((l) => !l.counted).map((l) => ({ c, l })));
   if (!left.length) return null;
   const insurer = str(e.claims[0]?.record.fields.insurer) ?? 'The plan';
+  const off = offOpen(idx, e);
   return card(
     { title: `What ${insurer} changed` },
     left.map(({ c, l }) =>
       h(
         'div',
         { class: 'event-changed' },
+        off(c, 'lines', l.at) ? h('p', { class: 'part-mark' }, notShared()) : null,
         h('p', null, `${c.provider ?? 'The provider'} billed “${l.label}”${l.amounts.billed ? ` at ${formatMoney(l.amounts.billed)}` : ''}. ${insurer} left that line out of the claim’s totals, so none of it is owed: the amounts on this page are the ones it counted.`),
         l.payerNotes.length ? h('p', { class: 'small muted' }, `${insurer}’s ${l.payerNotes.length === 1 ? 'note' : 'notes'}: ${l.payerNotes.join(' · ')}`) : null,
       ),
@@ -445,7 +478,7 @@ export function eventView(ctx: Ctx, personId: string, id: string): HTMLElement {
     happenedCard(ctx, idx, e),
     resultsCard(idx, e),
     costCard(e, m),
-    changedCard(e),
+    changedCard(idx, e),
     chargesCard(ctx, idx, e, m),
     billsCard(ctx, idx, e, m),
     papersCard(ctx, idx, e),
