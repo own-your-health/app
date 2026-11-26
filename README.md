@@ -1040,11 +1040,12 @@ page count. Papers took the place of each person's list of documents. A
   list was made from: everyone's search says so. Their own pages show all of it,
   say how much stays off shared screens, and mark each part that does "Not on
   shared screens", in the words that line begins with: a claim's line,
-  diagnosis and payer's note; on an open visit of claims alone, what it was
-  billed for and its diagnoses, where every claim that names one leaves it out
-  or is private, and a line its plan left out; a line of a paper's text, where
-  the text is the one the list was made from; and a line in that person's Costs
-  and Worth a call. A list of before 0.9.9 has no `parts` and judged none.
+  diagnosis and payer's note; on an open visit, a line its plan left out, where
+  its claim is private or leaves it out, and on one of claims alone also what
+  it was billed for and its diagnoses, where every claim that names one leaves
+  it out or is private; a line of a paper's text, where the text is the one the
+  list was made from; and a line in that person's Costs and Worth a call. A
+  list of before 0.9.9 has no `parts` and judged none.
 
   **Without a current list, everything of that person's stays off.** The
   list is used only when the MD5s in `views/views.json` are the folder's:
