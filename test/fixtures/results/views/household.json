@@ -23,14 +23,14 @@
   ],
   "organizations": [
     {
-      "id": "g_6fnnwhde2sjbdf6ordju",
+      "id": "g_g7sy7thfvspicnhcdnj3",
       "name": "Example Lab",
       "fhir_base": "https://example-lab.example"
     }
   ],
   "sources": [
     {
-      "id": "s_6av5d5ly45yyie37z23u",
+      "id": "s_gka4jsr3diq6q2rpgokb",
       "kind": "portal",
       "person": "p_m34nxk4cavrnsofgckqn",
       "cli": "labcorp",

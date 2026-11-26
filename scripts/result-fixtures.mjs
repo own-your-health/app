@@ -5,7 +5,8 @@
 // and a report that lists one and one not filed, as medrec's own test of them
 // has it (tests/flow.rs). Beside them, invented here: a visit with two results,
 // a heading that lists them, one whose results are none of them filed, and one
-// entered in error; and a test sent in two units. No field of them is set here.
+// entered in error; a blood pressure sent as a panel of its two numbers; and
+// two tests sent in two units. No field of them is set here.
 //
 //   MEDREC=<medrec 0.9.10> node scripts/result-fixtures.mjs
 //
@@ -36,7 +37,12 @@ const cases = JSON.parse(readFileSync(join(RESULTS, 'medrec', 'readings.json'), 
 const VISIT = '2024-05-14';
 const drawn = [result('pat visit', VISIT, ['2951-2', 'Sodium', 139, 'mmol/L', '135-145 mmol/L']), result('pat visit', VISIT, ['2823-3', 'Potassium', 5.4, 'mmol/L', '3.5-5.1 mmol/L', 'High'])];
 const LAB_CATEGORY = [{ coding: [{ system: 'http://terminology.hl7.org/CodeSystem/observation-category', code: 'laboratory', display: 'Laboratory' }] }];
-const glucose = (date, value, unit, range) => ({ resourceType: 'Observation', id: rid('Observation', `pat glucose ${date}`), status: 'final', category: LAB_CATEGORY, code: { text: 'Example glucose' }, effectiveDateTime: date, valueQuantity: { value, unit }, referenceRange: [{ text: range }] });
+const lab = (name) => (date, value, unit, range) => ({ resourceType: 'Observation', id: rid('Observation', `pat ${name} ${date}`), status: 'final', category: LAB_CATEGORY, code: { text: name }, effectiveDateTime: date, valueQuantity: { value, unit }, referenceRange: [{ text: range }] });
+const glucose = lab('Example glucose');
+const lactate = lab('Example lactate');
+const VITAL = [{ coding: [{ system: 'http://terminology.hl7.org/CodeSystem/observation-category', code: 'vital-signs', display: 'Vital Signs' }] }];
+const PANEL_DAY = '2024-06-10T08:15:00Z';
+const vital = (id, code, display, value) => ({ resourceType: 'Observation', id, status: 'final', category: VITAL, code: { coding: [{ system: 'http://loinc.org', code, display }] }, effectiveDateTime: PANEL_DAY, valueQuantity: { value, unit: 'mmHg' } });
 const heading = (display, members, more = {}) => ({ resourceType: 'Observation', id: rid('Observation', `pat ${display}`), status: 'final', code: { text: display }, effectiveDateTime: `${VISIT}T09:30:00Z`, hasMember: refs(...members), ...more });
 const resources = [
   // Each of its own day, so of its own record.
@@ -56,9 +62,14 @@ const resources = [
   heading('Example salts panel', drawn.map((r) => r.id)),
   heading('Example metals panel', ['not-filed-2', 'not-filed-3']),
   heading('Example withdrawn panel', drawn.map((r) => r.id), { status: 'entered-in-error' }),
+  vital('pat-sys', '8480-6', 'Systolic blood pressure', 130),
+  vital('pat-dia', '8462-4', 'Diastolic blood pressure', 85),
+  { resourceType: 'Observation', id: 'pat-bp-panel', status: 'final', category: VITAL, code: { coding: [{ system: 'http://loinc.org', code: '85354-9', display: 'Blood pressure panel' }] }, effectiveDateTime: PANEL_DAY, hasMember: refs('pat-sys', 'pat-dia') },
   glucose('2024-02-01', 95, 'mg/dL', '70-99 mg/dL'),
   glucose('2024-03-01', 5.4, 'mmol/L', '3.9-5.5 mmol/L'),
   glucose('2024-06-01', 99, 'mg/dL', '70-99 mg/dL'),
+  lactate('2024-02-01', 1.2, 'mmol/L', '0.5-2.2 mmol/L'),
+  lactate('2024-03-01', 11, 'mg/dL', '4.5-19.8 mg/dL'),
 ].map((r) => ({ ...r, subject }));
 
 const { root, at, imports } = machineWith(PEOPLE, { lab: SOURCE }, '0.9.10');

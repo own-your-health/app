@@ -12,8 +12,8 @@ import { labTest } from '../../model/labtests';
 import { learnMore } from '../../model/learn';
 import { allergyList, conditionList, CRITICALITY_TEXT, isFill, medicineList, saidOf, statusText, type ItemStanding } from '../../model/lists';
 import { isObject } from '../../model/parse';
-import { AMOUNT_LABELS, asMoney, docTypeLabel, documentTitle, findItem, formatMoney, importFor, isDoseGiven, isHeading, isQuantity, KIND_LABELS, LINE_AMOUNT_ORDER, memberIds, originNames, partSeries, readingOf, resultPoint, str, studyTitle, toCents, UNSAID, valueText, type ResultSeries } from '../../model/records';
-import { rangeWords, resultContext, unitText, verdict } from '../../model/result';
+import { AMOUNT_LABELS, asMoney, docTypeLabel, documentTitle, findItem, formatMoney, importFor, isDoseGiven, isHeading, isQuantity, KIND_LABELS, LINE_AMOUNT_ORDER, memberIds, originNames, partSeries, readingOf, resultPoint, str, studyTitle, toCents, UNSAID, valueText } from '../../model/records';
+import { rangeText, rangeWords, resultContext, unitText, verdict } from '../../model/result';
 import { leftOff, ownText, partSays } from '../../model/parts';
 import { recordTitle, visitTitle } from '../../model/titles';
 import type { ProviderField } from '../../model/providers';
@@ -26,7 +26,7 @@ import { paymentText, selfPay, unreadText } from '../../next/money';
 import { labelNote } from '../../next/labelView';
 import { providerLink } from '../../next/providerView';
 import { paperView } from '../../paper/view';
-import { drawable, otherUnit, rangeBar, resultChart } from '../chart';
+import { linesOf, linesView, rangeBar } from '../chart';
 import { button, card, chip, command, dotted, driveLink, empty, flagChip, jsonBlock, kv, link, outLink, phoneLink, row, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
 import { bytes, count, dateText, dateTime, localDay } from '../format';
@@ -288,13 +288,8 @@ function resultView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
   const shown = value ? (unitText(value) ?? value) : 'No value';
   const status = r.status && Object.hasOwn(RESULT_STATUS, r.status) ? RESULT_STATUS[r.status]! : undefined;
   const series = c.series;
-  const drawn = (s: ResultSeries, title?: string) => {
-    const chart = resultChart(s.points, s.unit, s.name);
-    return chart ? [{ name: title, ...drawable(s.points, s.unit), chart }] : [];
-  };
   // A result of several parts has a line for each part, where the whole has none.
-  const whole = series ? drawn(series) : [];
-  const charts = whole.length ? whole : partSeries(idx, r).flatMap((p) => drawn(p, p.name));
+  const lines = series ? linesOf(series, () => partSeries(idx, r)) : [];
   const parts = point.parts ?? [];
   const heading = isHeading(r);
   const sameDay = c.sameDraw.reduce((n, g) => n + g.records.length, 0);
@@ -342,8 +337,7 @@ function resultView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
     series && series.points.length > 1
       ? card(
           { title: 'Over time' },
-          charts.map((x) => [x.name ? h('h3', { class: 'group-head' }, x.unit ? `${x.name} (${unitText(x.unit)})` : x.name) : null, h('div', { class: 'chart-box' }, x.chart), otherUnit(x.other)]),
-          charts.some((x) => x.points.some((p) => rangeFor(p.range, p.unit ?? x.unit))) ? h('p', { class: 'small muted' }, 'The shaded band is the lab’s range at each result.') : null,
+          linesView(lines, 'The shaded band is the lab’s range at each result.'),
           h(
             'table',
             { class: 'table' },
@@ -359,7 +353,7 @@ function resultView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
                     { class: current ? 'current' : undefined, 'aria-current': current ? 'true' : undefined },
                     h('td', null, current ? [dateText(p.date), h('span', { class: 'sr-only' }, ' (this result)')] : link(itemRoute(person, p.id), dateText(p.date))),
                     h('td', { class: 'num' }, unitText(p.text) ?? p.text, isOutOfRange(f) ? [' ', flagChip(f)] : null),
-                    h('td', null, p.range ? (unitText(p.range) ?? p.range) : ''),
+                    h('td', null, rangeText(p, series.name)),
                   );
                 }),
             ),

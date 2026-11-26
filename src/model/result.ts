@@ -2,8 +2,8 @@
 // range, the other tests from the same draw, and the visit and report it
 // came with.
 
-import { isOutOfRange, rangeFor, resultFlag, type Range, type ResultFlag } from './flags';
-import { panelFor } from './panels';
+import { isOutOfRange, outsidePart, rangeFor, resultFlag, type Range, type ResultFlag } from './flags';
+import { panelOf } from './panels';
 import { samePractice, through } from './practices';
 import { day, isHeading, isWithdrawn, memberIds, resultSeries, seriesKey, type ResultPoint, type ResultSeries } from './records';
 import { recordTitle } from './titles';
@@ -27,6 +27,16 @@ export function rangeWords(r: Range, unit: string | undefined): string {
   return '';
 }
 
+/** What a row says of a result's range: its own, or that of the part out of its range that flags it, by name. */
+export function rangeText(p: ResultPoint, test: string): string {
+  if (p.range) return unitText(p.range) ?? p.range;
+  const part = outsidePart(p.parts);
+  if (!part?.point.range) return '';
+  const range = rangeFor(part.point.range, part.point.unit);
+  const name = part.name.startsWith(`${test}, `) ? part.name.slice(test.length + 2) : part.name;
+  return `${name}: ${range ? rangeWords(range, part.point.unit) : (unitText(part.point.range) ?? part.point.range)}`;
+}
+
 export interface Verdict {
   /** One sentence: where the value sits against the lab's range, or what the lab said. */
   text: string;
@@ -47,7 +57,9 @@ export function verdict(p: Pick<ResultPoint, 'value' | 'bound' | 'unit' | 'range
     const read = p.parts.map((x) => ({ name: x.name, verdict: verdict(x.point) }));
     const outside = read.filter((x) => x.verdict.outOfRange);
     if (outside.length) return { text: outside.map((x) => `${x.name}: ${x.verdict.text}`).join(' '), outOfRange: true, flag };
-    if (!p.range && read.some((x) => x.verdict.flag)) return { text: 'No part that has a range is outside it.', outOfRange: false };
+    // Each part that has a range read against it, or the rows below say each.
+    const ranged = read.filter((_, i) => p.parts![i]!.point.range);
+    if (!p.range && ranged.length) return { text: ranged.every((x) => x.verdict.flag) ? 'No part that has a range is outside it.' : 'Its parts and their ranges are below.', outOfRange: false };
   }
   const range = rangeFor(p.range, p.unit);
   const words = range ? rangeWords(range, p.unit) : p.range;
@@ -81,10 +93,11 @@ export interface ResultContext {
 }
 
 export function resultContext(index: PersonIndex, household: Household, person: string, today: string, r: MedRecord): ResultContext {
-  const series = resultSeries(index).find((s) => s.key === seriesKey(r));
+  // A heading is no result of the test it may share a code with.
+  const series = isHeading(r) ? undefined : resultSeries(index).find((s) => s.key === seriesKey(r));
   const point = series?.points.find((p) => p.id === r.id);
   const categoryOf = (x: MedRecord) => (typeof x.fields.category === 'string' ? x.fields.category : undefined);
-  const own = panelFor(seriesKey(r), categoryOf(r));
+  const own = panelOf(index, seriesKey(r), categoryOf(r));
   const d = day(r.date);
   // Its visit's records, or those its sign-in shows to be the same practice's.
   const visit = visitTimeline(index, household, person, today).visits.find((v) => v.recorded.some((g) => g.records.includes(r)));
@@ -95,7 +108,7 @@ export function resultContext(index: PersonIndex, household: Household, person: 
   const draw = index.records.filter((x) => x !== r && !listed.has(x.id) && x.kind === 'result' && !isHeading(x) && !isWithdrawn(x) && day(x.date) === d && together(x));
   const byPanel = new Map<string, { panel: string; order: number; records: { r: MedRecord; order: number }[] }>();
   for (const x of draw) {
-    const p = panelFor(seriesKey(x), categoryOf(x));
+    const p = panelOf(index, seriesKey(x), categoryOf(x));
     let g = byPanel.get(p.id);
     if (!g) byPanel.set(p.id, (g = { panel: p.name, order: p.id === own.id ? -1 : byPanel.size, records: [] }));
     g.records.push({ r: x, order: p.order });

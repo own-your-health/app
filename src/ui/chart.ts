@@ -2,8 +2,9 @@
 // the reference range shaded behind it, and a small sparkline for a list
 // row. The table beside the chart, and the row's text, carry every value.
 
-import { isOutOfRange, rangeFor, resultFlag, type FlagLevel, type Range } from '../model/flags';
-import type { ResultPoint } from '../model/records';
+import { isOutOfRange, rangeFor, resultFlag, unitKey, type FlagLevel, type Range } from '../model/flags';
+import type { ResultPoint, ResultSeries } from '../model/records';
+import { unitText } from '../model/result';
 import { h, s } from './dom';
 import { count, dateText } from './format';
 
@@ -83,14 +84,18 @@ function fmt(n: number): string {
 /** Points with a number and a date, oldest first (as the series keeps them). */
 /**
  * What a chart of these points (oldest first) draws, as one axis has one
- * unit: the dated numbers in the newest one's unit, that unit, and how many
- * dated numbers it leaves out for being in another.
+ * unit: the dated numbers in the unit of the newest that shares it with
+ * another (or the newest's, where none does), that unit as the newest of them
+ * spells it, and how many dated numbers it leaves out for being in another.
+ * Units are compared as a range's is (unitKey).
  */
 export function drawable(points: ResultPoint[], unit: string | undefined): { points: Dated[]; unit: string | undefined; other: number } {
   const dated = points.filter((p): p is Dated => p.value !== undefined && !!p.date && !Number.isNaN(Date.parse(p.date.slice(0, 10))));
-  const drawn = dated[dated.length - 1]?.unit ?? unit;
-  const same = dated.filter((p) => (p.unit ?? unit) === drawn);
-  return { points: same, unit: drawn, other: dated.length - same.length };
+  const key = (p: ResultPoint) => unitKey(p.unit ?? unit);
+  const many = (p: ResultPoint) => dated.filter((q) => key(q) === key(p)).length > 1;
+  const pick = [...dated].reverse().find(many) ?? dated[dated.length - 1];
+  const same = pick ? dated.filter((p) => key(p) === key(pick)) : [];
+  return { points: same, unit: same[same.length - 1]?.unit ?? unit, other: dated.length - same.length };
 }
 
 /**
@@ -158,9 +163,38 @@ export function chartBands(points: ResultPoint[], unit: string | undefined): Rec
 
 const dotClass = (p: ResultPoint) => (isOutOfRange(resultFlag(p)) ? 'chart-dot chart-dot-flag' : 'chart-dot');
 
-/** What a chart says of the results it leaves out for being in another unit than the newest. */
-export function otherUnit(n: number): HTMLElement | null {
-  return n ? h('p', { class: 'small muted' }, `${count(n, 'result')} in another unit ${n === 1 ? 'is' : 'are'} not in the chart.`) : null;
+/** What a chart says of the results it leaves out for being in another unit, or where there is none for that. */
+export function otherUnit(n: number, charted: boolean): HTMLElement | null {
+  if (!n) return null;
+  return h('p', { class: 'small muted' }, charted ? `${count(n, 'result')} in another unit ${n === 1 ? 'is' : 'are'} not in the chart.` : 'Its results are in more than one unit, so there is no chart.');
+}
+
+/** A line over time: a test's, or a part's, named, with what it leaves out. */
+export interface Line {
+  name?: string;
+  unit?: string;
+  points: ResultPoint[];
+  other: number;
+  chart: HTMLElement | null;
+}
+
+/** A test's line, or where its results are no numbers, one for each of its parts (partSeries); none where nothing is drawn or left out. */
+export function linesOf(whole: ResultSeries | undefined, parts: () => ResultSeries[]): Line[] {
+  const line = (s: ResultSeries, named: boolean): Line[] => {
+    const d = drawable(s.points, s.unit);
+    const chart = resultChart(s.points, s.unit, s.name);
+    return chart || d.other ? [{ ...(named ? { name: s.name } : {}), ...d, chart }] : [];
+  };
+  const own = whole ? line(whole, false) : [];
+  return own.length ? own : parts().flatMap((p) => line(p, true));
+}
+
+/** The lines, each under its name and with what it leaves out, and what the shaded band is where one has it. */
+export function linesView(lines: Line[], band: string): (HTMLElement | null)[] {
+  return [
+    ...lines.flatMap((x) => [x.name ? h('h3', { class: 'group-head' }, x.unit ? `${x.name} (${unitText(x.unit)})` : x.name) : null, x.chart ? h('div', { class: 'chart-box' }, x.chart) : null, otherUnit(x.other, !!x.chart)]),
+    lines.some((x) => x.chart && x.points.some((p) => rangeFor(p.range, p.unit ?? x.unit))) ? h('p', { class: 'small muted' }, band) : null,
+  ];
 }
 
 /** Null when fewer than two dated numeric points in one unit. Drawn at its box's width. */

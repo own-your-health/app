@@ -19,9 +19,11 @@ const BETWEEN = new RegExp(`^\\s*${NUM}\\s*([^\\d\\s–—-][^–—-]*?)?\\s*(?
 const BELOW = new RegExp(`^\\s*(<=|≤|<|less than|under)\\s*${NUM}\\s*(.*)$`, 'i');
 const ABOVE = new RegExp(`^\\s*(>=|≥|>|greater than|over)\\s*${NUM}\\s*(.*)$`, 'i');
 
+/** A unit as its spellings read alike: case, spaces and µ for u aside. */
+export const unitKey = (unit: string | undefined): string => (unit ?? '').trim().toLowerCase().replace(/[µμ]/g, 'u');
+
 function sameUnit(rangeUnit: string | undefined, unit: string | undefined): boolean {
-  const a = rangeUnit?.trim().toLowerCase();
-  const b = unit?.trim().toLowerCase();
+  const [a, b] = [unitKey(rangeUnit), unitKey(unit)];
   return !a || !b || a === b;
 }
 
@@ -124,8 +126,8 @@ const LABELS: Record<FlagLevel, string> = { high: 'High', low: 'Low', abnormal: 
  * Whether a result is out of its range: the source's interpretation when it
  * gave one this app can read, otherwise the value against the reference
  * range, when both are numbers in the same unit. A result of several parts of
- * which neither says is as the first part out of range, a critical one first.
- * Undefined when nothing says.
+ * which neither says is as the part out of range (outsidePart). Undefined when
+ * nothing says.
  */
 export function resultFlag(p: Pick<ResultPoint, 'value' | 'bound' | 'unit' | 'range' | 'interpretation' | 'parts'>): ResultFlag | undefined {
   const said = p.interpretation ? fromInterpretation(p.interpretation) : undefined;
@@ -133,12 +135,16 @@ export function resultFlag(p: Pick<ResultPoint, 'value' | 'bound' | 'unit' | 'ra
     const label = !said.critical ? LABELS[said.level] : said.level === 'abnormal' ? 'Critical' : `Critical ${LABELS[said.level].toLowerCase()}`;
     return { ...said, from: 'source', label };
   }
-  const outside = p.parts?.map((x) => resultFlag(x.point)).filter(isOutOfRange) ?? [];
-  if (outside.length) return outside.find((f) => f.critical) ?? outside[0];
-  if ((p.value === undefined && !p.bound) || !p.range) return undefined;
-  const level = fromRange(p, p.range, p.unit);
-  if (!level) return undefined;
-  return { level, critical: false, from: 'range', label: level === 'high' ? 'Above range' : level === 'low' ? 'Below range' : 'In range' };
+  const level = (p.value !== undefined || p.bound) && p.range ? fromRange(p, p.range, p.unit) : undefined;
+  if (level) return { level, critical: false, from: 'range', label: level === 'high' ? 'Above range' : level === 'low' ? 'Below range' : 'In range' };
+  const part = outsidePart(p.parts);
+  return part ? resultFlag(part.point) : undefined;
+}
+
+/** The part a result of several is flagged by where the whole says nothing: the first out of its range, a critical one first. */
+export function outsidePart<P extends { point: Pick<ResultPoint, 'value' | 'bound' | 'unit' | 'range' | 'interpretation'> }>(parts: P[] | undefined): P | undefined {
+  const out = (parts ?? []).filter((x) => isOutOfRange(resultFlag(x.point)));
+  return out.find((x) => resultFlag(x.point)!.critical) ?? out[0];
 }
 
 export function isOutOfRange(f: ResultFlag | undefined): f is ResultFlag {

@@ -3,7 +3,7 @@ import { withoutAbout } from '../src/model/aboutAnother';
 import { isOutOfRange, resultFlag } from '../src/model/flags';
 import { resultGroups } from '../src/model/panels';
 import { isHeading, isQuantity, isWithdrawn, memberIds, partSeries, readingOf, recordDetail, resultParts, resultPoint, resultReading, resultSeries } from '../src/model/records';
-import { resultContext, verdict } from '../src/model/result';
+import { rangeText, resultContext, verdict } from '../src/model/result';
 import { parseHousehold, parseIndex } from '../src/model/parse';
 import { find } from '../src/model/search';
 import type { Json, JsonObject, MedRecord, PersonIndex } from '../src/model/types';
@@ -134,6 +134,20 @@ describe('a result of several parts', () => {
     expect([of(110), of(150)]).toEqual(['The lab’s range is <120/80 mmHg.', 'Blood pressure, top number: Above the lab’s range of 90–120 mmHg.']);
   });
 
+  it('is as its whole where the whole reads against its own range, whatever a part says', () => {
+    const high = pressure(0, '2026-01-02', 150, 76, { reference_range: '90-120 mmHg' });
+    const r = { ...high, fields: { value: { value: 7, unit: 'U' }, reference_range: '0-10 U', components: high.fields.components as Json } };
+    expect([resultFlag(resultPoint(r))?.label, verdict(resultPoint(r)).text, verdict(resultPoint(r)).outOfRange]).toEqual(['In range', 'Within the lab’s range of 0–10 U.', false]);
+  });
+
+  it('says a part is outside no range only where each part that has one could be read against it', () => {
+    const unread = pressure(0, '2026-01-02', 110, 76, { reference_range: '90-120 kPa' });
+    expect(verdict(resultPoint(unread)).text).toBe('Its parts and their ranges are below.');
+    const [top, low] = unread.fields.components as Record<string, Json>[];
+    const oneRead = { ...unread, fields: { ...unread.fields, components: [top!, { ...low!, reference_range: '60-80 mmHg' }] as Json } };
+    expect(verdict(resultPoint(oneRead)).text).toBe('Its parts and their ranges are below.');
+  });
+
   it('says where no part is outside a range, and where none has one', () => {
     expect(verdict(resultPoint(pressure(0, '2026-01-02', 110, 76, { reference_range: '90-120 mmHg' }))).text).toBe('No part that has a range is outside it.');
     expect(verdict(resultPoint(first!)).text).toBe('The lab gave no range for this result.');
@@ -184,6 +198,14 @@ describe('a panel', () => {
   it('is not among what was tested that day, nor are the results it lists on its own page', () => {
     const drawn = (r: MedRecord) => resultContext(idx(a, b, apart, panel), household, ROBIN, '2026-11-22', r).sameDraw.flatMap((g) => g.records.map((x) => x.display)).sort();
     expect([drawn(a), drawn(panel)]).toEqual([['Maple', 'Oat'], ['Oat']]);
+    // What it lists, drawn that day with another, is named by it there too.
+    expect(resultContext(idx(a, b, apart, panel), household, ROBIN, '2026-11-22', apart).sameDraw.map((g) => [g.panel, g.records.map((x) => x.display)])).toEqual([['Sample pollen panel', ['Maple', 'Birch']]]);
+  });
+
+  it('names no test by a panel that lists only another panel', () => {
+    const inner = { ...result(4, 'Oat', '2026-01-02', { members: [a.id] }), id: `r_${'w'.repeat(20)}` };
+    const outer = { ...result(5, 'Sample outer panel', '2026-01-02', { members: [inner.id] }), id: `r_${'v'.repeat(20)}` };
+    expect(resultGroups(idx(apart, inner, outer)).map((g) => [g.name, g.tests.map((t) => t.series.name)])).toEqual([['Other tests', ['Oat']]]);
   });
 
   it('is found by itself, and stands for no result of a test it shares a code with', () => {
@@ -233,9 +255,10 @@ describe('as medrec 0.9.10 writes them', () => {
     expect(resultPoint(one('2024-04-01')).value).toBeUndefined();
   });
 
-  it('flags one by the part out of its range', () => {
+  it('flags one by the part out of its range, and gives that part’s range by its name', () => {
     const p = resultPoint(one('2024-04-01'));
-    expect([resultFlag(p)?.label, verdict(p).text]).toEqual(['High', 'Blood pressure, top number: Above the lab’s range of 90–120 mmHg.']);
+    expect([resultFlag(p)?.label, verdict(p).text, rangeText(p, 'Blood pressure')]).toEqual(['High', 'Blood pressure, top number: Above the lab’s range of 90–120 mmHg.', 'top number: 90–120 mmHg']);
+    expect([rangeText(resultPoint(one('2024-04-02')), 'Blood pressure'), rangeText(resultPoint(one('2024-05-14', 'Potassium')), 'Potassium')]).toEqual(['', '3.5-5.1 mmol/L']);
   });
 
   it('reads a bound, a ratio, a range and a time as medrec gives them', () => {
@@ -278,6 +301,20 @@ describe('as medrec 0.9.10 writes them', () => {
     expect(groups).toContainEqual(['Example heading', ['Example antibody', 'Example cell count']]);
     expect(groups.flatMap(([, tests]) => tests)).not.toContain('Example salts panel');
     expect(resultSeries(pat).filter((x) => x.points.some((p) => isHeading(pat.records.find((r) => r.id === p.id)!)))).toEqual([]);
+  });
+
+  it('is no test where it shares a code with one, and has none of its history', () => {
+    const panel = one('2024-06-10', 'Blood pressure panel');
+    const household = parseHousehold(fixture('results/views/household.json'));
+    expect([isHeading(panel), memberIds(panel.fields).length, resultContext(pat, household, pat.person, '2026-11-22', panel).series]).toEqual([true, 2, undefined]);
+    expect(resultSeries(pat).find((s) => s.name === 'Blood pressure' && s.points.length > 1)!.points.map((p) => p.id)).not.toContain(panel.id);
+  });
+
+  it('names a test by the heading that lists it, in the list, on its page and in search', () => {
+    const household = parseHousehold(fixture('results/views/household.json'));
+    const antibody = one('2024-04-10');
+    expect(resultContext(pat, household, pat.person, '2026-11-22', antibody).panel).toBe('Example heading');
+    expect(find([{ person: pat.person, index: pat, text: null }], 'antibody').hits.map((h) => h.test?.panel)).toEqual(['Example heading']);
   });
 
   it('leaves a heading and what it lists out of what was drawn with a result that day', () => {

@@ -319,8 +319,9 @@ receipts no claim covers are not counted. The rules are `src/model/costs.ts`.
 Results are grouped by panel (metabolic, lipid, A1c, liver, blood count,
 thyroid, vitamins and iron, urine, vital signs) by each test's LOINC code,
 from a table in `src/model/panels.ts`; a test outside the table goes by the
-category its source gave, or else under the newest panel of its source's that
-lists it (medrec 0.9.10 and later), or under Other tests. A panel that its
+category its source gave where that is one other than laboratory, or else under
+the newest panel of its source's that lists a result of it (medrec 0.9.10 and
+later), on its own page and in search too, or under Other tests. A panel that its
 source lists results for, filed or not, and that has no value is a heading and
 no test: it is in no list of results and stands for none in search, a visit
 names it as a panel, and its own page lists its results. A panel with a critical

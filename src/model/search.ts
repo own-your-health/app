@@ -13,7 +13,7 @@
 // concept with nothing that has the other words ("Example Lab").
 
 import { claimAmounts, claimDiagnoses, claimLines, claimProvider, diagnosisText, revenueText } from './claims';
-import { panelFor } from './panels';
+import { panelFor, panelOf } from './panels';
 import { KIND_LABELS, asMoney, docTypeLabel, documentTitle, formatMoney, isHeading, isQuantity, readingOf, seriesKey, str, studyTitle, toCents, UNSAID, valueText } from './records';
 import { unitText } from './result';
 import { statusText } from './lists';
@@ -262,10 +262,10 @@ function lineFields(r: MedRecord): [string, string, true][] {
   });
 }
 
-function recordExtra(r: MedRecord): Candidate['extra'] {
+function recordExtra(index: PersonIndex, r: MedRecord): Candidate['extra'] {
   if (r.kind === 'result') {
     const series = seriesKey(r);
-    const panel = panelFor(series, str(r.fields.category));
+    const panel = panelOf(index, series, str(r.fields.category));
     const v = readingOf(r).text;
     // A heading is no result of the test it shares a code with: each is its own.
     const key = isHeading(r) ? `heading|${r.id}` : series;
@@ -310,7 +310,7 @@ function candidates(index: PersonIndex): Candidate[] {
     const fields = r.kind === 'claim' ? [...fieldsOf(r.fields, CLAIM_PARTS), ...claimDiagnoses(r).map((d): [string, string] => ['Diagnosis', diagnosisText(d)]), ...lineFields(r)] : fieldsOf(r.fields);
     // A visit can be titled by its reason, and is still found by the source's own name for it.
     if (r.kind === 'encounter') fields.push(['Name at the source', r.display ?? '']);
-    out.push(candidate(r.id, r.kind, title, r.date, [title, r.code?.display ?? '', r.code?.code ?? '', KIND_LABELS[r.kind] ?? r.kind, statusText(r.status) ?? ''], fields, recordConcept(r), recordExtra(r)));
+    out.push(candidate(r.id, r.kind, title, r.date, [title, r.code?.display ?? '', r.code?.code ?? '', KIND_LABELS[r.kind] ?? r.kind, statusText(r.status) ?? ''], fields, recordConcept(r), recordExtra(index, r)));
   }
   for (const d of index.documents) {
     const fields: [string, string][] = [

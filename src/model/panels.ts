@@ -1,7 +1,8 @@
 // Results grouped the way a lab report groups them. The index keeps each
 // result as its own record, so the panel comes from the test's LOINC code, by
-// a table of the common panels; else from the panel that lists the result
-// (medrec 0.9.10 and later); else from the result's category.
+// a table of the common panels; else from the result's category, where it is
+// one other than laboratory; else from the newest panel that lists a result of
+// the test (medrec 0.9.10 and later); else Other tests.
 
 import { isOutOfRange } from './flags';
 import { latestResults, type LatestResult } from './overview';
@@ -43,23 +44,28 @@ function loincOf(key: string): string | undefined {
   return system && /loinc/i.test(system) ? code : undefined;
 }
 
-/** The panel each result is listed by, and its place in it: the newest panel that lists it. */
+/** The panel each test is listed by, by its series key, and its place in it: the newest panel that lists a result of it. */
 const headings = new WeakMap<PersonIndex, Map<string, { heading: MedRecord; order: number }>>();
 
 function headingsOf(index: PersonIndex): Map<string, { heading: MedRecord; order: number }> {
   let out = headings.get(index);
   if (!out) {
     headings.set(index, (out = new Map()));
+    const byId = new Map(index.records.map((r) => [r.id, r]));
     const panels = index.records.filter((r) => isHeading(r) && !isWithdrawn(r)).sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
-    for (const heading of panels) for (const [order, id] of memberIds(heading.fields).entries()) out.set(id, { heading, order });
+    for (const heading of panels)
+      for (const [order, id] of memberIds(heading.fields).entries()) {
+        const x = byId.get(id);
+        if (x?.kind === 'result' && !isHeading(x)) out.set(seriesKey(x), { heading, order });
+      }
   }
   return out;
 }
 
 /** The group a test falls in, and its place there. */
-export function panelOf(index: PersonIndex, t: LatestResult, category?: string): { id: string; name: string; order: number } {
-  const by = panelFor(t.series.key, category);
-  const listed = by.id === 'other-lab' ? headingsOf(index).get(t.latest.id) : undefined;
+export function panelOf(index: PersonIndex, key: string, category?: string): { id: string; name: string; order: number } {
+  const by = panelFor(key, category);
+  const listed = by.id === 'other-lab' ? headingsOf(index).get(key) : undefined;
   return listed ? { id: `panel:${seriesKey(listed.heading)}`, name: recordTitle(listed.heading), order: listed.order } : by;
 }
 
@@ -85,7 +91,7 @@ export function resultGroups(index: PersonIndex): ResultGroup[] {
   for (const r of index.records) if (r.kind === 'result' && typeof r.fields.category === 'string') category.set(seriesKey(r), r.fields.category);
   const groups = new Map<string, { group: ResultGroup; order: Map<LatestResult, number> }>();
   for (const t of latestResults(index)) {
-    const p = panelOf(index, t, category.get(t.series.key));
+    const p = panelOf(index, t.series.key, category.get(t.series.key));
     let g = groups.get(p.id);
     if (!g) groups.set(p.id, (g = { group: { id: p.id, name: p.name, tests: [], outOfRange: 0 }, order: new Map() }));
     g.group.tests.push(t);

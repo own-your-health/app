@@ -65,6 +65,19 @@ describe('what a chart draws', () => {
     expect(chartBands([p('2025-01-01', 8, '11-21 mm Hg'), { ...kpa, range: '1-3 kPa' }, p('2025-05-01', 25, '11-21 mm Hg')], undefined)).toHaveLength(1);
   });
 
+  it('reads two spellings of one unit as one', () => {
+    const d = drawable([p('2025-01-01', 120, undefined, 'mg/dL'), p('2025-03-01', 119, undefined, ' MG/DL '), p('2025-05-01', 118, undefined, 'mg/dl')], undefined);
+    expect([d.points.length, d.unit, d.other]).toEqual([3, 'mg/dl', 0]);
+    expect(drawable([p('2025-01-01', 4, undefined, 'uIU/mL'), p('2025-03-01', 5, undefined, 'µIU/mL')], undefined).other).toBe(0);
+  });
+
+  it('is the newest unit that has two results, where the newest result is alone in its own', () => {
+    const d = drawable([p('2025-01-01', 120), p('2025-03-01', 118), p('2025-05-01', 16, undefined, 'kPa')], undefined);
+    expect([dates(d.points), d.unit, d.other]).toEqual([['2025-01-01', '2025-03-01'], 'mm Hg', 1]);
+    const alone = drawable([p('2025-01-01', 120), p('2025-05-01', 16, undefined, 'kPa')], undefined);
+    expect([dates(alone.points), alone.unit, alone.other]).toEqual([['2025-05-01'], 'kPa', 1]);
+  });
+
   it('takes a result with no unit as in the series’ own, and leaves out what is no dated number', () => {
     const bare = { ...p('2025-03-01', 119), unit: undefined };
     const d = drawable([p('2025-01-01', 120), bare, { ...p('2025-04-01', 1), value: undefined }, { ...p('2025-05-01', 118), date: undefined }], 'mm Hg');

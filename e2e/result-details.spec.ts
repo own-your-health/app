@@ -18,6 +18,7 @@ const REPORT = at('Example panel', '2024-04-30', 'report');
 const SALTS = at('Example salts panel', '2024-05-14');
 const METALS = at('Example metals panel', '2024-05-14');
 const OFFICE = at('Office visit', '2024-05-14', 'encounter');
+const PRESSURE_PANEL = at('Blood pressure panel', '2024-06-10');
 const VISIT = 'e_fus5gd54pzaapafx7tso';
 
 let problems: string[] = [];
@@ -51,12 +52,19 @@ test('a reading of two parts shows both, each against its range, and each over t
   await expect(over.locator('svg.chart').nth(1)).toHaveAttribute('aria-label', /^Blood pressure, bottom number in mmHg, 7 results from Apr 1, 2024 to Apr 17, 2024/);
   await expect(over.locator('p', { hasText: 'another unit' })).toHaveText(['1 result in another unit is not in the chart.']);
   await expect(over).toContainText('The shaded band is the lab’s range at each result.');
+  await expect(over.locator('tr.current')).toContainText('top number: 90–120 mmHg');
   await go(page, `#/p/${PAT}/results`);
   // The newest of its test, beside the one that names no code, which is a test of its own.
   const row = main(page).locator('.row', { hasText: '118/74 mmHg' });
   await expect(row).toContainText('Blood pressure');
   await expect(row.locator('svg.spark')).toHaveCount(0);
-  await expect(main(page).locator('.row', { hasText: 'Blood pressure' })).toHaveCount(2);
+  await expect(main(page).locator('.row-title', { hasText: /^Blood pressure$/ })).toHaveCount(2);
+  // Its own page draws each part, and says which part's range a flag is by.
+  await row.click();
+  await expect(main(page).locator('.card-head h1')).toHaveText('Blood pressure');
+  await expect(main(page).locator('h3')).toHaveText(['Blood pressure, top number (mmHg)', 'Blood pressure, bottom number (mmHg)']);
+  await expect(main(page).locator('svg.chart')).toHaveCount(2);
+  await expect(main(page).locator('tbody tr').last()).toHaveText(/^Apr 1, 2024128\/76 mmHgtop number: 90–120 mmHgHigh$/);
 });
 
 test('a reading whose part is in another unit shows it as given', async ({ page }) => {
@@ -74,11 +82,21 @@ test('a test sent in two units is drawn in the newest one’s, and says how many
   await expect(main(page).locator('tbody tr')).toHaveCount(3);
 });
 
+test('a test with no two results in one unit has no chart, and says why', async ({ page }) => {
+  await go(page, `#/p/${PAT}/results`);
+  await main(page).locator('.row', { hasText: 'Example lactate' }).click();
+  await expect(main(page).locator('svg.chart')).toHaveCount(0);
+  await expect(main(page).locator('p', { hasText: 'more than one unit' })).toHaveText(['Its results are in more than one unit, so there is no chart.']);
+  await expect(main(page)).not.toContainText('shaded band');
+});
+
 test('a value that is a bound is shown with its sign and is in no chart', async ({ page }) => {
   await go(page, `#/p/${PAT}/r/${BOUND}`);
   await expect(main(page).locator('.result-value')).toHaveText('<0.5 IU/mL');
   await expect(main(page).locator('.card').first().locator('svg.range-bar')).toHaveCount(0);
   await expect(main(page).locator('details.tech')).toContainText(/Value\s*<0\.5 IU\/mL/);
+  // It is under the heading that lists it, as in the list of results.
+  await expect(main(page).locator('.card').first()).toContainText('Example heading · Apr 10, 2024');
 });
 
 test('a panel lists its results, and is none of them', async ({ page }) => {
@@ -88,6 +106,10 @@ test('a panel lists its results, and is none of them', async ({ page }) => {
   await expect(main(page).locator('.result-value, .verdict')).toHaveCount(0);
   await expect(card(page, 'Its results').locator('.row')).toHaveText([/Example antibody.*<0\.5 IU\/mL/, /Example cell count/]);
   await expect(main(page).locator('details.tech')).not.toContainText(BOUND);
+  // One that shares its code with a test has none of that test's history.
+  await go(page, `#/p/${PAT}/r/${PRESSURE_PANEL}`);
+  await expect(card(page, 'Its results').locator('.row')).toHaveText([/Blood pressure, top number.*130 mmHg/, /Blood pressure, bottom number.*85 mmHg/]);
+  await expect(card(page, 'Over time')).toHaveCount(0);
   await go(page, `#/p/${PAT}/r/${REPORT}`);
   await expect(card(page, 'Its results').locator('.row')).toHaveText([/Example score/]);
   await go(page, `#/p/${PAT}/results`);
@@ -121,5 +143,12 @@ test('what it says fits a phone', async ({ page }) => {
     await go(page, path);
     await expect(main(page).locator('h1, h2').first()).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), path).toBe(0);
+  }
+  // A test's own page, with a part's range by name in its table.
+  for (const value of ['118/74 mmHg', 'Example lactate']) {
+    await go(page, `#/p/${PAT}/results`);
+    await main(page).locator('.row', { hasText: value }).click();
+    await expect(main(page).locator('.card-head h1')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), value).toBe(0);
   }
 });
