@@ -1,9 +1,9 @@
 // Writes test/fixtures/rules/: the household, each person's index, one person's
-// bills, and its answers to the requests put in the folder, as medrec 0.9.7
+// bills, and its answers to the requests put in the folder, as medrec 0.9.10
 // writes them of the invented records in sample/rules.mjs, which give each of
 // the app's reading rules a case. No field of them is set here.
 //
-//   MEDREC=<medrec 0.9.7> node scripts/rule-fixtures.mjs
+//   MEDREC=<medrec 0.9.10> node scripts/rule-fixtures.mjs
 //
 // The same sources give the same bytes (medrec.mjs). It writes over its own
 // files alone and deletes nothing: a file there it no longer writes stops the

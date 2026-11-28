@@ -220,7 +220,7 @@ test('a finished Refresh shows what it brought, without a reload', async ({ page
   await page.getByRole('button', { name: 'Refresh everything' }).click();
   await expect(page.getByText(/waiting for the Mac/).first()).toBeVisible();
   await page.evaluate((to) => void (location.hash = to), `#/p/${robin}/allergies`);
-  await expect(page.locator('main .row', { hasText: 'Sulfa drugs' })).toBeVisible();
+  await expect(page.locator('main .row', { hasText: 'Sulfa drugs' }).first()).toBeVisible();
 
   // The import filed a new name, and medrec wrote its views of the new index.
   const index = JSON.parse(google.read('Robin Example/index.json')!) as { rev: number; records: { kind: string; display: string }[] };
@@ -241,7 +241,8 @@ test('a finished Refresh shows what it brought, without a reload', async ({ page
 
   answerAsMac(google.changes[0]!.path);
   await lookAgain(page);
-  await expect(page.locator('main .row', { hasText: 'An invented allergy' })).toBeVisible();
+  // In medrec's list of what is current, and among all of them.
+  await expect(page.locator('main .row', { hasText: 'An invented allergy' })).toHaveCount(2);
   await expect(page.locator('main .row', { hasText: 'Sulfa drugs' })).toHaveCount(0);
   // medrec's lists are of the new index, so nothing is held back.
   await page.evaluate(() => void (location.hash = '#/'));

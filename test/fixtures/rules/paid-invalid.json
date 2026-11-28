@@ -21,6 +21,6 @@
     "outcome": "invalid",
     "sources": [],
     "message": "the document it names is not one of the person's",
-    "by": "medrec 0.9.7"
+    "by": "medrec 0.9.10"
   }
 }

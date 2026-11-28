@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { Store } from '../src/data/store';
 import { parseMedrecEvents, type MedrecEvent, type MedrecRule } from '../src/model/events';
 import { FolderError } from '../src/model/parse';
-import { parseParts } from '../src/model/parts';
+import { parseParts, partOf } from '../src/model/parts';
 import { anyPrivate, atLeast, documentPrivate, HELD, isHeld, itemPrivate, paperPrivate, parsePrivate, recordPrivate, studyPrivate, takenOut, whyHeld } from '../src/model/private';
 import { documentTitle } from '../src/model/records';
 import { find } from '../src/model/search';
@@ -485,9 +485,10 @@ describe('what the household marked', () => {
     expect(recordPrivate(index(MARKED, sam), claim)).toBe('sexual_health');
     expect(unbilledShares(index(MARKED, sam), events(MARKED).filter((x) => x.person.id === sam)).find((u) => u.event.event.id === visit.id)!.private).toBe('sexual_health');
     expect(quietClaims(MARKED, TODAY).get(claim)).toBe('sexual_health');
-    // On a shared screen it is medrec's own name and place for it, with nothing of those records: no amount, and not one of their names where medrec gives none.
+    // On a shared screen it is medrec's own name for it, with nothing of those records: no amount, not one of their names where medrec gives none, and no place, as medrec says of what is left of it (parts).
     const row = (of: ReturnType<typeof events>) => shown(of, undefined, false).events.find((x) => x.event.id === visit.id)!;
-    expect([row(events(MARKED)).event.title, row(events(MARKED)).event.place, row(events(MARKED)).money.share]).toEqual([visit.title, visit.place, undefined]);
+    expect(partOf(index(MARKED, sam), visit.id)?.event?.place).toBeNull();
+    expect([row(events(MARKED)).event.title, row(events(MARKED)).event.place, row(events(MARKED)).money.share]).toEqual([visit.title, undefined, undefined]);
     expect([row(events(MARKED)).event.claims, row(events(MARKED)).event.visits]).toEqual([[], []]);
     const idx = structuredClone(index(MARKED, sam));
     const given = idx.events!.events.find((e) => e.id === visit.id)!;
@@ -820,6 +821,8 @@ describe('another person’s paper in a visit (X2), and a visit linked to anothe
     const at = personEvents(index(SAMPLE, drew), SAMPLE.household, TODAY).find((e) => e.visits.some((v) => v.record.fields.location))!.id;
     const place = (change: (parent: PersonIndex, stay: { id: string; members: { record?: string; document?: string; person?: string }[]; placeFrom?: MedrecEvent['placeFrom'] }, e: { links?: object[]; place_from: string }) => void, from = 'linked') => {
       const [parent, child] = [structuredClone(index(SAMPLE, robin)), structuredClone(index(SAMPLE, drew))];
+      // As medrec before 0.9.9 wrote it, which says of no visit that its place may be shown; 0.9.9's word is below.
+      delete known(parent).clear;
       const stay = parent.events!.events.find((e) => e.members.some((m) => m.kind === 'claim'))!;
       const raw = demoJson<{ events: { id: string; members: { kind: string }[] }[] }>(eventsPath(drew));
       const e = Object.assign(raw.events.find((x) => x.id === at)!, { place: AT, place_from: from, links: [{ event: stay.id, person: robin, relation: 'born_during' }] as object[] | undefined });

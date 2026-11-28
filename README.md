@@ -589,11 +589,11 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   [viewing a paper](#viewing-a-paper).
 - The browser tests serve the build on port 4317. `E2E_PORT=<port> npm run e2e`
   moves it when another project's preview holds that port.
-- The sample folder in `public/demo/` is what medrec 0.9.7 writes of the
+- The sample folder in `public/demo/` is what medrec 0.9.10 writes of the
   invented records in `scripts/sample/`: raw FHIR that stand-ins for the
   provider CLIs serve, papers and images. `scripts/demo-folder.mjs` puts those
   where medrec reads them and sets no field medrec writes.
-  `MEDREC=<path to medrec 0.9.7> node scripts/demo-folder.mjs <a new folder>`
+  `MEDREC=<path to medrec 0.9.10> node scripts/demo-folder.mjs <a new folder>`
   writes it to a folder that does not exist yet; move `public/demo` away, that
   folder into its place, and commit it with what changed. Another medrec writes
   the sample differently, so the script refuses it. medrec runs under a scratch
@@ -601,11 +601,10 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   medrec setup is never touched. The time zone is `America/New_York`, the clock
   stands still at each step's moment, and medrec's ids come from the step
   (`scripts/sample/moment.c`, built with `cc`), so the same sources give the
-  same bytes on every machine. CI runs 0.9.7's Linux build, checked against its
+  same bytes on every machine. CI runs 0.9.10's Linux build, checked against its
   SHA-256, and compares. Only `views/views.json` and each person's
-  `events.json`, `bills.json`, `private.json`, `code-names.json` and
-  `providers.json` are kept. The app also reads `standing.json`, which medrec
-  0.9.9 and later write, so the 0.9.7 sample has none. medrec keeps the code names from the committed
+  `events.json`, `bills.json`, `private.json`, `code-names.json`,
+  `providers.json` and `standing.json` are kept. medrec keeps the code names from the committed
   files, so they need the published table only when someone gains a code or
   their id changes, and the script then says so: set `ICD10CM_ZIP` to the zip
   `medrec tables list` names, downloaded, for that run. `manifest.json` gives

@@ -40,7 +40,7 @@
           "fetched_at": "2026-11-14T20:10:00Z",
           "filed_at": "2026-11-14T20:10:00Z",
           "raw_path": "Lee Example/Records/athena-800001/Encounter/encounter-5bc729bf.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -79,7 +79,7 @@
           "fetched_at": "2026-11-14T20:15:00Z",
           "filed_at": "2026-11-14T20:15:00Z",
           "raw_path": "Lee Example/Records/athena-example-group/Encounter/encounter-4d296d42.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -118,7 +118,7 @@
           "fetched_at": "2026-11-14T20:15:00Z",
           "filed_at": "2026-11-14T20:15:00Z",
           "raw_path": "Lee Example/Records/athena-example-group/Encounter/encounter-88a43857.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -141,7 +141,10 @@
           "unit": "unit",
           "system": "http://unitsofmeasure.org"
         },
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -161,7 +164,7 @@
           "fetched_at": "2026-11-14T20:15:00Z",
           "filed_at": "2026-11-14T20:15:00Z",
           "raw_path": "Lee Example/Records/athena-example-group/Observation/observation-1572d1dc.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -200,7 +203,7 @@
           "fetched_at": "2026-11-14T20:16:00Z",
           "filed_at": "2026-11-14T20:16:00Z",
           "raw_path": "Lee Example/Records/athena-example-group/Encounter/encounter-d01d7fcc.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -223,7 +226,10 @@
           "unit": "unit",
           "system": "http://unitsofmeasure.org"
         },
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -243,7 +249,7 @@
           "fetched_at": "2026-11-14T20:16:00Z",
           "filed_at": "2026-11-14T20:16:00Z",
           "raw_path": "Lee Example/Records/athena-example-group/Observation/observation-a067c23b.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -282,7 +288,7 @@
           "fetched_at": "2026-11-14T20:17:00Z",
           "filed_at": "2026-11-14T20:17:00Z",
           "raw_path": "Lee Example/Records/athena-example-lake/Encounter/encounter-a4462e2d.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -321,7 +327,7 @@
           "fetched_at": "2026-11-14T20:17:00Z",
           "filed_at": "2026-11-14T20:17:00Z",
           "raw_path": "Lee Example/Records/athena-example-lake/Encounter/encounter-a0d81191.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -344,7 +350,10 @@
           "unit": "unit",
           "system": "http://unitsofmeasure.org"
         },
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -364,7 +373,7 @@
           "fetched_at": "2026-11-14T20:17:00Z",
           "filed_at": "2026-11-14T20:17:00Z",
           "raw_path": "Lee Example/Records/athena-example-lake/Observation/observation-7847388c.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     }
@@ -372,7 +381,7 @@
   "studies": [],
   "imports": [
     {
-      "id": "i_p3pqe6hxtzqwc43ht4na",
+      "id": "i_ktjtn3ntcr6wketqwcpo",
       "source_dir": "Lee Example/Records/athena-800001",
       "stream_sha256": "327e32d03839aa9f8894240940230bcea5b480878871f4a7cd5346df0c2161aa",
       "stream_bytes": 1037,
@@ -381,6 +390,7 @@
       "organization": "800001",
       "patient_id": "pat-364b056e",
       "pulled_at": "2026-11-14T20:10:00Z",
+      "from_files": false,
       "imported_at": "2026-11-14T20:10:00Z",
       "counts": {
         "Encounter": 1,
@@ -390,12 +400,13 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 2,
       "resources_unchanged": 0,
       "documents_added": 0
     },
     {
-      "id": "i_e35gwow4cw7mbxk4rkpr",
+      "id": "i_ew5a5kprwk5bgcbgcykk",
       "source_dir": "Lee Example/Records/athena-800002",
       "stream_sha256": "92f3545c724740c78bcadae72ade428dd40a581147733e9c6da5376a02996fd9",
       "stream_bytes": 652,
@@ -404,6 +415,7 @@
       "organization": "800002",
       "patient_id": "pat-4a64e46d",
       "pulled_at": "2026-11-14T20:11:00Z",
+      "from_files": false,
       "imported_at": "2026-11-14T20:11:00Z",
       "counts": {
         "Patient": 1
@@ -412,12 +424,13 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 1,
       "resources_unchanged": 0,
       "documents_added": 0
     },
     {
-      "id": "i_5lbgzbm5fwke77yl24ta",
+      "id": "i_mlxzo47iglzibzozks5t",
       "source_dir": "Lee Example/Records/athena-800003",
       "stream_sha256": "04d619cd9e12c082454fafe24da291a1f2eddaff23adfc0412beb6cab4d6bc16",
       "stream_bytes": 631,
@@ -426,6 +439,7 @@
       "organization": "800003",
       "patient_id": "pat-686945a9",
       "pulled_at": "2026-11-14T20:12:00Z",
+      "from_files": false,
       "imported_at": "2026-11-14T20:12:00Z",
       "counts": {
         "Patient": 1
@@ -434,12 +448,13 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 1,
       "resources_unchanged": 0,
       "documents_added": 0
     },
     {
-      "id": "i_aoy2zfjvaj4uhepovoik",
+      "id": "i_wiepg7gubkvmri3h63ul",
       "source_dir": "Lee Example/Records/athena-800004",
       "stream_sha256": "1c1eeacc30fdc80550b2389452c34542a828b9b3f4c4edd88e2d03daf361f91a",
       "stream_bytes": 661,
@@ -448,6 +463,7 @@
       "organization": "800004",
       "patient_id": "pat-ad2e492d",
       "pulled_at": "2026-11-14T20:13:00Z",
+      "from_files": false,
       "imported_at": "2026-11-14T20:13:00Z",
       "counts": {
         "Patient": 1
@@ -456,12 +472,13 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 1,
       "resources_unchanged": 0,
       "documents_added": 0
     },
     {
-      "id": "i_phdouqa37hdhba4senvo",
+      "id": "i_mi266fe724qwf2kl2rlq",
       "source_dir": "Lee Example/Records/mychart-800001",
       "stream_sha256": "feb1b4fd407c6e98cbac1c40167a114d44b00d1161a216bc30f0e1fd927ac69c",
       "stream_bytes": 635,
@@ -470,6 +487,7 @@
       "organization": "800001",
       "patient_id": "pat-8900a8c2",
       "pulled_at": "2026-11-14T20:14:00Z",
+      "from_files": false,
       "imported_at": "2026-11-14T20:14:00Z",
       "counts": {
         "Patient": 1
@@ -478,12 +496,13 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 1,
       "resources_unchanged": 0,
       "documents_added": 0
     },
     {
-      "id": "i_ys65rfdkbkgtrroy6yqv",
+      "id": "i_hksdikxnvdlwday2w2ee",
       "source_dir": "Lee Example/Records/athena-example-group",
       "stream_sha256": "d65b264e9913624ea9d6ce3e6b1744b4c027d801246c0b269a0e243d9733e815",
       "stream_bytes": 1768,
@@ -492,6 +511,7 @@
       "organization": "example-group",
       "patient_id": "pat-853f0d7e",
       "pulled_at": "2026-11-14T20:15:00Z",
+      "from_files": false,
       "imported_at": "2026-11-14T20:15:00Z",
       "counts": {
         "Encounter": 2,
@@ -502,12 +522,13 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 4,
       "resources_unchanged": 0,
       "documents_added": 0
     },
     {
-      "id": "i_4qogz7265rxhc3c4fhak",
+      "id": "i_bg7jhi7y7daolgb5qujc",
       "source_dir": "Lee Example/Records/athena-example-group",
       "stream_sha256": "05ad49b0eb32db66896f1a6c7248f27efad040f708c1132c3b210c3a2eb96389",
       "stream_bytes": 1469,
@@ -516,6 +537,7 @@
       "organization": "example-group",
       "patient_id": "pat-abda62c0",
       "pulled_at": "2026-11-14T20:16:00Z",
+      "from_files": false,
       "imported_at": "2026-11-14T20:16:00Z",
       "counts": {
         "Encounter": 1,
@@ -531,7 +553,7 @@
       "documents_added": 0
     },
     {
-      "id": "i_lnkixv4cn5oa5ctzmeja",
+      "id": "i_p6ywx6x6wnawywph5xht",
       "source_dir": "Lee Example/Records/athena-example-lake",
       "stream_sha256": "04c3855b820d9693262f515fef290cff7cf8a899d64e47cad515b435797e9dbd",
       "stream_bytes": 1768,
@@ -540,6 +562,7 @@
       "organization": "example-lake",
       "patient_id": "pat-106fdaf4",
       "pulled_at": "2026-11-14T20:17:00Z",
+      "from_files": false,
       "imported_at": "2026-11-14T20:17:00Z",
       "counts": {
         "Encounter": 2,
@@ -550,12 +573,13 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 4,
       "resources_unchanged": 0,
       "documents_added": 0
     },
     {
-      "id": "i_de6go7mrrsuhxxvaqaer",
+      "id": "i_5k2zdo6pfifxoksdkfck",
       "source_dir": "Lee Example/Records/athena-example-north",
       "stream_sha256": "73eac68a27063e07b86342606a0bfdfa91f9b361cc93dd266aca137d2e5bae18",
       "stream_bytes": 664,
@@ -564,6 +588,7 @@
       "organization": "example-north",
       "patient_id": "pat-353ab676",
       "pulled_at": "2026-11-14T20:18:00Z",
+      "from_files": false,
       "imported_at": "2026-11-14T20:18:00Z",
       "counts": {
         "Patient": 1
@@ -572,6 +597,7 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 1,
       "resources_unchanged": 0,
       "documents_added": 0

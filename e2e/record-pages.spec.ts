@@ -122,7 +122,7 @@ test('a medicine leads with how to take it and its last fill', async ({ page }) 
 
 test('a condition, an allergy and a vaccine lead with what they are and link to read more', async ({ page }) => {
   await openFromList(page, 'Robin', 'conditions', 'High blood pressure');
-  await expect(page.locator('section.card').first().locator('p.muted').first()).toHaveText('Condition · Active · from Example Health');
+  await expect(page.locator('section.card').first().locator('p.muted').first()).toHaveText('Condition · Current · from Example Health');
   await expectLearnLink(page, /Read about High blood pressure on MedlinePlus/, /mainSearchCriteria\.v\.cs=2\.16\.840\.1\.113883\.6\.90&mainSearchCriteria\.v\.c=I10&/);
   await expectFolded(page);
 

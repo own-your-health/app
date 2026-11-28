@@ -417,7 +417,7 @@
           "fetched_at": "2026-11-14T20:07:00Z",
           "filed_at": "2026-11-14T20:07:00Z",
           "raw_path": "Quinn Example/Records/uhc-example-health-plan/ExplanationOfBenefit/explanationofbenefit-7910cbaf.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -682,7 +682,7 @@
           "fetched_at": "2026-11-14T20:07:00Z",
           "filed_at": "2026-11-14T20:07:00Z",
           "raw_path": "Quinn Example/Records/uhc-example-health-plan/ExplanationOfBenefit/explanationofbenefit-227c3758.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1018,7 +1018,7 @@
           "fetched_at": "2026-11-14T20:07:00Z",
           "filed_at": "2026-11-14T20:07:00Z",
           "raw_path": "Quinn Example/Records/uhc-example-health-plan/ExplanationOfBenefit/explanationofbenefit-52b1db3e.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1316,7 +1316,7 @@
           "fetched_at": "2026-11-14T20:07:00Z",
           "filed_at": "2026-11-14T20:07:00Z",
           "raw_path": "Quinn Example/Records/uhc-example-health-plan/ExplanationOfBenefit/explanationofbenefit-880dbaab.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1491,7 +1491,7 @@
           "fetched_at": "2026-11-14T20:07:00Z",
           "filed_at": "2026-11-14T20:07:00Z",
           "raw_path": "Quinn Example/Records/uhc-example-health-plan/ExplanationOfBenefit/explanationofbenefit-68ce35db.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1666,7 +1666,7 @@
           "fetched_at": "2026-11-14T20:07:00Z",
           "filed_at": "2026-11-14T20:07:00Z",
           "raw_path": "Quinn Example/Records/uhc-example-health-plan/ExplanationOfBenefit/explanationofbenefit-51307e71.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -2030,7 +2030,7 @@
           "fetched_at": "2026-11-14T20:07:00Z",
           "filed_at": "2026-11-14T20:07:00Z",
           "raw_path": "Quinn Example/Records/uhc-example-health-plan/ExplanationOfBenefit/explanationofbenefit-a2d9557e.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     }
@@ -2038,7 +2038,7 @@
   "studies": [],
   "imports": [
     {
-      "id": "i_wxzbpoq4jrawp2bk5fhm",
+      "id": "i_inli4d5osqqxrlz2pvwl",
       "source_dir": "Quinn Example/Records/uhc-example-health-plan",
       "stream_sha256": "40e80a5781c2d20affb2d9b60cdeae90962c41087ac6b198ce4d5fd7a92f42d0",
       "stream_bytes": 26061,
@@ -2047,6 +2047,7 @@
       "organization": "example-health-plan",
       "patient_id": "pat-7079ed91",
       "pulled_at": "2026-11-14T20:07:00Z",
+      "from_files": false,
       "imported_at": "2026-11-14T20:07:00Z",
       "counts": {
         "ExplanationOfBenefit": 7,
@@ -2056,6 +2057,7 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 8,
       "resources_unchanged": 0,
       "documents_added": 0

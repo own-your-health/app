@@ -110,7 +110,7 @@
         "fetched_at": "2026-10-18T20:00:00Z",
         "filed_at": "2026-10-18T20:00:00Z",
         "raw_path": "Alex Example/Records/athena-example-pediatrics/Binary/binary-35068d59.json",
-        "filed_by": "medrec 0.9.7"
+        "filed_by": "medrec 0.9.10"
       }
     },
     {
@@ -150,7 +150,7 @@
         "fetched_at": "2026-11-21T18:00:00Z",
         "filed_at": "2026-11-21T18:00:00Z",
         "raw_path": "Alex Example/Records/athena-example-pediatrics/Binary/binary-35ebf03a.json",
-        "filed_by": "medrec 0.9.7"
+        "filed_by": "medrec 0.9.10"
       }
     },
     {
@@ -213,7 +213,7 @@
         "filed_at": "2026-11-21T20:00:00Z",
         "raw_path": "Alex Example/Documents/2026/2026-11-20_letter_example_pediatrics_School note.jpg",
         "classified_by": "hand",
-        "filed_by": "medrec 0.9.7"
+        "filed_by": "medrec 0.9.10"
       }
     }
   ],
@@ -258,7 +258,7 @@
           "fetched_at": "2026-10-17T20:00:00Z",
           "filed_at": "2026-10-17T20:00:00Z",
           "raw_path": "Alex Example/Records/kp-example-care-plan/Coverage/coverage-e444f774.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -624,7 +624,7 @@
           "fetched_at": "2026-10-17T20:00:00Z",
           "filed_at": "2026-10-17T20:00:00Z",
           "raw_path": "Alex Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-5327ffab.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -647,7 +647,10 @@
           "unit": "kg",
           "system": "http://unitsofmeasure.org"
         },
-        "category": "Vital signs"
+        "category": "Vital signs",
+        "categories": [
+          "vital-signs"
+        ]
       },
       "provenance": [
         {
@@ -667,7 +670,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Observation/observation-48627e5a.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -690,7 +693,10 @@
           "unit": "kg",
           "system": "http://unitsofmeasure.org"
         },
-        "category": "Vital signs"
+        "category": "Vital signs",
+        "categories": [
+          "vital-signs"
+        ]
       },
       "provenance": [
         {
@@ -710,7 +716,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Observation/observation-4acfe8b6.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -733,7 +739,10 @@
           "unit": "kg",
           "system": "http://unitsofmeasure.org"
         },
-        "category": "Vital signs"
+        "category": "Vital signs",
+        "categories": [
+          "vital-signs"
+        ]
       },
       "provenance": [
         {
@@ -753,7 +762,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Observation/observation-50cc88c7.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -792,7 +801,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-6c591f23.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -831,7 +840,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-b7c9987b.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -870,7 +879,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-aa39430b.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -909,7 +918,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-71fc2b91.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -948,7 +957,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-34405578.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -987,7 +996,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-cb576993.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1026,7 +1035,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-8006d30f.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1065,7 +1074,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-6e6d621d.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1104,7 +1113,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-6b1ff703.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1143,7 +1152,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-5bb3ef35.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1182,7 +1191,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-56f7b0f6.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1221,7 +1230,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-3d784ab7.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1260,7 +1269,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-6da6944b.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1299,7 +1308,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-bc45bfaf.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1338,7 +1347,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-fd6b4ed2.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1377,7 +1386,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-da4f362a.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1416,7 +1425,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-dcdb385c.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1455,7 +1464,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-9e4fc208.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1494,7 +1503,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-8df855b4.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1533,7 +1542,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-150c8937.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1572,7 +1581,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-055558fe.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1611,7 +1620,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-a37b6b9b.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1650,7 +1659,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-050c5f56.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1689,7 +1698,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Immunization/immunization-c6edfe22.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1738,7 +1747,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Encounter/encounter-f0f1bbbd.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1787,7 +1796,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Encounter/encounter-7c60e323.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1836,7 +1845,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Encounter/encounter-0e68c605.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -2238,7 +2247,7 @@
           "fetched_at": "2026-11-21T14:00:00Z",
           "filed_at": "2026-11-21T14:00:00Z",
           "raw_path": "Alex Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-071fe4ef.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -2286,7 +2295,7 @@
           "fetched_at": "2026-11-21T18:00:00Z",
           "filed_at": "2026-11-21T18:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Encounter/encounter-d8ba774a.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -2304,9 +2313,24 @@
       "status": "active",
       "fields": {
         "when": "2026-11-20",
+        "onset": "2026-11-20",
         "verification_status": "confirmed",
-        "category": "Encounter diagnosis"
+        "category": "Encounter diagnosis",
+        "categories": [
+          "Encounter diagnosis"
+        ]
       },
+      "words": [
+        {
+          "raw_path": "Alex Example/Records/athena-example-pediatrics/Condition/condition-5a93c995.json",
+          "status": "active",
+          "verification": "confirmed",
+          "categories": [
+            "Encounter diagnosis"
+          ],
+          "version": "bc5632c07be0359f"
+        }
+      ],
       "provenance": [
         {
           "source": {
@@ -2325,7 +2349,7 @@
           "fetched_at": "2026-11-21T18:00:00Z",
           "filed_at": "2026-11-21T18:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/Condition/condition-5a93c995.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -2354,6 +2378,13 @@
           "npi": "0000000022"
         }
       ],
+      "words": [
+        {
+          "raw_path": "Alex Example/Records/athena-example-pediatrics/MedicationRequest/medicationrequest-5119f4d3.json",
+          "status": "active",
+          "version": "2ff02bfe8c170cf1"
+        }
+      ],
       "provenance": [
         {
           "source": {
@@ -2372,7 +2403,7 @@
           "fetched_at": "2026-11-21T18:00:00Z",
           "filed_at": "2026-11-21T18:00:00Z",
           "raw_path": "Alex Example/Records/athena-example-pediatrics/MedicationRequest/medicationrequest-5119f4d3.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     }
@@ -2380,7 +2411,7 @@
   "studies": [],
   "imports": [
     {
-      "id": "i_7n4xirqw7tegh6mamc27",
+      "id": "i_iuo6sm63o2npctrizmad",
       "source_dir": "Alex Example/Records/kp-example-care-plan",
       "stream_sha256": "1160236319974d4e5962ba53859899aede5829d58091d4b896e3636b920d1a7e",
       "stream_bytes": 6423,
@@ -2389,6 +2420,7 @@
       "organization": "example-care-plan",
       "patient_id": "pat-71f4e4",
       "pulled_at": "2026-10-17T20:00:00Z",
+      "from_files": false,
       "imported_at": "2026-10-17T20:00:00Z",
       "counts": {
         "Coverage": 1,
@@ -2399,12 +2431,13 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 3,
       "resources_unchanged": 0,
       "documents_added": 0
     },
     {
-      "id": "i_3huv5q4sfo5nd7y252zi",
+      "id": "i_4opf6wfbbxb25r7kzdf5",
       "source_dir": "Alex Example/Records/athena-example-pediatrics",
       "stream_sha256": "2306a4f8adfad7a87dfb14ba4179243b18151c78271953aec122b6e993d69ce6",
       "stream_bytes": 14368,
@@ -2413,6 +2446,7 @@
       "organization": "example-pediatrics",
       "patient_id": "pat-c20a95",
       "pulled_at": "2026-10-18T20:00:00Z",
+      "from_files": false,
       "imported_at": "2026-10-18T20:00:00Z",
       "counts": {
         "Binary": 1,
@@ -2426,6 +2460,7 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 33,
       "resources_unchanged": 0,
       "documents_added": 1
@@ -2440,6 +2475,7 @@
       "organization": "example-care-plan",
       "patient_id": "pat-71f4e4",
       "pulled_at": "2026-11-21T14:00:00Z",
+      "from_files": false,
       "imported_at": "2026-11-21T14:00:00Z",
       "counts": {
         "Coverage": 1,
@@ -2450,6 +2486,7 @@
       "records_updated": 0,
       "records_unchanged": 2,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 1,
       "resources_unchanged": 3,
       "documents_added": 0
@@ -2464,6 +2501,7 @@
       "organization": "example-pediatrics",
       "patient_id": "pat-c20a95",
       "pulled_at": "2026-11-21T18:00:00Z",
+      "from_files": false,
       "imported_at": "2026-11-21T18:00:00Z",
       "counts": {
         "Binary": 2,
@@ -2479,6 +2517,7 @@
       "records_updated": 0,
       "records_unchanged": 30,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 5,
       "resources_unchanged": 33,
       "documents_added": 1

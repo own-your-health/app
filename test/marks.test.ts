@@ -656,7 +656,7 @@ describe('a payment marked', () => {
 
   it('is asked of a medrec that records it, by an account that may', async () => {
     const { store } = await loaded();
-    expect([store.medrec, store.mayRequest]).toEqual(['0.9.7', true]);
+    expect([store.medrec, store.mayRequest]).toEqual(['0.9.10', true]);
     const folder = demoFolder(NOW);
     const viewer = async (may: boolean | undefined) => {
       folder.mayRequest = async () => may;
