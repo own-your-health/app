@@ -24,7 +24,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const MAC = process.platform === 'darwin';
 
 // The sample is what this release writes.
-const VERSION = '0.9.7';
+const VERSION = '0.9.10';
 
 /** A command as an absolute path: its own, or the first on the shell's PATH, as a step's PATH may have none of that. */
 function commandAt(name, version) {
@@ -95,7 +95,7 @@ export function scratchMachine(root, { alone = false, release = VERSION } = {}) 
   return { home, bin, root: records, medrec };
 }
 
-/** The views of the sample's medrec that the app reads: each person's events, bills, private items, code names and provider labels, by the name medrec stores them under. */
-export const APP_VIEW = /^(events|bills|private|code-names|providers)\.[0-9a-f]{12}\.json$/;
+/** The views of medrec that the app reads: each person's events, bills, private items, code names, provider labels and what is current, by the name medrec stores them under. */
+export const APP_VIEW = /^(events|bills|private|code-names|providers|standing)\.[0-9a-f]{12}\.json$/;
 
 export const md5Of = (bytes) => createHash('md5').update(bytes).digest('hex');

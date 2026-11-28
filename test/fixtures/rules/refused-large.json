@@ -11,6 +11,6 @@
     "outcome": "invalid",
     "sources": [],
     "message": "it is 5291 bytes; a request is at most 4096",
-    "by": "medrec 0.9.7"
+    "by": "medrec 0.9.10"
   }
 }

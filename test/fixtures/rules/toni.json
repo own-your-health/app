@@ -7,7 +7,7 @@
   "studies": [],
   "imports": [
     {
-      "id": "i_2qkz7vxjra5ttbe7gcb3",
+      "id": "i_qporjphg4t2cz6qiqgd5",
       "source_dir": "Toni Example/Records/athena-example-group",
       "stream_sha256": "a787ed2a407781cf99af3d5f60d2ad474af2ef92155668ade2cf7fc04846d803",
       "stream_bytes": 665,
@@ -16,6 +16,7 @@
       "organization": "example-group",
       "patient_id": "pat-ee416ade",
       "pulled_at": "2026-11-14T20:19:00Z",
+      "from_files": false,
       "imported_at": "2026-11-14T20:19:00Z",
       "counts": {
         "Patient": 1
@@ -24,12 +25,13 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 1,
       "resources_unchanged": 0,
       "documents_added": 0
     },
     {
-      "id": "i_ogzu35uhdvwemqnpvkeg",
+      "id": "i_oil27mzpem24gjss4jud",
       "source_dir": "Toni Example/Records/athena-example-east",
       "stream_sha256": "9646a799f62fe0d9ce75ca90994d4b0ff72b4c8f9bcc73fa3c77ae52b1221379",
       "stream_bytes": 663,
@@ -38,6 +40,7 @@
       "organization": "example-east",
       "patient_id": "pat-ccc12d30",
       "pulled_at": "2026-11-14T20:20:00Z",
+      "from_files": false,
       "imported_at": "2026-11-14T20:20:00Z",
       "counts": {
         "Patient": 1
@@ -46,6 +49,7 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 1,
       "resources_unchanged": 0,
       "documents_added": 0

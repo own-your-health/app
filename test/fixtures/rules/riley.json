@@ -20,7 +20,10 @@
         "when": "2026-03-24",
         "value": "2.1",
         "reference_range": "1.6 mg/dL – 2.6 mg/dL",
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -40,7 +43,7 @@
           "fetched_at": "2026-11-14T20:00:00Z",
           "filed_at": "2026-11-14T20:00:00Z",
           "raw_path": "Riley Example/Records/labcorp-example-lab/Observation/observation-8220bc40.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -65,7 +68,10 @@
         },
         "reference_range": "1.6-2.6 mg/dL",
         "interpretation": "Normal",
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -85,7 +91,7 @@
           "fetched_at": "2026-11-14T20:00:00Z",
           "filed_at": "2026-11-14T20:00:00Z",
           "raw_path": "Riley Example/Records/labcorp-example-lab/Observation/observation-a55c684e.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -105,7 +111,10 @@
         "when": "2026-03-24",
         "value": "5.9",
         "reference_range": "2.5 - 4.5 mg/dL",
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -125,7 +134,7 @@
           "fetched_at": "2026-11-14T20:00:00Z",
           "filed_at": "2026-11-14T20:00:00Z",
           "raw_path": "Riley Example/Records/labcorp-example-lab/Observation/observation-4bacff80.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -144,7 +153,10 @@
       "fields": {
         "when": "2026-03-24",
         "value": "31",
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -164,7 +176,7 @@
           "fetched_at": "2026-11-14T20:00:00Z",
           "filed_at": "2026-11-14T20:00:00Z",
           "raw_path": "Riley Example/Records/labcorp-example-lab/Observation/observation-4a9ca535.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -184,7 +196,10 @@
         "when": "2026-03-24",
         "value": "<0.3",
         "reference_range": "0.0-1.0 mg/dL",
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -204,7 +219,7 @@
           "fetched_at": "2026-11-14T20:00:00Z",
           "filed_at": "2026-11-14T20:00:00Z",
           "raw_path": "Riley Example/Records/labcorp-example-lab/Observation/observation-02451fa5.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -224,7 +239,10 @@
         "when": "2026-03-24",
         "value": ">2000",
         "reference_range": ">=200 pg/mL",
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -244,7 +262,7 @@
           "fetched_at": "2026-11-14T20:00:00Z",
           "filed_at": "2026-11-14T20:00:00Z",
           "raw_path": "Riley Example/Records/labcorp-example-lab/Observation/observation-331664d0.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -264,7 +282,10 @@
         "when": "2026-03-24",
         "value": "<10",
         "reference_range": "50-150 ug/dL",
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -284,7 +305,7 @@
           "fetched_at": "2026-11-14T20:00:00Z",
           "filed_at": "2026-11-14T20:00:00Z",
           "raw_path": "Riley Example/Records/labcorp-example-lab/Observation/observation-a0c2fff4.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -303,7 +324,10 @@
       "fields": {
         "when": "2026-03-24",
         "value": "Clear",
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -323,7 +347,7 @@
           "fetched_at": "2026-11-14T20:00:00Z",
           "filed_at": "2026-11-14T20:00:00Z",
           "raw_path": "Riley Example/Records/labcorp-example-lab/Observation/observation-c2f5a71b.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     }
@@ -331,7 +355,7 @@
   "studies": [],
   "imports": [
     {
-      "id": "i_xxyn6rogjqhh7dcwuqlq",
+      "id": "i_oehx25gtja4ne4d5cwvm",
       "source_dir": "Riley Example/Records/labcorp-example-lab",
       "stream_sha256": "8a03e5ba68344d9e39224de492b776af681ad540775a54319ac79f7f6cc00dd5",
       "stream_bytes": 4540,
@@ -340,6 +364,7 @@
       "organization": "example-lab",
       "patient_id": "pat-fb5cf795",
       "pulled_at": "2026-11-14T20:00:00Z",
+      "from_files": false,
       "imported_at": "2026-11-14T20:00:00Z",
       "counts": {
         "Observation": 8,
@@ -349,6 +374,7 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 9,
       "resources_unchanged": 0,
       "documents_added": 0

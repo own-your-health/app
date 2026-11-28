@@ -39,7 +39,7 @@
           "fetched_at": "2026-11-14T20:01:00Z",
           "filed_at": "2026-11-14T20:01:00Z",
           "raw_path": "Kit Example/Records/uhc-example-health-plan/Coverage/coverage-94451455.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -76,7 +76,7 @@
           "fetched_at": "2026-11-14T20:02:00Z",
           "filed_at": "2026-11-14T20:02:00Z",
           "raw_path": "Kit Example/Records/mychart-example-health/Coverage/coverage-94236548.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -115,7 +115,7 @@
           "fetched_at": "2026-11-14T20:02:00Z",
           "filed_at": "2026-11-14T20:02:00Z",
           "raw_path": "Kit Example/Records/mychart-example-health/Coverage/coverage-578e34ea.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -154,7 +154,7 @@
           "fetched_at": "2026-11-14T20:02:00Z",
           "filed_at": "2026-11-14T20:02:00Z",
           "raw_path": "Kit Example/Records/mychart-example-health/Coverage/coverage-065dafd2.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -173,6 +173,19 @@
         },
         "relationship": "self"
       },
+      "words": [
+        {
+          "raw_path": "Kit Example/Records/mychart-example-health/Coverage/coverage-96bfc93c.json",
+          "status": "entered-in-error",
+          "version": "4b027e4fc3139bd2"
+        }
+      ],
+      "errors": [
+        {
+          "raw_path": "Kit Example/Records/mychart-example-health/Coverage/coverage-96bfc93c.json",
+          "from": "2026-11-14T20:02:00Z"
+        }
+      ],
       "provenance": [
         {
           "source": {
@@ -191,7 +204,7 @@
           "fetched_at": "2026-11-14T20:02:00Z",
           "filed_at": "2026-11-14T20:02:00Z",
           "raw_path": "Kit Example/Records/mychart-example-health/Coverage/coverage-96bfc93c.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -223,7 +236,7 @@
           "fetched_at": "2026-11-14T20:02:00Z",
           "filed_at": "2026-11-14T20:02:00Z",
           "raw_path": "Kit Example/Records/mychart-example-health/Coverage/coverage-ecc1e2cf.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     }
@@ -231,7 +244,7 @@
   "studies": [],
   "imports": [
     {
-      "id": "i_zrdrv3coucfqydlhwjod",
+      "id": "i_s77oxzzuomsiu33vdxok",
       "source_dir": "Kit Example/Records/uhc-example-health-plan",
       "stream_sha256": "e75f3d7859181e01acbcdfde4b2b2cd66dae794640837e61a1c98ae27f2e200e",
       "stream_bytes": 1183,
@@ -240,6 +253,7 @@
       "organization": "example-health-plan",
       "patient_id": "pat-68e1bb55",
       "pulled_at": "2026-11-14T20:01:00Z",
+      "from_files": false,
       "imported_at": "2026-11-14T20:01:00Z",
       "counts": {
         "Coverage": 1,
@@ -249,12 +263,13 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 2,
       "resources_unchanged": 0,
       "documents_added": 0
     },
     {
-      "id": "i_ha4zjlhi74d6eenofj66",
+      "id": "i_vyakqjsg6fiuu753v4gn",
       "source_dir": "Kit Example/Records/mychart-example-health",
       "stream_sha256": "bdbcee0e3a0b7e586427cec8fdf8349c5225c843faad67b62e744127d53d0609",
       "stream_bytes": 2540,
@@ -263,6 +278,7 @@
       "organization": "example-health",
       "patient_id": "pat-a5e26433",
       "pulled_at": "2026-11-14T20:02:00Z",
+      "from_files": false,
       "imported_at": "2026-11-14T20:02:00Z",
       "counts": {
         "Coverage": 5,
@@ -272,6 +288,7 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 6,
       "resources_unchanged": 0,
       "documents_added": 0

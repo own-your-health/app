@@ -38,7 +38,7 @@
           "fetched_at": "2026-11-14T20:06:00Z",
           "filed_at": "2026-11-14T20:06:00Z",
           "raw_path": "Pat Example/Records/kp-example-care-plan/Coverage/coverage-aea0bdfc.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -278,7 +278,7 @@
           "fetched_at": "2026-11-14T20:06:00Z",
           "filed_at": "2026-11-14T20:06:00Z",
           "raw_path": "Pat Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-aaae9f03.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -518,7 +518,7 @@
           "fetched_at": "2026-11-14T20:06:00Z",
           "filed_at": "2026-11-14T20:06:00Z",
           "raw_path": "Pat Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-95f318fb.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -758,7 +758,7 @@
           "fetched_at": "2026-11-14T20:06:00Z",
           "filed_at": "2026-11-14T20:06:00Z",
           "raw_path": "Pat Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-ea784ffa.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1002,7 +1002,7 @@
           "fetched_at": "2026-11-14T20:06:00Z",
           "filed_at": "2026-11-14T20:06:00Z",
           "raw_path": "Pat Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-cfabe8b3.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1246,7 +1246,7 @@
           "fetched_at": "2026-11-14T20:06:00Z",
           "filed_at": "2026-11-14T20:06:00Z",
           "raw_path": "Pat Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-1f5f5b44.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     }
@@ -1254,7 +1254,7 @@
   "studies": [],
   "imports": [
     {
-      "id": "i_7qdizxc7tcopmnm237kh",
+      "id": "i_n5t7lgt6cjv5hfcwr76j",
       "source_dir": "Pat Example/Records/kp-example-care-plan",
       "stream_sha256": "a8b4d4cac52aa419de3e5098086ee0eb328f55fffb811b4734e9030ebf8b4bb2",
       "stream_bytes": 17360,
@@ -1263,6 +1263,7 @@
       "organization": "example-care-plan",
       "patient_id": "pat-390968a7",
       "pulled_at": "2026-11-14T20:06:00Z",
+      "from_files": false,
       "imported_at": "2026-11-14T20:06:00Z",
       "counts": {
         "Coverage": 1,
@@ -1273,6 +1274,7 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 7,
       "resources_unchanged": 0,
       "documents_added": 0
