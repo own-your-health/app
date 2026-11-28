@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { demoJson } from '../test/helpers';
 import { ALEX, DREW, ROBIN, SAM } from '../test/sample';
+import { withoutStanding } from './alter';
 import { lay } from './lay';
 
 // The sample folder in demo mode, through the production build and its
@@ -237,6 +238,8 @@ test('a low result read from its range is flagged in its panel', async ({ page }
 });
 
 test('conditions, allergies and medicines read as lists naming their source', async ({ page }) => {
+  // The app's own lists, where medrec wrote no standing.json.
+  await lay(page, withoutStanding());
   await openList(page, 'Sam', 'conditions');
   const active = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Active$/ }) });
   await expect(active.locator('.row')).toHaveText([/Vitamin D deficiency.*recorded Apr 2, 2026 · from Example Health/]);
@@ -255,6 +258,7 @@ test('conditions, allergies and medicines read as lists naming their source', as
 });
 
 test('a medicine shows its prescriber and last fill, and an inactive allergy and a declined dose stand apart', async ({ page }) => {
+  await lay(page, withoutStanding());
   await openList(page, 'Robin', 'medicines');
   const active = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Active$/ }) });
   await expect(active.locator('.row')).toHaveText([
@@ -270,6 +274,18 @@ test('a medicine shows its prescriber and last fill, and an inactive allergy and
   await openList(page, 'Robin', 'immunizations');
   await expect(page.locator('.card', { hasText: 'Recorded as not given' }).locator('.row')).toHaveText([/COVID-19 vaccine.*Oct 4, 2025 · from Example Health/]);
   await expect(page.locator('.card', { has: page.locator('.card-head h2', { hasText: 'Doses given' }) }).locator('.row', { hasText: 'COVID-19' })).toHaveCount(0);
+});
+
+test('with medrec’s word on what is current, a list is what each source says, and the rest is one tap away', async ({ page }) => {
+  await openList(page, 'Robin', 'medicines');
+  const current = page.locator('.card', { has: page.locator('.card-head h2', { hasText: /^Current$/ }) });
+  await expect(current.locator('.row')).toHaveText([
+    /Atorvastatin 20 mg tablet.*last filled Nov 7, 2026 at Example Pharmacy, 30 days · Example Pharmacy Benefits: active, read Oct 15, 2026/,
+    /Lisinopril 10 mg tablet.*last filled Nov 12, 2026 at Example Pharmacy, 90 days · Example Health: active, read Oct 15, 2026/,
+  ]);
+  await expect(page.locator('main details summary')).toHaveText('All: 3 records');
+  await openList(page, 'Robin', 'allergies');
+  await expect(current.locator('.row')).toHaveText([/Sulfa drugs.*Rash · low risk of a severe reaction · recorded Jan 1, 2012 · Example Health: active, read Oct 15, 2026/]);
 });
 
 test('each vaccine is listed once, with a link to every dose', async ({ page }) => {

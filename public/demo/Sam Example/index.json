@@ -155,7 +155,7 @@
         "filed_at": "2026-10-14T20:00:00Z",
         "raw_path": "Sam Example/Claims/2026/2026-07-09_bill_example_billing_Statement from Example Billing.pdf",
         "classified_by": "hand",
-        "filed_by": "medrec 0.9.7"
+        "filed_by": "medrec 0.9.10"
       }
     },
     {
@@ -287,7 +287,7 @@
         "filed_at": "2026-10-14T20:00:00Z",
         "raw_path": "Sam Example/Documents/2026/2026-09-16_discharge_summary_example_endoscopy_center_After your upper endoscopy.pdf",
         "classified_by": "hand",
-        "filed_by": "medrec 0.9.7"
+        "filed_by": "medrec 0.9.10"
       }
     },
     {
@@ -443,7 +443,7 @@
         "filed_at": "2026-10-14T20:00:00Z",
         "raw_path": "Sam Example/Claims/2026/2026-09-16_bill_example_endoscopy_center_Statement from Example Endoscopy Center.pdf",
         "classified_by": "hand",
-        "filed_by": "medrec 0.9.7"
+        "filed_by": "medrec 0.9.10"
       }
     },
     {
@@ -553,7 +553,7 @@
         "fetched_at": "2026-11-10T20:00:00Z",
         "filed_at": "2026-11-10T20:00:00Z",
         "raw_path": "Sam Example/Records/mychart-example-health/Binary/binary-c748f6cc.json",
-        "filed_by": "medrec 0.9.7"
+        "filed_by": "medrec 0.9.10"
       }
     },
     {
@@ -593,7 +593,7 @@
         "fetched_at": "2026-11-10T20:00:00Z",
         "filed_at": "2026-11-10T20:00:00Z",
         "raw_path": "Sam Example/Records/mychart-example-health/Binary/binary-3aab15da.json",
-        "filed_by": "medrec 0.9.7"
+        "filed_by": "medrec 0.9.10"
       }
     }
   ],
@@ -638,7 +638,7 @@
           "fetched_at": "2026-10-17T20:00:00Z",
           "filed_at": "2026-10-17T20:00:00Z",
           "raw_path": "Sam Example/Records/kp-example-care-plan/Coverage/coverage-5b0e1ced.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1008,7 +1008,7 @@
           "fetched_at": "2026-10-17T20:00:00Z",
           "filed_at": "2026-10-17T20:00:00Z",
           "raw_path": "Sam Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-fdfcbc8c.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1360,7 +1360,7 @@
           "fetched_at": "2026-10-17T20:00:00Z",
           "filed_at": "2026-10-17T20:00:00Z",
           "raw_path": "Sam Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-e070ac12.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1625,7 +1625,7 @@
           "fetched_at": "2026-10-17T20:00:00Z",
           "filed_at": "2026-10-17T20:00:00Z",
           "raw_path": "Sam Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-ae3ba387.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1941,7 +1941,7 @@
           "fetched_at": "2026-10-17T20:00:00Z",
           "filed_at": "2026-10-17T20:00:00Z",
           "raw_path": "Sam Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-7e4d1b74.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -2201,7 +2201,7 @@
           "fetched_at": "2026-10-17T20:00:00Z",
           "filed_at": "2026-10-17T20:00:00Z",
           "raw_path": "Sam Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-58473c3e.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -2617,7 +2617,7 @@
           "fetched_at": "2026-10-17T20:00:00Z",
           "filed_at": "2026-10-17T20:00:00Z",
           "raw_path": "Sam Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-bb5fc9a7.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -2642,8 +2642,24 @@
         },
         "reference_range": "12.0-15.5 g/dL",
         "interpretation": "Low",
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
+      "words": [
+        {
+          "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-8fa7f3cc.json",
+          "status": "final",
+          "version": "7db8ea31e8dc1167"
+        },
+        {
+          "raw_path": "Sam Example/Records/peryourhealth-example-billing/Observation/observation-6f2d0320.json",
+          "status": "final",
+          "version": "aff4f36200d20cf1"
+        }
+      ],
+      "fields_from": "Sam Example/Records/labcorp-example-lab/Observation/observation-8fa7f3cc.json",
       "provenance": [
         {
           "source": {
@@ -2662,7 +2678,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-8fa7f3cc.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         },
         {
           "source": {
@@ -2681,7 +2697,7 @@
           "fetched_at": "2026-11-02T20:00:00Z",
           "filed_at": "2026-11-02T20:00:00Z",
           "raw_path": "Sam Example/Records/peryourhealth-example-billing/Observation/observation-6f2d0320.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -2706,7 +2722,10 @@
         },
         "reference_range": "4.5-11.0 10*3/uL",
         "interpretation": "Normal",
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -2726,7 +2745,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-05f4841f.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -2751,7 +2770,10 @@
         },
         "reference_range": "150-400 10*3/uL",
         "interpretation": "Normal",
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -2771,7 +2793,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-2e2d6cf2.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -2796,7 +2818,10 @@
         },
         "reference_range": "12.0-15.5 g/dL",
         "interpretation": "Low",
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -2816,7 +2841,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-3b5a9396.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -2841,7 +2866,10 @@
         },
         "reference_range": "4.5-11.0 10*3/uL",
         "interpretation": "Normal",
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -2861,7 +2889,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-fb25eea4.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -2886,7 +2914,10 @@
         },
         "reference_range": "150-400 10*3/uL",
         "interpretation": "Normal",
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -2906,7 +2937,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-6780d47e.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -2931,7 +2962,10 @@
         },
         "reference_range": "0.4-4.0 mIU/L",
         "interpretation": "Normal",
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -2951,7 +2985,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Sam Example/Records/labcorp-example-lab/Observation/observation-3f9d3c19.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -2976,7 +3010,10 @@
         },
         "reference_range": "30-100 ng/mL",
         "interpretation": "Low",
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -2996,7 +3033,7 @@
           "fetched_at": "2026-11-10T20:00:00Z",
           "filed_at": "2026-11-10T20:00:00Z",
           "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-e73e671c.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -3021,7 +3058,10 @@
         },
         "reference_range": "30-100 ng/mL",
         "interpretation": "Low",
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -3041,7 +3081,7 @@
           "fetched_at": "2026-11-10T20:00:00Z",
           "filed_at": "2026-11-10T20:00:00Z",
           "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-377dd77d.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -3059,9 +3099,24 @@
       "status": "active",
       "fields": {
         "when": "2026-04-02",
+        "onset": "2026-04-02",
         "verification_status": "confirmed",
-        "category": "Problem list item"
+        "category": "Problem list item",
+        "categories": [
+          "Problem list item"
+        ]
       },
+      "words": [
+        {
+          "raw_path": "Sam Example/Records/mychart-example-health/Condition/condition-f81d9792.json",
+          "status": "active",
+          "verification": "confirmed",
+          "categories": [
+            "Problem list item"
+          ],
+          "version": "4e041f529cf64c7c"
+        }
+      ],
       "provenance": [
         {
           "source": {
@@ -3080,7 +3135,7 @@
           "fetched_at": "2026-11-10T20:00:00Z",
           "filed_at": "2026-11-10T20:00:00Z",
           "raw_path": "Sam Example/Records/mychart-example-health/Condition/condition-f81d9792.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -3098,10 +3153,26 @@
       "status": "resolved",
       "fields": {
         "when": "2026-05-20",
+        "onset": "2026-05-20",
         "verification_status": "confirmed",
         "category": "Encounter diagnosis",
+        "categories": [
+          "Encounter diagnosis"
+        ],
         "abatement": "2026-07-01"
       },
+      "words": [
+        {
+          "raw_path": "Sam Example/Records/mychart-example-health/Condition/condition-a1ab70c3.json",
+          "status": "resolved",
+          "verification": "confirmed",
+          "categories": [
+            "Encounter diagnosis"
+          ],
+          "abatement": "2026-07-01",
+          "version": "55060c7abd86bc58"
+        }
+      ],
       "provenance": [
         {
           "source": {
@@ -3120,7 +3191,7 @@
           "fetched_at": "2026-11-10T20:00:00Z",
           "filed_at": "2026-11-10T20:00:00Z",
           "raw_path": "Sam Example/Records/mychart-example-health/Condition/condition-a1ab70c3.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -3138,12 +3209,20 @@
       "status": "active",
       "fields": {
         "when": "2001-03-01",
+        "onset": "2001-03-01",
         "criticality": "high",
         "reaction": [
           "Hives",
           "Swelling of the lips"
         ]
       },
+      "words": [
+        {
+          "raw_path": "Sam Example/Records/mychart-example-health/AllergyIntolerance/allergyintolerance-3c3d2526.json",
+          "status": "active",
+          "version": "d1e47f77823537a9"
+        }
+      ],
       "provenance": [
         {
           "source": {
@@ -3162,7 +3241,7 @@
           "fetched_at": "2026-11-10T20:00:00Z",
           "filed_at": "2026-11-10T20:00:00Z",
           "raw_path": "Sam Example/Records/mychart-example-health/AllergyIntolerance/allergyintolerance-3c3d2526.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -3181,6 +3260,13 @@
         "dosage": "2 tablets by mouth every 6 hours as needed for pain",
         "source": "statement"
       },
+      "words": [
+        {
+          "raw_path": "Sam Example/Records/mychart-example-health/MedicationStatement/medicationstatement-b14b4ccd.json",
+          "status": "completed",
+          "version": "2f1bb794a548f7dd"
+        }
+      ],
       "provenance": [
         {
           "source": {
@@ -3199,7 +3285,7 @@
           "fetched_at": "2026-11-10T20:00:00Z",
           "filed_at": "2026-11-10T20:00:00Z",
           "raw_path": "Sam Example/Records/mychart-example-health/MedicationStatement/medicationstatement-b14b4ccd.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -3226,6 +3312,13 @@
           "npi": "0000000014"
         }
       ],
+      "words": [
+        {
+          "raw_path": "Sam Example/Records/mychart-example-health/MedicationRequest/medicationrequest-f1d05a0c.json",
+          "status": "active",
+          "version": "82843628c3ead053"
+        }
+      ],
       "provenance": [
         {
           "source": {
@@ -3244,7 +3337,7 @@
           "fetched_at": "2026-11-10T20:00:00Z",
           "filed_at": "2026-11-10T20:00:00Z",
           "raw_path": "Sam Example/Records/mychart-example-health/MedicationRequest/medicationrequest-f1d05a0c.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -3292,7 +3385,7 @@
           "fetched_at": "2026-11-10T20:00:00Z",
           "filed_at": "2026-11-10T20:00:00Z",
           "raw_path": "Sam Example/Records/mychart-example-health/Encounter/encounter-6787bf25.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -3321,6 +3414,13 @@
           "npi": "0000000014"
         }
       ],
+      "words": [
+        {
+          "raw_path": "Sam Example/Records/mychart-example-health/MedicationRequest/medicationrequest-2aaed65d.json",
+          "status": "active",
+          "version": "0f890aafd734fd47"
+        }
+      ],
       "provenance": [
         {
           "source": {
@@ -3339,7 +3439,7 @@
           "fetched_at": "2026-11-10T20:00:00Z",
           "filed_at": "2026-11-10T20:00:00Z",
           "raw_path": "Sam Example/Records/mychart-example-health/MedicationRequest/medicationrequest-2aaed65d.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -3391,7 +3491,7 @@
           "fetched_at": "2026-11-10T20:00:00Z",
           "filed_at": "2026-11-10T20:00:00Z",
           "raw_path": "Sam Example/Records/mychart-example-health/MedicationDispense/medicationdispense-e1218911.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -3416,7 +3516,10 @@
         },
         "reference_range": "30-100 ng/mL",
         "interpretation": "Normal",
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -3436,7 +3539,7 @@
           "fetched_at": "2026-11-10T20:00:00Z",
           "filed_at": "2026-11-10T20:00:00Z",
           "raw_path": "Sam Example/Records/mychart-example-health/Observation/observation-26065f46.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -3488,7 +3591,7 @@
           "fetched_at": "2026-11-10T20:00:00Z",
           "filed_at": "2026-11-10T20:00:00Z",
           "raw_path": "Sam Example/Records/mychart-example-health/MedicationDispense/medicationdispense-59aa7b6e.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -3890,7 +3993,7 @@
           "fetched_at": "2026-11-21T14:00:00Z",
           "filed_at": "2026-11-21T14:00:00Z",
           "raw_path": "Sam Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-74348406.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -3939,7 +4042,7 @@
           "fetched_at": "2026-11-22T15:00:00Z",
           "filed_at": "2026-11-22T15:00:00Z",
           "raw_path": "Sam Example/Records/mychart-example-health/Encounter/encounter-2ef91d0e.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -3966,6 +4069,13 @@
           "npi": "0000000105"
         }
       ],
+      "words": [
+        {
+          "raw_path": "Sam Example/Records/mychart-example-health/MedicationRequest/medicationrequest-5b73db83.json",
+          "status": "active",
+          "version": "caa06cb55aa864ac"
+        }
+      ],
       "provenance": [
         {
           "source": {
@@ -3984,7 +4094,7 @@
           "fetched_at": "2026-11-22T15:00:00Z",
           "filed_at": "2026-11-22T15:00:00Z",
           "raw_path": "Sam Example/Records/mychart-example-health/MedicationRequest/medicationrequest-5b73db83.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -4034,7 +4144,7 @@
           "fetched_at": "2026-11-22T15:00:00Z",
           "filed_at": "2026-11-22T15:00:00Z",
           "raw_path": "Sam Example/Records/mychart-example-health/MedicationDispense/medicationdispense-20603dd3.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     }
@@ -4098,14 +4208,14 @@
           "filed_at": "2026-10-14T20:00:00Z",
           "raw_path": "Sam Example/Imaging/2026-05-20_dx_ankle_example_imaging",
           "classified_by": "hand",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     }
   ],
   "imports": [
     {
-      "id": "i_mz7mnhl53s7hzslisbn3",
+      "id": "i_exe4qrr2srohlb3wvz3m",
       "source_dir": "Sam Example/Records/kp-example-care-plan",
       "stream_sha256": "956b3603449244122902c7fc8ed84145d44025b4d197106572726683c059e80f",
       "stream_bytes": 28525,
@@ -4114,6 +4224,7 @@
       "organization": "example-care-plan",
       "patient_id": "pat-71f4e3",
       "pulled_at": "2026-10-17T20:00:00Z",
+      "from_files": false,
       "imported_at": "2026-10-17T20:00:00Z",
       "counts": {
         "Coverage": 1,
@@ -4124,12 +4235,13 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 8,
       "resources_unchanged": 0,
       "documents_added": 0
     },
     {
-      "id": "i_zzuo7wbwmpodm7tyvk2p",
+      "id": "i_g7ezjnjfmz7psnyf2kb5",
       "source_dir": "Sam Example/Records/labcorp-example-lab",
       "stream_sha256": "1851a3defaa2a17b8311700fd52b7389f6b5e17ed32b3923399b86afff8ac374",
       "stream_bytes": 5348,
@@ -4138,6 +4250,7 @@
       "organization": "example-lab",
       "patient_id": "pat-36c1fa",
       "pulled_at": "2026-10-18T20:00:00Z",
+      "from_files": false,
       "imported_at": "2026-10-18T20:00:00Z",
       "counts": {
         "Observation": 7,
@@ -4147,12 +4260,13 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 8,
       "resources_unchanged": 0,
       "documents_added": 0
     },
     {
-      "id": "i_dsn2uehvgjbmb67cg7p2",
+      "id": "i_tjxx72rjeketmjpamtin",
       "source_dir": "Sam Example/Records/peryourhealth-example-billing",
       "stream_sha256": "b5801b5b2dcbe0dce96033c06d7e7afe3c98e1d32653f209dd4ba53a7df608fa",
       "stream_bytes": 1355,
@@ -4161,6 +4275,7 @@
       "organization": "example-billing",
       "patient_id": "pat-9b80d2",
       "pulled_at": "2026-11-02T20:00:00Z",
+      "from_files": false,
       "imported_at": "2026-11-02T20:00:00Z",
       "counts": {
         "Observation": 1,
@@ -4170,12 +4285,13 @@
       "records_updated": 1,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 2,
       "resources_unchanged": 0,
       "documents_added": 0
     },
     {
-      "id": "i_26au3xpd7z3xjddvwenf",
+      "id": "i_ii3bsrxismg74nsdmqvm",
       "source_dir": "Sam Example/Records/mychart-example-health",
       "stream_sha256": "2b52936d34c169c5daa07401eae2f328485c565332b126c9696b4910ebf8437a",
       "stream_bytes": 10653,
@@ -4184,6 +4300,7 @@
       "organization": "example-health",
       "patient_id": "pat-e47d08",
       "pulled_at": "2026-11-10T20:00:00Z",
+      "from_files": false,
       "imported_at": "2026-11-10T20:00:00Z",
       "counts": {
         "AllergyIntolerance": 1,
@@ -4201,6 +4318,7 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 17,
       "resources_unchanged": 0,
       "documents_added": 2
@@ -4215,6 +4333,7 @@
       "organization": "example-lab",
       "patient_id": "pat-36c1fa",
       "pulled_at": "2026-11-13T20:00:00Z",
+      "from_files": false,
       "imported_at": "2026-11-13T20:00:00Z",
       "counts": {
         "Observation": 7,
@@ -4224,6 +4343,7 @@
       "records_updated": 0,
       "records_unchanged": 7,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 0,
       "resources_unchanged": 8,
       "documents_added": 0
@@ -4238,6 +4358,7 @@
       "organization": "example-care-plan",
       "patient_id": "pat-71f4e3",
       "pulled_at": "2026-11-21T14:00:00Z",
+      "from_files": false,
       "imported_at": "2026-11-21T14:00:00Z",
       "counts": {
         "Coverage": 1,
@@ -4248,6 +4369,7 @@
       "records_updated": 0,
       "records_unchanged": 7,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 1,
       "resources_unchanged": 8,
       "documents_added": 0
@@ -4262,6 +4384,7 @@
       "organization": "example-health",
       "patient_id": "pat-e47d08",
       "pulled_at": "2026-11-22T15:00:00Z",
+      "from_files": false,
       "imported_at": "2026-11-22T15:00:00Z",
       "counts": {
         "AllergyIntolerance": 1,
@@ -4279,6 +4402,7 @@
       "records_updated": 0,
       "records_unchanged": 12,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 3,
       "resources_unchanged": 17,
       "documents_added": 0

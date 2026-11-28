@@ -109,7 +109,7 @@
         "fetched_at": "2026-10-18T20:00:00Z",
         "filed_at": "2026-10-18T20:00:00Z",
         "raw_path": "Drew Example/Records/athena-example-pediatrics/Binary/binary-7c82efb6.json",
-        "filed_by": "medrec 0.9.7"
+        "filed_by": "medrec 0.9.10"
       }
     },
     {
@@ -219,7 +219,7 @@
         "fetched_at": "2026-10-18T20:00:00Z",
         "filed_at": "2026-10-18T20:00:00Z",
         "raw_path": "Drew Example/Records/athena-example-pediatrics/Binary/binary-59a79c77.json",
-        "filed_by": "medrec 0.9.7"
+        "filed_by": "medrec 0.9.10"
       }
     }
   ],
@@ -259,7 +259,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Immunization/immunization-82438a67.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -298,7 +298,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Immunization/immunization-7bff8686.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -337,7 +337,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Immunization/immunization-44d84df5.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -376,7 +376,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Immunization/immunization-188fb283.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -415,7 +415,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Immunization/immunization-63aed2b5.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -454,7 +454,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Immunization/immunization-127e7a31.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -493,7 +493,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Immunization/immunization-91252087.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -532,7 +532,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Immunization/immunization-370d8cf8.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -571,7 +571,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Immunization/immunization-4af6ee27.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -610,7 +610,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Immunization/immunization-fe5c3c76.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -649,7 +649,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Immunization/immunization-9e648eaa.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -688,7 +688,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Immunization/immunization-25475503.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -727,7 +727,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Immunization/immunization-f839b5b4.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -766,7 +766,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Immunization/immunization-e49317fb.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -805,7 +805,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Immunization/immunization-05e465cb.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -844,7 +844,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Immunization/immunization-45d6cebf.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -883,7 +883,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Immunization/immunization-da70d6f7.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -922,7 +922,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Immunization/immunization-f87dcbbb.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -961,7 +961,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Immunization/immunization-59586644.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1000,7 +1000,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Immunization/immunization-e28b22d8.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1039,7 +1039,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Immunization/immunization-35c51b54.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1088,7 +1088,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Encounter/encounter-6a59cd09.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1111,7 +1111,10 @@
           "unit": "kg",
           "system": "http://unitsofmeasure.org"
         },
-        "category": "Vital signs"
+        "category": "Vital signs",
+        "categories": [
+          "vital-signs"
+        ]
       },
       "provenance": [
         {
@@ -1131,7 +1134,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Observation/observation-345c12da.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1154,7 +1157,10 @@
           "unit": "cm",
           "system": "http://unitsofmeasure.org"
         },
-        "category": "Vital signs"
+        "category": "Vital signs",
+        "categories": [
+          "vital-signs"
+        ]
       },
       "provenance": [
         {
@@ -1174,7 +1180,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Observation/observation-720dc883.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1199,7 +1205,10 @@
         },
         "reference_range": "<3.5 ug/dL",
         "interpretation": "Normal",
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -1219,7 +1228,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Observation/observation-ac37a7d7.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1268,7 +1277,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Encounter/encounter-654c9e50.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1291,7 +1300,10 @@
           "unit": "kg",
           "system": "http://unitsofmeasure.org"
         },
-        "category": "Vital signs"
+        "category": "Vital signs",
+        "categories": [
+          "vital-signs"
+        ]
       },
       "provenance": [
         {
@@ -1311,7 +1323,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Observation/observation-69c727b2.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1334,7 +1346,10 @@
           "unit": "cm",
           "system": "http://unitsofmeasure.org"
         },
-        "category": "Vital signs"
+        "category": "Vital signs",
+        "categories": [
+          "vital-signs"
+        ]
       },
       "provenance": [
         {
@@ -1354,7 +1369,7 @@
           "fetched_at": "2026-10-18T20:00:00Z",
           "filed_at": "2026-10-18T20:00:00Z",
           "raw_path": "Drew Example/Records/athena-example-pediatrics/Observation/observation-8802953e.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     }
@@ -1362,7 +1377,7 @@
   "studies": [],
   "imports": [
     {
-      "id": "i_3iwhzdw6gfr3akp7wip7",
+      "id": "i_wqo67tfx4fx7ftuzioew",
       "source_dir": "Drew Example/Records/athena-example-pediatrics",
       "stream_sha256": "ee009243a2b6004878ea5530ba864de421e9259c2ca2e14819fe212d27952079",
       "stream_bytes": 16085,
@@ -1371,6 +1386,7 @@
       "organization": "example-pediatrics",
       "patient_id": "pat-d6583c",
       "pulled_at": "2026-10-18T20:00:00Z",
+      "from_files": false,
       "imported_at": "2026-10-18T20:00:00Z",
       "counts": {
         "Binary": 2,
@@ -1384,6 +1400,7 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 33,
       "resources_unchanged": 0,
       "documents_added": 2
@@ -1398,6 +1415,7 @@
       "organization": "example-pediatrics",
       "patient_id": "pat-d6583c",
       "pulled_at": "2026-11-22T00:00:00Z",
+      "from_files": false,
       "imported_at": "2026-11-22T00:00:00Z",
       "counts": {
         "Binary": 2,
@@ -1411,6 +1429,7 @@
       "records_updated": 0,
       "records_unchanged": 28,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 0,
       "resources_unchanged": 33,
       "documents_added": 0

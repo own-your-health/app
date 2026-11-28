@@ -132,7 +132,7 @@
         "filed_at": "2026-11-13T20:00:00Z",
         "raw_path": "Noor Example/Documents/2026/2026-01-21_discharge_summary_example_hospital_Leaving the hospital.pdf",
         "classified_by": "hand",
-        "filed_by": "medrec 0.9.7"
+        "filed_by": "medrec 0.9.10"
       }
     },
     {
@@ -271,7 +271,7 @@
         "filed_at": "2026-11-13T20:00:00Z",
         "raw_path": "Noor Example/Claims/2026/2026-03-02_bill_example_hospital_Statement from Example Hospital.pdf",
         "classified_by": "hand",
-        "filed_by": "medrec 0.9.7"
+        "filed_by": "medrec 0.9.10"
       }
     },
     {
@@ -343,7 +343,7 @@
         "filed_at": "2026-11-13T20:00:00Z",
         "raw_path": "Noor Example/Claims/2026/2026-04-02_receipt_example_front_desk_Receipt.pdf",
         "classified_by": "hand",
-        "filed_by": "medrec 0.9.7"
+        "filed_by": "medrec 0.9.10"
       }
     }
   ],
@@ -756,7 +756,7 @@
           "fetched_at": "2026-11-14T20:08:00Z",
           "filed_at": "2026-11-14T20:08:00Z",
           "raw_path": "Noor Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-cab91521.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -996,7 +996,7 @@
           "fetched_at": "2026-11-14T20:08:00Z",
           "filed_at": "2026-11-14T20:08:00Z",
           "raw_path": "Noor Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-2d2f71f5.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1236,7 +1236,7 @@
           "fetched_at": "2026-11-14T20:08:00Z",
           "filed_at": "2026-11-14T20:08:00Z",
           "raw_path": "Noor Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-7b6431c1.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1476,7 +1476,7 @@
           "fetched_at": "2026-11-14T20:08:00Z",
           "filed_at": "2026-11-14T20:08:00Z",
           "raw_path": "Noor Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-6c9b40e4.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -1832,7 +1832,7 @@
           "fetched_at": "2026-11-14T20:08:00Z",
           "filed_at": "2026-11-14T20:08:00Z",
           "raw_path": "Noor Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-485d4a34.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -2072,7 +2072,7 @@
           "fetched_at": "2026-11-14T20:08:00Z",
           "filed_at": "2026-11-14T20:08:00Z",
           "raw_path": "Noor Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-312a237f.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -2312,7 +2312,7 @@
           "fetched_at": "2026-11-14T20:08:00Z",
           "filed_at": "2026-11-14T20:08:00Z",
           "raw_path": "Noor Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-e45fe807.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -2552,7 +2552,7 @@
           "fetched_at": "2026-11-14T20:08:00Z",
           "filed_at": "2026-11-14T20:08:00Z",
           "raw_path": "Noor Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-e0fdf64d.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -2796,7 +2796,7 @@
           "fetched_at": "2026-11-14T20:08:00Z",
           "filed_at": "2026-11-14T20:08:00Z",
           "raw_path": "Noor Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-d0a65dd8.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -3043,7 +3043,7 @@
           "fetched_at": "2026-11-14T20:08:00Z",
           "filed_at": "2026-11-14T20:08:00Z",
           "raw_path": "Noor Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-58e70317.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -3287,7 +3287,7 @@
           "fetched_at": "2026-11-14T20:08:00Z",
           "filed_at": "2026-11-14T20:08:00Z",
           "raw_path": "Noor Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-6a3e9075.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -3527,7 +3527,7 @@
           "fetched_at": "2026-11-14T20:08:00Z",
           "filed_at": "2026-11-14T20:08:00Z",
           "raw_path": "Noor Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-43c953be.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -3767,7 +3767,7 @@
           "fetched_at": "2026-11-14T20:08:00Z",
           "filed_at": "2026-11-14T20:08:00Z",
           "raw_path": "Noor Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-83a174db.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -4007,7 +4007,7 @@
           "fetched_at": "2026-11-14T20:08:00Z",
           "filed_at": "2026-11-14T20:08:00Z",
           "raw_path": "Noor Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-bee72723.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -4247,7 +4247,7 @@
           "fetched_at": "2026-11-14T20:08:00Z",
           "filed_at": "2026-11-14T20:08:00Z",
           "raw_path": "Noor Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-69e0e693.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -4487,7 +4487,7 @@
           "fetched_at": "2026-11-14T20:08:00Z",
           "filed_at": "2026-11-14T20:08:00Z",
           "raw_path": "Noor Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-5178c8fd.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -4833,7 +4833,7 @@
           "fetched_at": "2026-11-14T20:08:00Z",
           "filed_at": "2026-11-14T20:08:00Z",
           "raw_path": "Noor Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-2a558914.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -5073,7 +5073,7 @@
           "fetched_at": "2026-11-14T20:08:00Z",
           "filed_at": "2026-11-14T20:08:00Z",
           "raw_path": "Noor Example/Records/kp-example-care-plan/ExplanationOfBenefit/explanationofbenefit-d337f4fa.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -5115,7 +5115,7 @@
           "fetched_at": "2026-11-14T20:09:00Z",
           "filed_at": "2026-11-14T20:09:00Z",
           "raw_path": "Noor Example/Records/mychart-example-health/Encounter/encounter-4b891d69.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -5140,7 +5140,10 @@
         },
         "reference_range": "135-145 mmol/L",
         "interpretation": "Normal",
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -5160,7 +5163,7 @@
           "fetched_at": "2026-11-14T20:09:00Z",
           "filed_at": "2026-11-14T20:09:00Z",
           "raw_path": "Noor Example/Records/mychart-example-health/Observation/observation-daaff345.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -5202,7 +5205,7 @@
           "fetched_at": "2026-11-14T20:09:00Z",
           "filed_at": "2026-11-14T20:09:00Z",
           "raw_path": "Noor Example/Records/mychart-example-health/Encounter/encounter-7e2306e3.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -5243,7 +5246,7 @@
           "fetched_at": "2026-11-14T20:09:00Z",
           "filed_at": "2026-11-14T20:09:00Z",
           "raw_path": "Noor Example/Records/mychart-example-health/Encounter/encounter-9002b30e.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     }
@@ -5251,7 +5254,7 @@
   "studies": [],
   "imports": [
     {
-      "id": "i_ljdn4xaeasdrj4t3rqsw",
+      "id": "i_zjeh2zmxn6fbpqe2uhdp",
       "source_dir": "Noor Example/Records/kp-example-care-plan",
       "stream_sha256": "0664913f1f4a9d1c2d8687fa3c226058689ea1783b8085fe586aa386f06f9f29",
       "stream_bytes": 64884,
@@ -5260,6 +5263,7 @@
       "organization": "example-care-plan",
       "patient_id": "pat-fe3a9a46",
       "pulled_at": "2026-11-14T20:08:00Z",
+      "from_files": false,
       "imported_at": "2026-11-14T20:08:00Z",
       "counts": {
         "ExplanationOfBenefit": 18,
@@ -5269,12 +5273,13 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 19,
       "resources_unchanged": 0,
       "documents_added": 0
     },
     {
-      "id": "i_fxx45ym6z2oqevnjyooz",
+      "id": "i_smzllyv3qjfsnacmzrqi",
       "source_dir": "Noor Example/Records/mychart-example-health",
       "stream_sha256": "720501d628730b6f35dbe64c0938df57af896c4568a18077afa943e2e60a989e",
       "stream_bytes": 2696,
@@ -5283,6 +5288,7 @@
       "organization": "example-health",
       "patient_id": "pat-f2c5f11c",
       "pulled_at": "2026-11-14T20:09:00Z",
+      "from_files": false,
       "imported_at": "2026-11-14T20:09:00Z",
       "counts": {
         "Encounter": 3,
@@ -5293,6 +5299,7 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 5,
       "resources_unchanged": 0,
       "documents_added": 0

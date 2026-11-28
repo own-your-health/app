@@ -332,7 +332,9 @@ describe('a folder', () => {
     expect([isInError(read.index(ROBIN)!, result), read.index(SAM)!.inError]).toEqual([true, { records: [], documents: [], carried: new Set() }]);
     const behind = await load((v, p) => Object.assign(v, { medrec: '0.9.9' }) && Object.assign(p, { in_error: wrong, index: '0'.repeat(32) }));
     expect([isInError(behind.index(ROBIN)!, result), findItem(behind.index(ROBIN)!, result)?.type]).toEqual([false, 'record']);
-    expect((await load(() => undefined)).index(ROBIN)!.inError).toBeUndefined();
+    // The sample's medrec says nothing is; one before 0.9.9 says nothing of it.
+    expect((await load(() => undefined)).index(ROBIN)!.inError).toEqual({ records: [], documents: [], carried: new Set() });
+    expect((await load((v) => Object.assign(v, { medrec: '0.9.7' }))).index(ROBIN)!.inError).toBeUndefined();
   });
 });
 

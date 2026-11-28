@@ -32,7 +32,9 @@ test('a condition leads with the source’s words, and Details give its code’s
   await expect(field(page, 'Name at the source')).toHaveText('High blood pressure');
 
   await open(page, `#/p/${ROBIN}/conditions`);
-  await expect(page.locator('main .row-title')).toHaveText(['High blood pressure', 'Seasonal allergies']);
+  await expect(card(page, /^Current$/).locator('.row-title')).toHaveText(['High blood pressure']);
+  await page.locator('main details summary').click();
+  await expect(page.locator('main details .row-title')).toHaveText(['High blood pressure', 'Seasonal allergies']);
 });
 
 test('a title that says what the source says is not said again', async ({ page }) => {

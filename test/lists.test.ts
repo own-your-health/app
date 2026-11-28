@@ -5,7 +5,8 @@ import { demo, personNamed } from './demo-data';
 
 const TODAY = '2026-11-22';
 const { household, indexes } = demo();
-const index = (name: string) => indexes.get(personNamed(household, name).id)!;
+// The lists as the app makes them itself, where medrec wrote no standing.json (before 0.9.9): model/standing.ts has medrec's.
+const index = (name: string): PersonIndex => ({ ...indexes.get(personNamed(household, name).id)!, standing: undefined });
 const names = (xs: { name: string }[]) => xs.map((x) => x.name);
 
 /** The index with records added, each with only what it gives: one without a code is grouped by its name. */

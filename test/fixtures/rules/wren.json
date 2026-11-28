@@ -39,7 +39,7 @@
           "fetched_at": "2026-11-14T20:03:00Z",
           "filed_at": "2026-11-14T20:03:00Z",
           "raw_path": "Wren Example/Records/uhc-example-health-plan/Coverage/coverage-b686bca6.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     }
@@ -47,7 +47,7 @@
   "studies": [],
   "imports": [
     {
-      "id": "i_d2vfb3qywdoctgjs4boi",
+      "id": "i_yhjhayjsdbrh2bekeaed",
       "source_dir": "Wren Example/Records/uhc-example-health-plan",
       "stream_sha256": "6939a376107dd26235e6790f735cda4cb54fe6e70d8f327a360841d1e15cf25c",
       "stream_bytes": 1187,
@@ -56,6 +56,7 @@
       "organization": "example-health-plan",
       "patient_id": "pat-33a4567b",
       "pulled_at": "2026-11-14T20:03:00Z",
+      "from_files": false,
       "imported_at": "2026-11-14T20:03:00Z",
       "counts": {
         "Coverage": 1,
@@ -65,6 +66,7 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 2,
       "resources_unchanged": 0,
       "documents_added": 0

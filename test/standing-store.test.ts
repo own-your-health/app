@@ -9,7 +9,8 @@ interface Views {
 }
 
 const CASE = standingCase(ALEX);
-const FILE = Object.keys(CASE).find((f) => f.startsWith(`views/${ALEX}/standing.`))!;
+// The case's own, not the sample's it leaves out.
+const FILE = Object.keys(CASE).find((f) => f.startsWith(`views/${ALEX}/standing.`) && CASE[f] !== null)!;
 
 async function load(overlay: Overlay): Promise<Store> {
   const s = new Store(demoFolderWith(overlay));
@@ -30,7 +31,8 @@ const why = (s: Store) => s.standingNotes.get(ALEX);
 describe('a person’s standing.json', () => {
   it('is read beside the index it was written from, and of no one else', async () => {
     const s = await load(CASE);
-    expect([has(s), s.index(ROBIN)!.standing, s.mayBring(), s.standingNotes.size]).toEqual([true, undefined, false, 0]);
+    expect([has(s), s.index(ROBIN)!.standing === s.index(ALEX)!.standing, s.mayBring(), s.standingNotes.size]).toEqual([true, false, false, 0]);
+    expect(s.index(ALEX)!.standing!.order.get('allergy')).not.toEqual(s.index(ROBIN)!.standing!.order.get('allergy'));
     expect(s.index(ALEX)!.standing!.order.get('allergy')!.length).toBeGreaterThan(0);
   });
 
@@ -57,7 +59,7 @@ describe('a person’s standing.json', () => {
   it('is not missed in a folder of an earlier medrec', async () => {
     const s = await load(standingCase(ALEX, { standing: false }));
     expect([has(s), s.mayBring(), s.standingNotes.size]).toEqual([false, false, 0]);
-    expect(demoJson<Views>('views/views.json').people[ALEX]!.files['standing.json']).toBeUndefined();
+    expect(JSON.parse(standingCase(ALEX, { standing: false })['views/views.json']!).people[ALEX].files['standing.json']).toBeUndefined();
   });
 
   it('is refused and said to be where a newer medrec wrote it, or it is none, and is not read for again', async () => {

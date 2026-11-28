@@ -35,6 +35,9 @@ const card = (page: Page, title: string) => main(page).locator('.card', { has: p
 test('is in no list, which says how many it leaves out', async ({ page }) => {
   await go(page, `#/p/${ROBIN}/results`);
   await expect(main(page)).toContainText(ONE);
+  // Medicines go by medrec's standing.json, which says the same.
+  await go(page, `#/p/${ROBIN}/medicines`);
+  await expect(main(page)).toContainText(ONE);
   await go(page, '#/papers');
   await expect(main(page)).toContainText('2 entered in error, not shown.');
   await go(page, `#/papers?who=${ROBIN}`);

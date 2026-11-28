@@ -341,7 +341,7 @@
           "fetched_at": "2026-11-14T20:21:00Z",
           "filed_at": "2026-11-14T20:21:00Z",
           "raw_path": "Wyn Example/Records/uhc-example-health-plan/ExplanationOfBenefit/explanationofbenefit-274e55da.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -539,7 +539,7 @@
           "fetched_at": "2026-11-14T20:21:00Z",
           "filed_at": "2026-11-14T20:21:00Z",
           "raw_path": "Wyn Example/Records/uhc-example-health-plan/ExplanationOfBenefit/explanationofbenefit-1e3e1a06.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -619,7 +619,7 @@
           "fetched_at": "2026-11-14T20:21:00Z",
           "filed_at": "2026-11-14T20:21:00Z",
           "raw_path": "Wyn Example/Records/uhc-example-health-plan/ExplanationOfBenefit/explanationofbenefit-c7e793d1.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -660,7 +660,7 @@
           "fetched_at": "2026-11-14T20:22:00Z",
           "filed_at": "2026-11-14T20:22:00Z",
           "raw_path": "Wyn Example/Records/mychart-example-health/Encounter/encounter-2d6f45f7.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -700,7 +700,7 @@
           "fetched_at": "2026-11-14T20:22:00Z",
           "filed_at": "2026-11-14T20:22:00Z",
           "raw_path": "Wyn Example/Records/mychart-example-health/Encounter/encounter-9db7509f.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -720,7 +720,10 @@
         "when": "2026-03-04",
         "value": "Positive",
         "reference_range": "Negative",
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -740,7 +743,7 @@
           "fetched_at": "2026-11-14T20:22:00Z",
           "filed_at": "2026-11-14T20:22:00Z",
           "raw_path": "Wyn Example/Records/mychart-example-health/Observation/observation-fcb2cf24.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     },
@@ -765,7 +768,10 @@
         },
         "reference_range": "60-120 ug/dL",
         "interpretation": "Normal",
-        "category": "Laboratory"
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
       },
       "provenance": [
         {
@@ -785,7 +791,7 @@
           "fetched_at": "2026-11-14T20:22:00Z",
           "filed_at": "2026-11-14T20:22:00Z",
           "raw_path": "Wyn Example/Records/mychart-example-health/Observation/observation-4ab25488.json",
-          "filed_by": "medrec 0.9.7"
+          "filed_by": "medrec 0.9.10"
         }
       ]
     }
@@ -793,7 +799,7 @@
   "studies": [],
   "imports": [
     {
-      "id": "i_pohtgbszlmhn5mc2bzl2",
+      "id": "i_hzsvkm6nl4wubfoaouvc",
       "source_dir": "Wyn Example/Records/uhc-example-health-plan",
       "stream_sha256": "b778b231d8c9e56608634a2168f14300b603a3fc5abacd016d58c878f103e5e5",
       "stream_bytes": 8656,
@@ -802,6 +808,7 @@
       "organization": "example-health-plan",
       "patient_id": "pat-63241757",
       "pulled_at": "2026-11-14T20:21:00Z",
+      "from_files": false,
       "imported_at": "2026-11-14T20:21:00Z",
       "counts": {
         "ExplanationOfBenefit": 3,
@@ -811,12 +818,13 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 4,
       "resources_unchanged": 0,
       "documents_added": 0
     },
     {
-      "id": "i_qxe3brej3ckdxpaxnzuz",
+      "id": "i_3k4yzntaepnkusfy2t52",
       "source_dir": "Wyn Example/Records/mychart-example-health",
       "stream_sha256": "5d3a0e04fb422ebbfc329f497f6254be0aebe7aebc813fee68d528983d6f45bc",
       "stream_bytes": 2627,
@@ -825,6 +833,7 @@
       "organization": "example-health",
       "patient_id": "pat-f8ce30c5",
       "pulled_at": "2026-11-14T20:22:00Z",
+      "from_files": false,
       "imported_at": "2026-11-14T20:22:00Z",
       "counts": {
         "Encounter": 2,
@@ -835,6 +844,7 @@
       "records_updated": 0,
       "records_unchanged": 0,
       "records_older": 0,
+      "records_not_served": 0,
       "resources_written": 5,
       "resources_unchanged": 0,
       "documents_added": 0

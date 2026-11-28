@@ -1,9 +1,9 @@
 // Writes the sample records folder (public/demo/) from scripts/sample/: what
 // invented providers serve and papers a household keeps. This script only
-// puts those where medrec reads them. medrec 0.9.7, its own release, writes
+// puts those where medrec reads them. medrec 0.9.10, its own release, writes
 // every record, paper, index, view and status: no field of them is set here.
 //
-//   MEDREC=<medrec 0.9.7> node scripts/demo-folder.mjs <a new folder>
+//   MEDREC=<medrec 0.9.10> node scripts/demo-folder.mjs <a new folder>
 //
 // It writes to a folder that does not exist yet and deletes nothing. To take a
 // new sample, move public/demo away and the new folder into its place.

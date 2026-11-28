@@ -18,8 +18,8 @@ import { APP_VIEW, scratchMachine } from './medrec.mjs';
 const ERRORS = join(dirname(fileURLToPath(import.meta.url)), '..', 'test', 'fixtures', 'errors');
 const OUT = join(ERRORS, 'views');
 const given = (file) => join(ERRORS, 'medrec', file);
-/** Of the views this release writes, those the app reads: the sample's, and what is current. */
-const read = (file) => APP_VIEW.test(file) || /^standing\.[0-9a-f]{12}\.json$/.test(file);
+/** Of the views this release writes, those the app reads. */
+const read = (file) => APP_VIEW.test(file);
 
 const { root, medrec } = scratchMachine(undefined, { release: '0.9.9' });
 const [person] = JSON.parse(readFileSync(given('household.json'), 'utf8')).people;
