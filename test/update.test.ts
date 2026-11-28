@@ -1,6 +1,6 @@
 // The look for a newer build: what the site's page names, once per while, and only one notice.
 import { describe, expect, it, vi } from 'vitest';
-import { buildOf, LOOK_EVERY_MS, updateWatcher } from '../src/ui/update';
+import { buildOf, LOOK_EVERY_MS, otherBuild, updateWatcher } from '../src/ui/update';
 
 const page = (build: string) => `<!doctype html><html><head><script src="./theme.js"></script><script type="module" crossorigin src="/app/assets/${build}"></script></head></html>`;
 
@@ -61,5 +61,27 @@ describe('looking for a newer build', () => {
     const dev = watcher(undefined, [page('index-new.js')]);
     await dev.look();
     expect(dev.fetchPage).not.toHaveBeenCalled();
+  });
+});
+
+describe('the build to load for a folder that needs a newer app', () => {
+  const site = (answer: string | Error) => async () => {
+    if (answer instanceof Error) throw answer;
+    return answer;
+  };
+
+  it('is the site’s, where it names another', async () => {
+    expect(await otherBuild('assets/index-old.js', site(page('index-new.js')))).toBe('assets/index-new.js');
+  });
+
+  it('is none where the site names this one, names none, or does not answer, and none is asked for on the dev server', async () => {
+    const asked = vi.fn(site(page('index-new.js')));
+    expect([
+      await otherBuild('assets/index-old.js', site(page('index-old.js'))),
+      await otherBuild('assets/index-old.js', site('<!doctype html>')),
+      await otherBuild('assets/index-old.js', site(new Error('offline'))),
+      await otherBuild(undefined, asked),
+    ]).toEqual([undefined, undefined, undefined, undefined]);
+    expect(asked).not.toHaveBeenCalled();
   });
 });

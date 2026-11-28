@@ -294,6 +294,8 @@ export class Store {
       this.hasViews = raw !== null;
       return raw === null ? null : parseViews(raw);
     } catch (e) {
+      // Views a newer contract governs: nothing of the folder is read by this app's own rules either.
+      if (e instanceof FolderError && e.kind === 'newer_reader') throw e;
       const newer = e instanceof FolderError && e.kind === 'newer_format';
       this.viewsError = newer
         ? { kind: 'newer_format', text: 'medrec’s views are written by a newer medrec. Update the app. Until then it groups each person’s visits itself.' }

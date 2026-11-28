@@ -23,6 +23,8 @@ export class Rereads {
     private readonly now: () => number,
     /** Tells the person that the records shown are not the folder's. */
     private readonly say: (text: string) => void,
+    /** The folder's views need a newer app: nothing of it may stay on screen. */
+    private readonly refuse: (text: string) => void,
   ) {}
 
   /** Whether the timer should look now. */
@@ -49,6 +51,7 @@ export class Rereads {
   }
 
   private failed(e: unknown): void {
+    if (e instanceof FolderError && e.kind === 'newer_reader') return this.refuse(e.message);
     const newer = e instanceof FolderError && e.kind === 'newer_format';
     if (this.said || (!newer && this.tries < SAID_AT)) return;
     this.said = true;

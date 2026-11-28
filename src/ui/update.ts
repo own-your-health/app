@@ -45,6 +45,13 @@ export function updateWatcher(w: UpdateWatch): () => Promise<void> {
   };
 }
 
+/** The build the site's page names, when it is not this page's; undefined when it is, when this page names none, or when the site does not answer. */
+export async function otherBuild(current: string | undefined, fetchPage: () => Promise<string>): Promise<string | undefined> {
+  if (!current) return undefined;
+  const next = await fetchPage().then(buildOf, () => undefined);
+  return next && next !== current ? next : undefined;
+}
+
 /** The site's page for the app, revalidated past the HTTP cache. */
 export async function fetchAppPage(): Promise<string> {
   const res = await fetch(new URL('./', location.href), { cache: 'no-cache', credentials: 'omit' });
