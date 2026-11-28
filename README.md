@@ -430,7 +430,10 @@ what it answered. Once a request is finished the app reads the records again,
 so what it brought shows without a reload. A read that fails, or that leaves
 out someone whose records are here, changes nothing: it is tried again after
 30 seconds, then after twice as long each time, six tries in all, and the
-third failure says so (`src/data/rereads.ts`).
+third failure says so (`src/data/rereads.ts`). A read that finds the folder
+needs a newer app (its views' `reader`, or a higher `format` in
+`household.json`) is not tried again: at once nothing of the folder stays on
+screen, and the app looks for its update (Limits, below).
 
 A request loads each source at most once every 15 minutes, counted from its
 last load or try (medrec 0.7.0 and later; before, it waited the source's own
@@ -477,7 +480,7 @@ The privacy policy is at https://own-your-health.github.io/app/privacy.html
   sign out a medrec that signs in to Drive through the household's project.
   Removing the app's access in the Google Account does the same, and the
   privacy policy says so.
-- **Browser storage holds five settings, nothing else:** your client id
+- **Local storage holds five settings, nothing else:** your client id
   (`own-your-health-app.client_id`), the chosen folder's id and name
   (`own-your-health-app.folder`), the email of the Google account that last
   signed in (`own-your-health-app.account`), the theme, when you choose
@@ -486,6 +489,9 @@ The privacy policy is at https://own-your-health.github.io/app/privacy.html
   id and the email go to Google as the sign-in's `client_id` and `login_hint`,
   and the folder id goes to Drive when the app reads the folder. During a
   sign-in, a random nonce sits in session storage until Google answers.
+  After the app reloads for a folder that needs a newer app, session storage
+  keeps the name of the build it reloaded to (`update-tried`) while the tab is
+  open, so the tab does not reload for that build by itself again.
 - **Read-only, except requests.** The app writes only requests into
   `_requests/` (to refresh, and to mark a bill paid or undo that), and deletes
   only requests it made (a cancel or an undo). A payment's request holds the
@@ -581,22 +587,30 @@ tested.
 - No offline copy. Each visit reads the folder again.
 - Records folders written by a newer medrec, with a higher `format` in
   `household.json`, are refused with "Update the app".
-- The app follows medrec's contract up to 0.9.10 (`FOLLOWS` in
-  `src/model/views.ts`). Views whose `reader` in `views/views.json` (medrec
-  0.9.11 and later; where it is absent, the `medrec` that wrote them) is newer,
-  compared part by part as numbers, or is no `MAJOR.MINOR.PATCH`, need a newer
-  app: nothing of the folder is shown, on opening, in the sample, or when an
-  open folder is read again, because the rules the app does not know may hold
-  more private. The app first asks its site for its page and reloads once to
-  a newer build there; else it says "These records were written by a newer
-  medrec. Update the app to see them." with a **Look for an update** button.
-  A folder with a higher `format` takes the same path.
+- The app follows medrec's contract up to 0.9.10 (`follows` in
+  `src/medrec-contract.json`, `FOLLOWS` in `src/model/views.ts`). Views whose
+  `reader` in `views/views.json` (medrec 0.9.11 and later; where it is absent,
+  the `medrec` that wrote them) is newer, compared part by part as numbers, or
+  is no `MAJOR.MINOR.PATCH`, need a newer app. Then nothing of the folder is
+  read past `views.json`, `household.json` and the list of answered requests,
+  and nothing of it is shown, on opening, in the sample, or when an open
+  folder is read again (its sheets and toasts closed too), because the rules
+  the app does not know may hold more private. A folder with a higher
+  `format` takes the same path.
+- Such a folder stays chosen, so the updated app opens it. The app first asks
+  its site for its page, giving up after 10 seconds, and reloads to a newer
+  build there: by itself once per build in the tab, and again whenever **Look
+  for an update** is pressed. Else it says "These records were written by a
+  newer medrec. Update the app to see them.", with that button, and **Choose
+  a folder** when signed in to Drive. It adds that there is no newer app yet,
+  or that the site could not be reached. Focus moves to its heading, which
+  reads with the text.
 - The site says which contract it follows at
   `https://own-your-health.github.io/app/medrec-contract.json`, for a script
   that needs no sign-in (medrec's install, before it writes views a newer
-  contract governs): `{"schema": "own-your-health-app/medrec-contract/v1",
-  "follows": "0.9.10"}`. The build writes it from `FOLLOWS`. GitHub Pages lets
-  a cache keep it for up to 10 minutes.
+  contract governs): `{"schema":"own-your-health-app/medrec-contract/v1",
+  "follows":"0.9.10"}`, `src/medrec-contract.json` as it is. GitHub Pages
+  lets a cache keep it for up to 10 minutes.
 
 ## Development
 
@@ -1102,8 +1116,9 @@ page count. Papers took the place of each person's list of documents. A
   is gone or does not read (`labels_unreadable`, medrec 0.9.7 and later), holds
   back all of that person's items from every shared screen, which says so in a
   line with the reason. So does a `views.json` in a layout newer than the
-  app knows, which says to update the app, or one that does not read. Their
-  own pages still show everything. Settings gives each person's reason. While
+  app knows whose `reader` is one the app follows, which says to update the
+  app, or one that does not read. Their own pages still show everything.
+  Views that need a newer app open nothing at all (Limits). Settings gives each person's reason. While
   someone's items are held back, the app reads the records again each time it
   comes to the front and, where the list is behind, arriving or unread, with
   the same waits as after a Refresh, so the hold ends once medrec has written.

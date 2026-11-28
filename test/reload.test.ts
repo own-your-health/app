@@ -288,14 +288,13 @@ describe('when a read is due', () => {
     expect([store.owed, await timer(3600)]).toEqual([false, []]);
   });
 
-  it('is said at once when the folder is in a newer layout, and only once', async () => {
+  it('refuses the folder at once when it is in a newer layout, as on opening, and says nothing else', async () => {
     const household = { ...demoJson<object>('household.json'), format: 99 };
-    const { rereads, said, timer, finish } = await watching({}, { 'household.json': JSON.stringify(household) });
+    const { rereads, said, refused, finish } = await watching({}, { 'household.json': JSON.stringify(household) });
     finish();
     await rereads.look();
-    await timer(3600);
-    expect(said.length).toBe(1);
-    expect(said[0]).toMatch(/newer than this app reads .* Update the app\.$/);
+    expect([said, refused.length]).toEqual([[], 1]);
+    expect(refused[0]).toMatch(/newer than this app reads .* Update the app\.$/);
   });
 
   it('is while a hold may end by itself, the app left in front', async () => {

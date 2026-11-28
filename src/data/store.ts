@@ -181,8 +181,9 @@ export class Store {
 
   /** Reads household.json, every person's index, the status and the requests. */
   async load(): Promise<void> {
-    await this.loadStart();
-    await Promise.all([this.loadRecords(), this.loadRefreshState()]);
+    // views.json first: a folder whose views need a newer app has nothing else of it read, the requests and their tidying included.
+    const [, views] = await Promise.all([this.loadStart(), this.readViews()]);
+    await Promise.all([this.loadRecords(views), this.loadRefreshState()]);
   }
 
   /** Reads the household, and lists the answers the records are read after: what those did, the records show. */
@@ -224,8 +225,8 @@ export class Store {
     // Its own view of the folder: a call that hangs, or a read taken over, touches nothing others use.
     const next = new Store(this.folder.fresh());
     next.named = this.named;
-    await next.loadStart();
-    await next.loadRecords();
+    const [, views] = await Promise.all([next.loadStart(), next.readViews()]);
+    await next.loadRecords(views);
     // Another read took over from this one, which had stalled.
     if (run !== this.runs) return;
     for (const p of next.household.people) {
@@ -266,9 +267,9 @@ export class Store {
     this.household = parseHousehold(raw);
   }
 
-  /** Reads every person's index, with medrec's events and private list for each. */
-  private async loadRecords(): Promise<void> {
-    const [views] = await Promise.all([this.readViews(), this.loadIndexes()]);
+  /** Reads every person's index, with medrec's events and private list for each, by the views views.json lists. */
+  private async loadRecords(views: Record<string, unknown> | null): Promise<void> {
+    await this.loadIndexes();
     this.medrec = typeof views?.medrec === 'string' ? views.medrec : undefined;
     const household = this.folder.md5('household.json');
     // Whoever compares with it says why it could not be read; with no view to compare, nobody does.

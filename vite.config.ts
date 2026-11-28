@@ -1,7 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
-import { FOLLOWS } from './src/model/views';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
 
@@ -49,22 +48,25 @@ function pdfjsFiles(): Plugin {
   };
 }
 
-// Which medrec contract the app follows, for a script that reads it without
-// signing in: medrec's install checks it against the `reader` its views will
-// carry before it installs (`follows`, MAJOR.MINOR.PATCH).
-export const CONTRACT_FILE = 'medrec-contract.json';
-export const contract = (): string => `${JSON.stringify({ schema: 'own-your-health-app/medrec-contract/v1', follows: FOLLOWS })}\n`;
+// Which medrec contract the app follows (`follows`, MAJOR.MINOR.PATCH): the
+// app reads it as FOLLOWS, and the site publishes the file as it is, for a
+// script that reads it without signing in. medrec's install checks it against
+// the `reader` its views will carry before it installs.
+const CONTRACT_FILE = 'medrec-contract.json';
+const contract = readFileSync(new URL(`./src/${CONTRACT_FILE}`, import.meta.url), 'utf8');
+const follows = (JSON.parse(contract) as { follows?: unknown }).follows;
+if (typeof follows !== 'string' || !/^\d+\.\d+\.\d+$/.test(follows)) throw new Error(`src/${CONTRACT_FILE} names no follows in MAJOR.MINOR.PATCH.`);
 function medrecContract(): Plugin {
   return {
     name: 'medrec-contract',
     generateBundle() {
-      this.emitFile({ type: 'asset', fileName: CONTRACT_FILE, source: contract() });
+      this.emitFile({ type: 'asset', fileName: CONTRACT_FILE, source: contract });
     },
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         if (req.url !== `/app/${CONTRACT_FILE}`) return next();
         res.setHeader('Content-Type', 'application/json');
-        res.end(contract());
+        res.end(contract);
       });
     },
   };
@@ -75,7 +77,7 @@ function medrecContract(): Plugin {
 export default defineConfig({
   base: '/app/',
   plugins: [devPolicy(), pdfjsFiles(), medrecContract()],
-  define: { __APP_VERSION__: JSON.stringify(pkg.version), __PDFJS_VERSION__: JSON.stringify(pdfjs.version) },
+  define: { __APP_VERSION__: JSON.stringify(pkg.version), __PDFJS_VERSION__: JSON.stringify(pdfjs.version), __MEDREC_FOLLOWS__: JSON.stringify(follows) },
   server: { port: 5173, strictPort: true },
   preview: { port: 4173, strictPort: true },
   build: {

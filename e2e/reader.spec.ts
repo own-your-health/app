@@ -3,8 +3,8 @@ import { demoJson, type Overlay } from '../test/helpers';
 import { CLIENT, FakeGoogle, FOLDER_NAME } from './fake-google';
 import { lay } from './lay';
 import { macWrites } from './mac';
+import { readFileSync } from 'node:fs';
 import { ROBIN } from '../test/sample';
-import { FOLLOWS } from '../src/model/views';
 
 // views.json's `reader` (medrec 0.9.11 and later): the oldest medrec contract a
 // reader must follow to read the views, `medrec` standing in where it is
@@ -36,11 +36,16 @@ async function openSample(page: Page, overlay: Overlay): Promise<{ loads: () => 
   return { loads: () => loads };
 }
 
-/** The page says to update, and shows nothing of the folder: no one's name, no tabs, no sample banner. */
+const FAILED = `${NOTE} The app’s site could not be reached to look for a newer app. Check the connection and look again.`;
+const NONE_YET = `${NOTE} There is no newer app yet. Look again later.`;
+
+/** The page says to update, its heading taking focus and read with the text, and shows nothing of the folder: no one's name, no tabs, sheet, toast or sample banner. */
 async function refused(page: Page, text = NOTE): Promise<void> {
-  await expect(main(page).getByRole('heading', { name: 'Update the app' })).toBeVisible();
+  const heading = main(page).getByRole('heading', { name: 'Update the app' });
+  await expect(heading).toBeFocused();
+  await expect(heading).toHaveAccessibleDescription(text);
   await expect(main(page)).toContainText(text);
-  await expect(page.locator('.app-tabs, .banner-sample')).toHaveCount(0);
+  await expect(page.locator('.app-tabs, .banner-sample, .scrim, .toast')).toHaveCount(0);
   const shown = await page.locator('body').innerText();
   expect(PEOPLE.filter((name) => shown.includes(name))).toEqual([]);
 }
@@ -70,8 +75,19 @@ test('a folder whose reader is newer, with no newer app on the site, shows nothi
     await refused(page);
   }
   await main(page).getByRole('button', { name: 'Look for an update' }).click();
-  await refused(page, `${NOTE} There is no newer app yet. Look again later.`);
+  await refused(page, NONE_YET);
   expect([asked.length, loads()]).toEqual([2, 1]);
+  await expect(main(page).getByRole('button', { name: 'Choose a folder' })).toHaveCount(0);
+});
+
+test('a folder whose reader is newer, where the site cannot be reached, says the look failed', async ({ page, baseURL }) => {
+  let site = false;
+  await page.route(`${baseURL}`, (route) => (route.request().resourceType() === 'fetch' && !site ? route.abort('internetdisconnected') : route.continue()));
+  await openSample(page, withViews({ reader: '0.9.11', medrec: '0.9.11' }));
+  await refused(page, FAILED);
+  site = true;
+  await main(page).getByRole('button', { name: 'Look for an update' }).click();
+  await refused(page, NONE_YET);
 });
 
 test('a folder whose reader is newer loads the newer app on the site, which opens it', async ({ page, baseURL }) => {
@@ -97,7 +113,7 @@ test('a folder whose reader is newer loads the newer app on the site, which open
   expect(new URL(page.url()).search).toBe('?demo');
 });
 
-test('a page that still loads the old app after reloading for a newer one says to update, and reloads no more', async ({ page, baseURL }) => {
+test('a page that still loads the old app after reloading for a newer one says to update and reloads no more by itself, but the button loads it again', async ({ page, baseURL }) => {
   await page.route(`${baseURL}`, async (route) => {
     if (route.request().resourceType() !== 'fetch') return route.continue();
     const res = await route.fetch();
@@ -105,9 +121,11 @@ test('a page that still loads the old app after reloading for a newer one says t
   });
   const { loads } = await openSample(page, withViews({ reader: '0.9.11', medrec: '0.9.11' }));
   await refused(page);
-  await main(page).getByRole('button', { name: 'Look for an update' }).click();
-  await refused(page, `${NOTE} There is no newer app yet. Look again later.`);
   expect(loads()).toBe(2);
+  await main(page).getByRole('button', { name: 'Look for an update' }).click();
+  await expect.poll(loads).toBe(3);
+  await refused(page);
+  expect(loads()).toBe(3);
 });
 
 test('the sample, read again after medrec writes views with a newer reader, leaves the screen and its sample banner', async ({ page }) => {
@@ -125,8 +143,8 @@ test('the sample, read again after medrec writes views with a newer reader, leav
 test('the site says which medrec contract it follows, to anyone, as JSON', async ({ request }) => {
   const res = await request.get('medrec-contract.json');
   expect([res.status(), res.headers()['content-type']]).toEqual([200, 'application/json']);
-  expect(await res.json()).toEqual({ schema: 'own-your-health-app/medrec-contract/v1', follows: FOLLOWS });
-  expect(FOLLOWS).toMatch(/^\d+\.\d+\.\d+$/);
+  expect(await res.text()).toBe(readFileSync('src/medrec-contract.json', 'utf8'));
+  expect(await res.json()).toEqual({ schema: 'own-your-health-app/medrec-contract/v1', follows: '0.9.10' });
 });
 
 test.describe('signed in to Drive', () => {
@@ -139,10 +157,37 @@ test.describe('signed in to Drive', () => {
     return google;
   }
 
-  test('a folder whose reader is newer is not opened', async ({ page, context }) => {
+  test('a folder whose reader is newer is not opened: nothing but views.json, household.json and the answered requests is read, and it stays chosen', async ({ page, context }) => {
     const google = await signIn(page, context, withViews({ reader: '0.9.11', medrec: '0.9.11' }));
     await refused(page);
-    expect(google.reads.filter((r) => r.startsWith('views/') && r !== VIEWS)).toEqual([]);
+    await page.waitForTimeout(300);
+    expect([...new Set(google.reads)].filter((r) => ![VIEWS, 'household.json'].includes(r) && !r.startsWith('_requests/done'))).toEqual([]);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('own-your-health-app.folder') ?? 'null') as { name?: string } | null)).toMatchObject({ name: FOLDER_NAME });
+    // Another folder is one tap away; choosing forgets this one.
+    await main(page).getByRole('button', { name: 'Choose a folder' }).click();
+    await expect(page.locator('.row', { hasText: FOLDER_NAME })).toBeVisible();
+    expect(await page.evaluate(() => localStorage.getItem('own-your-health-app.folder'))).toBeNull();
+  });
+
+  test('an open folder whose household.json medrec writes again in a newer format leaves the screen, and says to update', async ({ page, context }) => {
+    const google = await signIn(page, context);
+    await expect(main(page)).toContainText('Where everyone stands');
+    const household = { ...demoJson<Record<string, unknown>>('household.json'), format: 99 };
+    await macWrites(page, google, { 'household.json': JSON.stringify(household) }, 1);
+    const said = main(page).locator('p').first();
+    await expect(said).toHaveText(/newer than this app reads\b.* Update the app\.$/);
+    await refused(page, await said.innerText());
+  });
+
+  test('an open Mark paid sheet closes when the folder is refused on reading it again', async ({ page, context }) => {
+    const google = await signIn(page, context);
+    await expect(main(page)).toContainText('Where everyone stands');
+    await page.evaluate(() => (location.hash = '#/money/bills'));
+    await main(page).getByRole('button', { name: /^Mark paid:/ }).first().click();
+    await expect(page.getByRole('dialog', { name: 'Mark paid' })).toBeVisible();
+    await macWrites(page, google, withViews({ reader: '0.9.11', medrec: '0.9.11' }), 2);
+    await refused(page);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
   test('an open folder whose views medrec writes again with a newer reader leaves the screen, and says to update', async ({ page, context }) => {

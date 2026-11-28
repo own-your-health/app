@@ -12,11 +12,11 @@ import { needsAttention } from '../model/sources';
 import type { RequestScope } from '../model/types';
 import { getAccount, getClientId, getFolder, setAccount, setClientId, setFolder } from '../settings';
 import { readSetupLink, setupLinkFor, withoutClient, type SetupLink } from '../setup-link';
-import { button, sheet, type Ctx, type Mark } from './components';
+import { button, closeSheets, sheet, type Ctx, type Mark } from './components';
 import { clear, h, icon, s } from './dom';
 import { href, isListSection, moved, parseRoute, type Route } from './router';
 import { tabBar } from './tabs';
-import { buildOf, fetchAppPage, otherBuild, updateWatcher } from './update';
+import { buildOf, fetchAppPage, siteBuild, updateWatcher } from './update';
 import { costsView } from './views/costs';
 import { homeView } from './views/home';
 import { itemView } from './views/item';
@@ -52,7 +52,7 @@ type Phase =
   | { name: 'folder' }
   | { name: 'loading'; text?: string }
   | { name: 'ready' }
-  | { name: 'message'; title: string; text: string; actions?: HTMLElement[] };
+  | { name: 'message'; title: string; text: string; actions?: HTMLElement[]; focus?: boolean };
 
 /** In sessionStorage: the build this tab last reloaded to because a folder needed a newer app. */
 const UPDATE_TRIED = 'update-tried';
@@ -296,7 +296,11 @@ export class App {
     try {
       await store.load();
     } catch (e) {
-      if (e instanceof FolderError && (e.kind === 'newer_format' || e.kind === 'newer_reader')) return this.outOfDate(e.message);
+      if (e instanceof FolderError && (e.kind === 'newer_format' || e.kind === 'newer_reader')) {
+        // Kept, so the updated app opens it.
+        setFolder(f);
+        return this.outOfDate(e.message);
+      }
       setFolder(null);
       const text = await whyNotOpened(this.drive, f.id, e, this.user.email);
       return this.show({ name: 'message', title: 'That folder could not be opened', text, actions: [button('Choose a folder', () => this.show({ name: 'folder' }), { primary: true })] });
@@ -337,28 +341,30 @@ export class App {
 
   /**
    * The folder needs a newer app than this one. A newer build on the site is
-   * loaded, once per build in this tab, so a page that still runs this one
-   * does not reload again and again. Else the page says to update, with
-   * nothing of the folder on any screen, and its button looks again.
+   * loaded: by itself once per build in this tab, so a page that still runs
+   * this one does not reload again and again, and whenever the button asks.
+   * Else the page says to update, with nothing of the folder on any screen,
+   * open sheets and toasts included.
    */
   private async outOfDate(text: string, looked = false): Promise<void> {
     this.store = null;
     this.rereads = null;
     this.demoMac = null;
     window.clearInterval(this.pollTimer);
+    window.clearTimeout(this.toastTimer);
+    this.toastBox.replaceChildren();
     this.banner.replaceChildren();
+    closeSheets();
     this.show({ name: 'loading', text: 'Looking for a newer app…' });
-    const next = await otherBuild(this.build, fetchAppPage);
-    if (next && sessionStorage.getItem(UPDATE_TRIED) !== next) {
-      sessionStorage.setItem(UPDATE_TRIED, next);
+    const site = await siteBuild(this.build, fetchAppPage);
+    if (site.kind === 'other' && (looked || sessionStorage.getItem(UPDATE_TRIED) !== site.build)) {
+      sessionStorage.setItem(UPDATE_TRIED, site.build);
       return location.reload();
     }
-    this.show({
-      name: 'message',
-      title: 'Update the app',
-      text: looked ? `${text} There is no newer app yet. Look again later.` : text,
-      actions: [button('Look for an update', () => void this.outOfDate(text, true), { primary: true })],
-    });
+    const more =
+      site.kind === 'failed' ? ' The app’s site could not be reached to look for a newer app. Check the connection and look again.' : looked && site.kind === 'same' ? ' There is no newer app yet. Look again later.' : '';
+    const choose = this.drive && !this.demo ? [button('Choose a folder', () => (setFolder(null), this.show({ name: 'folder' })))] : [];
+    this.show({ name: 'message', title: 'Update the app', text: text + more, focus: true, actions: [button('Look for an update', () => void this.outOfDate(text, true), { primary: true }), ...choose] });
   }
 
   private startPolling(): void {
@@ -639,7 +645,8 @@ export class App {
         this.main.append(folderView(this.drive, { account: this.user.email, onPick: (f) => this.openFolder(f), onDifferentAccount: () => this.differentAccount() }));
         return;
       case 'message':
-        this.main.append(messageView(p.title, p.text, p.actions));
+        this.main.append(messageView(p.title, p.text, p.actions, p.focus));
+        if (p.focus) this.main.querySelector<HTMLElement>('h2')?.focus();
         return;
       case 'ready':
         this.main.append(this.routeView());

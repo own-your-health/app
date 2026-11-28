@@ -23,7 +23,7 @@ export class Rereads {
     private readonly now: () => number,
     /** Tells the person that the records shown are not the folder's. */
     private readonly say: (text: string) => void,
-    /** The folder's views need a newer app: nothing of it may stay on screen. */
+    /** The folder needs a newer app (its views' reader, or household.json's format): nothing of it may stay on screen. */
     private readonly refuse: (text: string) => void,
   ) {}
 
@@ -51,11 +51,9 @@ export class Rereads {
   }
 
   private failed(e: unknown): void {
-    if (e instanceof FolderError && e.kind === 'newer_reader') return this.refuse(e.message);
-    const newer = e instanceof FolderError && e.kind === 'newer_format';
-    if (this.said || (!newer && this.tries < SAID_AT)) return;
+    if (e instanceof FolderError && (e.kind === 'newer_reader' || e.kind === 'newer_format')) return this.refuse(e.message);
+    if (this.said || this.tries < SAID_AT) return;
     this.said = true;
-    const why = e instanceof Error ? e.message : 'unknown error';
-    this.say(newer ? why : `The records could not be read again, so these are from before. ${why}`);
+    this.say(`The records could not be read again, so these are from before. ${e instanceof Error ? e.message : 'unknown error'}`);
   }
 }

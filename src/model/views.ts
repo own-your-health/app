@@ -33,10 +33,11 @@ const md5Of = (v: unknown): Md5 | undefined => (v === null ? null : typeof v ===
 
 /**
  * The newest medrec whose contract this app follows: it reads views whose
- * `reader` is this or older. Raise it with the change that follows a newer
- * medrec's contract, never ahead of it.
+ * `reader` is this or older. It is `follows` in src/medrec-contract.json,
+ * which the site publishes as it is; raise it there with the change that
+ * follows a newer medrec's contract, never ahead of it.
  */
-export const FOLLOWS = '0.9.10';
+export const FOLLOWS: string = __MEDREC_FOLLOWS__;
 
 export const NEWER_READER = 'These records were written by a newer medrec. Update the app to see them.';
 

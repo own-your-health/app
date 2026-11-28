@@ -82,9 +82,20 @@ describe('views.json’s reader', () => {
 describe('a folder whose views need a newer app', () => {
   const NEWER = { 'views/views.json': JSON.stringify(views({ reader: '0.9.11', medrec: '0.9.11' })) };
 
-  it('is not opened: nothing of it is read by the app’s own rules', async () => {
-    const store = new Store(demoFolderWith(NEWER));
+  it('is not opened: nothing of it is read by the app’s own rules, its requests and status included', async () => {
+    const read: string[] = [];
+    const folder = demoFolderWith(NEWER);
+    const store = new Store(
+      new Proxy(folder, {
+        get: (t, k) => {
+          const v: unknown = Reflect.get(t, k, t);
+          return typeof v === 'function' ? (...args: unknown[]) => (read.push(`${String(k)} ${String(args[0])}`), (v as (...a: unknown[]) => unknown).apply(t, args)) : v;
+        },
+      }),
+    );
     await expect(store.load()).rejects.toMatchObject({ kind: 'newer_reader', message: NEWER_READER });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(read.filter((x) => !/ (household\.json|views\/views\.json|_requests\/done)$/.test(x))).toEqual([]);
   });
 
   it('opens where its reader is absent and an older medrec wrote it', async () => {
