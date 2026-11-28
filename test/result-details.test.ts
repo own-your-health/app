@@ -4,7 +4,7 @@ import { isOutOfRange, resultFlag } from '../src/model/flags';
 import { panelFor, panelOf, resultGroups } from '../src/model/panels';
 import { itemPrivate } from '../src/model/private';
 import { isHeading, isQuantity, isWithdrawn, memberIds, partSeries, readingOf, recordDetail, resultParts, resultPoint, resultReading, resultSeries, seriesKey, str, testPartSeries } from '../src/model/records';
-import { rangeText, resultContext, verdict } from '../src/model/result';
+import { rangeLine, rangePieces, rangeText, resultContext, verdict } from '../src/model/result';
 import { parseHousehold, parseIndex } from '../src/model/parse';
 import { find } from '../src/model/search';
 import type { Json, JsonObject, MedRecord, PersonIndex } from '../src/model/types';
@@ -67,6 +67,61 @@ describe('a quantity with a comparator', () => {
 const part = (code: string | null, display: string | null, value: Json, more: Record<string, Json> = {}) => ({ code: { ...(code ? { system: 'http://loinc.org', code } : {}), ...(display ? { display } : {}) }, value, ...more });
 const pressure = (n: number, date: string, top: number, low: number, more: Record<string, Json> = {}) =>
   result(n, 'Blood pressure', date, { value: { value: `${top}/${low}`, unit: 'mmHg' }, components: [part('8480-6', 'Systolic', { value: top, unit: 'mmHg' }, more), part('8462-4', 'Diastolic', { value: low, unit: 'mmHg' })], category: 'Vital signs' }, '85354-9');
+
+describe('a range cut where a line may break', () => {
+  const whole = (text: string) => rangePieces(text).filter((x) => x.whole).map((x) => x.text);
+
+  it('keeps each number or pair whole with its unit, and the rest of its words free', () => {
+    expect(rangePieces('90–120 mmHg')).toEqual([{ text: '90–120 mmHg', whole: true }]);
+    expect(whole('3.5-5.1 mmol/L')).toEqual(['3.5-5.1 mmol/L']);
+    expect(whole('under 130 mg/dL')).toEqual(['130 mg/dL']);
+    expect(rangePieces('<0.5 ng/mL')).toEqual([{ text: '<0.5 ng/mL', whole: true }]);
+    expect(rangePieces('11 g/dL – 15 g/dL')).toEqual([{ text: '11 g/dL – 15 g/dL', whole: true }]);
+  });
+
+  it('lets a long range a source wrote in words wrap between its numbers', () => {
+    const text = 'Normal: under 120 mmHg; Elevated: 120–129 mmHg; High: 130 or more (stage 1)';
+    expect(rangePieces(text).map((x) => x.text).join('')).toBe(text);
+    expect(whole(text)).toEqual(['120 mmHg', '120–129 mmHg', '130 or', '1']);
+    expect(Math.max(...whole(text).map((x) => x.length))).toBeLessThan(14);
+  });
+});
+
+describe('a blood pressure’s one form', () => {
+  const of = (...parts: ReturnType<typeof part>[]) => readingOf(result(0, 'Blood pressure', '2026-01-02', { value: 'As its source wrote it', components: parts }, '85354-9')).text;
+  const [top, bottom] = [(value: Json) => part('8480-6', 'Systolic', value), (value: Json) => part('8462-4', 'Diastolic', value)];
+  const mmHg = (value: number) => ({ value, unit: 'mmHg' });
+
+  it('is the bottom number alone where there is no top one, and two bottom numbers are both said', () => {
+    expect([of(bottom(mmHg(80))), of(top(mmHg(120)), bottom(mmHg(80)), bottom(mmHg(82)))]).toEqual(['80 mmHg, bottom number only', '120/80 and 82 mmHg']);
+  });
+
+  it('gives a part in another unit than the numbers its own unit, and one with no unit none', () => {
+    expect(of(top(mmHg(120)), bottom(mmHg(80)), part('8867-4', 'Heart rate', { value: 64, unit: '/min' }), part(null, 'Mean Blood Pressure', mmHg(93)))).toBe('120/80 mmHg, heart rate 64 /min, mean 93');
+    expect(of(top({ value: 120 }), bottom({ value: 80 }))).toBe('120/80');
+  });
+
+  it('keeps a name of capitals as it is, and the words of a name that is only “blood pressure”', () => {
+    expect(of(top(mmHg(120)), bottom(mmHg(80)), part(null, 'MAP', mmHg(93)), part(null, 'Blood pressure', mmHg(95)))).toBe('120/80 mmHg, MAP 93, blood pressure 95');
+  });
+
+  it('is the source’s own words where no part is a top or a bottom number', () => {
+    expect([of(part(null, 'Upper', mmHg(120))), of()]).toEqual(['As its source wrote it', 'As its source wrote it']);
+  });
+
+  it('reads a part by name only where it has no code, so another test’s coded “Systolic” or “Diastolic” part is none', () => {
+    expect([of(part('00000-4', 'Systolic function', mmHg(60)), part('00000-5', 'Diastolic function', { value: 2 })), of(part(null, 'Systolic', mmHg(120)), part(null, 'Diastolic', mmHg(80)))]).toEqual(['As its source wrote it', '120/80 mmHg']);
+  });
+
+  it('knows LOINC’s codes however a source writes LOINC’s system', () => {
+    const coded = (system: string, code: string, value: number) => ({ code: { system, code }, value: mmHg(value) });
+    expect(of(coded('LOINC', '8480-6', 120), coded('https://loinc.org', '8462-4', 80))).toBe('120/80 mmHg');
+  });
+
+  it('leaves out a part with no value, and keeps the source’s words where no number is left', () => {
+    expect([of(top(null), bottom(mmHg(80))), of(top(null), bottom(null)), of(top(mmHg(120)), bottom(mmHg(80)), part(null, 'Mean blood pressure', null))]).toEqual(['80 mmHg, bottom number only', 'As its source wrote it', '120/80 mmHg']);
+  });
+});
 
 describe('a test’s parts over time', () => {
   const reading = (n: number, date: string, parts: ReturnType<typeof part>[]) => result(n, 'Example reading', date, { value: 'Example', components: parts }, '00000-1');
@@ -258,16 +313,18 @@ describe('as medrec 0.9.10 writes them', () => {
   };
   const read = (r: MedRecord) => [readingOf(r).text, resultParts(r).map((x) => `${x.name}: ${x.point.text}`)];
 
-  it('reads a reading of several parts as its text, with its parts in the source’s order', () => {
-    expect(['01', '02', '03', '04', '05', '06', '07'].map((d) => read(one(`2024-04-${d}`)))).toEqual([
+  it('reads a blood pressure in one form whatever its source wrote, with its parts in the source’s order', () => {
+    expect(['01', '02', '03', '04', '05', '06', '07', '11'].map((d) => read(one(`2024-04-${d}`)))).toEqual([
       ['128/76 mmHg', ['Blood pressure, top number: 128 mmHg', 'Blood pressure, bottom number: 76 mmHg']],
       ['110/70 mmHg', ['Blood pressure, bottom number: 70 mmHg', 'Blood pressure, top number: 110 mmHg']],
-      ['Systolic blood pressure 120 mmHg; Diastolic blood pressure 80 mmHg', ['Systolic blood pressure: 120 mmHg', 'Diastolic blood pressure: 80 mmHg']],
-      ['Systolic blood pressure 16 kPa; Diastolic blood pressure 80 mmHg', ['Blood pressure, top number: 16 kPa', 'Blood pressure, bottom number: 80 mmHg']],
-      ['Systolic blood pressure 122 mmHg', ['Blood pressure, top number: 122 mmHg']],
-      ['122/78 mmHg; Mean blood pressure 93 mmHg', ['Blood pressure, top number: 122 mmHg', 'Mean blood pressure: 93 mmHg', 'Blood pressure, bottom number: 78 mmHg']],
-      ['Systolic blood pressure 122 mmHg; Systolic blood pressure 124 mmHg; Diastolic blood pressure 78 mmHg', ['Blood pressure, top number: 122 mmHg', 'Blood pressure, top number: 124 mmHg', 'Blood pressure, bottom number: 78 mmHg']],
+      ['120/80 mmHg', ['Systolic blood pressure: 120 mmHg', 'Diastolic blood pressure: 80 mmHg']],
+      ['16 kPa/80 mmHg', ['Blood pressure, top number: 16 kPa', 'Blood pressure, bottom number: 80 mmHg']],
+      ['122 mmHg, top number only', ['Blood pressure, top number: 122 mmHg']],
+      ['122/78 mmHg, mean 93', ['Blood pressure, top number: 122 mmHg', 'Mean blood pressure: 93 mmHg', 'Blood pressure, bottom number: 78 mmHg']],
+      ['122 and 124/78 mmHg', ['Blood pressure, top number: 122 mmHg', 'Blood pressure, top number: 124 mmHg', 'Blood pressure, bottom number: 78 mmHg']],
+      ['>260/80 mmHg', ['Blood pressure, top number: >260 mmHg', 'Blood pressure, bottom number: 80 mmHg']],
     ]);
+    // A reading of other parts is as its source wrote it.
     expect([read(one('2024-04-08')), read(one('2024-04-17'))]).toEqual([
       ['7', ['First part: 3', 'Second part: 4']],
       ['118/74 mmHg', ['Blood pressure, top number: 118 mmHg', 'Blood pressure, bottom number: 74 mmHg']],
@@ -279,6 +336,12 @@ describe('as medrec 0.9.10 writes them', () => {
     const p = resultPoint(one('2024-04-01'));
     expect([resultFlag(p)?.label, verdict(p).text, rangeText(p, 'Blood pressure')]).toEqual(['High', 'Blood pressure, top number: Above the lab’s range of 90–120 mmHg.', 'top number: 90–120 mmHg']);
     expect([rangeText(resultPoint(one('2024-04-02')), 'Blood pressure'), rangeText(resultPoint(one('2024-05-14', 'Potassium')), 'Potassium')]).toEqual(['', '3.5-5.1 mmol/L']);
+    // Under a value in a table over time.
+    expect([rangeLine(p, 'Blood pressure'), rangeLine(resultPoint(one('2024-04-02')), 'Blood pressure'), rangeLine(resultPoint(one('2024-05-14', 'Potassium')), 'Potassium')]).toEqual([
+      { words: 'Range: top number ', range: '90–120 mmHg' },
+      undefined,
+      { words: 'Range: ', range: '3.5-5.1 mmol/L' },
+    ]);
     // Where the whole says of itself, no part flags it, and none's range is given.
     const said = one('2024-04-01');
     expect(rangeText(resultPoint({ ...said, fields: { ...said.fields, interpretation: 'Normal' } }), 'Blood pressure')).toBe('');

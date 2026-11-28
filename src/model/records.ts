@@ -2,9 +2,9 @@
 // medicines, lists, claims and bills.
 
 import type { Household, ImagingStudy, ImportRun, Json, JsonObject, MedDocument, MedRecord, PersonIndex, Provenance } from './types';
-import { parseRange, type Bound } from './flags';
+import { parseRange, unitKey, type Bound } from './flags';
 import { isObject } from './parse';
-import { labTest, resultName } from './labtests';
+import { isLoinc, labTest, resultName } from './labtests';
 import { practiceName, practiceOf } from './practices';
 import { placeName } from './words';
 
@@ -225,8 +225,58 @@ export const UNSAID: ReadonlySet<string> = new Set(['when', 'members']);
  */
 export const isHeading = (r: MedRecord): boolean => r.kind === 'result' && !valueText(r.fields.value) && ((isObject(r.lists) && Object.keys(r.lists).length > 0) || r.fields.members !== undefined);
 
-/** What a result's page and the lists give as its value. */
-export const readingOf = (r: MedRecord): Reading => (isHeading(r) ? { text: 'Panel' } : resultReading(r.fields));
+/** What a result's page and the lists give as its value: a blood pressure in its one form. */
+export function readingOf(r: MedRecord): Reading {
+  if (isHeading(r)) return { text: 'Panel' };
+  const reading = resultReading(r.fields);
+  const pressure = pressureText(resultParts(r));
+  return pressure ? { ...reading, text: pressure } : reading;
+}
+
+/** Whether a part is coded as LOINC's `code`; `resultParts` keys a coded part by its system and code. */
+const isCode = (p: ResultPart, code: string): boolean => {
+  const at = p.key.lastIndexOf('|');
+  return p.key.slice(at + 1) === code && isLoinc(p.key.slice(0, at));
+};
+/** A part with no code: `resultParts` keys it by its name. */
+const uncoded = (p: ResultPart): boolean => p.key.startsWith('display|');
+/** A blood pressure's top and bottom numbers, by their LOINC codes, or by name where a source gives a part no code. */
+const isTop = (p: ResultPart): boolean => isCode(p, '8480-6') || (uncoded(p) && /^systolic\b/i.test(p.name));
+const isBottom = (p: ResultPart): boolean => isCode(p, '8462-4') || (uncoded(p) && /^diastolic\b/i.test(p.name));
+/** A part that says something: a number, a bound, or words. */
+const said = (p: ResultPart): boolean => p.point.value !== undefined || p.point.bound !== undefined || p.point.text !== '—';
+
+/** A part's number without its unit: "122", ">260". */
+const bare = ({ text, unit }: ResultPoint): string => (unit && text.endsWith(` ${unit}`) ? text.slice(0, -unit.length - 1) : text);
+
+/** A part's name in plain words after a blood pressure: "mean" for "Mean blood pressure", "heart rate". */
+const plainName = (name: string): string => {
+  const word = name.replace(/\s*\bblood pressure\b\s*/i, ' ').trim() || name;
+  return /^[A-Z][a-z]/.test(word) ? word[0]!.toLowerCase() + word.slice(1) : word;
+};
+
+/**
+ * A blood pressure in one form, made from its parts, whatever its source
+ * wrote as the whole: "118/74 mmHg", ">260/80 mmHg", two top numbers as
+ * "122 and 124/78 mmHg", a reading of one as "122 mmHg, top number only", and
+ * any other part after it in plain words, "122/78 mmHg, mean 93". A part
+ * with no value is left out. None where no part left is a top or a bottom
+ * number: the source's own words stand.
+ */
+export function pressureText(all: ResultPart[]): string | undefined {
+  const parts = all.filter(said);
+  const tops = parts.filter(isTop);
+  const bottoms = parts.filter(isBottom);
+  if (!tops.length && !bottoms.length) return undefined;
+  const both = [...tops, ...bottoms];
+  // One unit is said once, at the end; numbers in different units each keep theirs.
+  const unit = new Set(both.map((p) => unitKey(p.point.unit))).size === 1 ? both[0]!.point.unit : undefined;
+  const numbers = (of: ResultPart[]) => of.map((p) => (unit ? bare(p.point) : p.point.text)).join(' and ');
+  const withUnit = (t: string) => (unit ? `${t} ${unit}` : t);
+  const form = !tops.length || !bottoms.length ? `${withUnit(numbers(both))}, ${tops.length ? 'top' : 'bottom'} number only` : withUnit(`${numbers(tops)}/${numbers(bottoms)}`);
+  const others = parts.filter((p) => !isTop(p) && !isBottom(p)).map((p) => `${plainName(p.name)} ${unit && unitKey(p.point.unit) === unitKey(unit) ? bare(p.point) : p.point.text}`);
+  return [form, ...others].join(', ');
+}
 
 /** A result's part: what it names, and the part as a point of its own. */
 export interface ResultPart {

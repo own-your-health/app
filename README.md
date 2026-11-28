@@ -335,7 +335,15 @@ Every record's page leads with the plain answer. A result shows:
 - its value, and whether it is within the lab's range, in words and as a
   marker on the range: within it in a calm green with a check, outside it in
   the attention colour with an arrow, the stretches outside the range
-  hatched, so none of it rests on colour alone;
+  hatched, so none of it rests on colour alone. A blood pressure's value is
+  made from its parts, whatever its source wrote as the whole, wherever the
+  app gives it: the top and bottom numbers (LOINC 8480-6 and 8462-4, or a part
+  with no code whose name starts Systolic or Diastolic) read `118/74 mmHg`;
+  two of one kind are joined by "and"; one kind alone says `top number only`
+  or `bottom number only`; numbers in different units each keep theirs; any
+  other part follows by name (`122/78 mmHg, mean 93`). A part with no value
+  is left out, and with no top or bottom number left the source's own value
+  shows;
 - a sentence or two on what the test measures and what a high or low result
   can go with, written from the MedlinePlus page it links and stopping at
   "a question for your doctor";
