@@ -16,7 +16,7 @@ function record(r: MedRecord, gone: ReadonlySet<string>): MedRecord {
   // The fields stay in the source's order, which their list on a page has.
   const fields = Object.entries(r.fields).flatMap(([k, v]): [string, Json][] => {
     if (k === 'visit' && typeof v === 'string' && gone.has(v)) return [];
-    return [[k, k === 'results' ? kept(v) : k === 'items' && Array.isArray(v) ? v.map(line) : v]];
+    return [[k, k === 'results' || k === 'members' ? kept(v) : k === 'items' && Array.isArray(v) ? v.map(line) : v]];
   });
   return { ...r, documents: r.documents.filter((d) => !gone.has(d)), fields: Object.fromEntries(fields), provenance: r.provenance.map((p) => source(p, gone)) };
 }

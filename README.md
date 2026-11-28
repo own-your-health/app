@@ -115,10 +115,11 @@ Low, Abnormal, Critical), or, when it gave none the app can read, when the
 value falls outside the reference range in the same unit; the app labels
 those **Above range** or **Below range**, so it is clear the app worked it out.
 A number the lab sent as text ("95", a FHIR valueString) reads as a number,
-in the unit its range names. A value sent as a bound ("<0.5", ">60") stays
-text and reads against the range only when every value it allows sits on one
-side of it: ">60" against "60 or more" is within, "<0.5" against 0–1 says
-nothing.
+in the unit its range names. A value sent as a bound ("<0.5", ">60"), as text
+or as a quantity with a comparator, is never plotted and reads against the
+range only when every value it allows sits on one side of it: ">60" against
+"60 or more" is within, "<0.5" against 0–1 says nothing. A result of several
+parts with nothing said of the whole is out of range where a part is.
 
 Conditions, allergies, medicines and vaccines are listed once each, however
 many dates the records hold them on, by the newest record's status in words
@@ -318,7 +319,12 @@ receipts no claim covers are not counted. The rules are `src/model/costs.ts`.
 Results are grouped by panel (metabolic, lipid, A1c, liver, blood count,
 thyroid, vitamins and iron, urine, vital signs) by each test's LOINC code,
 from a table in `src/model/panels.ts`; a test outside the table goes by the
-category its source gave, or under Other tests. A panel with a critical
+category its source gave where that is one other than laboratory, or else under
+the newest panel of its source's that lists a result of it (medrec 0.9.10 and
+later), on its own page and in search too, or under Other tests. A panel that its
+source lists results for, filed or not, and that has no value is a heading and
+no test: it is in no list of results and stands for none in search, a visit
+names it as a panel, and its own page lists its results. A panel with a critical
 result comes first, then one with any result out of range, and within a
 panel the out-of-range tests come first, then the order a lab report uses.
 Each test's chart shades the reference range each result came with.
@@ -333,7 +339,14 @@ Every record's page leads with the plain answer. A result shows:
 - a sentence or two on what the test measures and what a high or low result
   can go with, written from the MedlinePlus page it links and stopping at
   "a question for your doctor";
-- its history, with the range band;
+- its parts, for a result of several (a blood pressure's two numbers), each
+  with its own range;
+- its history, with the range band, or each part's where the whole is no
+  number; a part its source names twice has no line, and a line draws the
+  results in one unit, that of the newest result that shares its unit with
+  another (case, spaces and µ for u aside), and says which unit it is and how
+  many results in another it leaves out, or that there is no chart where no
+  two share one;
 - the other tests from the same draw, and the visit and lab report it came
   with.
 
@@ -611,7 +624,7 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   labels, as it is. Every National Provider Identifier in the sample and these
   begins with 0, which CMS never issues. The scripts
   delete nothing: medrec works in a new temporary folder, and a file no longer
-  part of a case is named for a person to remove. CI runs all six scripts.
+  part of a case is named for a person to remove. CI runs all seven scripts.
   `test/fixtures/standing/medrec/` is medrec's own fixture for readers of
   `standing.json`, as `tests/fixtures/standing/` of its 0.9.9 has it, and
   `test/fixtures/errors/medrec/` is its fixture of what is entered in error
@@ -621,6 +634,13 @@ npm run e2e        # browser tests at phone and desktop sizes: the sample, and s
   medrec's change.
   `test/fixtures/errors/views/` is what medrec 0.9.9 writes of `errors/medrec/`, by
   `node scripts/error-fixtures.mjs` with `MEDREC` set to that release.
+  `test/fixtures/results/medrec/readings.json` is medrec's own fixture of a
+  result's shapes (`tests/fixtures/fhir/readings.json` of its 0.9.10), and
+  `test/fixtures/results/views/` the folder medrec 0.9.10 writes of it, with a
+  heading and a report as medrec's own test lists them, and invented beside
+  them a visit's results and headings, a blood pressure sent as a panel of its
+  two numbers, and two tests sent in two units, by
+  `node scripts/result-fixtures.mjs` with `MEDREC` set to that release.
   Written by hand are only Drive's answers, the app's own requests, and files
   medrec never writes: malformed ones, and ones of a later format.
 - The PNG icons in `public/` (for the manifest and the iPhone Home Screen) are

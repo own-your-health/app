@@ -6,7 +6,7 @@
 // show on their person's own page, marked; they stay off everyone's view,
 // counted, and off the sheet unless turned on.
 
-import { rangeWords, unitText, verdict } from '../model/result';
+import { rangeText, rangeWords, unitText, verdict } from '../model/result';
 import { rangeFor } from '../model/flags';
 import { underHeadings, type ConditionItem, type ItemStanding, type ListNotes, type MedicineItem, type AllergyItem } from '../model/lists';
 import type { LatestResult } from '../model/overview';
@@ -281,7 +281,7 @@ function doctorPage(ctx: Ctx, p: Person, idx: PersonIndex): HTMLElement {
             rows.map((x) => {
               const r = rangeFor(x.latest.range, x.latest.unit);
               const flag = x.flag && x.flag.level !== 'normal' ? ` (${x.flag.critical ? 'critical' : x.flag.label.toLowerCase()})` : '';
-              return h('tr', null, h('td', null, x.series.name), h('td', null, `${reading(x)}${flag}`), h('td', null, r ? rangeWords(r, x.latest.unit) : (x.latest.range ?? '')), h('td', null, x.latest.date ? dateText(x.latest.date) : ''));
+              return h('tr', null, h('td', null, x.series.name), h('td', null, `${reading(x)}${flag}`), h('td', null, r ? rangeWords(r, x.latest.unit) : rangeText(x.latest, x.series.name)), h('td', null, x.latest.date ? dateText(x.latest.date) : ''));
             }),
           ),
         )

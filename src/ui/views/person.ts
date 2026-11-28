@@ -4,14 +4,15 @@
 
 import { errorsOf } from '../../model/inError';
 import { conditionName } from '../../model/codeNames';
-import { originNames, seriesKey, sortByDateDesc, str, studyTitle } from '../../model/records';
-import { isOutOfRange, rangeFor, resultFlag } from '../../model/flags';
+import { isHeading, originNames, seriesKey, sortByDateDesc, str, studyTitle, testPartSeries } from '../../model/records';
+import { isOutOfRange, resultFlag } from '../../model/flags';
+import { rangeText } from '../../model/result';
 import type { LatestResult } from '../../model/overview';
 import { allergyList, conditionList, CRITICALITY_TEXT, medicineList, statusText, underHeadings, vaccineList, type AllergyItem, type ConditionItem, type ItemStanding, type MedicineItem } from '../../model/lists';
 import { resultGroups } from '../../model/panels';
 import { COMING_UP_DAYS, FLU, fluSeason, SCHEDULE_SOURCE, scheduleDigest, scheduleFor, type DoseState, type FluSeason, type ScheduleRow } from '../../model/schedule';
-import type { Person, PersonIndex, Provenance } from '../../model/types';
-import { resultChart, resultSparkline } from '../chart';
+import type { MedRecord, Person, PersonIndex, Provenance } from '../../model/types';
+import { linesOf, linesView, resultSparkline } from '../chart';
 import { aboutNote, unsureNote } from '../about';
 import { button, card, chip, command, empty, flagChip, link, row, type Ctx } from '../components';
 import { h, icon, type Child } from '../dom';
@@ -137,15 +138,18 @@ function resultRow(personId: string, t: LatestResult): HTMLElement {
   });
 }
 
+/** A result that is a test, not the heading of others. */
+const isTest = (r: MedRecord): boolean => r.kind === 'result' && !isHeading(r);
+
 function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLElement {
   const groups = resultGroups(idx);
   if (sub) {
     const group = groups.find((g) => g.tests.some((t) => t.series.key === sub));
     const t = group?.tests.find((x) => x.series.key === sub);
-    const wrong = errorsNote(errorsOf(idx, { record: (r) => r.kind === 'result' && seriesKey(r) === sub }));
+    const wrong = errorsNote(errorsOf(idx, { record: (r) => isTest(r) && seriesKey(r) === sub }));
     if (!group || !t) return card({}, empty('This test is not in the records.'), wrong);
     const s = t.series;
-    const chart = resultChart(s.points, s.unit, s.name);
+    const lines = linesOf(s, () => testPartSeries(idx, s.key));
     const others = group.tests.filter((x) => x !== t);
     return h(
       'div',
@@ -156,8 +160,7 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
         {},
         h('div', { class: 'card-head' }, h('h1', null, s.name), flagChip(t.flag)),
         h('p', { class: 'muted small' }, [group.name, count(s.points.length, 'result'), s.unit, t.latest.range ? `range ${t.latest.range}` : null].filter(Boolean).join(' · ')),
-        chart ? h('div', { class: 'chart-box' }, chart) : null,
-        chart && s.points.some((p) => rangeFor(p.range, p.unit ?? s.unit)) ? h('p', { class: 'small muted' }, 'The shaded band is the reference range each result came with.') : null,
+        linesView(lines, 'The shaded band is the reference range each result came with.'),
         h(
           'table',
           { class: 'table' },
@@ -172,7 +175,7 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
                 null,
                 h('td', null, link(itemRoute(person.id, p.id), dateText(p.date))),
                 h('td', { class: 'num' }, p.text),
-                h('td', null, p.range ?? ''),
+                h('td', null, rangeText(p, s.name)),
                 h('td', { class: isOutOfRange(flag) ? 'attention' : undefined }, flag?.label ?? ''),
               );
             }),
@@ -183,7 +186,7 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
       others.length ? card({ title: `Also in ${group.name}` }, others.map((x) => resultRow(person.id, x))) : null,
     );
   }
-  const notes = [errorsNote(errorsOf(idx, { record: (r) => r.kind === 'result' })), aboutNote(idx)];
+  const notes = [errorsNote(errorsOf(idx, { record: isTest })), aboutNote(idx)];
   if (!groups.length) return card({ title: 'Results' }, empty('No results yet.'), unsureNote(idx), ...notes);
   return h(
     'div',

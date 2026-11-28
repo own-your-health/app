@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ResultPoint } from '../src/model/records';
-import { chartBands, niceTicks } from '../src/ui/chart';
+import { chartBands, drawable, niceTicks, otherUnitText } from '../src/ui/chart';
 
 // The full chart is 640 by 220, with 48 to the left, 16 to the right and top, and 28 below.
 const LEFT = 48;
@@ -50,5 +50,51 @@ describe('the reference range behind a chart', () => {
   it('draws no range it cannot read in the result’s unit', () => {
     expect(chartBands([p('2025-02-11', 15, '1.5-2.8 kPa', 'mm Hg'), p('2025-05-06', 18, 'Not detected', 'mm Hg')], 'mm Hg')).toEqual([]);
     expect(chartBands([p('2025-02-11', 15, '1.5-2.8 kPa')], 'mm Hg')).toEqual([]);
+  });
+});
+
+describe('what a chart draws', () => {
+  const dates = (pts: ResultPoint[]) => pts.map((x) => x.date);
+
+  it('is the results in the newest one’s unit, as one axis has one', () => {
+    const kpa = p('2025-03-01', 16, undefined, 'kPa');
+    const all = [p('2025-01-01', 120), kpa, p('2025-05-01', 118)];
+    expect([dates(drawable(all, undefined).points), drawable(all, undefined).unit, drawable(all, undefined).other]).toEqual([['2025-01-01', '2025-05-01'], 'mm Hg', 1]);
+    const newest = drawable([...all, { ...kpa, date: '2025-06-01' }], undefined);
+    expect([dates(newest.points), newest.unit, newest.other]).toEqual([['2025-03-01', '2025-06-01'], 'kPa', 2]);
+    expect(chartBands([p('2025-01-01', 8, '11-21 mm Hg'), { ...kpa, range: '1-3 kPa' }, p('2025-05-01', 25, '11-21 mm Hg')], undefined)).toHaveLength(1);
+  });
+
+  it('reads two spellings of one unit as one', () => {
+    const d = drawable([p('2025-01-01', 120, undefined, 'mg/dL'), p('2025-03-01', 119, undefined, ' MG/DL '), p('2025-05-01', 118, undefined, 'mg/dl')], undefined);
+    expect([d.points.length, d.unit, d.other]).toEqual([3, 'mg/dl', 0]);
+    expect(drawable([p('2025-01-01', 4, undefined, 'uIU/mL'), p('2025-03-01', 5, undefined, 'µIU/mL')], undefined).other).toBe(0);
+    expect(drawable([p('2025-01-01', 120, undefined, 'mm Hg'), p('2025-03-01', 118, undefined, 'mmHg')], undefined).other).toBe(0);
+  });
+
+  it('is the newest unit that has two results, where the newest result is alone in its own', () => {
+    const d = drawable([p('2025-01-01', 120), p('2025-03-01', 118), p('2025-05-01', 16, undefined, 'kPa')], undefined);
+    expect([dates(d.points), d.unit, d.other, d.newestLeft]).toEqual([['2025-01-01', '2025-03-01'], 'mm Hg', 1, true]);
+    const alone = drawable([p('2025-01-01', 120), p('2025-05-01', 16, undefined, 'kPa')], undefined);
+    expect([dates(alone.points), alone.unit, alone.other, alone.newestLeft]).toEqual([['2025-05-01'], 'kPa', 1, false]);
+  });
+
+  it('says which unit it is in, how many it leaves out, and whether the newest is among them', () => {
+    const say = (other: number, unit: string | undefined, newestLeft: boolean, charted = true) => otherUnitText({ other, unit, newestLeft, charted });
+    expect([say(0, 'kPa', false), say(1, 'kPa', false), say(1, 'kPa', true), say(2, 'kPa', true), say(2, undefined, false), say(2, 'kPa', false, false)]).toEqual([
+      undefined,
+      'The chart is in kPa; 1 result in another unit is not in it.',
+      'The chart is in kPa; 1 result in another unit, the newest, is not in it.',
+      'The chart is in kPa; 2 results in another unit, the newest among them, are not in it.',
+      '2 results in another unit are not in the chart.',
+      'Its results are in more than one unit, so there is no chart.',
+    ]);
+  });
+
+  it('takes a result with no unit as in the series’ own, and leaves out what is no dated number', () => {
+    const bare = { ...p('2025-03-01', 119), unit: undefined };
+    const d = drawable([p('2025-01-01', 120), bare, { ...p('2025-04-01', 1), value: undefined }, { ...p('2025-05-01', 118), date: undefined }], 'mm Hg');
+    expect([dates(d.points), d.unit, d.other]).toEqual([['2025-01-01', '2025-03-01'], 'mm Hg', 0]);
+    expect(drawable([], 'mm Hg')).toEqual({ points: [], unit: 'mm Hg', other: 0, newestLeft: false });
   });
 });

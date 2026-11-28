@@ -1,0 +1,1846 @@
+{
+  "schema": "medrec-index/v1",
+  "person": "p_m34nxk4cavrnsofgckqn",
+  "rev": 2,
+  "documents": [],
+  "records": [
+    {
+      "id": "r_rrlioh7h5ktdf4zooe7n",
+      "kind": "result",
+      "key": "result|http://loinc.org|85354-9|2024-04-01",
+      "date": "2024-04-01",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "85354-9",
+        "display": "Blood pressure panel"
+      },
+      "display": "Blood pressure panel",
+      "status": "final",
+      "fields": {
+        "when": "2024-04-01T09:30:00Z",
+        "value": {
+          "value": "128/76",
+          "unit": "mmHg"
+        },
+        "components": [
+          {
+            "code": {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            },
+            "value": {
+              "value": 128,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org"
+            },
+            "reference_range": "90 – 120",
+            "interpretation": "High"
+          },
+          {
+            "code": {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            },
+            "value": {
+              "value": 76,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org"
+            }
+          }
+        ],
+        "category": "Vital Signs",
+        "categories": [
+          "vital-signs"
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "bp-1"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/bp-1.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_xhmftu3pmoajnqmwvhfj",
+      "kind": "result",
+      "key": "result|http://loinc.org|85354-9|2024-04-02",
+      "date": "2024-04-02",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "85354-9",
+        "display": "Blood pressure panel"
+      },
+      "display": "Blood pressure panel",
+      "status": "final",
+      "fields": {
+        "when": "2024-04-02T09:30:00Z",
+        "value": {
+          "value": "110/70",
+          "unit": "mmHg"
+        },
+        "components": [
+          {
+            "code": {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Lower"
+            },
+            "value": {
+              "value": 70,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org"
+            }
+          },
+          {
+            "code": {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Upper"
+            },
+            "value": {
+              "value": 110,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org"
+            }
+          }
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "bp-2"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/bp-2.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_ukuskz4gglnxthtidshv",
+      "kind": "result",
+      "key": "result|blood pressure|2024-04-03",
+      "date": "2024-04-03",
+      "code": {
+        "display": "Blood pressure"
+      },
+      "display": "Blood pressure",
+      "status": "final",
+      "fields": {
+        "when": "2024-04-03T09:30:00Z",
+        "value": "Systolic blood pressure 120 mmHg; Diastolic blood pressure 80 mmHg",
+        "components": [
+          {
+            "code": {
+              "display": "Systolic blood pressure"
+            },
+            "value": {
+              "value": 120,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org"
+            }
+          },
+          {
+            "code": {
+              "display": "Diastolic blood pressure"
+            },
+            "value": {
+              "value": 80,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org"
+            }
+          }
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "bp-3"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/bp-3.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_4csbpacwuu5csoxw7ecw",
+      "kind": "result",
+      "key": "result|http://loinc.org|85354-9|2024-04-04",
+      "date": "2024-04-04",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "85354-9",
+        "display": "Blood pressure panel"
+      },
+      "display": "Blood pressure panel",
+      "status": "final",
+      "fields": {
+        "when": "2024-04-04T09:30:00Z",
+        "value": "Systolic blood pressure 16 kPa; Diastolic blood pressure 80 mmHg",
+        "components": [
+          {
+            "code": {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            },
+            "value": {
+              "value": 16,
+              "unit": "kPa",
+              "system": "http://unitsofmeasure.org"
+            }
+          },
+          {
+            "code": {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            },
+            "value": {
+              "value": 80,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org"
+            }
+          }
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "bp-4"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/bp-4.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_bzy2wfrcngs77g3lqedm",
+      "kind": "result",
+      "key": "result|http://loinc.org|85354-9|2024-04-05",
+      "date": "2024-04-05",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "85354-9",
+        "display": "Blood pressure panel"
+      },
+      "display": "Blood pressure panel",
+      "status": "final",
+      "fields": {
+        "when": "2024-04-05T09:30:00Z",
+        "value": "Systolic blood pressure 122 mmHg",
+        "components": [
+          {
+            "code": {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            },
+            "value": {
+              "value": 122,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org"
+            }
+          }
+        ]
+      },
+      "given": [
+        {
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/bp-5.json",
+          "fields": {
+            "components": [
+              {
+                "code": {
+                  "system": "http://loinc.org",
+                  "code": "8480-6",
+                  "display": "Systolic blood pressure"
+                }
+              },
+              {
+                "code": {
+                  "system": "http://loinc.org",
+                  "code": "8462-4",
+                  "display": "Diastolic blood pressure"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "bp-5"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/bp-5.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_ywh676wdu2k2pdgg26xh",
+      "kind": "result",
+      "key": "result|http://loinc.org|85354-9|2024-04-06",
+      "date": "2024-04-06",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "85354-9",
+        "display": "Blood pressure panel"
+      },
+      "display": "Blood pressure panel",
+      "status": "final",
+      "fields": {
+        "when": "2024-04-06T09:30:00Z",
+        "value": "122/78 mmHg; Mean blood pressure 93 mmHg",
+        "components": [
+          {
+            "code": {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            },
+            "value": {
+              "value": 122,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org"
+            }
+          },
+          {
+            "code": {
+              "system": "http://loinc.org",
+              "code": "8478-0",
+              "display": "Mean blood pressure"
+            },
+            "value": {
+              "value": 93,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org"
+            }
+          },
+          {
+            "code": {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            },
+            "value": {
+              "value": 78,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org"
+            }
+          }
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "bp-6"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/bp-6.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_4jcqlgllcxmm7t4xldt7",
+      "kind": "result",
+      "key": "result|http://loinc.org|85354-9|2024-04-07",
+      "date": "2024-04-07",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "85354-9",
+        "display": "Blood pressure panel"
+      },
+      "display": "Blood pressure panel",
+      "status": "final",
+      "fields": {
+        "when": "2024-04-07T09:30:00Z",
+        "value": "Systolic blood pressure 122 mmHg; Systolic blood pressure 124 mmHg; Diastolic blood pressure 78 mmHg",
+        "components": [
+          {
+            "code": {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            },
+            "value": {
+              "value": 122,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org"
+            }
+          },
+          {
+            "code": {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            },
+            "value": {
+              "value": 124,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org"
+            }
+          },
+          {
+            "code": {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            },
+            "value": {
+              "value": 78,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org"
+            }
+          }
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "bp-7"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/bp-7.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_pbyai45drc444v55bq2g",
+      "kind": "result",
+      "key": "result|example score|2024-04-08",
+      "date": "2024-04-08",
+      "code": {
+        "display": "Example score"
+      },
+      "display": "Example score",
+      "status": "final",
+      "fields": {
+        "when": "2024-04-08T09:30:00Z",
+        "value": 7,
+        "components": [
+          {
+            "code": {
+              "display": "First part"
+            },
+            "value": 3
+          },
+          {
+            "code": {
+              "display": "Second part"
+            },
+            "value": 4
+          }
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "sum-1"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/sum-1.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_jn4xa2j7hsktgwejrqgk",
+      "kind": "result",
+      "key": "result|http://loinc.org|85354-9|2024-04-09",
+      "date": "2024-04-09",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "85354-9",
+        "display": "Blood pressure panel"
+      },
+      "display": "Blood pressure panel",
+      "status": "final",
+      "fields": {
+        "when": "2024-04-09T09:30:00Z"
+      },
+      "given": [
+        {
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/none-1.json",
+          "fields": {
+            "components": [
+              {
+                "code": {
+                  "system": "http://loinc.org",
+                  "code": "8480-6",
+                  "display": "Systolic blood pressure"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "none-1"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/none-1.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_eiru7nbjtipakuffmtzo",
+      "kind": "result",
+      "key": "result|example antibody|2024-04-10",
+      "date": "2024-04-10",
+      "code": {
+        "display": "Example antibody"
+      },
+      "display": "Example antibody",
+      "status": "final",
+      "fields": {
+        "when": "2024-04-10T09:30:00Z",
+        "value": {
+          "value": 0.5,
+          "unit": "IU/mL",
+          "comparator": "<",
+          "system": "http://unitsofmeasure.org"
+        }
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "lt-1"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/lt-1.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_vr4n7izj6ozvlth4e5x5",
+      "kind": "result",
+      "key": "result|http://loinc.org|85354-9|2024-04-11",
+      "date": "2024-04-11",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "85354-9",
+        "display": "Blood pressure panel"
+      },
+      "display": "Blood pressure panel",
+      "status": "final",
+      "fields": {
+        "when": "2024-04-11T09:30:00Z",
+        "value": "Systolic blood pressure >260 mmHg; Diastolic blood pressure 80 mmHg",
+        "components": [
+          {
+            "code": {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            },
+            "value": {
+              "value": 260,
+              "unit": "mmHg",
+              "comparator": ">",
+              "system": "http://unitsofmeasure.org"
+            }
+          },
+          {
+            "code": {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            },
+            "value": {
+              "value": 80,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org"
+            }
+          }
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "lt-2"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/lt-2.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_2ui6hoqfbf53qhoq6uwl",
+      "kind": "result",
+      "key": "result|example titer|2024-04-12",
+      "date": "2024-04-12",
+      "code": {
+        "display": "Example titer"
+      },
+      "display": "Example titer",
+      "status": "final",
+      "fields": {
+        "when": "2024-04-12T09:30:00Z",
+        "value": "1:40"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "ratio-1"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/ratio-1.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_qxjntmpbqep6npxdltjd",
+      "kind": "result",
+      "key": "result|example cell count|2024-04-13",
+      "date": "2024-04-13",
+      "code": {
+        "display": "Example cell count"
+      },
+      "display": "Example cell count",
+      "status": "final",
+      "fields": {
+        "when": "2024-04-13T09:30:00Z",
+        "value": "0 /HPF – 5 /HPF"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "range-1"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/range-1.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_4astui4qckkssvhr2i6x",
+      "kind": "result",
+      "key": "result|example titer two|2024-04-14",
+      "date": "2024-04-14",
+      "code": {
+        "display": "Example titer two"
+      },
+      "display": "Example titer two",
+      "status": "final",
+      "fields": {
+        "when": "2024-04-14T09:30:00Z",
+        "value": "1:>1280"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "ratio-2"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/ratio-2.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_hkvz6fstbx4u42gc7xcx",
+      "kind": "result",
+      "key": "result|example time|2024-04-15",
+      "date": "2024-04-15",
+      "code": {
+        "display": "Example time"
+      },
+      "display": "Example time",
+      "status": "final",
+      "fields": {
+        "when": "2024-04-15T09:30:00Z",
+        "value": "07:30:00"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "time-1"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/time-1.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_4xnq2nvjnt2zq3hewiv2",
+      "kind": "result",
+      "key": "result|example level|2024-04-16",
+      "date": "2024-04-16",
+      "code": {
+        "display": "Example level"
+      },
+      "display": "Example level",
+      "status": "final",
+      "fields": {
+        "when": "2024-04-16T09:30:00Z"
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "unit-1"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/unit-1.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_k3x5tjgjumygzsqcsp3n",
+      "kind": "result",
+      "key": "result|http://loinc.org|85354-9|2024-04-17",
+      "date": "2024-04-17",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "85354-9",
+        "display": "Blood pressure panel"
+      },
+      "display": "Blood pressure panel",
+      "status": "final",
+      "fields": {
+        "when": "2024-04-17T09:30:00Z",
+        "value": {
+          "value": "118/74",
+          "unit": "mmHg"
+        },
+        "components": [
+          {
+            "code": {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            },
+            "value": {
+              "value": 118,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org"
+            }
+          },
+          {
+            "code": {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            },
+            "value": {
+              "value": 74,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org"
+            }
+          }
+        ]
+      },
+      "given": [
+        {
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/unit-2.json",
+          "fields": {
+            "components": [
+              {
+                "code": {
+                  "system": "http://loinc.org",
+                  "code": "8480-6",
+                  "display": "Systolic blood pressure"
+                }
+              },
+              {
+                "code": {
+                  "system": "http://loinc.org",
+                  "code": "8462-4",
+                  "display": "Diastolic blood pressure"
+                }
+              },
+              {
+                "code": {
+                  "display": "Sample wristband reading"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "unit-2"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/unit-2.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_ipa7xzvb7cz2eikeij3i",
+      "kind": "result",
+      "key": "result|example dose level|2024-04-18",
+      "date": "2024-04-18",
+      "code": {
+        "display": "Example dose level"
+      },
+      "display": "Example dose level",
+      "status": "final",
+      "fields": {
+        "when": "2024-04-18T09:30:00Z",
+        "value": {
+          "value": 4,
+          "unit": "mg",
+          "system": "http://unitsofmeasure.org"
+        }
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "ad-1"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/ad-1.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_nyidihrvuwtmnedth26a",
+      "kind": "result",
+      "key": "result|example pair|2024-04-19",
+      "date": "2024-04-19",
+      "code": {
+        "display": "Example pair"
+      },
+      "display": "Example pair",
+      "status": "final",
+      "fields": {
+        "when": "2024-04-19T09:30:00Z",
+        "value": "Second part 4",
+        "components": [
+          {
+            "code": {
+              "display": "Second part"
+            },
+            "value": 4
+          }
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "bare-1"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/bare-1.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_kj6kr3msme5xxz3fbdp3",
+      "kind": "result",
+      "key": "result|example test|2024-04-20",
+      "date": "2024-04-20",
+      "code": {
+        "display": "Example test"
+      },
+      "display": "Example test",
+      "status": "final",
+      "fields": {
+        "when": "2024-04-20T09:30:00Z",
+        "value": "Seen",
+        "category": "Laboratory",
+        "categories": [
+          "laboratory",
+          "Outside lab"
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "cat-1"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/cat-1.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_ylbqrguz4jtdzbssrmmb",
+      "kind": "result",
+      "key": "result|example heading|2024-04-21",
+      "date": "2024-04-21",
+      "code": {
+        "display": "Example heading"
+      },
+      "display": "Example heading",
+      "status": "final",
+      "fields": {
+        "when": "2024-04-21T09:30:00Z",
+        "members": [
+          "r_eiru7nbjtipakuffmtzo",
+          "r_qxjntmpbqep6npxdltjd"
+        ]
+      },
+      "lists": {
+        "Pat Example/Records/labcorp-example-lab/Observation/panel-1.json": [
+          "Observation/lt-1.json",
+          "Observation/range-1.json"
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "panel-1"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/panel-1.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_hn5njguah36xfsizohu3",
+      "kind": "report",
+      "key": "report|example panel|2024-04-30",
+      "date": "2024-04-30",
+      "code": {
+        "display": "Example panel"
+      },
+      "display": "Example panel",
+      "status": "final",
+      "fields": {
+        "when": "2024-04-30T09:30:00Z",
+        "category": "LAB",
+        "categories": [
+          "LAB"
+        ],
+        "results": 2,
+        "members": [
+          "r_pbyai45drc444v55bq2g"
+        ]
+      },
+      "lists": {
+        "Pat Example/Records/labcorp-example-lab/DiagnosticReport/report-1.json": [
+          "Observation/sum-1.json",
+          "Observation/not-filed.json"
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "DiagnosticReport",
+            "id": "report-1"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/DiagnosticReport/report-1.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_i5qb5mtp7erdzt3iorw3",
+      "kind": "encounter",
+      "key": "encounter|office visit|2024-05-14",
+      "date": "2024-05-14",
+      "code": {
+        "display": "Office visit"
+      },
+      "display": "Office visit",
+      "status": "finished",
+      "fields": {
+        "when": "2024-05-14T09:00:00Z",
+        "class": "ambulatory",
+        "location": "Example Clinic",
+        "practitioner": "Dr. Example Clinician",
+        "reason": "Check-up",
+        "period": {
+          "start": "2024-05-14T09:00:00Z",
+          "end": "2024-05-14T09:40:00Z"
+        }
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Encounter",
+            "id": "encounter-37734e22",
+            "last_updated": "2024-05-14T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Encounter/encounter-37734e22.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_t5ourbkgwy4cmcoanszr",
+      "kind": "result",
+      "key": "result|http://loinc.org|2951-2|2024-05-14",
+      "date": "2024-05-14",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "2951-2",
+        "display": "Sodium"
+      },
+      "display": "Sodium",
+      "status": "final",
+      "fields": {
+        "when": "2024-05-14",
+        "value": {
+          "value": 139,
+          "unit": "mmol/L",
+          "system": "http://unitsofmeasure.org"
+        },
+        "reference_range": "135-145 mmol/L",
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-90db748a",
+            "last_updated": "2024-05-14T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/observation-90db748a.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_zaan4pc5es2n3jd4suad",
+      "kind": "result",
+      "key": "result|http://loinc.org|2823-3|2024-05-14",
+      "date": "2024-05-14",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "2823-3",
+        "display": "Potassium"
+      },
+      "display": "Potassium",
+      "status": "final",
+      "fields": {
+        "when": "2024-05-14",
+        "value": {
+          "value": 5.4,
+          "unit": "mmol/L",
+          "system": "http://unitsofmeasure.org"
+        },
+        "reference_range": "3.5-5.1 mmol/L",
+        "interpretation": "High",
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-68576313",
+            "last_updated": "2024-05-14T08:00:00Z"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/observation-68576313.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_4wgtwwoxlvdglgxq4pwf",
+      "kind": "result",
+      "key": "result|example salts panel|2024-05-14",
+      "date": "2024-05-14",
+      "code": {
+        "display": "Example salts panel"
+      },
+      "display": "Example salts panel",
+      "status": "final",
+      "fields": {
+        "when": "2024-05-14T09:30:00Z",
+        "members": [
+          "r_t5ourbkgwy4cmcoanszr",
+          "r_zaan4pc5es2n3jd4suad"
+        ]
+      },
+      "lists": {
+        "Pat Example/Records/labcorp-example-lab/Observation/observation-bb183926.json": [
+          "Observation/observation-90db748a.json",
+          "Observation/observation-68576313.json"
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-bb183926"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/observation-bb183926.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_62agjxtdqwxgjqvfwhtp",
+      "kind": "result",
+      "key": "result|example metals panel|2024-05-14",
+      "date": "2024-05-14",
+      "code": {
+        "display": "Example metals panel"
+      },
+      "display": "Example metals panel",
+      "status": "final",
+      "fields": {
+        "when": "2024-05-14T09:30:00Z"
+      },
+      "lists": {
+        "Pat Example/Records/labcorp-example-lab/Observation/observation-232d8f5b.json": [
+          "Observation/not-filed-2.json",
+          "Observation/not-filed-3.json"
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-232d8f5b"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/observation-232d8f5b.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_o6jz4amwkm4m6hqnppxb",
+      "kind": "result",
+      "key": "result|example withdrawn panel|2024-05-14",
+      "date": "2024-05-14",
+      "code": {
+        "display": "Example withdrawn panel"
+      },
+      "display": "Example withdrawn panel",
+      "status": "entered-in-error",
+      "fields": {
+        "when": "2024-05-14T09:30:00Z",
+        "members": [
+          "r_t5ourbkgwy4cmcoanszr",
+          "r_zaan4pc5es2n3jd4suad"
+        ]
+      },
+      "words": [
+        {
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/observation-9a4425c4.json",
+          "status": "entered-in-error",
+          "version": "f198ea4aca5d11ee"
+        }
+      ],
+      "errors": [
+        {
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/observation-9a4425c4.json",
+          "from": "2026-11-14T20:00:00Z"
+        }
+      ],
+      "lists": {
+        "Pat Example/Records/labcorp-example-lab/Observation/observation-9a4425c4.json": [
+          "Observation/observation-90db748a.json",
+          "Observation/observation-68576313.json"
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-9a4425c4"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/observation-9a4425c4.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_7lvfmqhn4xq2hrlkzgu2",
+      "kind": "result",
+      "key": "result|http://loinc.org|8480-6|2024-06-10",
+      "date": "2024-06-10",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "8480-6",
+        "display": "Systolic blood pressure"
+      },
+      "display": "Systolic blood pressure",
+      "status": "final",
+      "fields": {
+        "when": "2024-06-10T08:15:00Z",
+        "value": {
+          "value": 130,
+          "unit": "mmHg",
+          "system": null
+        },
+        "category": "Vital Signs",
+        "categories": [
+          "vital-signs"
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "pat-sys"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/pat-sys.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_qxbgui6lhsf4xruycjvx",
+      "kind": "result",
+      "key": "result|http://loinc.org|8462-4|2024-06-10",
+      "date": "2024-06-10",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "8462-4",
+        "display": "Diastolic blood pressure"
+      },
+      "display": "Diastolic blood pressure",
+      "status": "final",
+      "fields": {
+        "when": "2024-06-10T08:15:00Z",
+        "value": {
+          "value": 85,
+          "unit": "mmHg",
+          "system": null
+        },
+        "category": "Vital Signs",
+        "categories": [
+          "vital-signs"
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "pat-dia"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/pat-dia.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_eacw4o2lxmivtcuikzld",
+      "kind": "result",
+      "key": "result|http://loinc.org|85354-9|2024-06-10",
+      "date": "2024-06-10",
+      "code": {
+        "system": "http://loinc.org",
+        "code": "85354-9",
+        "display": "Blood pressure panel"
+      },
+      "display": "Blood pressure panel",
+      "status": "final",
+      "fields": {
+        "when": "2024-06-10T08:15:00Z",
+        "category": "Vital Signs",
+        "categories": [
+          "vital-signs"
+        ],
+        "members": [
+          "r_7lvfmqhn4xq2hrlkzgu2",
+          "r_qxbgui6lhsf4xruycjvx"
+        ]
+      },
+      "lists": {
+        "Pat Example/Records/labcorp-example-lab/Observation/pat-bp-panel.json": [
+          "Observation/pat-sys.json",
+          "Observation/pat-dia.json"
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "pat-bp-panel"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/pat-bp-panel.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_6av5d5ly45yyie37z23u",
+      "kind": "result",
+      "key": "result|example glucose|2024-02-01",
+      "date": "2024-02-01",
+      "code": {
+        "display": "Example glucose"
+      },
+      "display": "Example glucose",
+      "status": "final",
+      "fields": {
+        "when": "2024-02-01",
+        "value": {
+          "value": 95,
+          "unit": "mg/dL",
+          "system": null
+        },
+        "reference_range": "70-99 mg/dL",
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-8c1e461d"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/observation-8c1e461d.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_6fnnwhde2sjbdf6ordju",
+      "kind": "result",
+      "key": "result|example glucose|2024-03-01",
+      "date": "2024-03-01",
+      "code": {
+        "display": "Example glucose"
+      },
+      "display": "Example glucose",
+      "status": "final",
+      "fields": {
+        "when": "2024-03-01",
+        "value": {
+          "value": 5.4,
+          "unit": "mmol/L",
+          "system": null
+        },
+        "reference_range": "3.9-5.5 mmol/L",
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-fe7de762"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/observation-fe7de762.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_syo4lwqy5ny4gnyupqfj",
+      "kind": "result",
+      "key": "result|example glucose|2024-06-01",
+      "date": "2024-06-01",
+      "code": {
+        "display": "Example glucose"
+      },
+      "display": "Example glucose",
+      "status": "final",
+      "fields": {
+        "when": "2024-06-01",
+        "value": {
+          "value": 99,
+          "unit": "mg/dL",
+          "system": null
+        },
+        "reference_range": "70-99 mg/dL",
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-d0a40d8c"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/observation-d0a40d8c.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_u34l46vbgrt4opxykcka",
+      "kind": "result",
+      "key": "result|example lactate|2024-02-01",
+      "date": "2024-02-01",
+      "code": {
+        "display": "Example lactate"
+      },
+      "display": "Example lactate",
+      "status": "final",
+      "fields": {
+        "when": "2024-02-01",
+        "value": {
+          "value": 1.2,
+          "unit": "mmol/L",
+          "system": null
+        },
+        "reference_range": "0.5-2.2 mmol/L",
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-60f4bb1a"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/observation-60f4bb1a.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    },
+    {
+      "id": "r_633yezquxgwtnjmfktgm",
+      "kind": "result",
+      "key": "result|example lactate|2024-03-01",
+      "date": "2024-03-01",
+      "code": {
+        "display": "Example lactate"
+      },
+      "display": "Example lactate",
+      "status": "final",
+      "fields": {
+        "when": "2024-03-01",
+        "value": {
+          "value": 11,
+          "unit": "mg/dL",
+          "system": null
+        },
+        "reference_range": "4.5-19.8 mg/dL",
+        "category": "Laboratory",
+        "categories": [
+          "laboratory"
+        ]
+      },
+      "provenance": [
+        {
+          "source": {
+            "kind": "portal",
+            "cli": "labcorp",
+            "cli_version": "0.2.1",
+            "organization_id": "example-lab",
+            "fhir_base": "https://example-lab.example"
+          },
+          "method": "portal",
+          "source_resource": {
+            "type": "Observation",
+            "id": "observation-10bc8566"
+          },
+          "fetched_at": "2026-11-14T20:00:00Z",
+          "filed_at": "2026-11-14T20:00:00Z",
+          "raw_path": "Pat Example/Records/labcorp-example-lab/Observation/observation-10bc8566.json",
+          "filed_by": "medrec 0.9.10"
+        }
+      ]
+    }
+  ],
+  "studies": [],
+  "imports": [
+    {
+      "id": "i_fiaf5kby7dgilxlxp5on",
+      "source_dir": "Pat Example/Records/labcorp-example-lab",
+      "stream_sha256": "2fba579d4fd2a567ff5053e7f1fb189c0b2e4f17f3bfbddf31b5451a91567b80",
+      "stream_bytes": 17143,
+      "cli": "labcorp",
+      "cli_version": "0.2.1",
+      "organization": "example-lab",
+      "patient_id": "pat-248ab672",
+      "pulled_at": "2026-11-14T20:00:00Z",
+      "from_files": false,
+      "imported_at": "2026-11-14T20:00:00Z",
+      "counts": {
+        "DiagnosticReport": 1,
+        "Encounter": 1,
+        "Observation": 34,
+        "Patient": 1
+      },
+      "records_added": 36,
+      "records_updated": 0,
+      "records_unchanged": 0,
+      "records_older": 0,
+      "records_not_served": 0,
+      "resources_written": 37,
+      "resources_unchanged": 0,
+      "documents_added": 0
+    }
+  ]
+}

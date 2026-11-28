@@ -150,6 +150,17 @@ export function folderOf(files: Record<string, string>): DemoFolder {
   return new DemoFolder('/app/demo/', fetchImpl, new Date(anchor));
 }
 
+/**
+ * The folder medrec 0.9.10 writes of its own fixture of a result's shapes, and
+ * of a visit's results and headings (scripts/result-fixtures.mjs): one person's,
+ * Pat Example's, by each file's path in it. Laid over the sample, it is the
+ * household in place of the sample's.
+ */
+export function resultsFiles(): Record<string, string> {
+  const dir = join(FIXTURES, 'results', 'views');
+  return Object.fromEntries(filesUnder(dir).map((f) => [f, readFileSync(join(dir, f), 'utf8')]));
+}
+
 /** medrec's fixture of what is entered in error, with the views medrec 0.9.9 writes of it (scripts/error-fixtures.mjs). */
 export function errorsFolder(change: (files: Record<string, string>) => void = () => {}): DemoFolder {
   const [given, views] = [join(FIXTURES, 'errors', 'medrec'), join(FIXTURES, 'errors', 'views')];

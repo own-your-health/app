@@ -16,9 +16,9 @@ export const put = (path, bytes) => {
   writeFileSync(path, bytes);
 };
 
-/** A scratch machine whose medrec finds `sources`' CLIs and nothing else: no other provider, and no text reader but a stand-in for pdftotext. */
-export function machineWith(people, sources) {
-  const { home, bin, root, medrec: at } = scratchMachine(undefined, { alone: true });
+/** A scratch machine whose medrec finds `sources`' CLIs and nothing else: no other provider, and no text reader but a stand-in for pdftotext. It is the sample's release, or `release`. */
+export function machineWith(people, sources, release) {
+  const { home, bin, root, medrec: at } = scratchMachine(undefined, { alone: true, ...(release ? { release } : {}) });
   const served = join(home, 'served');
   for (const tool of ['cat', 'basename', 'dirname']) symlinkSync([`/usr/bin/${tool}`, `/bin/${tool}`].find(existsSync), join(bin, tool));
   put(join(bin, 'pdftotext'), `#!/bin/sh\nexec "${process.execPath}" "${join(HERE, 'sample', 'pdftotext.mjs')}" "$@"\n`);

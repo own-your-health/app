@@ -2,10 +2,11 @@
 // the reference range shaded behind it, and a small sparkline for a list
 // row. The table beside the chart, and the row's text, carry every value.
 
-import { isOutOfRange, rangeFor, resultFlag, type FlagLevel, type Range } from '../model/flags';
-import type { ResultPoint } from '../model/records';
+import { isOutOfRange, rangeFor, resultFlag, unitKey, type FlagLevel, type Range } from '../model/flags';
+import type { ResultPoint, ResultSeries } from '../model/records';
+import { unitText } from '../model/result';
 import { h, s } from './dom';
-import { dateText } from './format';
+import { count, dateText } from './format';
 
 /** The size of a chart's text (`.chart-label`), in CSS pixels. */
 export const LABEL_PX = 12;
@@ -81,8 +82,21 @@ function fmt(n: number): string {
 }
 
 /** Points with a number and a date, oldest first (as the series keeps them). */
-function plottable(points: ResultPoint[]): Dated[] {
-  return points.filter((p): p is Dated => p.value !== undefined && !!p.date && !Number.isNaN(Date.parse(p.date.slice(0, 10))));
+/**
+ * What a chart of these points (oldest first) draws, as one axis has one
+ * unit: the dated numbers in the unit of the newest that shares it with
+ * another (or the newest's, where none does), that unit as the newest of them
+ * spells it, and how many dated numbers it leaves out for being in another.
+ * Units are compared as a range's is (unitKey).
+ */
+export function drawable(points: ResultPoint[], unit: string | undefined): { points: Dated[]; unit: string | undefined; other: number; newestLeft: boolean } {
+  const dated = points.filter((p): p is Dated => p.value !== undefined && !!p.date && !Number.isNaN(Date.parse(p.date.slice(0, 10))));
+  const key = (p: ResultPoint) => unitKey(p.unit ?? unit);
+  const many = (p: ResultPoint) => dated.filter((q) => key(q) === key(p)).length > 1;
+  const pick = [...dated].reverse().find(many) ?? dated[dated.length - 1];
+  const same = pick ? dated.filter((p) => key(p) === key(pick)) : [];
+  const newest = dated[dated.length - 1];
+  return { points: same, unit: same[same.length - 1]?.unit ?? unit, other: dated.length - same.length, newestLeft: !!newest && !same.includes(newest) };
 }
 
 /**
@@ -142,19 +156,60 @@ function bands(pts: Dated[], ranges: (Range | undefined)[], x: (i: number) => nu
 
 /** The shaded ranges of the full chart, in its 640 by 220 coordinates (for tests). */
 export function chartBands(points: ResultPoint[], unit: string | undefined): Rect[] {
-  const pts = plottable(points);
+  const { points: pts, unit: drawn } = drawable(points, unit);
   if (pts.length < 2) return [];
-  const { ranges, x, y } = layout(pts, unit, CHART);
+  const { ranges, x, y } = layout(pts, drawn, CHART);
   return bandRects(pts, ranges, x, y, CHART);
 }
 
 const dotClass = (p: ResultPoint) => (isOutOfRange(resultFlag(p)) ? 'chart-dot chart-dot-flag' : 'chart-dot');
 
-/** Null when fewer than two dated numeric points. Drawn at its box's width. */
+/** What a line says of the results it leaves out for being in another unit, and of the unit it is in; or that there is no chart for that. */
+export function otherUnitText(x: { other: number; unit?: string; newestLeft: boolean; charted: boolean }): string | undefined {
+  if (!x.other) return undefined;
+  if (!x.charted) return 'Its results are in more than one unit, so there is no chart.';
+  const which = x.newestLeft ? (x.other === 1 ? ', the newest,' : ', the newest among them,') : '';
+  const left = `${count(x.other, 'result')} in another unit${which} ${x.other === 1 ? 'is' : 'are'} not in ${x.unit ? 'it' : 'the chart'}.`;
+  return x.unit ? `The chart is in ${unitText(x.unit) ?? x.unit}; ${left}` : left;
+}
+
+/** A line over time: a test's, or a part's, named, with what it leaves out. */
+export interface Line {
+  name?: string;
+  unit?: string;
+  points: ResultPoint[];
+  other: number;
+  newestLeft: boolean;
+  chart: HTMLElement | null;
+}
+
+/** A test's line, or where its results are no numbers, one for each of its parts (partSeries); none where nothing is drawn or left out. */
+export function linesOf(whole: ResultSeries | undefined, parts: () => ResultSeries[]): Line[] {
+  const line = (s: ResultSeries, named: boolean): Line[] => {
+    const d = drawable(s.points, s.unit);
+    const chart = resultChart(s.points, s.unit, s.name);
+    return chart || d.other ? [{ ...(named ? { name: s.name } : {}), ...d, chart }] : [];
+  };
+  const own = whole ? line(whole, false) : [];
+  return own.length ? own : parts().flatMap((p) => line(p, true));
+}
+
+/** The lines, each under its name and with what it leaves out, and what the shaded band is where one has it. */
+export function linesView(lines: Line[], band: string): (HTMLElement | null)[] {
+  return [
+    ...lines.flatMap((x) => {
+      const note = otherUnitText({ ...x, charted: !!x.chart });
+      return [x.name ? h('h3', { class: 'group-head' }, x.unit ? `${x.name} (${unitText(x.unit)})` : x.name) : null, x.chart ? h('div', { class: 'chart-box' }, x.chart) : null, note ? h('p', { class: 'small muted' }, note) : null];
+    }),
+    lines.some((x) => x.chart && x.points.some((p) => rangeFor(p.range, p.unit ?? x.unit))) ? h('p', { class: 'small muted' }, band) : null,
+  ];
+}
+
+/** Null when fewer than two dated numeric points in one unit. Drawn at its box's width. */
 export function resultChart(points: ResultPoint[], unit: string | undefined, name: string): HTMLElement | null {
-  const pts = plottable(points);
+  const { points: pts, unit: drawn } = drawable(points, unit);
   if (pts.length < 2) return null;
-  return fitted((width) => resultSvg(pts, unit, name, width), CHART.w);
+  return fitted((width) => resultSvg(pts, drawn, name, width), CHART.w);
 }
 
 function resultSvg(pts: Dated[], unit: string | undefined, name: string, width: number): SVGSVGElement {
@@ -181,9 +236,9 @@ function resultSvg(pts: Dated[], unit: string | undefined, name: string, width: 
 
 /** A row's small picture of the same: hidden from screen readers, since the row's text says it. Null under two points. */
 export function resultSparkline(points: ResultPoint[], unit: string | undefined): SVGSVGElement | null {
-  const pts = plottable(points);
+  const { points: pts, unit: drawn } = drawable(points, unit);
   if (pts.length < 2) return null;
-  const { ranges, x, y } = layout(pts, unit, SPARK);
+  const { ranges, x, y } = layout(pts, drawn, SPARK);
   const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
   return s(
     'svg',

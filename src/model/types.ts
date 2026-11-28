@@ -1,6 +1,6 @@
 // The records folder's files, as medrec writes them (medrec-cli
 // docs/data-contract.md). Only the fields the app reads are typed; every
-// object keeps the rest, which the Inspect view shows as it is.
+// object keeps the rest, which no screen shows.
 
 import type { Unsure } from './aboutAnother';
 import type { MedrecBills } from './bills';
@@ -172,6 +172,8 @@ export interface MedRecord {
   documents: string[];
   provenance: Provenance[];
   words?: SourceWord[];
+  /** What each source's panel or report lists, by its raw file (medrec 0.9.10 and later): told only whether it lists anything. */
+  lists?: Json;
   /** The raw path of the provenance whose resource the status and fields are of. */
   fields_from?: string;
   /** medrec says it stands, whatever its status (src/model/inError.ts). */

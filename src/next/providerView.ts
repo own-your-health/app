@@ -8,7 +8,7 @@ import { isOutOfRange, resultFlag } from '../model/flags';
 import { sharedIndex } from '../model/parts';
 import { called } from '../model/people';
 import type { ProviderField } from '../model/providers';
-import { docTypeLabel, documentTitle, formatMoney, resultPoint, resultReading, studyTitle } from '../model/records';
+import { docTypeLabel, documentTitle, formatMoney, readingOf, resultPoint, studyTitle } from '../model/records';
 import { unitText } from '../model/result';
 import { recordTitle } from '../model/titles';
 import type { MedRecord, PersonIndex } from '../model/types';
@@ -147,7 +147,7 @@ export function providerView(ctx: Ctx, route: ProviderRoute): HTMLElement {
   const claimRow = (x: Mine<MedRecord>) => row({ route: item(x.person, x.item.id), title: recordTitle(x.item), meta: meta(dateText(x.item.date), whose(x.person), x.item.without?.says), aside: [priv(x), owed(claimCents(x.item).youOwe)] });
   const recordRow = (x: Mine<MedRecord>) => row({ route: item(x.person, x.item.id), title: recordTitle(x.item), meta: meta(dateText(x.item.date), whose(x.person)), aside: priv(x) });
   const testRow = (x: Mine<MedRecord>) => {
-    const reading = x.item.kind === 'result' ? resultReading(x.item.fields).text : undefined;
+    const reading = x.item.kind === 'result' ? readingOf(x.item).text : undefined;
     const flag = x.item.kind === 'result' ? resultFlag(resultPoint(x.item)) : undefined;
     return row({ route: item(x.person, x.item.id), title: recordTitle(x.item), meta: meta(dateText(x.item.date), reading ? (unitText(reading) ?? reading) : null, whose(x.person)), aside: [priv(x), isOutOfRange(flag) ? flagChip(flag) : null] });
   };
