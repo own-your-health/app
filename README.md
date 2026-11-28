@@ -591,12 +591,14 @@ tested.
   `src/medrec-contract.json`, `FOLLOWS` in `src/model/views.ts`). Views whose
   `reader` in `views/views.json` (medrec 0.9.11 and later; where it is absent,
   the `medrec` that wrote them) is newer, compared part by part as numbers, or
-  is no `MAJOR.MINOR.PATCH`, need a newer app. Then nothing of the folder is
-  read past `views.json`, `household.json` and the list of answered requests,
-  and nothing of it is shown, on opening, in the sample, or when an open
-  folder is read again (its sheets and toasts closed too), because the rules
-  the app does not know may hold more private. A folder with a higher
-  `format` takes the same path.
+  is no `MAJOR.MINOR.PATCH`, need a newer app. On opening, and in the sample,
+  nothing of the folder is then read past `views.json`, `household.json` and
+  the list of answered requests. An open folder has its status and requests
+  looked at (and the app's handled requests tidied) on each poll, as before,
+  ahead of the read that finds this. In every case nothing of the folder is
+  shown afterwards (its sheets and toasts closed too), because the rules the
+  app does not know may hold more private. A folder with a higher `format`
+  takes the same path.
 - Such a folder stays chosen, so the updated app opens it. The app first asks
   its site for its page, giving up after 10 seconds, and reloads to a newer
   build there: by itself once per build in the tab, and again whenever **Look
