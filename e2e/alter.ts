@@ -63,6 +63,8 @@ export function rewritten(base: Overlay, change: (files: PersonFiles) => void, m
       const kept = new Set(files.index.records.map((r) => r.id));
       const text = JSON.stringify({
         ...standing,
+        // medrec writes what is entered in error in both, alike.
+        ...(files.view.in_error !== undefined ? { in_error: files.view.in_error } : {}),
         order: Object.fromEntries(Object.entries(standing.order).map(([kind, ids]) => [kind, ids.filter((id) => kept.has(id))])),
         records: Object.fromEntries(Object.entries(standing.records).filter(([id]) => kept.has(id))),
       });
