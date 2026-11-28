@@ -1120,7 +1120,10 @@ page count. Papers took the place of each person's list of documents. A
   line with the reason. So does a `views.json` in a layout newer than the
   app knows whose `reader` is one the app follows, which says to update the
   app, or one that does not read. Their own pages still show everything.
-  Views that need a newer app open nothing at all (Limits). Settings gives each person's reason. While
+  A `views.json` that does not read is also said once across the top of
+  every page, with **Read again**, which reads the folder at once and says so
+  when it still does not read. Views that need a newer app open nothing at
+  all (Limits). Settings gives each person's reason. While
   someone's items are held back, the app reads the records again each time it
   comes to the front and, where the list is behind, arriving or unread, with
   the same waits as after a Refresh, so the hold ends once medrec has written.

@@ -147,6 +147,27 @@ test('the site says which medrec contract it follows, to anyone, as JSON', async
   expect(await res.json()).toEqual({ schema: 'own-your-health-app/medrec-contract/v1', follows: '0.9.10' });
 });
 
+test('a views.json that does not read opens the folder, says so once with its items held, and reads it again on asking', async ({ page }) => {
+  const overlay: Overlay = { [VIEWS]: '{' };
+  await openSample(page, overlay);
+  await expect(main(page)).toContainText('Where everyone stands');
+  const note = page.locator('.banner-views');
+  await expect(note).toHaveText('medrec’s views could not be read, so the folder’s summary is missing: everyone’s items are left off shared screens, and this app groups the visits itself.Read again');
+  await expect(note).toHaveAttribute('role', 'status');
+  await expect(page.getByRole('heading', { name: 'Update the app' })).toHaveCount(0);
+  await page.evaluate(() => (location.hash = '#/settings'));
+  await expect(main(page)).toContainText('Not listed: everyone’s items are left off shared screens');
+  // Still not readable: said, and the page stays as it is.
+  await note.getByRole('button', { name: 'Read again' }).click();
+  await expect(page.locator('.toast')).toContainText('medrec’s views still could not be read.');
+  await expect(note.getByRole('button', { name: 'Read again' })).toBeEnabled();
+  // medrec's views read: the note goes, and medrec's list of private items is in use.
+  delete overlay[VIEWS];
+  await note.getByRole('button', { name: 'Read again' }).click();
+  await expect(note).toHaveCount(0);
+  await expect(main(page)).toContainText('Left off shared screens, as medrec lists them');
+});
+
 test.describe('signed in to Drive', () => {
   async function signIn(page: Page, context: BrowserContext, overlay: Overlay = {}): Promise<FakeGoogle> {
     const google = new FakeGoogle(new Date('2026-11-22T20:00:00Z'));
