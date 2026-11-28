@@ -1007,7 +1007,7 @@ pre.text {
   font-size: 13px;
 }
 
-/* "90–120 mmHg" breaks before its first number, never after the dash. */
+/* "90–120 mmHg" breaks before its first number, never after the dash; a range's other words wrap. */
 .table .table-range-value {
   white-space: nowrap;
 }

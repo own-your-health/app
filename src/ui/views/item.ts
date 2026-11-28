@@ -13,7 +13,7 @@ import { learnMore } from '../../model/learn';
 import { allergyList, conditionList, CRITICALITY_TEXT, isFill, medicineList, saidOf, statusText, type ItemStanding } from '../../model/lists';
 import { isObject } from '../../model/parse';
 import { AMOUNT_LABELS, asMoney, docTypeLabel, documentTitle, findItem, formatMoney, importFor, isDoseGiven, isHeading, isQuantity, KIND_LABELS, LINE_AMOUNT_ORDER, memberIds, originNames, partSeries, readingOf, resultPoint, str, studyTitle, toCents, UNSAID, valueText } from '../../model/records';
-import { rangeLine, rangeWords, resultContext, unitText, verdict } from '../../model/result';
+import { rangeLine, rangePieces, rangeWords, resultContext, unitText, verdict } from '../../model/result';
 import { leftOff, ownText, partSays } from '../../model/parts';
 import { recordTitle, visitTitle } from '../../model/titles';
 import type { ProviderField } from '../../model/providers';
@@ -352,7 +352,7 @@ function resultView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
                     'tr',
                     { class: current ? 'current' : undefined, 'aria-current': current ? 'true' : undefined },
                     h('td', { class: 'table-date' }, current ? [dateText(p.date), h('span', { class: 'sr-only' }, ' (this result)')] : link(itemRoute(person, p.id), dateText(p.date))),
-                    h('td', { class: 'num' }, unitText(p.text) ?? p.text, isOutOfRange(f) ? [' ', flagChip(f)] : null, range ? h('div', { class: 'table-range' }, range.words, h('span', { class: 'table-range-value' }, range.range)) : null),
+                    h('td', { class: 'num' }, unitText(p.text) ?? p.text, isOutOfRange(f) ? [' ', flagChip(f)] : null, range ? h('div', { class: 'table-range' }, range.words, rangePieces(range.range).map((x) => (x.whole ? h('span', { class: 'table-range-value' }, x.text) : x.text))) : null),
                   );
                 }),
             ),

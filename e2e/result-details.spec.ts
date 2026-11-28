@@ -36,6 +36,17 @@ function patWith(keep: (r: { date?: string; code?: { code?: string } }) => boole
 }
 const pressureUpTo = (day: string) => patWith((r) => r.code?.code !== '85354-9' || (r.date ?? '') < day);
 
+/** The folder with one of Pat's records changed, and views.json's MD5 of the index made to match. */
+function patChanged(id: string, change: (fields: Record<string, unknown>) => void): Record<string, string> {
+  const files = resultsFiles();
+  const index = JSON.parse(files['Pat Example/index.json']!) as { records: { id: string; fields: Record<string, unknown> }[] };
+  change(index.records.find((r) => r.id === id)!.fields);
+  const text = JSON.stringify(index);
+  const views = JSON.parse(files['views/views.json']!) as { people: Record<string, { index: string }> };
+  views.people[PAT]!.index = createHash('md5').update(text).digest('hex');
+  return { ...files, 'Pat Example/index.json': text, 'views/views.json': JSON.stringify(views) };
+}
+
 let problems: string[] = [];
 
 test.beforeEach(async ({ page }) => {
@@ -216,6 +227,19 @@ test('a blood pressure reads in one form in every row, its date on one line', as
   await page.setViewportSize({ width: 320, height: 780 });
   expect((await rowLines(page)).map(([date, value]) => date === 1 && value <= 2)).toEqual(Array(6).fill(true));
   expect(await rangeLines(page)).toEqual([1]);
+});
+
+test('a long range a source wrote in words wraps on a phone, its numbers each kept whole', async ({ page }) => {
+  const LONG = 'Normal: under 120 mmHg; Elevated: 120–129 mmHg; High: 130 or more, or a bottom number of 80 or more';
+  await lay(page, patChanged(at('Blood pressure panel', '2024-04-17'), (f) => Object.assign(f, { reference_range: LONG })));
+  await page.setViewportSize({ width: 320, height: 780 });
+  await go(page, `#/p/${PAT}/results`);
+  await main(page).locator('.row', { hasText: '118/74 mmHg' }).click();
+  await expect(main(page).locator('tbody tr').first().locator('.table-range')).toHaveText(`Range: ${LONG}`);
+  const range = main(page).locator('tbody tr').first().locator('.table-range');
+  expect(await range.evaluate((x) => x.getBoundingClientRect().height / parseFloat(getComputedStyle(x).lineHeight))).toBeGreaterThan(2.5);
+  expect(await main(page).locator('table').evaluate((t) => Math.round(t.getBoundingClientRect().right - t.closest('.card')!.getBoundingClientRect().right))).toBeLessThan(0);
+  expect(await rangeLines(page)).toEqual(Array(5).fill(1));
 });
 
 test('what it says fits a phone', async ({ page }) => {

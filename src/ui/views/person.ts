@@ -6,7 +6,7 @@ import { errorsOf } from '../../model/inError';
 import { conditionName } from '../../model/codeNames';
 import { isHeading, originNames, seriesKey, sortByDateDesc, str, studyTitle, testPartSeries } from '../../model/records';
 import { isOutOfRange, resultFlag } from '../../model/flags';
-import { rangeLine } from '../../model/result';
+import { rangeLine, rangePieces } from '../../model/result';
 import type { LatestResult } from '../../model/overview';
 import { allergyList, conditionList, CRITICALITY_TEXT, medicineList, statusText, underHeadings, vaccineList, type AllergyItem, type ConditionItem, type ItemStanding, type MedicineItem } from '../../model/lists';
 import { resultGroups } from '../../model/panels';
@@ -175,7 +175,7 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
                 'tr',
                 null,
                 h('td', { class: 'table-date' }, link(itemRoute(person.id, p.id), dateText(p.date))),
-                h('td', { class: 'num' }, p.text, isOutOfRange(flag) ? [' ', flagChip(flag)] : null, range ? h('div', { class: 'table-range' }, range.words, h('span', { class: 'table-range-value' }, range.range)) : null),
+                h('td', { class: 'num' }, p.text, isOutOfRange(flag) ? [' ', flagChip(flag)] : null, range ? h('div', { class: 'table-range' }, range.words, rangePieces(range.range).map((x) => (x.whole ? h('span', { class: 'table-range-value' }, x.text) : x.text))) : null),
               );
             }),
           ),

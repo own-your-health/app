@@ -4,7 +4,7 @@ import { isOutOfRange, resultFlag } from '../src/model/flags';
 import { panelFor, panelOf, resultGroups } from '../src/model/panels';
 import { itemPrivate } from '../src/model/private';
 import { isHeading, isQuantity, isWithdrawn, memberIds, partSeries, readingOf, recordDetail, resultParts, resultPoint, resultReading, resultSeries, seriesKey, str, testPartSeries } from '../src/model/records';
-import { rangeLine, rangeText, resultContext, verdict } from '../src/model/result';
+import { rangeLine, rangePieces, rangeText, resultContext, verdict } from '../src/model/result';
 import { parseHousehold, parseIndex } from '../src/model/parse';
 import { find } from '../src/model/search';
 import type { Json, JsonObject, MedRecord, PersonIndex } from '../src/model/types';
@@ -67,6 +67,24 @@ describe('a quantity with a comparator', () => {
 const part = (code: string | null, display: string | null, value: Json, more: Record<string, Json> = {}) => ({ code: { ...(code ? { system: 'http://loinc.org', code } : {}), ...(display ? { display } : {}) }, value, ...more });
 const pressure = (n: number, date: string, top: number, low: number, more: Record<string, Json> = {}) =>
   result(n, 'Blood pressure', date, { value: { value: `${top}/${low}`, unit: 'mmHg' }, components: [part('8480-6', 'Systolic', { value: top, unit: 'mmHg' }, more), part('8462-4', 'Diastolic', { value: low, unit: 'mmHg' })], category: 'Vital signs' }, '85354-9');
+
+describe('a range cut where a line may break', () => {
+  const whole = (text: string) => rangePieces(text).filter((x) => x.whole).map((x) => x.text);
+
+  it('keeps each number or pair whole with its unit, and the rest of its words free', () => {
+    expect(rangePieces('90–120 mmHg')).toEqual([{ text: '90–120 mmHg', whole: true }]);
+    expect(whole('3.5-5.1 mmol/L')).toEqual(['3.5-5.1 mmol/L']);
+    expect(whole('under 130 mg/dL')).toEqual(['130 mg/dL']);
+    expect(rangePieces('<0.5 ng/mL')).toEqual([{ text: '<0.5 ng/mL', whole: true }]);
+  });
+
+  it('lets a long range a source wrote in words wrap between its numbers', () => {
+    const text = 'Normal: under 120 mmHg; Elevated: 120–129 mmHg; High: 130 or more (stage 1)';
+    expect(rangePieces(text).map((x) => x.text).join('')).toBe(text);
+    expect(whole(text)).toEqual(['120 mmHg', '120–129 mmHg', '130 or', '1']);
+    expect(Math.max(...whole(text).map((x) => x.length))).toBeLessThan(14);
+  });
+});
 
 describe('a blood pressure’s one form', () => {
   const of = (...parts: ReturnType<typeof part>[]) => readingOf(result(0, 'Blood pressure', '2026-01-02', { value: 'As its source wrote it', components: parts }, '85354-9')).text;
