@@ -76,6 +76,7 @@ describe('a range cut where a line may break', () => {
     expect(whole('3.5-5.1 mmol/L')).toEqual(['3.5-5.1 mmol/L']);
     expect(whole('under 130 mg/dL')).toEqual(['130 mg/dL']);
     expect(rangePieces('<0.5 ng/mL')).toEqual([{ text: '<0.5 ng/mL', whole: true }]);
+    expect(rangePieces('11 g/dL – 15 g/dL')).toEqual([{ text: '11 g/dL – 15 g/dL', whole: true }]);
   });
 
   it('lets a long range a source wrote in words wrap between its numbers', () => {

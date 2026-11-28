@@ -50,8 +50,8 @@ export function rangeLine(p: ResultPoint, test: string): { words: string; range:
   return r && { words: `Range: ${r.part ? `${r.part} ` : ''}`, range: r.text };
 }
 
-/** A number, or two with a dash between, and the word after it: "90–120 mmHg", "<0.5 ng/mL", "130 mg/dL". */
-const NUMBERS = /[<>≤≥]?\d[\d.,]*(?:\s?[–-]\s?\d[\d.,]*)?(?:\s[^\s;,()]+)?/g;
+/** A number, or two with a dash between, and the word after it: "90–120 mmHg", "11 g/dL – 15 g/dL", "<0.5 ng/mL", "130 mg/dL". */
+const NUMBERS = /[<>≤≥]?\d[\d.,]*(?:\s[^\s;,()]+\s[–-]\s?\d[\d.,]*|\s?[–-]\s?\d[\d.,]*)?(?:\s[^\s;,()]+)?/g;
 
 /**
  * A range's text cut where a line may break: each number, or pair, with its
