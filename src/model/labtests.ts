@@ -368,9 +368,12 @@ export const LAB_TESTS: Record<string, LabTest> = {
 
 const LOINC = /loinc/i;
 
+/** Whether a code system is LOINC's, however a source writes it ("http://loinc.org", "LOINC"). */
+export const isLoinc = (system: string | undefined): boolean => !!system && LOINC.test(system);
+
 /** The curated entry for a coded record, when it is one. */
 export function labTest(code: { system?: string; code?: string } | undefined): LabTest | undefined {
-  return code?.code && code.system && LOINC.test(code.system) && Object.hasOwn(LAB_TESTS, code.code) ? LAB_TESTS[code.code] : undefined;
+  return code?.code && isLoinc(code.system) && Object.hasOwn(LAB_TESTS, code.code) ? LAB_TESTS[code.code] : undefined;
 }
 
 const PLAIN_SPECIMENS = /^(blood|serum or plasma|serum|plasma|arterial blood|venous blood|capillary blood)$/i;

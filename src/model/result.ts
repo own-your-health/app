@@ -27,15 +27,47 @@ export function rangeWords(r: Range, unit: string | undefined): string {
   return '';
 }
 
-/** What a row says of a result's range: its own, or that of the part out of its range that flags it, by name. */
-export function rangeText(p: ResultPoint, test: string): string {
-  if (p.range) return unitText(p.range) ?? p.range;
+/** A result's range: its own, or that of the part out of its range that flags it, with the part's name. */
+function rangeOf(p: ResultPoint, test: string): { part?: string; text: string } | undefined {
+  if (p.range) return { text: unitText(p.range) ?? p.range };
   // A part flags the row only where the whole says nothing of itself.
   const part = resultFlag({ ...p, parts: undefined }) ? undefined : outsidePart(p.parts);
-  if (!part?.point.range) return '';
+  if (!part?.point.range) return undefined;
   const range = rangeFor(part.point.range, part.point.unit);
   const name = part.name.startsWith(`${test}, `) ? part.name.slice(test.length + 2) : part.name;
-  return `${name}: ${range ? rangeWords(range, part.point.unit) : (unitText(part.point.range) ?? part.point.range)}`;
+  return { part: name, text: range ? rangeWords(range, part.point.unit) : (unitText(part.point.range) ?? part.point.range) };
+}
+
+/** What a Range column says of a result: "3.5-5.1 mmol/L", or "top number: 90–120 mmHg" by the part that flags it. */
+export function rangeText(p: ResultPoint, test: string): string {
+  const r = rangeOf(p, test);
+  return !r ? '' : r.part ? `${r.part}: ${r.text}` : r.text;
+}
+
+/** The line under a result's value in a table over time, "Range: top number 90–120 mmHg": its words, and its range. */
+export function rangeLine(p: ResultPoint, test: string): { words: string; range: string } | undefined {
+  const r = rangeOf(p, test);
+  return r && { words: `Range: ${r.part ? `${r.part} ` : ''}`, range: r.text };
+}
+
+/** A number, or two with a dash between, and the word after it: "90–120 mmHg", "11 g/dL – 15 g/dL", "<0.5 ng/mL", "130 mg/dL". */
+const NUMBERS = /[<>≤≥]?\d[\d.,]*(?:\s[^\s;,()]+\s[–-]\s?\d[\d.,]*|\s?[–-]\s?\d[\d.,]*)?(?:\s[^\s;,()]+)?/g;
+
+/**
+ * A range's text cut where a line may break: each number, or pair, with its
+ * unit kept whole ("90–120 mmHg" breaks before "90", never after the dash),
+ * and any other words free to wrap, however long a source's range is.
+ */
+export function rangePieces(text: string): { text: string; whole: boolean }[] {
+  const pieces: { text: string; whole: boolean }[] = [];
+  let at = 0;
+  for (const m of text.matchAll(NUMBERS)) {
+    if (m.index > at) pieces.push({ text: text.slice(at, m.index), whole: false });
+    pieces.push({ text: m[0], whole: true });
+    at = m.index + m[0].length;
+  }
+  if (at < text.length) pieces.push({ text: text.slice(at), whole: false });
+  return pieces;
 }
 
 export interface Verdict {
