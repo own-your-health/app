@@ -101,8 +101,11 @@ export function standingCase(person: string, { standing = true, hidden = [], sch
   if (line) for (const [id, r] of Object.entries(said.records)) r.line = line(id, r.line);
   if (standing) {
     view('standing', { ...said, person, ...(schema ? { schema } : {}) });
-    Object.assign(views, { medrec: '0.9.9' });
     Object.assign(v, { in_error: said.in_error });
+  } else {
+    // A folder of a medrec before 0.9.9, which writes no one's.
+    Object.assign(views, { medrec: '0.9.7' });
+    for (const other of Object.values(views.people)) delete other.files['standing.json'];
   }
   out['views/views.json'] = JSON.stringify(views);
   return out;

@@ -35,11 +35,11 @@ jobs:
       # Installing the app needs the manifest linked and every icon present.
       - name: Production build carries the manifest and its icons
         run: node scripts/check-install.mjs dist
-      # The sample is what medrec 0.9.7 writes, by this exact build.
-      - name: Install medrec 0.9.7
+      # The sample is what medrec 0.9.10 writes, by this exact build.
+      - name: Install medrec 0.9.10
         env:
-          MEDREC_URL: https://github.com/own-your-health/medrec-cli/releases/download/v0.9.7/medrec-x86_64-unknown-linux-gnu.tar.gz
-          MEDREC_SHA256: 7767c8995a94950fca4e6b9a93cd06314563697f48d34c2a9167dab069ac2e9f
+          MEDREC_URL: https://github.com/own-your-health/medrec-cli/releases/download/v0.9.10/medrec-x86_64-unknown-linux-gnu.tar.gz
+          MEDREC_SHA256: 5f676d81626b4803a2c40cc1c75425cf63b3639f06bd8f003e1aa85aac3b06b0
         run: |
           curl -fsSL --retry 3 -o "$RUNNER_TEMP/medrec.tar.gz" "$MEDREC_URL"
           echo "$MEDREC_SHA256  $RUNNER_TEMP/medrec.tar.gz" | sha256sum -c -
@@ -52,7 +52,7 @@ jobs:
         run: |
           node scripts/demo-folder.mjs "$RUNNER_TEMP/sample"
           diff -r "$RUNNER_TEMP/sample" public/demo
-      # medrec 0.9.9 writes what the sample's release does not yet.
+      # The entered-in-error cases are what medrec 0.9.9 writes of medrec's own fixture of them.
       - name: Install medrec 0.9.9
         env:
           MEDREC_URL: https://github.com/own-your-health/medrec-cli/releases/download/v0.9.9/medrec-x86_64-unknown-linux-gnu.tar.gz
@@ -62,29 +62,18 @@ jobs:
           echo "$MEDREC_SHA256  $RUNNER_TEMP/medrec-0.9.9.tar.gz" | sha256sum -c -
           mkdir -p "$RUNNER_TEMP/medrec-0.9.9"
           tar xzf "$RUNNER_TEMP/medrec-0.9.9.tar.gz" -C "$RUNNER_TEMP/medrec-0.9.9"
-      # And medrec 0.9.10 what neither does yet: a result's parts, bounds and the results a panel lists.
-      - name: Install medrec 0.9.10
-        env:
-          MEDREC_URL: https://github.com/own-your-health/medrec-cli/releases/download/v0.9.10/medrec-x86_64-unknown-linux-gnu.tar.gz
-          MEDREC_SHA256: 5f676d81626b4803a2c40cc1c75425cf63b3639f06bd8f003e1aa85aac3b06b0
-        run: |
-          curl -fsSL --retry 3 -o "$RUNNER_TEMP/medrec-0.9.10.tar.gz" "$MEDREC_URL"
-          echo "$MEDREC_SHA256  $RUNNER_TEMP/medrec-0.9.10.tar.gz" | sha256sum -c -
-          mkdir -p "$RUNNER_TEMP/medrec-0.9.10"
-          tar xzf "$RUNNER_TEMP/medrec-0.9.10.tar.gz" -C "$RUNNER_TEMP/medrec-0.9.10"
       # So are the cases the tests read: medrec writes each, never a hand.
       - name: Private-items, bill, label, rule, entered-in-error and result cases match their generators
         env:
           MEDREC: ${{ runner.temp }}/medrec/medrec
           MEDREC_099: ${{ runner.temp }}/medrec-0.9.9/medrec
-          MEDREC_0910: ${{ runner.temp }}/medrec-0.9.10/medrec
         run: |
           node scripts/private-fixtures.mjs
           node scripts/bill-fixtures.mjs
           node scripts/label-fixtures.mjs
           node scripts/rule-fixtures.mjs
+          node scripts/result-fixtures.mjs
           MEDREC="$MEDREC_099" node scripts/error-fixtures.mjs
-          MEDREC="$MEDREC_0910" node scripts/result-fixtures.mjs
           git diff --exit-code -- test/fixtures
           test -z "$(git status --porcelain -- test/fixtures)"
 

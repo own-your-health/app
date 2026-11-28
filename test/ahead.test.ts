@@ -25,7 +25,8 @@ const medicine = (name: string, runsOut: string): MedRecord[] =>
     return { ...r, id: `r_${name}${i}`, key: `medication|${name}|${date}`, code: undefined, display: name, date, fields: { ...r.fields, when: date } };
   });
 /** Alex with these medicines. Alex has none of their own. */
-const taking = (...meds: [string, string][]): PersonIndex => ({ ...index('Alex'), records: [...index('Alex').records, ...meds.flatMap(([n, d]) => medicine(n, d))] });
+// Records added here are in no standing.json medrec wrote, so the app's own lists say what is current.
+const taking = (...meds: [string, string][]): PersonIndex => ({ ...index('Alex'), standing: undefined, records: [...index('Alex').records, ...meds.flatMap(([n, d]) => medicine(n, d))] });
 /** A Sunday. */
 const SUNDAY = '2026-10-11';
 const refills = (idx: PersonIndex, today = SUNDAY) => aheadOf({ ...person('Alex'), birth_date: undefined }, idx, today, true);

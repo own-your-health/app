@@ -48,7 +48,7 @@ test('a person’s page runs Due, Current, Worth noticing, Recently, then Quiet'
   const current = card(page, /^Current$/);
   await expect(current.locator('h3')).toHaveText(['Conditions', 'Medicines', 'Allergies']);
   await expect(current.locator('.row').first()).toContainText('Vitamin D deficiency');
-  await expect(current.locator('.row').first()).toContainText('last recorded Apr 2, 2026 · from Example Health');
+  await expect(current.locator('.row').first()).toContainText('last recorded Apr 2, 2026 · Example Health: active, read Nov 10, 2026');
   await expect(current.locator('.row', { hasText: 'Vitamin D3' })).toContainText('prescribed by Dr. Casey Placeholder');
 
   const hemoglobin = card(page, /^Worth noticing$/).locator('.row');
@@ -61,7 +61,7 @@ test('a person’s page runs Due, Current, Worth noticing, Recently, then Quiet'
   const quiet = page.locator('details.health-quiet');
   await expect(quiet.locator('summary')).toHaveText('Quiet: 6 items that are not news');
   await quiet.locator('summary').click();
-  await quiet.getByRole('link', { name: /1 past or unconfirmed condition/ }).click();
+  await quiet.getByRole('link', { name: /1 other condition/ }).click();
   await expect(page).toHaveURL(new RegExp(`#/p/${SAM}/conditions$`));
 });
 

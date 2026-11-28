@@ -33,6 +33,15 @@ export interface PersonFiles {
 
 const md5 = (text: string) => createHash('md5').update(text).digest('hex');
 
+/** The kinds of record medrec's standing.json says are current or not. */
+const LISTED = new Set(['allergy', 'condition', 'medication']);
+
+/** Of medrec's standing.json, what a rewrite keeps in step with the index. */
+interface Standing {
+  order: Record<string, string[]>;
+  records: Record<string, unknown>;
+}
+
 /** The folder with each person's files changed, named and checked as medrec would, by this version of it. `base` is laid over the sample first. */
 export function rewritten(base: Overlay, change: (files: PersonFiles) => void, medrec?: string): Overlay {
   const out: Overlay = { ...base };
@@ -44,7 +53,22 @@ export function rewritten(base: Overlay, change: (files: PersonFiles) => void, m
     const v = views.people[p.id]!;
     const viewPath = (file: string) => `views/${p.id}/${file}.${v.files[`${file}.json`]!.slice(0, 12)}.json`;
     const files: PersonFiles = { name: p.name, index: read(`${p.folder}/index.json`), events: read(viewPath('events')), bills: read(viewPath('bills')), list: read(viewPath('private')), text: read(`${p.folder}/text.json`), view: v };
+    const before = new Set(files.index.records.map((r) => r.id));
     change(files);
+    // What is current, as medrec writes it again of the index: without the records no longer in it.
+    // A condition, allergy or medicine added here is in none of its lists, so the app makes its own.
+    const standing = v.files['standing.json'] ? read<Standing>(viewPath('standing')) : undefined;
+    if (standing && files.index.records.some((r) => LISTED.has(r.kind ?? '') && !before.has(r.id))) delete v.files['standing.json'];
+    else if (standing) {
+      const kept = new Set(files.index.records.map((r) => r.id));
+      const text = JSON.stringify({
+        ...standing,
+        order: Object.fromEntries(Object.entries(standing.order).map(([kind, ids]) => [kind, ids.filter((id) => kept.has(id))])),
+        records: Object.fromEntries(Object.entries(standing.records).filter(([id]) => kept.has(id))),
+      });
+      v.files['standing.json'] = md5(text);
+      out[viewPath('standing')] = text;
+    }
     for (const [file, x] of [['events', files.events], ['bills', files.bills], ['private', files.list]] as const) {
       const text = JSON.stringify(x);
       v.files[`${file}.json`] = md5(text);
@@ -268,3 +292,10 @@ export const enteredInError = (): Overlay =>
     },
     '0.9.9',
   );
+
+/** The sample as a medrec before 0.9.9 would leave it, which writes no one's standing.json: the app makes its lists itself. */
+export function withoutStanding(): Overlay {
+  const views = JSON.parse(readFileSync(join(DEMO, 'views', 'views.json'), 'utf8')) as Views;
+  for (const v of Object.values(views.people)) delete v.files['standing.json'];
+  return { 'views/views.json': JSON.stringify(views) };
+}
