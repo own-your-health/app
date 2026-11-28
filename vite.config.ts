@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
+import { FOLLOWS } from './src/model/views';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
 
@@ -48,11 +49,32 @@ function pdfjsFiles(): Plugin {
   };
 }
 
+// Which medrec contract the app follows, for a script that reads it without
+// signing in: medrec's install checks it against the `reader` its views will
+// carry before it installs (`follows`, MAJOR.MINOR.PATCH).
+export const CONTRACT_FILE = 'medrec-contract.json';
+export const contract = (): string => `${JSON.stringify({ schema: 'own-your-health-app/medrec-contract/v1', follows: FOLLOWS })}\n`;
+function medrecContract(): Plugin {
+  return {
+    name: 'medrec-contract',
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: CONTRACT_FILE, source: contract() });
+    },
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url !== `/app/${CONTRACT_FILE}`) return next();
+        res.setHeader('Content-Type', 'application/json');
+        res.end(contract());
+      });
+    },
+  };
+}
+
 // The app is served from own-your-health.github.io/app/, and locally from
 // localhost:5173/app/, so the OAuth redirect URI is the same path in both.
 export default defineConfig({
   base: '/app/',
-  plugins: [devPolicy(), pdfjsFiles()],
+  plugins: [devPolicy(), pdfjsFiles(), medrecContract()],
   define: { __APP_VERSION__: JSON.stringify(pkg.version), __PDFJS_VERSION__: JSON.stringify(pdfjs.version) },
   server: { port: 5173, strictPort: true },
   preview: { port: 4173, strictPort: true },

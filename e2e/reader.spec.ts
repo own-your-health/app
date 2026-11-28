@@ -4,6 +4,7 @@ import { CLIENT, FakeGoogle, FOLDER_NAME } from './fake-google';
 import { lay } from './lay';
 import { macWrites } from './mac';
 import { ROBIN } from '../test/sample';
+import { FOLLOWS } from '../src/model/views';
 
 // views.json's `reader` (medrec 0.9.11 and later): the oldest medrec contract a
 // reader must follow to read the views, `medrec` standing in where it is
@@ -119,6 +120,13 @@ test('the sample, read again after medrec writes views with a newer reader, leav
   // The sample's Mac picks the request up and loads in about 6 seconds.
   await expect(main(page).getByRole('heading', { name: 'Update the app' })).toBeVisible({ timeout: 20_000 });
   await refused(page);
+});
+
+test('the site says which medrec contract it follows, to anyone, as JSON', async ({ request }) => {
+  const res = await request.get('medrec-contract.json');
+  expect([res.status(), res.headers()['content-type']]).toEqual([200, 'application/json']);
+  expect(await res.json()).toEqual({ schema: 'own-your-health-app/medrec-contract/v1', follows: FOLLOWS });
+  expect(FOLLOWS).toMatch(/^\d+\.\d+\.\d+$/);
 });
 
 test.describe('signed in to Drive', () => {

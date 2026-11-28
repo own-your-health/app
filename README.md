@@ -581,6 +581,22 @@ tested.
 - No offline copy. Each visit reads the folder again.
 - Records folders written by a newer medrec, with a higher `format` in
   `household.json`, are refused with "Update the app".
+- The app follows medrec's contract up to 0.9.10 (`FOLLOWS` in
+  `src/model/views.ts`). Views whose `reader` in `views/views.json` (medrec
+  0.9.11 and later; where it is absent, the `medrec` that wrote them) is newer,
+  compared part by part as numbers, or is no `MAJOR.MINOR.PATCH`, need a newer
+  app: nothing of the folder is shown, on opening, in the sample, or when an
+  open folder is read again, because the rules the app does not know may hold
+  more private. The app first asks its site for its page and reloads once to
+  a newer build there; else it says "These records were written by a newer
+  medrec. Update the app to see them." with a **Look for an update** button.
+  A folder with a higher `format` takes the same path.
+- The site says which contract it follows at
+  `https://own-your-health.github.io/app/medrec-contract.json`, for a script
+  that needs no sign-in (medrec's install, before it writes views a newer
+  contract governs): `{"schema": "own-your-health-app/medrec-contract/v1",
+  "follows": "0.9.10"}`. The build writes it from `FOLLOWS`. GitHub Pages lets
+  a cache keep it for up to 10 minutes.
 
 ## Development
 
