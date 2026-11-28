@@ -79,7 +79,7 @@ test('a reading of two parts shows both, each against its range, and each over t
   await expect(main(page).locator('.card-head h1')).toHaveText('Blood pressure');
   await expect(main(page).locator('h3')).toHaveText(['Blood pressure, top number (mmHg)', 'Blood pressure, bottom number (mmHg)']);
   await expect(main(page).locator('svg.chart')).toHaveCount(2);
-  await expect(main(page).locator('tbody tr').last()).toHaveText(/^Apr 1, 2024128\/76 mmHgtop number: 90–120 mmHgHigh$/);
+  await expect(main(page).locator('tbody tr').last()).toHaveText(/^Apr 1, 2024128\/76 mmHg Hightop number: 90–120 mmHg$/);
 });
 
 test('a reading whose part is in another unit shows it as given', async ({ page }) => {
@@ -185,14 +185,21 @@ test('a blood pressure reads in one form in every row, its date on one line', as
   await go(page, `#/p/${PAT}/results`);
   await main(page).locator('.row', { hasText: '118/74 mmHg' }).click();
   await expect(main(page).locator('.card-head h1')).toHaveText('Blood pressure');
-  // Newest first; whatever words its source wrote, each is top/bottom, and a part beyond them after it.
-  await expect(main(page).locator('tbody tr td:nth-child(2)')).toHaveText(['118/74 mmHg', '>260/80 mmHg', '122 and 124/78 mmHg', '122/78 mmHg, mean 93', '122 mmHg, top number only', '16 kPa/80 mmHg', '110/70 mmHg', '128/76 mmHg']);
-  expect(await dateLines(page)).toEqual(Array(8).fill(1));
+  // Newest first; whatever words its source wrote, each is top/bottom, and a part beyond them after it. One has no value.
+  await expect(main(page).locator('tbody tr td:nth-child(2)')).toHaveText(['118/74 mmHg', '>260/80 mmHg', '—', '122 and 124/78 mmHg', '122/78 mmHg, mean 93', '122 mmHg, top number only', '16 kPa/80 mmHg', '110/70 mmHg', '128/76 mmHg High']);
+  expect(await dateLines(page)).toEqual(Array(9).fill(1));
+  // At 320 px the table stays inside its card.
+  await page.setViewportSize({ width: 320, height: 780 });
+  const spill = () => main(page).locator('table').evaluate((t) => {
+    const card = t.closest('.card')!;
+    return Math.round(t.getBoundingClientRect().right - (card.getBoundingClientRect().right - parseFloat(getComputedStyle(card).paddingRight)));
+  });
+  expect(await spill()).toBeLessThanOrEqual(0);
   // The reading's own page, and its others over time.
   await go(page, `#/p/${PAT}/r/${WORDS}`);
   await expect(main(page).locator('.result-value')).toHaveText('120/80 mmHg');
   await go(page, `#/p/${PAT}/r/${PRESSURE}`);
-  await expect(card(page, 'Over time').locator('tbody td:nth-child(2)')).toHaveText([/^118\/74 mmHg/, /^>260\/80 mmHg/, /^122 and 124\/78 mmHg/, /^122\/78 mmHg, mean 93/, /^122 mmHg, top number only/, /^128\/76 mmHg/]);
+  await expect(card(page, 'Over time').locator('tbody td:nth-child(2)')).toHaveText([/^118\/74 mmHg/, /^>260\/80 mmHg/, /^—/, /^122 and 124\/78 mmHg/, /^122\/78 mmHg, mean 93/, /^128\/76 mmHg/]);
   expect(await dateLines(page)).toEqual(Array(6).fill(1));
 });
 

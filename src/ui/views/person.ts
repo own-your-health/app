@@ -164,19 +164,19 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
         h(
           'table',
           { class: 'table' },
-          h('thead', null, h('tr', null, h('th', null, 'Date'), h('th', null, 'Value'), h('th', null, 'Range'), h('th', null, 'Flag'))),
+          h('thead', null, h('tr', null, h('th', null, 'Date'), h('th', null, 'Value'), h('th', null, 'Range'))),
           h(
             'tbody',
             null,
             [...s.points].reverse().map((p) => {
+              // A flag is beside its value, as on a result's own page, so a phone has room for the date on one line.
               const flag = resultFlag(p);
               return h(
                 'tr',
                 null,
                 h('td', { class: 'table-date' }, link(itemRoute(person.id, p.id), dateText(p.date))),
-                h('td', { class: 'num' }, p.text),
+                h('td', { class: 'num' }, p.text, isOutOfRange(flag) ? [' ', flagChip(flag)] : null),
                 h('td', null, rangeText(p, s.name)),
-                h('td', { class: isOutOfRange(flag) ? 'attention' : undefined }, flag?.label ?? ''),
               );
             }),
           ),

@@ -224,7 +224,7 @@ test('results come by panel, the panel with an out-of-range result first', async
   await expect(page.locator('svg.chart rect.chart-band')).toHaveCount(1);
   await expect(page.locator('svg.chart')).toHaveAttribute('aria-label', /against the range 3\.5-5\.1 mmol\/L$/);
   await expect(page.locator('svg.chart circle.chart-dot-flag')).toHaveCount(1);
-  await expect(page.locator('table tbody tr').first().locator('td').last()).toHaveText('High');
+  await expect(page.locator('table tbody tr').first().locator('td').nth(1).locator('.chip')).toHaveText('High');
   await expect(page.locator('.card', { hasText: 'Also in Metabolic panel' }).locator('.row-title')).toHaveText(['Glucose', 'Creatinine', 'Sodium', 'Calcium']);
 });
 
