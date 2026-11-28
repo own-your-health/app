@@ -54,6 +54,9 @@ type Phase =
   | { name: 'ready' }
   | { name: 'message'; title: string; text: string; actions?: HTMLElement[]; focus?: boolean };
 
+/** What the page says while medrec's views do not read. */
+const VIEWS_UNREAD = 'medrec’s views could not be read, so the folder’s summary is missing: everyone’s items are left off shared screens, and this app groups the visits itself.';
+
 /** In sessionStorage: the build this tab last reloaded to because a folder needed a newer app. */
 const UPDATE_TRIED = 'update-tried';
 
@@ -576,6 +579,31 @@ export class App {
     if (this.demo && ready) {
       this.banner.replaceChildren(h('div', { class: 'banner banner-sample' }, h('span', { class: 'chip chip-attention' }, 'Sample data'), h('span', null, 'Invented records. Nothing is saved.')));
     }
+    // views.json did not read: the app holds every item that may be private, and says so once, with a way to try again.
+    this.banner.querySelector('.banner-views')?.remove();
+    if (ready && this.store?.viewsError?.kind === 'unreadable') {
+      const again = button('Read again', () => void this.readAgain(again), { small: true });
+      this.banner.append(h('div', { class: 'banner banner-views', role: 'status' }, h('span', null, VIEWS_UNREAD), again));
+    }
+  }
+
+  /** Reads the folder again now, at the person's asking, and says what came of it. */
+  private async readAgain(again: HTMLButtonElement): Promise<void> {
+    const store = this.store;
+    if (!store) return;
+    again.disabled = true;
+    again.textContent = 'Reading…';
+    try {
+      await store.reload();
+    } catch (e) {
+      if (store !== this.store) return;
+      if (e instanceof FolderError && (e.kind === 'newer_reader' || e.kind === 'newer_format')) return this.outOfDate(e.message);
+      this.toast(`The records could not be read again, so these are from before. ${e instanceof Error ? e.message : 'unknown error'}`, 'error');
+      return this.renderBar();
+    }
+    if (store !== this.store) return;
+    if (store.viewsError?.kind === 'unreadable') this.toast(`medrec’s views still could not be read. ${store.viewsError.text}`, 'error');
+    this.render();
   }
 
   /** The one clock the views and the bar read. */
