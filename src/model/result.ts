@@ -27,15 +27,27 @@ export function rangeWords(r: Range, unit: string | undefined): string {
   return '';
 }
 
-/** What a row says of a result's range: its own, or that of the part out of its range that flags it, by name. */
-export function rangeText(p: ResultPoint, test: string): string {
-  if (p.range) return unitText(p.range) ?? p.range;
+/** A result's range: its own, or that of the part out of its range that flags it, with the part's name. */
+function rangeOf(p: ResultPoint, test: string): { part?: string; text: string } | undefined {
+  if (p.range) return { text: unitText(p.range) ?? p.range };
   // A part flags the row only where the whole says nothing of itself.
   const part = resultFlag({ ...p, parts: undefined }) ? undefined : outsidePart(p.parts);
-  if (!part?.point.range) return '';
+  if (!part?.point.range) return undefined;
   const range = rangeFor(part.point.range, part.point.unit);
   const name = part.name.startsWith(`${test}, `) ? part.name.slice(test.length + 2) : part.name;
-  return `${name}: ${range ? rangeWords(range, part.point.unit) : (unitText(part.point.range) ?? part.point.range)}`;
+  return { part: name, text: range ? rangeWords(range, part.point.unit) : (unitText(part.point.range) ?? part.point.range) };
+}
+
+/** What a Range column says of a result: "3.5-5.1 mmol/L", or "top number: 90–120 mmHg" by the part that flags it. */
+export function rangeText(p: ResultPoint, test: string): string {
+  const r = rangeOf(p, test);
+  return !r ? '' : r.part ? `${r.part}: ${r.text}` : r.text;
+}
+
+/** The line under a result's value in a table over time: "Range: 3.5-5.1 mmol/L", "Range: top number 90–120 mmHg". */
+export function rangeLine(p: ResultPoint, test: string): string | undefined {
+  const r = rangeOf(p, test);
+  return r && `Range: ${r.part ? `${r.part} ` : ''}${r.text}`;
 }
 
 export interface Verdict {

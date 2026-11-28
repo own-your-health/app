@@ -6,7 +6,7 @@ import { errorsOf } from '../../model/inError';
 import { conditionName } from '../../model/codeNames';
 import { isHeading, originNames, seriesKey, sortByDateDesc, str, studyTitle, testPartSeries } from '../../model/records';
 import { isOutOfRange, resultFlag } from '../../model/flags';
-import { rangeText } from '../../model/result';
+import { rangeLine } from '../../model/result';
 import type { LatestResult } from '../../model/overview';
 import { allergyList, conditionList, CRITICALITY_TEXT, medicineList, statusText, underHeadings, vaccineList, type AllergyItem, type ConditionItem, type ItemStanding, type MedicineItem } from '../../model/lists';
 import { resultGroups } from '../../model/panels';
@@ -164,19 +164,18 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
         h(
           'table',
           { class: 'table' },
-          h('thead', null, h('tr', null, h('th', null, 'Date'), h('th', null, 'Value'), h('th', null, 'Range'))),
+          h('thead', null, h('tr', null, h('th', null, 'Date'), h('th', null, 'Value'))),
           h(
             'tbody',
             null,
             [...s.points].reverse().map((p) => {
-              // A flag is beside its value, as on a result's own page, so a phone has room for the date on one line.
-              const flag = resultFlag(p);
+              // Its flag and range are under its value, so a phone has room for the date on one line.
+              const [flag, range] = [resultFlag(p), rangeLine(p, s.name)];
               return h(
                 'tr',
                 null,
                 h('td', { class: 'table-date' }, link(itemRoute(person.id, p.id), dateText(p.date))),
-                h('td', { class: 'num' }, p.text, isOutOfRange(flag) ? [' ', flagChip(flag)] : null),
-                h('td', null, rangeText(p, s.name)),
+                h('td', { class: 'num' }, p.text, isOutOfRange(flag) ? [' ', flagChip(flag)] : null, range ? h('div', { class: 'table-range' }, range) : null),
               );
             }),
           ),

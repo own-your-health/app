@@ -4,7 +4,7 @@ import { isOutOfRange, resultFlag } from '../src/model/flags';
 import { panelFor, panelOf, resultGroups } from '../src/model/panels';
 import { itemPrivate } from '../src/model/private';
 import { isHeading, isQuantity, isWithdrawn, memberIds, partSeries, readingOf, recordDetail, resultParts, resultPoint, resultReading, resultSeries, seriesKey, str, testPartSeries } from '../src/model/records';
-import { rangeText, resultContext, verdict } from '../src/model/result';
+import { rangeLine, rangeText, resultContext, verdict } from '../src/model/result';
 import { parseHousehold, parseIndex } from '../src/model/parse';
 import { find } from '../src/model/search';
 import type { Json, JsonObject, MedRecord, PersonIndex } from '../src/model/types';
@@ -304,6 +304,8 @@ describe('as medrec 0.9.10 writes them', () => {
     const p = resultPoint(one('2024-04-01'));
     expect([resultFlag(p)?.label, verdict(p).text, rangeText(p, 'Blood pressure')]).toEqual(['High', 'Blood pressure, top number: Above the lab’s range of 90–120 mmHg.', 'top number: 90–120 mmHg']);
     expect([rangeText(resultPoint(one('2024-04-02')), 'Blood pressure'), rangeText(resultPoint(one('2024-05-14', 'Potassium')), 'Potassium')]).toEqual(['', '3.5-5.1 mmol/L']);
+    // Under a value in a table over time.
+    expect([rangeLine(p, 'Blood pressure'), rangeLine(resultPoint(one('2024-04-02')), 'Blood pressure'), rangeLine(resultPoint(one('2024-05-14', 'Potassium')), 'Potassium')]).toEqual(['Range: top number 90–120 mmHg', undefined, 'Range: 3.5-5.1 mmol/L']);
     // Where the whole says of itself, no part flags it, and none's range is given.
     const said = one('2024-04-01');
     expect(rangeText(resultPoint({ ...said, fields: { ...said.fields, interpretation: 'Normal' } }), 'Blood pressure')).toBe('');

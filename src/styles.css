@@ -996,9 +996,15 @@ pre.text {
   vertical-align: top;
 }
 
-/* A date in a table of results over time stays on one line. */
+/* A date in a table of results over time stays on one line, and a range is under its value. */
 .table .table-date {
   white-space: nowrap;
+}
+
+.table .table-range {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .table th {
