@@ -45,9 +45,22 @@ export function updateWatcher(w: UpdateWatch): () => Promise<void> {
   };
 }
 
+/** What a look at the site found: another build, this one (or, on the dev server, none to compare), or nothing it could read. */
+export type SiteBuild = { kind: 'other'; build: string } | { kind: 'same' } | { kind: 'failed' };
+
+/** The build the site's page names, beside this page's. */
+export async function siteBuild(current: string | undefined, fetchPage: () => Promise<string>): Promise<SiteBuild> {
+  if (!current) return { kind: 'same' };
+  const next = await fetchPage().then(buildOf, () => undefined);
+  return !next ? { kind: 'failed' } : next === current ? { kind: 'same' } : { kind: 'other', build: next };
+}
+
+/** How long a look at the site may take before it counts as failed: a stalled connection does not hold a screen. */
+export const LOOK_TIMEOUT_MS = 10_000;
+
 /** The site's page for the app, revalidated past the HTTP cache. */
-export async function fetchAppPage(): Promise<string> {
-  const res = await fetch(new URL('./', location.href), { cache: 'no-cache', credentials: 'omit' });
+export async function fetchAppPage(timeout = LOOK_TIMEOUT_MS): Promise<string> {
+  const res = await fetch(new URL('./', location.href), { cache: 'no-cache', credentials: 'omit', signal: AbortSignal.timeout(timeout) });
   if (!res.ok) throw new Error(`The app's page answered ${res.status}.`);
   return res.text();
 }

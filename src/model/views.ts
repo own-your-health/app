@@ -32,13 +32,51 @@ const MD5 = /^[0-9a-f]{32}$/;
 const md5Of = (v: unknown): Md5 | undefined => (v === null ? null : typeof v === 'string' && MD5.test(v) ? v : undefined);
 
 /**
- * views.json, once it is in the layout this app reads (v2, every medrec's so
- * far). Null for v1, which medrec never wrote: there are no views to read. A
- * later layout is refused as newer, anything else as malformed.
+ * The newest medrec whose contract this app follows: it reads views whose
+ * `reader` is this or older. It is `follows` in src/medrec-contract.json,
+ * which the site publishes as it is; raise it there with the change that
+ * follows a newer medrec's contract, never ahead of it.
  */
-export function parseViews(raw: unknown): Record<string, unknown> | null {
+export const FOLLOWS: string = __MEDREC_FOLLOWS__;
+
+export const NEWER_READER = 'These records were written by a newer medrec. Update the app to see them.';
+
+type Version = [number, number, number];
+
+/** A medrec version, `MAJOR.MINOR.PATCH` in three decimal integers; undefined for anything else. */
+export function versionOf(v: unknown): Version | undefined {
+  const m = typeof v === 'string' ? /^(\d+)\.(\d+)\.(\d+)$/.exec(v) : null;
+  return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : undefined;
+}
+
+/** Whether one version is newer than another, part by part as numbers: 0.9.10 is newer than 0.9.9. */
+function newer(a: Version, b: Version): boolean {
+  const i = a.findIndex((n, j) => n !== b[j]);
+  return i >= 0 && a[i]! > b[i]!;
+}
+
+/**
+ * Whether an app that follows `follows` may read these views: the oldest
+ * contract their reader must follow (`reader`, or where that is absent the
+ * `medrec` that wrote them) is no newer. A value that is no version is refused.
+ */
+export function readable(views: Record<string, unknown>, follows: string = FOLLOWS): boolean {
+  const need = versionOf(views.reader === undefined ? views.medrec : views.reader);
+  return need !== undefined && !newer(need, versionOf(follows)!);
+}
+
+/**
+ * views.json, once it is in the layout this app reads (v2, every medrec's so
+ * far). Null for v1, which medrec never wrote: there are no views to read.
+ * Views whose reader must follow a newer contract than this app's are refused
+ * whole, and so is the folder (`newer_reader`), whatever their layout: the
+ * rules this app does not know may hold more private. A later layout is
+ * refused as newer, anything else as malformed.
+ */
+export function parseViews(raw: unknown, follows: string = FOLLOWS): Record<string, unknown> | null {
   if (!isObject(raw) || typeof raw.schema !== 'string' || !raw.schema.startsWith('medrec-views/')) throw new FolderError('malformed', 'views/views.json is not medrec’s list of views.');
   if (raw.schema === 'medrec-views/v1') return null;
+  if (!readable(raw, follows)) throw new FolderError('newer_reader', NEWER_READER);
   if (raw.schema !== 'medrec-views/v2') throw new FolderError('newer_format', 'They are written by a newer medrec. Update the app.');
   if (!isObject(raw.people)) throw new FolderError('malformed', 'views/views.json names no people.');
   return raw;

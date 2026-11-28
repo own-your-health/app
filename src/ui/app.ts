@@ -12,11 +12,11 @@ import { needsAttention } from '../model/sources';
 import type { RequestScope } from '../model/types';
 import { getAccount, getClientId, getFolder, setAccount, setClientId, setFolder } from '../settings';
 import { readSetupLink, setupLinkFor, withoutClient, type SetupLink } from '../setup-link';
-import { button, sheet, type Ctx, type Mark } from './components';
+import { button, closeSheets, sheet, type Ctx, type Mark } from './components';
 import { clear, h, icon, s } from './dom';
 import { href, isListSection, moved, parseRoute, type Route } from './router';
 import { tabBar } from './tabs';
-import { buildOf, fetchAppPage, updateWatcher } from './update';
+import { buildOf, fetchAppPage, siteBuild, updateWatcher } from './update';
 import { costsView } from './views/costs';
 import { homeView } from './views/home';
 import { itemView } from './views/item';
@@ -50,9 +50,12 @@ type Phase =
   | { name: 'welcome'; error?: string }
   | { name: 'signin'; error?: string }
   | { name: 'folder' }
-  | { name: 'loading' }
+  | { name: 'loading'; text?: string }
   | { name: 'ready' }
-  | { name: 'message'; title: string; text: string; actions?: HTMLElement[] };
+  | { name: 'message'; title: string; text: string; actions?: HTMLElement[]; focus?: boolean };
+
+/** In sessionStorage: the build this tab last reloaded to because a folder needed a newer app. */
+const UPDATE_TRIED = 'update-tried';
 
 function logo(): SVGSVGElement {
   return s(
@@ -84,8 +87,10 @@ export class App {
   private banner = h('div', { class: 'banner-slot', 'aria-live': 'polite' });
   /** A newer build of the app is on the site: a line that stays until the page reloads. */
   private update = h('div', { class: 'banner-slot', 'aria-live': 'polite' });
+  /** The build this page runs, from its own script's address. */
+  private readonly build = buildOf(document.querySelector('script[type="module"][src]')?.getAttribute('src') ?? '');
   private lookForUpdate = updateWatcher({
-    current: buildOf(document.querySelector('script[type="module"][src]')?.getAttribute('src') ?? ''),
+    current: this.build,
     fetchPage: fetchAppPage,
     now: () => Date.now(),
     onNew: () =>
@@ -291,8 +296,10 @@ export class App {
     try {
       await store.load();
     } catch (e) {
-      if (e instanceof FolderError && e.kind === 'newer_format') {
-        return this.show({ name: 'message', title: 'Update the app', text: e.message, actions: [button('Reload', () => location.reload(), { primary: true })] });
+      if (e instanceof FolderError && (e.kind === 'newer_format' || e.kind === 'newer_reader')) {
+        // Kept, so the updated app opens it.
+        setFolder(f);
+        return this.outOfDate(e.message);
       }
       setFolder(null);
       const text = await whyNotOpened(this.drive, f.id, e, this.user.email);
@@ -311,6 +318,7 @@ export class App {
     try {
       await store.load();
     } catch (e) {
+      if (e instanceof FolderError && (e.kind === 'newer_format' || e.kind === 'newer_reader')) return this.outOfDate(e.message);
       return this.show({ name: 'message', title: 'The sample records did not load', text: e instanceof Error ? e.message : String(e) });
     }
     this.opened(store);
@@ -323,7 +331,40 @@ export class App {
 
   private opened(store: Store): void {
     this.store = store;
-    this.rereads = new Rereads(store, () => Date.now(), (text) => store === this.store && this.toast(text, 'error'));
+    this.rereads = new Rereads(
+      store,
+      () => Date.now(),
+      (text) => store === this.store && this.toast(text, 'error'),
+      (text) => void (store === this.store && this.outOfDate(text)),
+    );
+  }
+
+  /**
+   * The folder needs a newer app than this one. A newer build on the site is
+   * loaded: by itself once per build in this tab, so a page that still runs
+   * this one does not reload again and again, and whenever the button asks.
+   * Else the page says to update, with nothing of the folder on any screen,
+   * open sheets and toasts included.
+   */
+  private async outOfDate(text: string, looked = false): Promise<void> {
+    this.store = null;
+    this.rereads = null;
+    this.demoMac = null;
+    window.clearInterval(this.pollTimer);
+    window.clearTimeout(this.toastTimer);
+    this.toastBox.replaceChildren();
+    this.banner.replaceChildren();
+    closeSheets();
+    this.show({ name: 'loading', text: 'Looking for a newer app…' });
+    const site = await siteBuild(this.build, fetchAppPage);
+    if (site.kind === 'other' && (looked || sessionStorage.getItem(UPDATE_TRIED) !== site.build)) {
+      sessionStorage.setItem(UPDATE_TRIED, site.build);
+      return location.reload();
+    }
+    const more =
+      site.kind === 'failed' ? ' The app’s site could not be reached to look for a newer app. Check the connection and look again.' : looked && site.kind === 'same' ? ' There is no newer app yet. Look again later.' : '';
+    const choose = this.drive && !this.demo ? [button('Choose a folder', () => (setFolder(null), this.show({ name: 'folder' })))] : [];
+    this.show({ name: 'message', title: 'Update the app', text: text + more, focus: true, actions: [button('Look for an update', () => void this.outOfDate(text, true), { primary: true }), ...choose] });
   }
 
   private startPolling(): void {
@@ -579,7 +620,7 @@ export class App {
     const p = this.phase;
     switch (p.name) {
       case 'loading':
-        this.main.append(h('div', { class: 'loading', role: 'status' }, h('div', { class: 'spinner', 'aria-hidden': 'true' }), h('p', null, 'Reading the records folder…')));
+        this.main.append(h('div', { class: 'loading', role: 'status' }, h('div', { class: 'spinner', 'aria-hidden': 'true' }), h('p', null, p.text ?? 'Reading the records folder…')));
         return;
       case 'welcome':
         this.main.append(
@@ -604,7 +645,8 @@ export class App {
         this.main.append(folderView(this.drive, { account: this.user.email, onPick: (f) => this.openFolder(f), onDifferentAccount: () => this.differentAccount() }));
         return;
       case 'message':
-        this.main.append(messageView(p.title, p.text, p.actions));
+        this.main.append(messageView(p.title, p.text, p.actions, p.focus));
+        if (p.focus) this.main.querySelector<HTMLElement>('h2')?.focus();
         return;
       case 'ready':
         this.main.append(this.routeView());

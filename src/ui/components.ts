@@ -228,11 +228,17 @@ export function jsonBlock(value: unknown): HTMLElement {
   return h('pre', { class: 'json' }, JSON.stringify(value, null, 2));
 }
 
-/** A panel over the page. It closes on Escape, beside it, or when the page is left; Tab stays in it. */
+const CLOSE_SHEETS = 'oyh-close-sheets';
+
+/** Closes every open sheet, as leaving the page does. */
+export const closeSheets = (): void => void window.dispatchEvent(new Event(CLOSE_SHEETS));
+
+/** A panel over the page. It closes on Escape, beside it, when the page is left, or on closeSheets; Tab stays in it. */
 export function sheet(title: string, body: Child, onClose: () => void): HTMLElement {
   const close = () => {
     document.removeEventListener('keydown', onKey);
     window.removeEventListener('hashchange', close);
+    window.removeEventListener(CLOSE_SHEETS, close);
     scrim.remove();
     onClose();
   };
@@ -259,6 +265,7 @@ export function sheet(title: string, body: Child, onClose: () => void): HTMLElem
   };
   document.addEventListener('keydown', onKey);
   window.addEventListener('hashchange', close);
+  window.addEventListener(CLOSE_SHEETS, close);
   return scrim;
 }
 

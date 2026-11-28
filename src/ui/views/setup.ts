@@ -189,6 +189,13 @@ export function folderView(drive: Drive, opts: { account?: string; onPick: (f: {
   );
 }
 
-export function messageView(title: string, text: string, actions: HTMLElement[] = []): HTMLElement {
-  return h('div', { class: 'stack narrow' }, card({ title }, h('p', null, text), actions.length ? h('div', { class: 'actions' }, actions) : null));
+/** A message in place of the page. With `focus`, its heading can take focus and is described by the text, so moving focus there reads both. */
+export function messageView(title: string, text: string, actions: HTMLElement[] = [], focus = false): HTMLElement {
+  const view = h('div', { class: 'stack narrow' }, card({ title }, h('p', focus ? { id: 'message-text' } : null, text), actions.length ? h('div', { class: 'actions' }, actions) : null));
+  const heading = view.querySelector('h2');
+  if (focus && heading) {
+    heading.tabIndex = -1;
+    heading.setAttribute('aria-describedby', 'message-text');
+  }
+  return view;
 }

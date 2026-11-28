@@ -186,7 +186,7 @@ describe('a folder', () => {
     const s = await load({ 'views/views.json': '{' });
     expect([out(s), s.index(ALEX)!.aboutUnsure]).toEqual([[undefined, 'unreadable', false], 'unreadable']);
     expect(out(await load(by('0.9.9', (p) => void (p.about_another = { r_1: {} }))))).toEqual([undefined, 'unreadable', false]);
-    expect(out(await load({ 'views/views.json': JSON.stringify({ schema: 'medrec-views/v3' }) }))).toEqual([undefined, 'newer_format', false]);
+    expect(out(await load({ 'views/views.json': JSON.stringify({ schema: 'medrec-views/v3', medrec: '0.9.12', reader: '0.9.10' }) }))).toEqual([undefined, 'newer_format', false]);
     // A folder without views is an earlier medrec's, and someone with no index has nothing.
     expect(out(await load({ 'views/views.json': null }))).toEqual([undefined, undefined, false]);
     expect((await load({ 'views/views.json': '{', 'Robin Example/index.json': null })).index(ROBIN)!.aboutUnsure).toBeUndefined();
@@ -209,7 +209,7 @@ describe('a folder', () => {
     };
     expect(await again({ 'views/views.json': '{' })).toEqual([1, 'unreadable', true, true]);
     expect(await again(by('0.9.9', (p) => Object.assign(p, { index: createHash('md5').update('other').digest('hex') })))).toEqual([1, 'behind', true, true]);
-    expect(await again({ 'views/views.json': JSON.stringify({ schema: 'medrec-views/v3' }) })).toEqual([1, 'newer_format', true, true]);
+    expect(await again({ 'views/views.json': JSON.stringify({ schema: 'medrec-views/v3', medrec: '0.9.12', reader: '0.9.10' }) })).toEqual([1, 'newer_format', true, true]);
     // Another computer's earlier medrec, which has no list.
     expect(await again(by('0.9.8'))).toEqual([1, 'unsaid', true, true]);
     // A list that reads, of these files, decides.

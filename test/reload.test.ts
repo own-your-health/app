@@ -234,8 +234,8 @@ describe('when a read is due', () => {
   async function watching(...states: Overlay[]) {
     const { store, reads } = await opened(...states);
     let at = 0;
-    const said: string[] = [];
-    const rereads = new Rereads(store, () => at, (t) => void said.push(t));
+    const [said, refused]: [string[], string[]] = [[], []];
+    const rereads = new Rereads(store, () => at, (t) => void said.push(t), (t) => void refused.push(t));
     /** The times of the reads a timer starts in this many seconds, looking every second. */
     const timer = async (seconds: number) => {
       const times: number[] = [];
@@ -247,7 +247,7 @@ describe('when a read is due', () => {
       }
       return times;
     };
-    return { store, rereads, reads, said, timer, finish: () => void (store.finished += 1) };
+    return { store, rereads, reads, said, refused, timer, finish: () => void (store.finished += 1) };
   }
   const FAILS: Overlay = { 'household.json': null };
   const BEHIND: Overlay = { [path('Sam Example')]: JSON.stringify({ ...demoJson<object>(path('Sam Example')), rev: 99 }) };
@@ -288,14 +288,13 @@ describe('when a read is due', () => {
     expect([store.owed, await timer(3600)]).toEqual([false, []]);
   });
 
-  it('is said at once when the folder is in a newer layout, and only once', async () => {
+  it('refuses the folder at once when it is in a newer layout, as on opening, and says nothing else', async () => {
     const household = { ...demoJson<object>('household.json'), format: 99 };
-    const { rereads, said, timer, finish } = await watching({}, { 'household.json': JSON.stringify(household) });
+    const { rereads, said, refused, finish } = await watching({}, { 'household.json': JSON.stringify(household) });
     finish();
     await rereads.look();
-    await timer(3600);
-    expect(said.length).toBe(1);
-    expect(said[0]).toMatch(/newer than this app reads .* Update the app\.$/);
+    expect([said, refused.length]).toEqual([[], 1]);
+    expect(refused[0]).toMatch(/newer than this app reads .* Update the app\.$/);
   });
 
   it('is while a hold may end by itself, the app left in front', async () => {

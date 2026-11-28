@@ -224,7 +224,9 @@ describe('a person whose list can’t be used is held back', () => {
       const store = await load({ [path]: text, 'views/views.json': views(state, medrec), ...overlay });
       return [why(store), store.holdMayEnd()];
     };
-    expect([await by('0.9.6'), await by(''), await by('0.9.7'), await by('0.9.6', {}, '0'.repeat(32))]).toEqual([['older_medrec', true], ['older_medrec', true], ['behind', true], ['behind', true]]);
+    expect([await by('0.9.6'), await by('0.9.7'), await by('0.9.6', {}, '0'.repeat(32))]).toEqual([['older_medrec', true], ['behind', true], ['behind', true]]);
+    // A medrec that is no version, with no reader beside it, is no folder to open (views.json's reader, test/views-reader.test.ts).
+    await expect(by('')).rejects.toMatchObject({ kind: 'newer_reader' });
     // The update's first pass ends between two reads.
     const updating = await load({ [path]: text, 'views/views.json': views(undefined, '0.9.6') });
     const updated = await load({ [path]: text, 'views/views.json': views(md5) });

@@ -33,7 +33,8 @@ import { firstNames } from './people';
 
 export class FolderError extends Error {
   constructor(
-    readonly kind: 'not_household' | 'newer_format' | 'malformed',
+    /** `newer_reader`: medrec's views follow a newer contract than this app (views.json's `reader`), so nothing of the folder is shown. */
+    readonly kind: 'not_household' | 'newer_format' | 'newer_reader' | 'malformed',
     message: string,
   ) {
     super(message);
