@@ -4,7 +4,7 @@
 import type { Household, ImagingStudy, ImportRun, Json, JsonObject, MedDocument, MedRecord, PersonIndex, Provenance } from './types';
 import { parseRange, unitKey, type Bound } from './flags';
 import { isObject } from './parse';
-import { labTest, resultName } from './labtests';
+import { isLoinc, labTest, resultName } from './labtests';
 import { practiceName, practiceOf } from './practices';
 import { placeName } from './words';
 
@@ -233,9 +233,18 @@ export function readingOf(r: MedRecord): Reading {
   return pressure ? { ...reading, text: pressure } : reading;
 }
 
-/** A blood pressure's top and bottom numbers, by their LOINC codes, or by name where a source gives no code. */
-const isTop = (p: ResultPart): boolean => p.key === 'http://loinc.org|8480-6' || /^systolic\b/i.test(p.name);
-const isBottom = (p: ResultPart): boolean => p.key === 'http://loinc.org|8462-4' || /^diastolic\b/i.test(p.name);
+/** Whether a part is coded as LOINC's `code`; `resultParts` keys a coded part by its system and code. */
+const isCode = (p: ResultPart, code: string): boolean => {
+  const at = p.key.lastIndexOf('|');
+  return p.key.slice(at + 1) === code && isLoinc(p.key.slice(0, at));
+};
+/** A part with no code: `resultParts` keys it by its name. */
+const uncoded = (p: ResultPart): boolean => p.key.startsWith('display|');
+/** A blood pressure's top and bottom numbers, by their LOINC codes, or by name where a source gives a part no code. */
+const isTop = (p: ResultPart): boolean => isCode(p, '8480-6') || (uncoded(p) && /^systolic\b/i.test(p.name));
+const isBottom = (p: ResultPart): boolean => isCode(p, '8462-4') || (uncoded(p) && /^diastolic\b/i.test(p.name));
+/** A part that says something: a number, a bound, or words. */
+const said = (p: ResultPart): boolean => p.point.value !== undefined || p.point.bound !== undefined || p.point.text !== '—';
 
 /** A part's number without its unit: "122", ">260". */
 const bare = ({ text, unit }: ResultPoint): string => (unit && text.endsWith(` ${unit}`) ? text.slice(0, -unit.length - 1) : text);
@@ -250,10 +259,12 @@ const plainName = (name: string): string => {
  * A blood pressure in one form, made from its parts, whatever its source
  * wrote as the whole: "118/74 mmHg", ">260/80 mmHg", two top numbers as
  * "122 and 124/78 mmHg", a reading of one as "122 mmHg, top number only", and
- * any other part after it in plain words, "122/78 mmHg, mean 93". None where
- * no part is a top or a bottom number.
+ * any other part after it in plain words, "122/78 mmHg, mean 93". A part
+ * with no value is left out. None where no part left is a top or a bottom
+ * number: the source's own words stand.
  */
-export function pressureText(parts: ResultPart[]): string | undefined {
+export function pressureText(all: ResultPart[]): string | undefined {
+  const parts = all.filter(said);
   const tops = parts.filter(isTop);
   const bottoms = parts.filter(isBottom);
   if (!tops.length && !bottoms.length) return undefined;
