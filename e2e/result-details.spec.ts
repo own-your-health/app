@@ -168,6 +168,34 @@ test('a panel is named as one in its visit and in search, also where none of wha
   await expect(card(page, 'Its results').locator('.row')).toHaveText([/Sodium/, /Potassium.*High/]);
 });
 
+/** Of each date in a table's rows, how many lines it takes. */
+const dateLines = (page: Page) =>
+  main(page)
+    .locator('tbody td.table-date')
+    .evaluateAll((cells) =>
+      cells.map((td) => {
+        const r = document.createRange();
+        r.selectNodeContents(td.querySelector('a') ?? td.firstChild!);
+        return new Set([...r.getClientRects()].map((x) => Math.round(x.top))).size;
+      }),
+    );
+
+test('a blood pressure reads in one form in every row, its date on one line', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await go(page, `#/p/${PAT}/results`);
+  await main(page).locator('.row', { hasText: '118/74 mmHg' }).click();
+  await expect(main(page).locator('.card-head h1')).toHaveText('Blood pressure');
+  // Newest first; whatever words its source wrote, each is top/bottom, and a part beyond them after it.
+  await expect(main(page).locator('tbody tr td:nth-child(2)')).toHaveText(['118/74 mmHg', '>260/80 mmHg', '122 and 124/78 mmHg', '122/78 mmHg, mean 93', '122 mmHg, top number only', '16 kPa/80 mmHg', '110/70 mmHg', '128/76 mmHg']);
+  expect(await dateLines(page)).toEqual(Array(8).fill(1));
+  // The reading's own page, and its others over time.
+  await go(page, `#/p/${PAT}/r/${WORDS}`);
+  await expect(main(page).locator('.result-value')).toHaveText('120/80 mmHg');
+  await go(page, `#/p/${PAT}/r/${PRESSURE}`);
+  await expect(card(page, 'Over time').locator('tbody td:nth-child(2)')).toHaveText([/^118\/74 mmHg/, /^>260\/80 mmHg/, /^122 and 124\/78 mmHg/, /^122\/78 mmHg, mean 93/, /^122 mmHg, top number only/, /^128\/76 mmHg/]);
+  expect(await dateLines(page)).toEqual(Array(6).fill(1));
+});
+
 test('what it says fits a phone', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 780 });
   for (const path of [`#/p/${PAT}/r/${PRESSURE}`, `#/p/${PAT}/r/${WORDS}`, `#/p/${PAT}/r/${HEADING}`, `#/p/${PAT}/r/${BOUND}`, `#/p/${PAT}/results`, `#/p/${PAT}/e/${VISIT}`]) {

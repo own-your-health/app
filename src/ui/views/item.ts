@@ -351,7 +351,7 @@ function resultView(ctx: Ctx, idx: PersonIndex, r: MedRecord): Child[] {
                   return h(
                     'tr',
                     { class: current ? 'current' : undefined, 'aria-current': current ? 'true' : undefined },
-                    h('td', null, current ? [dateText(p.date), h('span', { class: 'sr-only' }, ' (this result)')] : link(itemRoute(person, p.id), dateText(p.date))),
+                    h('td', { class: 'table-date' }, current ? [dateText(p.date), h('span', { class: 'sr-only' }, ' (this result)')] : link(itemRoute(person, p.id), dateText(p.date))),
                     h('td', { class: 'num' }, unitText(p.text) ?? p.text, isOutOfRange(f) ? [' ', flagChip(f)] : null),
                     h('td', null, rangeText(p, series.name)),
                   );

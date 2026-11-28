@@ -996,6 +996,11 @@ pre.text {
   vertical-align: top;
 }
 
+/* A date in a table of results over time stays on one line. */
+.table .table-date {
+  white-space: nowrap;
+}
+
 .table th {
   color: var(--muted);
   font-size: 12px;

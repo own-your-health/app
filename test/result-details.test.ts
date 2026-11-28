@@ -68,6 +68,29 @@ const part = (code: string | null, display: string | null, value: Json, more: Re
 const pressure = (n: number, date: string, top: number, low: number, more: Record<string, Json> = {}) =>
   result(n, 'Blood pressure', date, { value: { value: `${top}/${low}`, unit: 'mmHg' }, components: [part('8480-6', 'Systolic', { value: top, unit: 'mmHg' }, more), part('8462-4', 'Diastolic', { value: low, unit: 'mmHg' })], category: 'Vital signs' }, '85354-9');
 
+describe('a blood pressure’s one form', () => {
+  const of = (...parts: ReturnType<typeof part>[]) => readingOf(result(0, 'Blood pressure', '2026-01-02', { value: 'As its source wrote it', components: parts }, '85354-9')).text;
+  const [top, bottom] = [(value: Json) => part('8480-6', 'Systolic', value), (value: Json) => part('8462-4', 'Diastolic', value)];
+  const mmHg = (value: number) => ({ value, unit: 'mmHg' });
+
+  it('is the bottom number alone where there is no top one, and two bottom numbers are both said', () => {
+    expect([of(bottom(mmHg(80))), of(top(mmHg(120)), bottom(mmHg(80)), bottom(mmHg(82)))]).toEqual(['80 mmHg, bottom number only', '120/80 and 82 mmHg']);
+  });
+
+  it('gives a part in another unit than the numbers its own unit, and one with no unit none', () => {
+    expect(of(top(mmHg(120)), bottom(mmHg(80)), part('8867-4', 'Heart rate', { value: 64, unit: '/min' }), part(null, 'Mean Blood Pressure', mmHg(93)))).toBe('120/80 mmHg, heart rate 64 /min, mean 93');
+    expect(of(top({ value: 120 }), bottom({ value: 80 }))).toBe('120/80');
+  });
+
+  it('keeps a name of capitals as it is, and the words of a name that is only “blood pressure”', () => {
+    expect(of(top(mmHg(120)), bottom(mmHg(80)), part(null, 'MAP', mmHg(93)), part(null, 'Blood pressure', mmHg(95)))).toBe('120/80 mmHg, MAP 93, blood pressure 95');
+  });
+
+  it('is the source’s own words where no part is a top or a bottom number', () => {
+    expect([of(part(null, 'Upper', mmHg(120))), of()]).toEqual(['As its source wrote it', 'As its source wrote it']);
+  });
+});
+
 describe('a test’s parts over time', () => {
   const reading = (n: number, date: string, parts: ReturnType<typeof part>[]) => result(n, 'Example reading', date, { value: 'Example', components: parts }, '00000-1');
   const lines = (...records: MedRecord[]) => testPartSeries(idx(...records), seriesKey(records[0]!)).map((s) => [s.name, s.points.map((x) => x.date)]);
@@ -258,16 +281,18 @@ describe('as medrec 0.9.10 writes them', () => {
   };
   const read = (r: MedRecord) => [readingOf(r).text, resultParts(r).map((x) => `${x.name}: ${x.point.text}`)];
 
-  it('reads a reading of several parts as its text, with its parts in the source’s order', () => {
-    expect(['01', '02', '03', '04', '05', '06', '07'].map((d) => read(one(`2024-04-${d}`)))).toEqual([
+  it('reads a blood pressure in one form whatever its source wrote, with its parts in the source’s order', () => {
+    expect(['01', '02', '03', '04', '05', '06', '07', '11'].map((d) => read(one(`2024-04-${d}`)))).toEqual([
       ['128/76 mmHg', ['Blood pressure, top number: 128 mmHg', 'Blood pressure, bottom number: 76 mmHg']],
       ['110/70 mmHg', ['Blood pressure, bottom number: 70 mmHg', 'Blood pressure, top number: 110 mmHg']],
-      ['Systolic blood pressure 120 mmHg; Diastolic blood pressure 80 mmHg', ['Systolic blood pressure: 120 mmHg', 'Diastolic blood pressure: 80 mmHg']],
-      ['Systolic blood pressure 16 kPa; Diastolic blood pressure 80 mmHg', ['Blood pressure, top number: 16 kPa', 'Blood pressure, bottom number: 80 mmHg']],
-      ['Systolic blood pressure 122 mmHg', ['Blood pressure, top number: 122 mmHg']],
-      ['122/78 mmHg; Mean blood pressure 93 mmHg', ['Blood pressure, top number: 122 mmHg', 'Mean blood pressure: 93 mmHg', 'Blood pressure, bottom number: 78 mmHg']],
-      ['Systolic blood pressure 122 mmHg; Systolic blood pressure 124 mmHg; Diastolic blood pressure 78 mmHg', ['Blood pressure, top number: 122 mmHg', 'Blood pressure, top number: 124 mmHg', 'Blood pressure, bottom number: 78 mmHg']],
+      ['120/80 mmHg', ['Systolic blood pressure: 120 mmHg', 'Diastolic blood pressure: 80 mmHg']],
+      ['16 kPa/80 mmHg', ['Blood pressure, top number: 16 kPa', 'Blood pressure, bottom number: 80 mmHg']],
+      ['122 mmHg, top number only', ['Blood pressure, top number: 122 mmHg']],
+      ['122/78 mmHg, mean 93', ['Blood pressure, top number: 122 mmHg', 'Mean blood pressure: 93 mmHg', 'Blood pressure, bottom number: 78 mmHg']],
+      ['122 and 124/78 mmHg', ['Blood pressure, top number: 122 mmHg', 'Blood pressure, top number: 124 mmHg', 'Blood pressure, bottom number: 78 mmHg']],
+      ['>260/80 mmHg', ['Blood pressure, top number: >260 mmHg', 'Blood pressure, bottom number: 80 mmHg']],
     ]);
+    // A reading of other parts is as its source wrote it.
     expect([read(one('2024-04-08')), read(one('2024-04-17'))]).toEqual([
       ['7', ['First part: 3', 'Second part: 4']],
       ['118/74 mmHg', ['Blood pressure, top number: 118 mmHg', 'Blood pressure, bottom number: 74 mmHg']],

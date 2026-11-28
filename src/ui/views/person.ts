@@ -173,7 +173,7 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
               return h(
                 'tr',
                 null,
-                h('td', null, link(itemRoute(person.id, p.id), dateText(p.date))),
+                h('td', { class: 'table-date' }, link(itemRoute(person.id, p.id), dateText(p.date))),
                 h('td', { class: 'num' }, p.text),
                 h('td', null, rangeText(p, s.name)),
                 h('td', { class: isOutOfRange(flag) ? 'attention' : undefined }, flag?.label ?? ''),
