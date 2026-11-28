@@ -89,6 +89,19 @@ describe('a blood pressure’s one form', () => {
   it('is the source’s own words where no part is a top or a bottom number', () => {
     expect([of(part(null, 'Upper', mmHg(120))), of()]).toEqual(['As its source wrote it', 'As its source wrote it']);
   });
+
+  it('reads a part by name only where it has no code, so another test’s coded “Systolic” or “Diastolic” part is none', () => {
+    expect([of(part('00000-4', 'Systolic function', mmHg(60)), part('00000-5', 'Diastolic function', { value: 2 })), of(part(null, 'Systolic', mmHg(120)), part(null, 'Diastolic', mmHg(80)))]).toEqual(['As its source wrote it', '120/80 mmHg']);
+  });
+
+  it('knows LOINC’s codes however a source writes LOINC’s system', () => {
+    const coded = (system: string, code: string, value: number) => ({ code: { system, code }, value: mmHg(value) });
+    expect(of(coded('LOINC', '8480-6', 120), coded('https://loinc.org', '8462-4', 80))).toBe('120/80 mmHg');
+  });
+
+  it('leaves out a part with no value, and keeps the source’s words where no number is left', () => {
+    expect([of(top(null), bottom(mmHg(80))), of(top(null), bottom(null)), of(top(mmHg(120)), bottom(mmHg(80)), part(null, 'Mean blood pressure', null))]).toEqual(['80 mmHg, bottom number only', 'As its source wrote it', '120/80 mmHg']);
+  });
 });
 
 describe('a test’s parts over time', () => {
@@ -305,7 +318,11 @@ describe('as medrec 0.9.10 writes them', () => {
     expect([resultFlag(p)?.label, verdict(p).text, rangeText(p, 'Blood pressure')]).toEqual(['High', 'Blood pressure, top number: Above the lab’s range of 90–120 mmHg.', 'top number: 90–120 mmHg']);
     expect([rangeText(resultPoint(one('2024-04-02')), 'Blood pressure'), rangeText(resultPoint(one('2024-05-14', 'Potassium')), 'Potassium')]).toEqual(['', '3.5-5.1 mmol/L']);
     // Under a value in a table over time.
-    expect([rangeLine(p, 'Blood pressure'), rangeLine(resultPoint(one('2024-04-02')), 'Blood pressure'), rangeLine(resultPoint(one('2024-05-14', 'Potassium')), 'Potassium')]).toEqual(['Range: top number 90–120 mmHg', undefined, 'Range: 3.5-5.1 mmol/L']);
+    expect([rangeLine(p, 'Blood pressure'), rangeLine(resultPoint(one('2024-04-02')), 'Blood pressure'), rangeLine(resultPoint(one('2024-05-14', 'Potassium')), 'Potassium')]).toEqual([
+      { words: 'Range: top number ', range: '90–120 mmHg' },
+      undefined,
+      { words: 'Range: ', range: '3.5-5.1 mmol/L' },
+    ]);
     // Where the whole says of itself, no part flags it, and none's range is given.
     const said = one('2024-04-01');
     expect(rangeText(resultPoint({ ...said, fields: { ...said.fields, interpretation: 'Normal' } }), 'Blood pressure')).toBe('');

@@ -44,10 +44,10 @@ export function rangeText(p: ResultPoint, test: string): string {
   return !r ? '' : r.part ? `${r.part}: ${r.text}` : r.text;
 }
 
-/** The line under a result's value in a table over time: "Range: 3.5-5.1 mmol/L", "Range: top number 90–120 mmHg". */
-export function rangeLine(p: ResultPoint, test: string): string | undefined {
+/** The line under a result's value in a table over time, "Range: top number 90–120 mmHg": its words, and the range kept on one line. */
+export function rangeLine(p: ResultPoint, test: string): { words: string; range: string } | undefined {
   const r = rangeOf(p, test);
-  return r && `Range: ${r.part ? `${r.part} ` : ''}${r.text}`;
+  return r && { words: `Range: ${r.part ? `${r.part} ` : ''}`, range: r.text };
 }
 
 export interface Verdict {

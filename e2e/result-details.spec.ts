@@ -181,6 +181,9 @@ const rowLines = (page: Page) =>
       return rows.map((tr): [number, number] => [lines(tr.querySelector('td.table-date a') ?? tr.querySelector('td.table-date')!.firstChild!), lines(tr.querySelector('td:nth-child(2)')!.firstChild!)]);
     });
 
+/** Of each range under a value, how many lines its numbers and unit take. */
+const rangeLines = (page: Page) => main(page).locator('td .table-range-value').evaluateAll((spans) => spans.map((x) => new Set([...x.getClientRects()].map((r) => Math.round(r.top))).size));
+
 test('a blood pressure reads in one form in every row, its date on one line', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await go(page, `#/p/${PAT}/results`);
@@ -194,6 +197,8 @@ test('a blood pressure reads in one form in every row, its date on one line', as
   expect(await rowLines(page)).toEqual(Array(9).fill([1, 1]));
   await page.setViewportSize({ width: 320, height: 780 });
   expect((await rowLines(page)).map(([date, value]) => date === 1 && value <= 2)).toEqual(Array(9).fill(true));
+  // A range breaks before its numbers, never after the dash.
+  expect(await rangeLines(page)).toEqual([1]);
   // And the table stays inside its card.
   const spill = () => main(page).locator('table').evaluate((t) => {
     const card = t.closest('.card')!;
@@ -210,6 +215,7 @@ test('a blood pressure reads in one form in every row, its date on one line', as
   expect(await rowLines(page)).toEqual(Array(6).fill([1, 1]));
   await page.setViewportSize({ width: 320, height: 780 });
   expect((await rowLines(page)).map(([date, value]) => date === 1 && value <= 2)).toEqual(Array(6).fill(true));
+  expect(await rangeLines(page)).toEqual([1]);
 });
 
 test('what it says fits a phone', async ({ page }) => {

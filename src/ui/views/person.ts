@@ -175,7 +175,7 @@ function resultsSection(person: Person, idx: PersonIndex, sub?: string): HTMLEle
                 'tr',
                 null,
                 h('td', { class: 'table-date' }, link(itemRoute(person.id, p.id), dateText(p.date))),
-                h('td', { class: 'num' }, p.text, isOutOfRange(flag) ? [' ', flagChip(flag)] : null, range ? h('div', { class: 'table-range' }, range) : null),
+                h('td', { class: 'num' }, p.text, isOutOfRange(flag) ? [' ', flagChip(flag)] : null, range ? h('div', { class: 'table-range' }, range.words, h('span', { class: 'table-range-value' }, range.range)) : null),
               );
             }),
           ),
